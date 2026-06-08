@@ -25,6 +25,13 @@ import {
     addDoc,
     updateDoc
 } from "firebase/firestore";
+import {
+    getStorage,
+    ref,
+    uploadBytesResumable,
+    getDownloadURL,
+    deleteObject
+} from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDV2GaYmyXXF6cYACk--bQLbAJZhyrng6k",
@@ -40,11 +47,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 export { 
     auth, 
     db, 
+    storage,
     googleProvider,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -64,5 +73,9 @@ export {
     collectionGroup,
     deleteDoc,
     addDoc,
-    updateDoc
+    updateDoc,
+    ref,
+    uploadBytesResumable,
+    getDownloadURL,
+    deleteObject
 };

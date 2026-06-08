@@ -3,6 +3,7 @@ import { TRANSLATIONS } from './i18n.js';
 import { 
     auth, 
     db, 
+    storage,
     googleProvider,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -22,7 +23,10 @@ import {
     collectionGroup,
     deleteDoc,
     addDoc,
-    updateDoc
+    updateDoc,
+    ref,
+    uploadBytesResumable,
+    getDownloadURL
 } from "./firebase.js";
 
 // Estado global de la aplicación
@@ -5714,9 +5718,10 @@ function renderBeatsList() {
     initTooltips();
 }
 
-// DOMContentLoaded: solo tooltips (initBeatsDB se mueve a initApp para que ocurra despues de que el usuario este establecido)
+// DOMContentLoaded: solo tooltips y subidas (initBeatsDB se mueve a initApp para que ocurra despues de que el usuario este establecido)
 document.addEventListener('DOMContentLoaded', () => {
     initTooltips();
+    initFileUploads();
     setupAdminPlanModalEvents();
     document.getElementById('btn-close-progress')?.addEventListener('click', () => {
         document.getElementById('email-progress-modal').style.display = 'none';
@@ -5731,6 +5736,116 @@ function initTooltips() {
             el.setAttribute('data-tooltip', titleText);
             el.removeAttribute('title');
         }
+    });
+}
+
+// Variables para el control de subidas de archivos
+let activeUploadTarget = null;
+let activeUploadButton = null;
+
+// Inicializar la funcionalidad de subida de archivos (MP3, WAV, Stems) a Firebase Storage
+function initFileUploads() {
+    const fileUploader = document.getElementById('shared-file-uploader');
+    if (!fileUploader) return;
+
+    // Escuchar clicks en cualquier botón de subida
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-upload-file');
+        if (!btn) return;
+
+        e.preventDefault();
+        
+        // Guardar destino y botón activo
+        activeUploadTarget = btn.getAttribute('data-target');
+        activeUploadButton = btn;
+        
+        // Configurar los tipos de archivo permitidos y disparar el selector
+        const accept = btn.getAttribute('data-accept') || '*/*';
+        fileUploader.setAttribute('accept', accept);
+        fileUploader.value = ''; // Resetear
+        fileUploader.click();
+    });
+
+    // Escuchar el cambio en el input de archivo (cuando el usuario selecciona un archivo)
+    fileUploader.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file || !activeUploadTarget || !activeUploadButton) return;
+
+        const uid = window.currentUser || 'anonymous';
+        const originalBtnHTML = activeUploadButton.innerHTML;
+        
+        // Desactivar botón y cambiar a estado de carga
+        activeUploadButton.disabled = true;
+        activeUploadButton.style.opacity = '0.7';
+        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... 0%`;
+        if (window.lucide) window.lucide.createIcons();
+
+        // Crear una ruta única en Firebase Storage
+        const timestamp = Date.now();
+        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const storagePath = `users/${uid}/beats/${timestamp}_${safeName}`;
+        const fileRef = ref(storage, storagePath);
+
+        // Iniciar tarea de subida
+        const uploadTask = uploadBytesResumable(fileRef, file);
+
+        uploadTask.on('state_changed', 
+            (snapshot) => {
+                const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
+            }, 
+            (error) => {
+                console.error("Error al subir archivo a Firebase Storage:", error);
+                showToast("Error al subir el archivo. Inténtalo de nuevo.", true);
+                
+                // Restaurar botón
+                activeUploadButton.disabled = false;
+                activeUploadButton.style.opacity = '1';
+                activeUploadButton.innerHTML = originalBtnHTML;
+                if (window.lucide) window.lucide.createIcons();
+            }, 
+            async () => {
+                try {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    
+                    // Escribir el enlace público en el input correspondiente
+                    const targetInput = document.getElementById(activeUploadTarget);
+                    if (targetInput) {
+                        targetInput.value = downloadURL;
+                        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        
+                        // Actualizar previsualización si aplica
+                        if (typeof generatePreview === 'function') {
+                            generatePreview();
+                        }
+                    }
+                    
+                    showToast("¡Archivo subido con éxito!");
+                    
+                    // Mostrar estado exitoso brevemente
+                    activeUploadButton.disabled = false;
+                    activeUploadButton.style.opacity = '1';
+                    activeUploadButton.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
+                    if (window.lucide) window.lucide.createIcons();
+                    
+                    const btnRef = activeUploadButton;
+                    setTimeout(() => {
+                        if (btnRef.innerHTML.includes('check')) {
+                            btnRef.innerHTML = originalBtnHTML;
+                            if (window.lucide) window.lucide.createIcons();
+                        }
+                    }, 3000);
+
+                } catch (urlErr) {
+                    console.error("Error al obtener la URL del archivo:", urlErr);
+                    showToast("Error al obtener la URL de descarga.", true);
+                    activeUploadButton.disabled = false;
+                    activeUploadButton.style.opacity = '1';
+                    activeUploadButton.innerHTML = originalBtnHTML;
+                    if (window.lucide) window.lucide.createIcons();
+                }
+            }
+        );
     });
 }
 

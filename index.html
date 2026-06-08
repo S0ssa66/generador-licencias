@@ -740,16 +740,31 @@
                     <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border-color);">
                         <span style="font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Enlaces de Entrega (Para el Correo)</span>
                         <div class="input-group">
-                            <label for="audio-link-mp3"><i data-lucide="link"></i> Enlace MP3 (Google Drive/etc.)</label>
-                            <input type="text" id="audio-link-mp3" placeholder="Enlace de descarga del MP3">
+                            <label for="audio-link-mp3"><i data-lucide="link"></i> Archivo MP3 (O enlace)</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" id="audio-link-mp3" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                                <button type="button" class="btn btn-secondary btn-upload-file" data-target="audio-link-mp3" data-accept=".mp3,audio/mpeg" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                    <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir MP3
+                                </button>
+                            </div>
                         </div>
                         <div class="input-group" style="margin-top: 8px;">
-                            <label for="audio-link-wav"><i data-lucide="link"></i> Enlace WAV (Dropbox/etc.)</label>
-                            <input type="text" id="audio-link-wav" placeholder="Enlace de descarga del WAV">
+                            <label for="audio-link-wav"><i data-lucide="link"></i> Archivo WAV (O enlace)</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" id="audio-link-wav" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                                <button type="button" class="btn btn-secondary btn-upload-file" data-target="audio-link-wav" data-accept=".wav,audio/wav,audio/x-wav" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                    <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir WAV
+                                </button>
+                            </div>
                         </div>
                         <div class="input-group" style="margin-top: 8px;">
-                            <label for="audio-link-stems"><i data-lucide="link"></i> Enlace Stems/Tracks (WeTransfer/etc.)</label>
-                            <input type="text" id="audio-link-stems" placeholder="Enlace de descarga de las pistas separadas">
+                            <label for="audio-link-stems"><i data-lucide="link"></i> Archivo Stems/Tracks (O enlace)</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" id="audio-link-stems" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                                <button type="button" class="btn btn-secondary btn-upload-file" data-target="audio-link-stems" data-accept=".zip,.rar,.tar,.gz,application/zip,application/x-zip-compressed" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                    <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir Stems
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1756,18 +1771,33 @@
                     </div>
                     
                     <div class="input-group" style="margin-bottom: 10px;">
-                        <label for="db-beat-mp3">Enlace MP3 (Google Drive)</label>
-                        <input type="text" id="db-beat-mp3" placeholder="https://drive.google.com/file/d/...">
+                        <label for="db-beat-mp3">Archivo MP3 (O enlace)</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="db-beat-mp3" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                            <button type="button" class="btn btn-secondary btn-upload-file" data-target="db-beat-mp3" data-accept=".mp3,audio/mpeg" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir MP3
+                            </button>
+                        </div>
                     </div>
-
+                    
                     <div class="input-group" style="margin-bottom: 10px;">
-                        <label for="db-beat-wav">Enlace WAV (Google Drive)</label>
-                        <input type="text" id="db-beat-wav" placeholder="https://drive.google.com/file/d/...">
+                        <label for="db-beat-wav">Archivo WAV (O enlace)</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="db-beat-wav" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                            <button type="button" class="btn btn-secondary btn-upload-file" data-target="db-beat-wav" data-accept=".wav,audio/wav,audio/x-wav" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir WAV
+                            </button>
+                        </div>
                     </div>
 
                     <div class="input-group" style="margin-bottom: 15px;">
-                        <label for="db-beat-stems">Enlace Stems/Tracks (Google Drive)</label>
-                        <input type="text" id="db-beat-stems" placeholder="https://drive.google.com/file/d/...">
+                        <label for="db-beat-stems">Archivo Stems/Tracks (O enlace)</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="db-beat-stems" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                            <button type="button" class="btn btn-secondary btn-upload-file" data-target="db-beat-stems" data-accept=".zip,.rar,.tar,.gz,application/zip,application/x-zip-compressed" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir Stems
+                            </button>
+                        </div>
                     </div>
                     
                     <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -1925,6 +1955,8 @@
             initPayPalButton();
         }
     </script>
+    <!-- Hidden shared file uploader -->
+    <input type="file" id="shared-file-uploader" style="display: none;">
 </body>
 </html>
 
