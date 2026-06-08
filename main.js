@@ -5743,7 +5743,7 @@ function initTooltips() {
 let activeUploadTarget = null;
 let activeUploadButton = null;
 
-// Inicializar la funcionalidad de subida de archivos (MP3, WAV, Stems) a Firebase Storage
+// Inicializar la funcionalidad de subida de archivos (MP3, WAV, Stems) con Google Drive como prioritario y Firebase como fallback
 function initFileUploads() {
     const fileUploader = document.getElementById('shared-file-uploader');
     if (!fileUploader) return;
@@ -5767,85 +5767,204 @@ function initFileUploads() {
     });
 
     // Escuchar el cambio en el input de archivo (cuando el usuario selecciona un archivo)
-    fileUploader.addEventListener('change', (e) => {
+    fileUploader.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file || !activeUploadTarget || !activeUploadButton) return;
 
-        const uid = window.currentUser || 'anonymous';
         const originalBtnHTML = activeUploadButton.innerHTML;
         
         // Desactivar botón y cambiar a estado de carga
         activeUploadButton.disabled = true;
         activeUploadButton.style.opacity = '0.7';
-        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... 0%`;
+        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando...`;
         if (window.lucide) window.lucide.createIcons();
 
-        // Crear una ruta única en Firebase Storage
-        const timestamp = Date.now();
-        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-        const storagePath = `users/${uid}/beats/${timestamp}_${safeName}`;
-        const fileRef = ref(storage, storagePath);
+        try {
+            // Intentar subir a Google Drive
+            const token = await getGdriveToken();
+            activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo a Drive...`;
+            
+            // Subir usando Google Drive API
+            const folderName = `${producerConfig.aka || producerConfig.name || 'BEATSS'} Licencias`;
+            const rootId = await getOrCreateDriveFolder(token, folderName);
+            const beatsFolderId = await getOrCreateDriveFolder(token, 'Beats', rootId);
 
-        // Iniciar tarea de subida
-        const uploadTask = uploadBytesResumable(fileRef, file);
-
-        uploadTask.on('state_changed', 
-            (snapshot) => {
-                const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+            // Subir con barra de progreso
+            const downloadURL = await uploadFileToDriveWithProgress(file, token, beatsFolderId, (progress) => {
                 activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
-            }, 
-            (error) => {
-                console.error("Error al subir archivo a Firebase Storage:", error);
-                showToast("Error al subir el archivo. Inténtalo de nuevo.", true);
-                
-                // Restaurar botón
-                activeUploadButton.disabled = false;
-                activeUploadButton.style.opacity = '1';
-                activeUploadButton.innerHTML = originalBtnHTML;
-                if (window.lucide) window.lucide.createIcons();
-            }, 
-            async () => {
-                try {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    
-                    // Escribir el enlace público en el input correspondiente
-                    const targetInput = document.getElementById(activeUploadTarget);
-                    if (targetInput) {
-                        targetInput.value = downloadURL;
-                        targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        
-                        // Actualizar previsualización si aplica
-                        if (typeof generatePreview === 'function') {
-                            generatePreview();
-                        }
-                    }
-                    
-                    showToast("¡Archivo subido con éxito!");
-                    
-                    // Mostrar estado exitoso brevemente
-                    activeUploadButton.disabled = false;
-                    activeUploadButton.style.opacity = '1';
-                    activeUploadButton.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
-                    if (window.lucide) window.lucide.createIcons();
-                    
-                    const btnRef = activeUploadButton;
-                    setTimeout(() => {
-                        if (btnRef.innerHTML.includes('check')) {
-                            btnRef.innerHTML = originalBtnHTML;
-                            if (window.lucide) window.lucide.createIcons();
-                        }
-                    }, 3000);
+            });
 
-                } catch (urlErr) {
-                    console.error("Error al obtener la URL del archivo:", urlErr);
-                    showToast("Error al obtener la URL de descarga.", true);
+            // Escribir el enlace público en el input correspondiente
+            const targetInput = document.getElementById(activeUploadTarget);
+            if (targetInput) {
+                targetInput.value = downloadURL;
+                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                if (typeof generatePreview === 'function') {
+                    generatePreview();
+                }
+            }
+            
+            showToast("¡Archivo guardado en Google Drive con éxito!");
+            
+            // Mostrar estado exitoso brevemente
+            activeUploadButton.disabled = false;
+            activeUploadButton.style.opacity = '1';
+            activeUploadButton.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
+            if (window.lucide) window.lucide.createIcons();
+            
+            const btnRef = activeUploadButton;
+            setTimeout(() => {
+                if (btnRef.innerHTML.includes('check')) {
+                    btnRef.innerHTML = originalBtnHTML;
+                    if (window.lucide) window.lucide.createIcons();
+                }
+            }, 3000);
+
+        } catch (driveErr) {
+            console.warn("Fallo en la subida a Google Drive, intentando fallback a Firebase Storage:", driveErr);
+            showToast("Usando Firebase Storage de respaldo...", false);
+            
+            // Fallback a Firebase Storage
+            activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... 0%`;
+            if (window.lucide) window.lucide.createIcons();
+            
+            const uid = window.currentUser || 'anonymous';
+            const timestamp = Date.now();
+            const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+            const storagePath = `users/${uid}/beats/${timestamp}_${safeName}`;
+            const fileRef = ref(storage, storagePath);
+
+            const uploadTask = uploadBytesResumable(fileRef, file);
+
+            uploadTask.on('state_changed', 
+                (snapshot) => {
+                    const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                    activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
+                }, 
+                (fbErr) => {
+                    console.error("Error al subir a Firebase Storage:", fbErr);
+                    showToast("Error al subir el archivo.", true);
                     activeUploadButton.disabled = false;
                     activeUploadButton.style.opacity = '1';
                     activeUploadButton.innerHTML = originalBtnHTML;
                     if (window.lucide) window.lucide.createIcons();
+                }, 
+                async () => {
+                    try {
+                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                        const targetInput = document.getElementById(activeUploadTarget);
+                        if (targetInput) {
+                            targetInput.value = downloadURL;
+                            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                            if (typeof generatePreview === 'function') {
+                                generatePreview();
+                            }
+                        }
+                        showToast("¡Archivo guardado en Firebase Storage!");
+                        activeUploadButton.disabled = false;
+                        activeUploadButton.style.opacity = '1';
+                        activeUploadButton.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
+                        if (window.lucide) window.lucide.createIcons();
+                        
+                        const btnRef = activeUploadButton;
+                        setTimeout(() => {
+                            if (btnRef.innerHTML.includes('check')) {
+                                btnRef.innerHTML = originalBtnHTML;
+                                if (window.lucide) window.lucide.createIcons();
+                            }
+                        }, 3000);
+                    } catch (urlErr) {
+                        console.error("Error al obtener la URL del archivo:", urlErr);
+                        showToast("Error al obtener la URL de descarga.", true);
+                        activeUploadButton.disabled = false;
+                        activeUploadButton.style.opacity = '1';
+                        activeUploadButton.innerHTML = originalBtnHTML;
+                        if (window.lucide) window.lucide.createIcons();
+                    }
                 }
-            }
-        );
+            );
+        }
+    });
+}
+
+// Subir un archivo binario a Google Drive usando XMLHttpRequest para monitorear el progreso
+async function uploadFileToDriveWithProgress(file, token, folderId, onProgress) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name');
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+        // Construir la petición multipart estructurada
+        const boundary = '-------314159265358979323846';
+        const delimiter = "\r\n--" + boundary + "\r\n";
+        const close_delim = "\r\n--" + boundary + "--";
+
+        const metadata = {
+            name: file.name,
+            parents: [folderId]
+        };
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const fileData = e.target.result;
+            const contentType = file.type || 'application/octet-stream';
+            
+            const metadataPart = 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata) + '\r\n';
+            const mediaPart = 'Content-Type: ' + contentType + '\r\n\r\n';
+
+            // Combinar partes en binario
+            const ui8Metadata = new TextEncoder().encode(delimiter + metadataPart + delimiter + mediaPart);
+            const ui8Close = new TextEncoder().encode(close_delim);
+            
+            const combined = new Uint8Array(ui8Metadata.length + fileData.byteLength + ui8Close.length);
+            combined.set(ui8Metadata, 0);
+            combined.set(new Uint8Array(fileData), ui8Metadata.length);
+            combined.set(ui8Close, ui8Metadata.length + fileData.byteLength);
+
+            xhr.setRequestHeader('Content-Type', 'multipart/related; boundary=' + boundary);
+
+            // Reportar progreso
+            xhr.upload.addEventListener('progress', (event) => {
+                if (event.lengthComputable) {
+                    const percent = Math.round((event.loaded / event.total) * 100);
+                    if (onProgress) onProgress(percent);
+                }
+            });
+
+            xhr.onreadystatechange = async () => {
+                if (xhr.readyState === 4) {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            const resJson = JSON.parse(xhr.responseText);
+                            const fileId = resJson.id;
+                            
+                            // Hacer el archivo público para que cualquiera pueda descargarlo
+                            await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ type: 'anyone', role: 'reader' })
+                            });
+
+                            const shareLink = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+                            resolve(shareLink);
+                        } catch (err) {
+                            reject(new Error("Error al hacer el archivo público o parsear la respuesta: " + err.message));
+                        }
+                    } else {
+                        reject(new Error(`Error de subida a Google Drive (HTTP ${xhr.status}): ${xhr.responseText}`));
+                    }
+                }
+            };
+
+            xhr.send(combined);
+        };
+        
+        reader.onerror = function(err) {
+            reject(err);
+        };
+
+        reader.readAsArrayBuffer(file);
     });
 }
 
