@@ -4565,11 +4565,15 @@ async function uploadToGoogleDrive(dataUri, filename) {
     const fileId = fileData.id;
 
     // Hacer el archivo público (cualquiera con el link puede verlo)
-    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'anyone', role: 'reader' })
-    });
+    try {
+        await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'anyone', role: 'reader' })
+        });
+    } catch (permErr) {
+        console.warn("No se pudieron cambiar los permisos del archivo en Google Drive (posible restricción de la cuenta):", permErr);
+    }
 
     const shareLink = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
     console.log('☁️ Subido a Google Drive:', shareLink);
@@ -6010,11 +6014,15 @@ async function uploadFileToDriveWithProgress(file, token, folderId, onProgress) 
                             const fileId = resJson.id;
                             
                             // Hacer el archivo público para que cualquiera pueda descargarlo
-                            await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
-                                method: 'POST',
-                                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ type: 'anyone', role: 'reader' })
-                            });
+                            try {
+                                await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+                                    method: 'POST',
+                                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ type: 'anyone', role: 'reader' })
+                                });
+                            } catch (permErr) {
+                                console.warn("No se pudieron cambiar los permisos del archivo en Google Drive (posible restricción de la cuenta):", permErr);
+                            }
 
                             const shareLink = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
                             resolve(shareLink);
