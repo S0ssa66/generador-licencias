@@ -820,7 +820,17 @@ async function loadProducerConfig() {
     document.getElementById('cfg-emailjs-public-key').value = producerConfig.emailjsPublicKey || "";
     document.getElementById('cfg-gdrive-client-id').value = producerConfig.gdriveClientId || "";
     if (document.getElementById('cfg-storage-provider')) {
-        document.getElementById('cfg-storage-provider').value = producerConfig.storageProvider || "gdrive";
+        document.getElementById('cfg-storage-provider').value = producerConfig.storageProvider || "gdrive-central";
+    }
+    
+    // Toggle de campos de admin
+    const adminFields = document.querySelectorAll('.admin-only-field');
+    adminFields.forEach(el => {
+        el.style.display = window.currentUserIsAdmin ? 'block' : 'none';
+    });
+
+    if (window.currentUserIsAdmin) {
+        loadPlatformGDriveStatus();
     }
     
     // Rellenar firma manual
@@ -1697,6 +1707,12 @@ function setupEventListeners() {
     document.getElementById('btn-cancel-settings').addEventListener('click', closeSettingsModal);
     document.getElementById('btn-save-settings').addEventListener('click', saveProducerConfig);
     document.getElementById('btn-export-backup').addEventListener('click', exportBackup);
+    
+    // Vinculación de Google Drive Central (Admin)
+    const btnLinkCentralGDrive = document.getElementById('btn-link-central-gdrive');
+    if (btnLinkCentralGDrive) {
+        btnLinkCentralGDrive.addEventListener('click', initPlatformGDriveOAuth);
+    }
 
     // Evento Canjear Código VIP
     const btnRedeemVip = document.getElementById('btn-redeem-vip');
@@ -4468,6 +4484,120 @@ async function dataURLtoBlob(dataurl) {
 // INTEGRACIÓN GOOGLE DRIVE
 // ============================================================
 
+// Cargar estado de la cuenta central de Google Drive (Admin)
+async function loadPlatformGDriveStatus() {
+    const statusEl = document.getElementById('cfg-gdrive-central-status');
+    if (!statusEl) return;
+    statusEl.textContent = 'Verificando estado...';
+    try {
+        const idToken = await auth.currentUser.getIdToken();
+        const res = await fetch('/api/gdrive-status', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.linked) {
+            statusEl.innerHTML = `<span style="color: #48bb78; font-weight: 600;">✓ Vinculado a:</span> ${data.email}`;
+            // Rellenar Client ID si está vacío
+            const idInput = document.getElementById('cfg-gdrive-client-id');
+            if (idInput && !idInput.value.trim()) {
+                idInput.value = data.clientId || '';
+            }
+            const secretInput = document.getElementById('cfg-gdrive-client-secret');
+            if (secretInput) {
+                secretInput.placeholder = '•••••••••••••••••••••••• (Guardado)';
+            }
+        } else {
+            statusEl.innerHTML = `<span style="color: #e53e3e; font-weight: 600;">✗ No vinculado</span>`;
+        }
+    } catch (e) {
+        console.error('Error al cargar estado de Drive Central:', e);
+        statusEl.textContent = 'Error al obtener estado.';
+    }
+}
+
+// Iniciar flujo de vinculación OAuth (Admin)
+function initPlatformGDriveOAuth() {
+    const clientId = document.getElementById('cfg-gdrive-client-id').value.trim();
+    const clientSecret = document.getElementById('cfg-gdrive-client-secret').value.trim();
+    if (!clientId) {
+        showToast('Por favor, ingresa el Client ID para vincular.', true);
+        return;
+    }
+    
+    showToast('☁️ Abriendo ventana de Google para vinculación central...');
+    
+    const client = google.accounts.oauth2.initCodeClient({
+        client_id: clientId,
+        scope: 'https://www.googleapis.com/auth/drive.file',
+        ux_mode: 'popup',
+        callback: async (response) => {
+            if (response.error) {
+                showToast('Error de Google: ' + response.error, true);
+                return;
+            }
+            const code = response.code;
+            
+            // Mostrar cargando
+            const statusEl = document.getElementById('cfg-gdrive-central-status');
+            if (statusEl) statusEl.textContent = 'Guardando vinculación en el servidor...';
+            
+            try {
+                const idToken = await auth.currentUser.getIdToken();
+                const res = await fetch('/api/gdrive-setup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        clientId: clientId,
+                        clientSecret: clientSecret
+                    })
+                });
+                const resData = await res.json();
+                if (res.ok && resData.success) {
+                    showToast(`¡Google Drive Central vinculado con éxito a ${resData.email}!`);
+                    loadPlatformGDriveStatus();
+                } else {
+                    showToast('Error al vincular: ' + (resData.error || 'error desconocido'), true);
+                    loadPlatformGDriveStatus();
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Error de red al conectar con el servidor', true);
+                loadPlatformGDriveStatus();
+            }
+        }
+    });
+    client.requestCode();
+}
+
+// Obtener token de acceso para la cuenta central de Google Drive de Sossa
+async function getCentralGdriveToken() {
+    const cachedToken = sessionStorage.getItem('gdrive_central_access_token');
+    const expiry = parseInt(sessionStorage.getItem('gdrive_central_token_expiry') || '0', 10);
+    if (cachedToken && Date.now() < expiry - 60000) return cachedToken;
+
+    try {
+        const idToken = await auth.currentUser.getIdToken();
+        const res = await fetch('/api/gdrive-token', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            sessionStorage.setItem('gdrive_central_access_token', data.accessToken);
+            sessionStorage.setItem('gdrive_central_token_expiry', String(Date.now() + data.expiresIn * 1000));
+            return data.accessToken;
+        } else {
+            throw new Error(data.error || 'Error al obtener token central');
+        }
+    } catch (e) {
+        console.error('Error en getCentralGdriveToken:', e);
+        throw new Error('No se pudo autenticar con el Google Drive de la plataforma: ' + e.message);
+    }
+}
+
 // Obtener token de acceso de Google Drive (abre popup si es necesario)
 async function getGdriveToken() {
     const cachedToken = sessionStorage.getItem('gdrive_access_token');
@@ -5876,8 +6006,17 @@ function initFileUploads() {
             if (producerConfig.storageProvider === 'alternative') {
                 throw new Error("Preferencia de almacenamiento establecida a servidores alternativos.");
             }
-            // Intentar subir a Google Drive
-            const token = await getGdriveToken();
+            
+            let token;
+            if (producerConfig.storageProvider === 'gdrive-central') {
+                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Central...`;
+                if (window.lucide) window.lucide.createIcons();
+                token = await getCentralGdriveToken();
+            } else {
+                // Google Drive Personal (abrir popup)
+                token = await getGdriveToken();
+            }
+            
             activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo a Drive...`;
             
             // Subir usando Google Drive API

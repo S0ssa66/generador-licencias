@@ -1767,17 +1767,29 @@
                   </div>
                   <!-- Configuración de Google Drive -->
                   <hr style="border: none; border-top: 1px solid var(--border-color); margin: 8px 0;">
-                  <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.8px;">☁️ Google Drive (Almacenamiento de PDFs)</div>
+                  <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.8px;">☁️ Google Drive</div>
                   <div class="input-group">
                       <label for="cfg-gdrive-client-id">Google Drive Client ID</label>
                       <input type="text" id="cfg-gdrive-client-id" placeholder="xxxxxx.apps.googleusercontent.com">
                   </div>
+                  <div class="input-group admin-only-field" id="cfg-gdrive-client-secret-container" style="display: none; margin-top: 8px;">
+                      <label for="cfg-gdrive-client-secret">Google Drive Client Secret (Admin)</label>
+                      <input type="password" id="cfg-gdrive-client-secret" placeholder="••••••••••••••••••••••••">
+                  </div>
                   <div class="input-group" style="margin-top: 8px;">
                       <label for="cfg-storage-provider">Almacenamiento Preferido para Beats</label>
                       <select id="cfg-storage-provider" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 13px; height: 38px; cursor: pointer; outline: none; box-sizing: border-box;">
-                          <option value="gdrive">☁️ Google Drive (Sincronización con tu Cuenta)</option>
+                          <option value="gdrive-central">🏢 Google Drive de la Plataforma (SaaS - Sin Login)</option>
+                          <option value="gdrive">☁️ Google Drive Personal (Requiere Login)</option>
                           <option value="alternative">🚀 Servidores Alternativos (Carga rápida sin login)</option>
                       </select>
+                  </div>
+                  <div class="input-group admin-only-field" id="cfg-gdrive-link-container" style="display: none; margin-top: 12px; border: 1px dashed var(--border-color); padding: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.01); box-sizing: border-box;">
+                      <label style="font-weight: 600; margin-bottom: 4px;">Vincular Google Drive Central (SaaS)</label>
+                      <div id="cfg-gdrive-central-status" style="font-size: 11px; color: #8a91a6; margin-bottom: 8px; line-height: 1.4;">Estado: cargando...</div>
+                      <button type="button" id="btn-link-central-gdrive" class="btn btn-secondary" style="width: 100%; height: 36px; font-size: 12px; justify-content: center; gap: 4px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: #fff; border-radius: 8px; cursor: pointer;">
+                          <i data-lucide="link" style="width: 14px; height: 14px;"></i> Vincular Google Drive Central
+                      </button>
                   </div>
                   <div style="font-size: 11px; color: #8a91a6; margin-top: 6px; line-height: 1.4; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); box-sizing: border-box;">
                       ℹ️ <strong>Ayuda de Google Drive:</strong> Si la autorización de Google falla (ej. origin_mismatch), ingresa a tu Consola de Google Cloud y agrega <code>https://generador-licencias.vercel.app</code> a <em>"Orígenes de JavaScript autorizados"</em> de tu Client ID. Si prefieres no configurarlo, selecciona <strong>Servidores Alternativos</strong>.
