@@ -29,6 +29,12 @@
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-title: 'Outfit', sans-serif;
     --font-serif: 'Playfair Display', Georgia, Cambria, serif;
+    
+    /* Variables de diseño del contrato PDF */
+    --contract-accent: #1e293b;
+    --contract-quote-bg: rgba(30, 41, 59, 0.04);
+    --contract-badge-bg: rgba(30, 41, 59, 0.08);
+    --contract-badge-border: rgba(30, 41, 59, 0.15);
 }
 
 body.light-theme {
@@ -63,6 +69,55 @@ body.theme-cgmonarco .btn-primary:hover {
 }
 body.light-theme.theme-cgmonarco {
     --border-focus: #e60000;
+}
+
+/* Theme overrides for Sossa (Purple) */
+body.theme-sossa {
+    --accent: #a855f7;
+    --accent-gradient: linear-gradient(135deg, #a855f7 0%, #c084fc 100%);
+    --accent-hover: #9333ea;
+    --border-focus: #a855f7;
+}
+body.theme-sossa .btn-primary {
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
+}
+body.theme-sossa .btn-primary:hover {
+    box-shadow: 0 6px 16px rgba(168, 85, 247, 0.35);
+}
+body.light-theme.theme-sossa {
+    --border-focus: #a855f7;
+}
+
+/* Temas dinámicos de contrato (Sossa / Monarco / Personalizados) */
+body.theme-sossa, body.contract-theme-purple {
+    --contract-accent: #7c3aed;
+    --contract-quote-bg: rgba(124, 58, 237, 0.04);
+    --contract-badge-bg: rgba(124, 58, 237, 0.08);
+    --contract-badge-border: rgba(124, 58, 237, 0.18);
+}
+body.theme-cgmonarco, body.contract-theme-red {
+    --contract-accent: #dc2626;
+    --contract-quote-bg: rgba(220, 38, 38, 0.04);
+    --contract-badge-bg: rgba(220, 38, 38, 0.08);
+    --contract-badge-border: rgba(220, 38, 38, 0.18);
+}
+body.contract-theme-blue {
+    --contract-accent: #2563eb;
+    --contract-quote-bg: rgba(37, 99, 235, 0.04);
+    --contract-badge-bg: rgba(37, 99, 235, 0.08);
+    --contract-badge-border: rgba(37, 99, 235, 0.18);
+}
+body.contract-theme-charcoal {
+    --contract-accent: #334155;
+    --contract-quote-bg: rgba(51, 65, 85, 0.04);
+    --contract-badge-bg: rgba(51, 65, 85, 0.08);
+    --contract-badge-border: rgba(51, 65, 85, 0.18);
+}
+body.contract-theme-gold {
+    --contract-accent: #b45309;
+    --contract-quote-bg: rgba(180, 83, 9, 0.04);
+    --contract-badge-bg: rgba(180, 83, 9, 0.08);
+    --contract-badge-border: rgba(180, 83, 9, 0.18);
 }
 
 /* Reset y Estilos Generales */
@@ -713,14 +768,14 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 }
 
 .paper h2, .contract-doc h2 {
-    font-family: var(--font-sans);
-    font-size: 14px;
-    margin-top: 24px;
+    font-family: var(--font-title);
+    font-size: 13.5px;
+    margin-top: 28px;
     margin-bottom: 16px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #e60000;
-    border-bottom: 1px solid #e5e5ea;
+    letter-spacing: 0.8px;
+    color: var(--contract-accent);
+    border-bottom: 2px solid var(--contract-badge-border);
     padding-bottom: 6px;
     text-align: left;
     font-weight: 700;
@@ -728,10 +783,10 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 
 .paper h3, .contract-doc h3 {
     font-family: var(--font-title);
-    font-size: 12.5px;
+    font-size: 12px;
     text-align: left;
     margin-top: 20px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     color: #1c1c1e;
     font-weight: 700;
 }
@@ -743,7 +798,7 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 
 .paper hr, .contract-doc hr {
     border: none;
-    border-top: 1px solid #e5e5ea;
+    border-top: 1px solid var(--contract-badge-border);
     margin: 20px 0;
 }
 
@@ -763,27 +818,26 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 }
 
 .paper blockquote, .contract-doc blockquote {
-    border-left: 3px solid #e60000;
-    padding-left: 14px;
+    border-left: 4px solid var(--contract-accent);
+    padding: 12px 16px;
     font-style: italic;
-    color: #48484a;
-    margin: 12px 0 12px 14px;
-    background-color: #fff8f8;
-    padding: 10px 14px;
-    border-radius: 0 6px 6px 0;
+    color: #2c2c2e;
+    margin: 16px 0;
+    background-color: var(--contract-quote-bg);
+    border-radius: 0 8px 8px 0;
 }
 
 /* Estilo para Markdown en papel */
 .paper pre {
-    background-color: #f1f2f6;
+    background-color: #f8f9fa;
     color: #2c2c2e;
     padding: 16px;
-    border-radius: 6px;
+    border-radius: 8px;
     font-family: 'Courier New', Courier, monospace;
     font-size: 12px;
     white-space: pre-wrap;
     text-align: left;
-    border: 1px solid #e5e5ea;
+    border: 1px solid var(--contract-badge-border);
     width: 100%;
     overflow-x: auto;
 }
@@ -791,7 +845,7 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 /* Clases específicas para el rediseño premium del PDF */
 .contract-doc {
     position: relative;
-    border-top: 6px solid #e60000;
+    border-top: 6px solid var(--contract-accent);
     padding-top: 10px;
     background-color: #ffffff;
     color: #2c2c2e;
@@ -897,21 +951,21 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 }
 
 .doc-meta-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
     margin: 24px 0;
-    padding: 16px;
+    padding: 18px;
     background-color: #f8f9fa;
-    border-left: 4px solid #e60000;
-    border-radius: 6px;
-    border-top: 1px solid #e5e5ea;
-    border-right: 1px solid #e5e5ea;
-    border-bottom: 1px solid #e5e5ea;
+    border-top: 3px solid var(--contract-accent);
+    border-radius: 8px;
+    border-left: 1px solid var(--contract-badge-border);
+    border-right: 1px solid var(--contract-badge-border);
+    border-bottom: 1px solid var(--contract-badge-border);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
 .meta-item {
-    flex: 1 1 200px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -919,7 +973,7 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 
 .meta-label {
     font-family: var(--font-title);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     color: #8e8e93;
     text-transform: uppercase;
@@ -927,13 +981,13 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 }
 
 .meta-value {
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
     color: #1c1c1e;
 }
 
 .meta-value.highlight {
-    color: #e60000;
+    color: var(--contract-accent);
 }
 
 .parties-container {
@@ -944,39 +998,41 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 
 .party-box {
     flex: 1;
-    padding: 16px;
+    padding: 18px;
     background-color: #ffffff;
-    border: 1px solid #e5e5ea;
+    border: 1px solid var(--contract-badge-border);
+    border-top: 3px solid var(--contract-accent);
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.01);
 }
 
 .party-role {
     font-family: var(--font-title);
-    font-size: 10px;
-    font-weight: 700;
-    color: #e60000;
+    font-size: 9px;
+    font-weight: 750;
+    color: var(--contract-accent);
     text-transform: uppercase;
     letter-spacing: 0.8px;
     margin-bottom: 8px;
 }
 
 .party-name {
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 700;
     color: #1c1c1e;
     margin-bottom: 4px;
 }
 
 .party-aka {
-    font-size: 12px;
+    font-size: 11.5px;
     color: #48484a;
     margin-bottom: 8px;
+    font-style: italic;
 }
 
 .party-contact {
     font-size: 11px;
-    color: #8e8e93;
+    color: #626475;
     line-height: 1.4;
 }
 
@@ -984,20 +1040,20 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     width: 100%;
     border-collapse: collapse;
     margin: 20px 0;
-    font-size: 12.5px;
+    font-size: 12px;
     text-align: left;
 }
 
 .limits-table th, .limits-table td {
-    padding: 12px 14px;
-    border-bottom: 1px solid #e5e5ea;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--contract-badge-border);
 }
 
 .limits-table th {
     background-color: #f8f9fa;
     font-family: var(--font-title);
     font-weight: 700;
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #48484a;
@@ -1012,20 +1068,20 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 }
 
 .limit-badge {
-    background-color: #fff0f0;
-    color: #e60000;
+    background-color: var(--contract-badge-bg);
+    color: var(--contract-accent);
     padding: 2px 8px;
     border-radius: 4px;
     font-weight: 600;
-    font-size: 11.5px;
-    border: 1px solid rgba(230, 0, 0, 0.12);
+    font-size: 11px;
+    border: 1px solid var(--contract-badge-border);
     display: inline-block;
 }
 
 .signature-section {
     display: flex;
     justify-content: center;
-    gap: 50px;
+    gap: 40px;
     margin-top: 40px;
     page-break-inside: avoid;
 }
@@ -1039,26 +1095,26 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 }
 
 .signature-img-wrap {
-    height: 90px;
+    height: 80px;
     width: 100%;
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    margin-bottom: -10px;
+    margin-bottom: -5px;
 }
 
 .signature-img {
-    max-height: 110px;
-    max-width: 220px;
+    max-height: 90px;
+    max-width: 200px;
     object-fit: contain;
     mix-blend-mode: multiply;
 }
 
 .signature-line {
     width: 100%;
-    border-top: 1px solid #8e8e93;
+    border-top: 1px solid var(--contract-badge-border);
     margin-top: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .signature-role {
@@ -1092,25 +1148,45 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 }
 
 .digital-seal {
-    border: 2px dashed #e60000;
-    color: #e60000;
-    padding: 8px 16px;
+    border: 2px solid var(--contract-accent);
+    outline: 1px dashed var(--contract-accent);
+    outline-offset: -4px;
+    color: var(--contract-accent);
+    padding: 12px 24px;
     font-family: var(--font-title);
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 800;
     text-transform: uppercase;
-    border-radius: 4px;
-    display: inline-block;
-    transform: rotate(-1.5deg);
-    background-color: rgba(230, 0, 0, 0.02);
-    line-height: 1.3;
-    text-align: center;
+    letter-spacing: 1.5px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    background-color: #f8f9fa;
 }
 
-.digital-seal strong {
-    color: #e60000 !important;
-    display: block;
-    font-size: 12px;
+.seal-icon {
+    font-size: 18px;
+    font-weight: 900;
+    background: var(--contract-accent);
+    color: #fff;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.seal-text {
+    line-height: 1.4;
+    text-align: left;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    text-transform: none;
+    color: #2c2c2e;
 }
 
 /* ==========================================================================
@@ -2400,5 +2476,18 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
         max-height: none;
     }
 }
+
+/* Botones para borrar inputs de subida */
+.btn-clear-input {
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+.btn-clear-input:hover {
+    color: #ffffff !important;
+    transform: scale(1.1);
+}
+.btn-clear-input:active {
+    transform: scale(0.9);
+}
+
 
 

@@ -118,6 +118,12 @@ function checkPlanLimitExceeded(actionName = 'generar una nueva licencia') {
 function updatePlanUI() {
     window.currentUserIsPro = (producerConfig && (producerConfig.plan === 'pro' || producerConfig.plan === 'elite')) || window.currentUserIsAdmin;
     
+    // Aplicar tema de color al contrato PDF
+    document.body.classList.remove('contract-theme-purple', 'contract-theme-red', 'contract-theme-blue', 'contract-theme-charcoal', 'contract-theme-gold');
+    if (window.currentUserIsPro && producerConfig && producerConfig.contractColor && producerConfig.contractColor !== 'default') {
+        document.body.classList.add(`contract-theme-${producerConfig.contractColor}`);
+    }
+    
     const container = document.getElementById('plan-badge-container');
     if (container) {
         if (producerConfig && producerConfig.plan === 'elite') {
@@ -822,6 +828,9 @@ async function loadProducerConfig() {
     if (document.getElementById('cfg-storage-provider')) {
         document.getElementById('cfg-storage-provider').value = producerConfig.storageProvider || "gdrive-central";
     }
+    if (document.getElementById('cfg-contract-color')) {
+        document.getElementById('cfg-contract-color').value = producerConfig.contractColor || "default";
+    }
     
     // Toggle de campos de admin
     const adminFields = document.querySelectorAll('.admin-only-field');
@@ -921,6 +930,9 @@ async function saveProducerConfig() {
     producerConfig.gdriveClientId = document.getElementById('cfg-gdrive-client-id').value.trim();
     if (document.getElementById('cfg-storage-provider')) {
         producerConfig.storageProvider = document.getElementById('cfg-storage-provider').value;
+    }
+    if (document.getElementById('cfg-contract-color')) {
+        producerConfig.contractColor = document.getElementById('cfg-contract-color').value;
     }
     // Si cambió el Client ID, limpiar token cacheado de Drive
     if (producerConfig.gdriveClientId !== (JSON.parse(localStorage.getItem(`${window.currentUser}_producer_config`) || '{}').gdriveClientId || '')) {
@@ -2087,6 +2099,7 @@ function setupEventListeners() {
                     method: method,
                     reference: ref,
                     status: 'pending',
+                    plan: window.selectedPaymentPlan || 'pro',
                     receiptUrl: currentUploadedReceiptBase64,
                     timestamp: new Date().toISOString()
                 };
@@ -4508,6 +4521,10 @@ async function loadPlatformGDriveStatus() {
             }
         } else {
             statusEl.innerHTML = `<span style="color: #e53e3e; font-weight: 600;">✗ No vinculado</span>`;
+            const secretInput = document.getElementById('cfg-gdrive-client-secret');
+            if (secretInput) {
+                secretInput.placeholder = 'Ingresa el Client Secret de Google Cloud';
+            }
         }
     } catch (e) {
         console.error('Error al cargar estado de Drive Central:', e);
@@ -4520,7 +4537,11 @@ function initPlatformGDriveOAuth() {
     const clientId = document.getElementById('cfg-gdrive-client-id').value.trim();
     const clientSecret = document.getElementById('cfg-gdrive-client-secret').value.trim();
     if (!clientId) {
-        showToast('Por favor, ingresa el Client ID para vincular.', true);
+        showToast('Por favor, ingresa el Client ID de Google para vincular.', true);
+        return;
+    }
+    if (!clientSecret) {
+        showToast('Por favor, ingresa el Client Secret de Google para vincular.', true);
         return;
     }
     
@@ -5724,7 +5745,7 @@ function openBeatForm(editId = null) {
     document.getElementById('beat-form-container').style.display = 'block';
     
     if (editId) {
-        const beat = localBeats.find(b => b.id === editId);
+        const beat = localBeats.find(b => String(b.id) === String(editId));
         if (beat) {
             document.getElementById('beat-form-title').innerText = 'Editar Beat';
             document.getElementById('edit-beat-id').value = beat.id;
@@ -5751,6 +5772,7 @@ function openBeatForm(editId = null) {
         document.getElementById('db-beat-genre').value = '';
         document.getElementById('db-beat-tags').value = '';
     }
+    updateClearButtonsVisibility();
 }
 
 function closeBeatForm() {
@@ -5822,7 +5844,7 @@ async function saveBeat() {
 // Eliminar Beat (con Firestore sync)
 async function deleteBeat(id) {
     if (confirm('¿Estás seguro de que deseas eliminar este beat?')) {
-        localBeats = localBeats.filter(b => b.id !== id);
+        localBeats = localBeats.filter(b => String(b.id) !== String(id));
         try {
             safeSetItem(`${window.currentUser}_beats`, JSON.stringify(localBeats));
             
@@ -5847,7 +5869,7 @@ async function deleteBeat(id) {
 
 // Auto-llenar campos del formulario principal
 function selectBeat(id) {
-    const beat = localBeats.find(b => b.id === id);
+    const beat = localBeats.find(b => String(b.id) === String(id));
     if (!beat) return;
 
     document.getElementById('beat-name').value = beat.name;
@@ -5945,6 +5967,7 @@ function renderBeatsList() {
 document.addEventListener('DOMContentLoaded', () => {
     initTooltips();
     initFileUploads();
+    initClearInputHandlers();
     setupAdminPlanModalEvents();
     document.getElementById('btn-close-progress')?.addEventListener('click', () => {
         document.getElementById('email-progress-modal').style.display = 'none';
@@ -6096,6 +6119,72 @@ function initFileUploads() {
                 activeUploadButton.style.opacity = '1';
                 activeUploadButton.innerHTML = originalBtnHTML;
                 if (window.lucide) window.lucide.createIcons();
+            }
+        }
+    });
+}
+
+// Inicializar manejadores para borrar y volver a elegir archivos
+function initClearInputHandlers() {
+    // Escuchar el click en los botones de limpiar
+    document.querySelectorAll('.btn-clear-input').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = btn.getAttribute('data-target');
+            const input = document.getElementById(targetId);
+            if (input) {
+                input.value = '';
+                // Disparar eventos para actualizar cualquier vista/previsualización vinculada
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            btn.style.display = 'none';
+        });
+    });
+
+    // Escuchar cambios en los inputs para mostrar/ocultar los botones dinámicamente
+    const targets = [
+        'tab-db-beat-mp3', 'tab-db-beat-wav', 'tab-db-beat-stems', 'tab-db-beat-artwork',
+        'db-beat-mp3', 'db-beat-wav', 'db-beat-stems', 'db-beat-artwork',
+        'audio-link-mp3', 'audio-link-wav', 'audio-link-stems'
+    ];
+    targets.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            const btn = document.querySelector(`.btn-clear-input[data-target="${id}"]`);
+            if (btn) {
+                const checkVisibility = () => {
+                    if (input.value.trim() !== '') {
+                        btn.style.display = 'flex';
+                    } else {
+                        btn.style.display = 'none';
+                    }
+                };
+                input.addEventListener('input', checkVisibility);
+                input.addEventListener('change', checkVisibility);
+            }
+        }
+    });
+    
+    // Ejecutar verificación inicial
+    updateClearButtonsVisibility();
+}
+
+// Actualizar la visibilidad de todos los botones de limpiar según si sus inputs tienen contenido
+function updateClearButtonsVisibility() {
+    const targets = [
+        'tab-db-beat-mp3', 'tab-db-beat-wav', 'tab-db-beat-stems', 'tab-db-beat-artwork',
+        'db-beat-mp3', 'db-beat-wav', 'db-beat-stems', 'db-beat-artwork',
+        'audio-link-mp3', 'audio-link-wav', 'audio-link-stems'
+    ];
+    targets.forEach(id => {
+        const input = document.getElementById(id);
+        const btn = document.querySelector(`.btn-clear-input[data-target="${id}"]`);
+        if (input && btn) {
+            if (input.value.trim() !== '') {
+                btn.style.display = 'flex';
+            } else {
+                btn.style.display = 'none';
             }
         }
     });
@@ -7377,6 +7466,11 @@ async function loadPendingPaymentsAdmin() {
                         ${pay.aka || 'N/A'}
                     </td>
                     <td style="padding: 12px 10px; color: #cbd5e0; font-size: 13px;">
+                        <span style="display:inline-block; padding: 2px 8px; border-radius: 100px; font-size: 10px; font-weight: 700; text-transform: uppercase; background: ${pay.plan === 'elite' ? 'rgba(236,72,153,0.15)' : 'rgba(168,85,247,0.15)'}; color: ${pay.plan === 'elite' ? '#ec4899' : '#a855f7'}; border: 1px solid ${pay.plan === 'elite' ? 'rgba(236,72,153,0.3)' : 'rgba(168,85,247,0.3)'};">
+                            ${pay.plan ? pay.plan.toUpperCase() : 'PRO'}
+                        </span>
+                    </td>
+                    <td style="padding: 12px 10px; color: #cbd5e0; font-size: 13px;">
                         ${pay.method || 'N/A'}
                     </td>
                     <td style="padding: 12px 10px; font-family: monospace; font-size: 12px; color: #a0aec0;">
@@ -7429,19 +7523,33 @@ window.viewReceiptLarge = function(receiptUrl) {
 };
 
 window.approvePaymentAdmin = async function(paymentId, userId, userEmail) {
-    if (!confirm(`¿Estás seguro de aprobar este pago y activar el Plan Pro para ${userEmail}?`)) return;
+    if (!confirm(`¿Estás seguro de aprobar este pago y activar la suscripción del usuario?`)) return;
     
     try {
-        // 1. Actualizar el plan del usuario en Firestore a 'pro' en su config
+        // 1. Obtener detalles del pago para saber qué plan se solicitó
+        const paymentDocRef = doc(db, "payments", paymentId);
+        const paymentSnap = await getDoc(paymentDocRef);
+        const paymentData = paymentSnap.exists() ? paymentSnap.data() : {};
+        const targetPlan = paymentData.plan || 'pro';
+        
+        // 2. Actualizar el plan del usuario en Firestore en su config
         const configDocRef = doc(db, "users", userId, "config", "producer");
         const docSnap = await getDoc(configDocRef);
         
+        const now = new Date();
+        const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        
         let newConfig = {};
         if (docSnap.exists()) {
-            newConfig = { ...docSnap.data(), plan: 'pro' };
+            newConfig = { 
+                ...docSnap.data(), 
+                plan: targetPlan, 
+                expirationPro: thirtyDaysLater.toISOString() 
+            };
         } else {
             newConfig = {
-                plan: 'pro',
+                plan: targetPlan,
+                expirationPro: thirtyDaysLater.toISOString(),
                 name: "Productor",
                 email: userEmail,
                 aka: "Productor"
@@ -7450,14 +7558,20 @@ window.approvePaymentAdmin = async function(paymentId, userId, userEmail) {
         
         await setDoc(configDocRef, newConfig);
         
-        // 2. Actualizar el estado del pago en la colección payments a 'approved'
-        const paymentDocRef = doc(db, "payments", paymentId);
+        // 3. Actualizar en el documento raíz del usuario
+        const userRef = doc(db, "users", userId);
+        await setDoc(userRef, {
+            plan: targetPlan,
+            planActivatedAt: now.toISOString(),
+        }, { merge: true });
+        
+        // 4. Actualizar el estado del pago en la colección payments a 'approved'
         await updateDoc(paymentDocRef, {
             status: 'approved',
-            approvedAt: new Date().toISOString()
+            approvedAt: now.toISOString()
         });
         
-        alert(`Plan Pro activado con éxito para ${userEmail}.`);
+        alert(`Plan ${targetPlan.toUpperCase()} activado con éxito para ${userEmail}.`);
         
         // 3. Recargar datos del panel admin
         await loadPendingPaymentsAdmin();
@@ -7493,6 +7607,9 @@ window.selectBeat = selectBeat;
 window.openBeatForm = openBeatForm;
 window.deleteBeat = deleteBeat;
 window.closeSettingsModal = closeSettingsModal;
+window.openTabBeatForm = openTabBeatForm;
+window.selectBeatForContract = selectBeatForContract;
+window.togglePlayBeat = togglePlayBeat;
 
 // Cargar datos del programa de referidos del usuario
 async function loadReferralData() {
@@ -8154,7 +8271,7 @@ function renderBeatsGrid() {
                 </div>
             </div>
             
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; cursor: pointer;" onclick="openTabBeatForm('${beat.id}')">
                 <div style="font-weight: 700; font-size: 14px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${beat.name}">${beat.name}</div>
                 <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                     ${detailsHtml}
@@ -8195,7 +8312,7 @@ function openTabBeatForm(editId = null) {
     document.getElementById('tab-beat-form-fields').style.display = 'block';
 
     if (editId) {
-        const beat = localBeats.find(b => b.id === editId);
+        const beat = localBeats.find(b => String(b.id) === String(editId));
         if (beat) {
             document.getElementById('tab-beat-form-title').innerText = 'Editar Beat: ' + beat.name;
             document.getElementById('tab-edit-beat-id').value = beat.id;
@@ -8230,6 +8347,7 @@ function openTabBeatForm(editId = null) {
     }
     
     if (window.lucide) window.lucide.createIcons();
+    updateClearButtonsVisibility();
 }
 
 // Cerrar formulario

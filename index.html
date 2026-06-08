@@ -254,137 +254,205 @@
 
     <!-- ===== MODAL MÉTODOS DE PAGO ===== -->
     <div id="payment-modal" style="display:none; position:fixed; inset:0; z-index:10000; align-items:center; justify-content:center; background:rgba(5,7,15,0.85); backdrop-filter:blur(12px); padding:16px; overflow-y:auto;">
-        <div style="background:#0f1320; border:1px solid rgba(0,102,255,0.2); border-radius:24px; width:100%; max-width:560px; padding:40px 32px; position:relative; box-shadow:0 30px 80px rgba(0,0,0,0.6); margin:auto;">
+        <div style="background:#0f1320; border:1px solid rgba(0,102,255,0.2); border-radius:24px; width:100%; max-width:580px; padding:32px; position:relative; box-shadow:0 30px 80px rgba(0,0,0,0.6); margin:auto; box-sizing: border-box;">
             <!-- Close -->
             <button onclick="closePaymentModal()" style="position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.06); border:none; color:#8a91a6; width:32px; height:32px; border-radius:50%; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">&times;</button>
 
             <!-- Header -->
-            <div style="text-align:center; margin-bottom:20px;">
-                <h3 style="color:#ffffff; font-size:22px; font-weight:800; margin:0 0 8px 0; font-family:'Montserrat',sans-serif;">Métodos de Pago</h3>
-                <p style="color:#8a91a6; font-size:13px; margin:0;">Elige tu plan y realiza el pago. Envíanos el comprobante a <strong style="color:#00ccff;">sossamusic@gmail.com</strong></p>
+            <div style="text-align:center; margin-bottom:24px;">
+                <h3 style="color:#ffffff; font-size:22px; font-weight:800; margin:0 0 6px 0; font-family:'Montserrat',sans-serif;">Mejora tu Cuenta en BEATSS</h3>
+                <p style="color:#8a91a6; font-size:13px; margin:0;">Genera licencias ilimitadas y personaliza tu marca al instante.</p>
             </div>
 
             <!-- Selector de Plan -->
-            <div style="display: flex; gap: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 4px; margin-bottom: 24px;">
-                <button type="button" id="pay-select-pro" class="pay-plan-tab active" onclick="switchPaymentPlan('pro')" style="flex: 1; height: 42px; border-radius: 8px; border: none; background: linear-gradient(135deg, #0055ee 0%, #00aacc 100%); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; outline: none; transition: all 0.2s;">
+            <div style="display: flex; gap: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 4px; margin-bottom: 20px;">
+                <button type="button" id="pay-select-pro" class="pay-plan-tab active" onclick="switchPaymentPlan('pro')" style="flex: 1; height: 44px; border-radius: 8px; border: none; background: linear-gradient(135deg, #0055ee 0%, #00aacc 100%); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; outline: none; transition: all 0.2s;">
                     <span>Plan Pro</span>
-                    <span style="font-size: 9px; opacity: 0.9; font-weight: 400;">$9.99 / mes</span>
+                    <span style="font-size: 9.5px; opacity: 0.9; font-weight: 400;">$9.99 / mes</span>
                 </button>
-                <button type="button" id="pay-select-elite" class="pay-plan-tab" onclick="switchPaymentPlan('elite')" style="flex: 1; height: 42px; border-radius: 8px; border: none; background: transparent; color: #8a91a6; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; outline: none; transition: all 0.2s;">
+                <button type="button" id="pay-select-elite" class="pay-plan-tab" onclick="switchPaymentPlan('elite')" style="flex: 1; height: 44px; border-radius: 8px; border: none; background: transparent; color: #8a91a6; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; outline: none; transition: all 0.2s;">
                     <span>Plan Elite 👑</span>
-                    <span style="font-size: 9px; opacity: 0.9; font-weight: 400;">$29.99 / mes</span>
+                    <span style="font-size: 9.5px; opacity: 0.9; font-weight: 400;">$29.99 / mes</span>
                 </button>
             </div>
 
             <!-- Warning Box (Plan Limits) -->
-            <div id="payment-modal-warning" style="display:none; margin-bottom: 24px; padding: 16px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 16px; color: #f87171; font-size: 13px; font-weight: 500; line-height: 1.5; text-align: left;">
+            <div id="payment-modal-warning" style="display:none; margin-bottom: 20px; padding: 16px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 16px; color: #f87171; font-size: 13px; font-weight: 500; line-height: 1.5; text-align: left;">
                 <div style="display: flex; gap: 8px; align-items: flex-start;">
                     <i data-lucide="alert-triangle" style="width: 18px; height: 18px; color: #ef4444; flex-shrink: 0; margin-top: 1px;"></i>
                     <div>
-                        <strong style="color: #ef4444;">Función Pro:</strong> 
+                        <strong style="color: #ef4444;">Función Premium:</strong> 
                         <span id="payment-modal-warning-text">Límite alcanzado</span>
                     </div>
                 </div>
             </div>
 
-            <!-- BANCO PICHINCHA -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,200,0,0.15); border-radius:16px; padding:24px; margin-bottom:16px;">
-                <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
-                    <!-- Pichincha Logo (colores oficiales: amarillo #FFD100 y rojo #E30613) -->
-                    <div style="width:48px; height:48px; border-radius:10px; background:#FFD100; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
-                        <svg viewBox="0 0 48 48" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="48" height="48" fill="#FFD100"/>
-                            <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black,Arial" font-weight="900" font-size="10" fill="#E30613">PICH</text>
-                        </svg>
-                    </div>
-                    <div>
-                        <div style="color:#FFD100; font-size:13px; font-weight:700; letter-spacing:0.5px;">BANCO PICHINCHA</div>
-                        <div style="color:#8a91a6; font-size:12px;">Cuenta de Ahorros</div>
-                    </div>
-                </div>
-                <div style="display:grid; gap:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px 14px;">
-                        <span style="color:#8a91a6; font-size:12px;">N° de Cuenta</span>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="color:#ffffff; font-weight:600; font-size:14px; font-family:monospace;">2205256268</span>
-                            <button onclick="navigator.clipboard.writeText('2205256268').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='⧉',1500)})" style="background:rgba(0,102,255,0.15); border:none; color:#0088ff; cursor:pointer; border-radius:4px; padding:3px 7px; font-size:13px;">⧉</button>
+            <!-- Selector de Métodos de Pago (Tabs) -->
+            <div style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px; padding-bottom: 4px;">
+                <button type="button" class="pay-method-tab active" onclick="switchPaymentMethodTab('deuna')" style="flex: 1; height: 38px; border: none; background: none; color: #00ccff; border-bottom: 2px solid #00ccff; font-weight: 700; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none;">
+                    📱 Deuna! / QR
+                </button>
+                <button type="button" class="pay-method-tab" onclick="switchPaymentMethodTab('transfer')" style="flex: 1; height: 38px; border: none; background: none; color: #8a91a6; font-weight: 600; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none;">
+                    🏦 Transferencia
+                </button>
+                <button type="button" class="pay-method-tab" onclick="switchPaymentMethodTab('paypal')" style="flex: 1; height: 38px; border: none; background: none; color: #8a91a6; font-weight: 600; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none;">
+                    💳 Tarjeta / PayPal
+                </button>
+            </div>
+
+            <!-- PANEL 1: DEUNA! -->
+            <div id="pay-tab-deuna" class="pay-method-panel" style="display: block;">
+                <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-sizing: border-box;">
+                    <div style="display: flex; gap: 14px; align-items: center;">
+                        <!-- Mock QR Code Placeholder -->
+                        <div style="width: 100px; height: 100px; background: #ffffff; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; flex-shrink: 0; box-shadow: 0 4px 20px rgba(0,204,255,0.15);">
+                            <svg viewBox="0 0 100 100" width="100%" height="100%" style="color: #0f1320;">
+                                <rect x="5" y="5" width="25" height="25" fill="currentColor" />
+                                <rect x="10" y="10" width="15" height="15" fill="#fff" />
+                                <rect x="13" y="13" width="9" height="9" fill="currentColor" />
+                                
+                                <rect x="70" y="5" width="25" height="25" fill="currentColor" />
+                                <rect x="75" y="10" width="15" height="15" fill="#fff" />
+                                <rect x="78" y="13" width="9" height="9" fill="currentColor" />
+                                
+                                <rect x="5" y="70" width="25" height="25" fill="currentColor" />
+                                <rect x="10" y="75" width="15" height="15" fill="#fff" />
+                                <rect x="13" y="78" width="9" height="9" fill="currentColor" />
+                                
+                                <rect x="35" y="5" width="5" height="10" fill="currentColor"/>
+                                <rect x="45" y="10" width="10" height="5" fill="currentColor"/>
+                                <rect x="60" y="5" width="5" height="20" fill="currentColor"/>
+                                <rect x="35" y="20" width="20" height="5" fill="currentColor"/>
+                                <rect x="40" y="30" width="10" height="10" fill="currentColor"/>
+                                <rect x="55" y="35" width="15" height="5" fill="currentColor"/>
+                                <rect x="5" y="35" width="15" height="5" fill="currentColor"/>
+                                <rect x="25" y="45" width="5" height="20" fill="currentColor"/>
+                                <rect x="5" y="55" width="10" height="10" fill="currentColor"/>
+                                <rect x="35" y="50" width="15" height="15" fill="currentColor"/>
+                                <rect x="55" y="50" width="30" height="5" fill="currentColor"/>
+                                <rect x="70" y="60" width="5" height="20" fill="currentColor"/>
+                                <rect x="80" y="45" width="15" height="15" fill="currentColor"/>
+                                <rect x="35" y="70" width="10" height="10" fill="currentColor"/>
+                                <rect x="50" y="75" width="15" height="15" fill="currentColor"/>
+                                <rect x="80" y="70" width="15" height="5" fill="currentColor"/>
+                                <rect x="70" y="90" width="25" height="5" fill="currentColor"/>
+                                <rect x="35" y="90" width="10" height="5" fill="currentColor"/>
+                                <rect x="15" y="35" width="10" height="10" fill="currentColor"/>
+                            </svg>
+                            <span style="color: #0f1320; font-size: 7.5px; font-weight: 800; text-transform: uppercase; margin-top: 3px; letter-spacing: 0.5px;">Escanear QR</span>
+                        </div>
+                        <div style="flex: 1; text-align: left;">
+                            <div style="color: #00ccff; font-size: 13px; font-weight: 700; margin-bottom: 4px;">DEUNA! (Pago Rápido)</div>
+                            <p style="color: #cbd5e0; font-size: 11px; line-height: 1.4; margin: 0;">Escanea el código QR de la izquierda o envía el monto correspondiente directamente al siguiente celular:</p>
                         </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px 14px;">
-                        <span style="color:#8a91a6; font-size:12px;">Titular</span>
-                        <span style="color:#ffffff; font-weight:600; font-size:13px;">Joao Dominguez Sosa</span>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:10px; padding:10px 14px;">
+                        <div style="text-align: left;">
+                            <div style="color: #8a91a6; font-size: 9px; text-transform: uppercase; font-weight: 600;">Celular Deuna!</div>
+                            <span style="color: #ffffff; font-weight: 700; font-size: 14px; font-family: monospace;">+593 96 120 1184</span>
+                        </div>
+                        <button type="button" onclick="navigator.clipboard.writeText('+593961201184').then(()=>{const originalText=this.textContent;this.textContent='✓';this.style.background='#10b981';this.style.color='#fff';setTimeout(()=>{this.textContent=originalText;this.style.background='rgba(0,102,255,0.15)';this.style.color='#0088ff'},1500)})" style="background:rgba(0,102,255,0.15); border:none; color:#0088ff; cursor:pointer; border-radius:6px; padding:5px 10px; font-size:11px; font-weight: 700; transition: all 0.2s;">Copiar</button>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px 14px;">
-                        <span style="color:#8a91a6; font-size:12px;">Cédula</span>
-                        <span style="color:#ffffff; font-weight:600; font-size:13px; font-family:monospace;">0803743111</span>
+                    
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:10px; padding:10px 14px;">
+                        <div style="text-align: left;">
+                            <div style="color: #8a91a6; font-size: 9px; text-transform: uppercase; font-weight: 600;">Titular</div>
+                            <span style="color: #ffffff; font-weight: 600; font-size: 12.5px;">Joao Dominguez Sosa</span>
+                        </div>
+                    </div>
+
+                    <!-- Steps display -->
+                    <div style="display: flex; gap: 8px; font-size: 11px; color: #8a91a6; margin-top: 4px; text-align: left; line-height: 1.4;">
+                        <div style="flex: 1; display: flex; gap: 6px; align-items: flex-start;">
+                            <span style="background: #00ccff; color: #0f1320; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; flex-shrink: 0;">1</span>
+                            <span>Realiza el pago móvil desde tu app</span>
+                        </div>
+                        <div style="flex: 1; display: flex; gap: 6px; align-items: flex-start;">
+                            <span style="background: #00ccff; color: #0f1320; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; flex-shrink: 0;">2</span>
+                            <span>Registra la referencia y captura abajo</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- BANCO GUAYAQUIL -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(0,120,200,0.2); border-radius:16px; padding:24px; margin-bottom:24px;">
-                <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
-                    <!-- Guayaquil Logo (colores oficiales: azul #005BAA) -->
-                    <div style="width:48px; height:48px; border-radius:10px; background:#005BAA; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
-                        <svg viewBox="0 0 48 48" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
-                            <rect width="48" height="48" fill="#005BAA"/>
-                            <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black,Arial" font-weight="900" font-size="9.5" fill="#ffffff">BGY</text>
-                        </svg>
-                    </div>
-                    <div>
-                        <div style="color:#4da8ff; font-size:13px; font-weight:700; letter-spacing:0.5px;">BANCO GUAYAQUIL</div>
-                        <div style="color:#8a91a6; font-size:12px;">Cuenta de Ahorros</div>
-                    </div>
-                </div>
-                <div style="display:grid; gap:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px 14px;">
-                        <span style="color:#8a91a6; font-size:12px;">N° de Cuenta</span>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="color:#ffffff; font-weight:600; font-size:14px; font-family:monospace;">0023915583</span>
-                            <button onclick="navigator.clipboard.writeText('0023915583').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='⧉',1500)})" style="background:rgba(0,102,255,0.15); border:none; color:#0088ff; cursor:pointer; border-radius:4px; padding:3px 7px; font-size:13px;">⧉</button>
+            <!-- PANEL 2: TRANSFERENCIA BANCARIA -->
+            <div id="pay-tab-transfer" class="pay-method-panel" style="display: none;">
+                <!-- Pichincha -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,209,0,0.2); border-radius:16px; padding:18px; margin-bottom:12px; box-sizing: border-box;">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <div style="width:34px; height:34px; border-radius:8px; background:#FFD100; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
+                            <span style="color:#E30613; font-family:'Montserrat',sans-serif; font-weight:900; font-size:9.5px;">PICH</span>
+                        </div>
+                        <div style="text-align: left;">
+                            <div style="color:#FFD100; font-size:12.5px; font-weight:700; letter-spacing:0.5px;">BANCO PICHINCHA</div>
+                            <div style="color:#8a91a6; font-size:10.5px;">Cuenta de Ahorros</div>
                         </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px 14px;">
-                        <span style="color:#8a91a6; font-size:12px;">Titular</span>
-                        <span style="color:#ffffff; font-weight:600; font-size:13px;">Joao Dominguez Sosa</span>
+                    <div style="display:grid; gap:6px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
+                            <span style="color:#8a91a6; font-size:11px;">N° de Cuenta</span>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span style="color:#ffffff; font-weight:600; font-size:13px; font-family:monospace;">2205256268</span>
+                                <button type="button" onclick="navigator.clipboard.writeText('2205256268').then(()=>{const original=this.textContent;this.textContent='✓';setTimeout(()=>this.textContent=original,1500)})" style="background:rgba(255,209,0,0.15); border:none; color:#ffd100; cursor:pointer; border-radius:4px; padding:2px 6px; font-size:11px; font-weight:700;">⧉</button>
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
+                            <span style="color:#8a91a6; font-size:11px;">Titular</span>
+                            <span style="color:#ffffff; font-weight:600; font-size:12px;">Joao Dominguez Sosa</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
+                            <span style="color:#8a91a6; font-size:11px;">Cédula</span>
+                            <span style="color:#ffffff; font-weight:600; font-size:12px; font-family:monospace;">0803743111</span>
+                        </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px 14px;">
-                        <span style="color:#8a91a6; font-size:12px;">Correo</span>
-                        <span style="color:#ffffff; font-weight:600; font-size:13px;">sossamusic@gmail.com</span>
+                </div>
+
+                <!-- Guayaquil -->
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(0,91,170,0.25); border-radius:16px; padding:18px; margin-bottom:12px; box-sizing: border-box;">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <div style="width:34px; height:34px; border-radius:8px; background:#005BAA; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
+                            <span style="color:#ffffff; font-family:'Montserrat',sans-serif; font-weight:900; font-size:9.5px;">BGY</span>
+                        </div>
+                        <div style="text-align: left;">
+                            <div style="color:#4da8ff; font-size:12.5px; font-weight:700; letter-spacing:0.5px;">BANCO GUAYAQUIL</div>
+                            <div style="color:#8a91a6; font-size:10.5px;">Cuenta de Ahorros</div>
+                        </div>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px 14px;">
-                        <span style="color:#8a91a6; font-size:12px;">Cédula</span>
-                        <span style="color:#ffffff; font-weight:600; font-size:13px; font-family:monospace;">0803743111</span>
+                    <div style="display:grid; gap:6px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
+                            <span style="color:#8a91a6; font-size:11px;">N° de Cuenta</span>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span style="color:#ffffff; font-weight:600; font-size:13px; font-family:monospace;">0023915583</span>
+                                <button type="button" onclick="navigator.clipboard.writeText('0023915583').then(()=>{const original=this.textContent;this.textContent='✓';setTimeout(()=>this.textContent=original,1500)})" style="background:rgba(0,91,170,0.2); border:none; color:#4da8ff; cursor:pointer; border-radius:4px; padding:2px 6px; font-size:11px; font-weight:700;">⧉</button>
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
+                            <span style="color:#8a91a6; font-size:11px;">Titular</span>
+                            <span style="color:#ffffff; font-weight:600; font-size:12px;">Joao Dominguez Sosa</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
+                            <span style="color:#8a91a6; font-size:11px;">Cédula</span>
+                            <span style="color:#ffffff; font-weight:600; font-size:12px; font-family:monospace;">0803743111</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- DEUNA! -->
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(0,204,255,0.15); border-radius:16px; padding:24px; margin-bottom:24px;">
-                <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
-                    <!-- Deuna Logo (colores oficiales: verde/azul brillante) -->
-                    <div style="width:48px; height:48px; border-radius:10px; background:#00CCFF; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
-                        <span style="color:#0f1320; font-family:'Montserrat',sans-serif; font-weight:900; font-size:14px;">deuna</span>
-                    </div>
-                    <div>
-                        <div style="color:#00CCFF; font-size:13px; font-weight:700; letter-spacing:0.5px;">DEUNA! (Celular / QR)</div>
-                        <div style="color:#8a91a6; font-size:12px;">Pago rápido sin costo</div>
-                    </div>
-                </div>
-                <div style="display:grid; gap:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:10px 14px;">
-                        <span style="color:#8a91a6; font-size:12px;">Número celular</span>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="color:#ffffff; font-weight:600; font-size:14px; font-family:monospace;">+593 96 120 1184</span>
-                            <button onclick="navigator.clipboard.writeText('+593961201184').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='⧉',1500)})" style="background:rgba(0,102,255,0.15); border:none; color:#0088ff; cursor:pointer; border-radius:4px; padding:3px 7px; font-size:13px;">⧉</button>
-                        </div>
-                    </div>
+            <!-- PANEL 3: PAYPAL -->
+            <div id="pay-tab-paypal" class="pay-method-panel" style="display: none;">
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(0,102,255,0.25); border-radius:16px; padding:20px; margin-bottom:16px; text-align: center; box-sizing: border-box;">
+                    <i data-lucide="credit-card" style="width: 28px; height: 28px; color: #0079c1; margin-bottom: 8px; display: inline-block;"></i>
+                    <div style="color: #ffffff; font-size: 13px; font-weight: 700; margin-bottom: 4px;">PAGO INSTANTÁNEO</div>
+                    <p style="color: #cbd5e0; font-size: 11px; line-height: 1.4; margin: 0 0 16px 0;">Paga de manera segura con tu tarjeta de crédito o cuenta de PayPal. Activación automática en segundos.</p>
+                    
+                    <div id="paypal-button-container" style="border-radius:12px; overflow:hidden; min-height:44px;"></div>
                 </div>
             </div>
 
             <!-- Formulario de Envío de Comprobante -->
-            <div id="payment-receipt-form" style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:24px; margin-top:24px;">
-                <h4 style="color:#ffffff; font-size:15px; font-weight:700; margin:0 0 16px 0; font-family:'Montserrat',sans-serif; display:flex; align-items:center; gap:8px;">
+            <div id="payment-receipt-form" style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:20px; margin-top:20px;">
+                <h4 style="color:#ffffff; font-size:14px; font-weight:700; margin:0 0 14px 0; font-family:'Montserrat',sans-serif; display:flex; align-items:center; gap:8px;">
                     <i data-lucide="upload-cloud" style="color:#00ccff; width:18px; height:18px;"></i> Registrar Pago Digital
                 </h4>
                 
@@ -392,23 +460,23 @@
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                         <div style="display:flex; flex-direction:column; gap:6px;">
                             <label style="color:#8a91a6; font-size:11px; font-weight:600; text-align:left;">Método Utilizado</label>
-                            <select id="receipt-method" style="background:#1e1e24; border:1px solid #2b2b35; border-radius:8px; padding:8px 10px; color:#ffffff; font-size:12px;">
+                            <select id="receipt-method" style="background:#1e1e24; border:1px solid #2b2b35; border-radius:8px; padding:8px 10px; color:#ffffff; font-size:12px; height:38px; cursor:pointer; outline:none;">
+                                <option value="Deuna!">Deuna!</option>
                                 <option value="Banco Pichincha">Banco Pichincha</option>
                                 <option value="Banco Guayaquil">Banco Guayaquil</option>
-                                <option value="Deuna!">Deuna!</option>
                                 <option value="Otro">Otro</option>
                             </select>
                         </div>
                         <div style="display:flex; flex-direction:column; gap:6px;">
                             <label style="color:#8a91a6; font-size:11px; font-weight:600; text-align:left;">Número de Referencia</label>
-                            <input type="text" id="receipt-ref" placeholder="Ej. 123456" style="background:#1e1e24; border:1px solid #2b2b35; border-radius:8px; padding:8px 10px; color:#ffffff; font-size:12px;" required>
+                            <input type="text" id="receipt-ref" placeholder="Ej. 123456" style="background:#1e1e24; border:1px solid #2b2b35; border-radius:8px; padding:8px 10px; color:#ffffff; font-size:12px; height:38px; box-sizing: border-box; outline:none;" required>
                         </div>
                     </div>
                     
                     <div style="display:flex; flex-direction:column; gap:6px; text-align:left;">
                         <label style="color:#8a91a6; font-size:11px; font-weight:600;">Comprobante de Pago (Imagen)</label>
                         <div style="display:flex; gap:10px; align-items:center;">
-                            <button type="button" id="btn-upload-receipt-img" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 14px; color:#ffffff; font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                            <button type="button" id="btn-upload-receipt-img" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 14px; color:#ffffff; font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; flex-shrink:0; height:38px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                                 <i data-lucide="image" style="width:16px; height:16px;"></i> Subir Captura
                             </button>
                             <input type="file" id="receipt-img-file" accept="image/*" style="display:none;">
@@ -420,21 +488,11 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary" style="height:40px; font-size:13px; font-weight:700; border-radius:8px; margin-top:8px; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, #0055ee 0%, #00aacc 100%); border:none; color:#ffffff; cursor:pointer; width:100%;">
-                        <i data-lucide="send"></i> Enviar Comprobante
+                    <button type="submit" class="btn btn-primary" style="height:44px; font-size:14px; font-weight:700; border-radius:8px; margin-top:8px; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, #0055ee 0%, #00aacc 100%); border:none; color:#ffffff; cursor:pointer; width:100%; box-shadow:0 4px 15px rgba(0,85,238,0.2); transition: transform 0.15s, opacity 0.15s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                        <i data-lucide="send"></i> Registrar Comprobante
                     </button>
                 </form>
             </div>
-
-            <!-- DIVISOR -->
-            <div style="display:flex; align-items:center; gap:12px; margin-top:24px; margin-bottom:24px;">
-                <div style="flex:1; height:1px; background:rgba(255,255,255,0.08); integrity:none;"></div>
-                <span style="color:#535a70; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px;">o activa con PayPal (Internacional)</span>
-                <div style="flex:1; height:1px; background:rgba(255,255,255,0.08); integrity:none;"></div>
-            </div>
-
-            <!-- PAYPAL BUTTON CONTAINER -->
-            <div id="paypal-button-container" style="border-radius:12px; overflow:hidden; min-height:44px;"></div>
         </div>
     </div>
     
@@ -747,13 +805,15 @@
                         </div>
                     </div>
 
-                    <!-- Enlaces de Audio para Entrega -->
-                    <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border-color);">
-                        <span style="font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px; display: block; margin-bottom: 8px;">Enlaces de Entrega (Para el Correo)</span>
                         <div class="input-group">
                             <label for="audio-link-mp3"><i data-lucide="link"></i> Archivo MP3 (O enlace)</label>
                             <div style="display: flex; gap: 8px; align-items: center;">
-                                <input type="text" id="audio-link-mp3" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                                <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                    <input type="text" id="audio-link-mp3" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                    <button type="button" class="btn-clear-input" data-target="audio-link-mp3" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                        <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                    </button>
+                                </div>
                                 <button type="button" class="btn btn-secondary btn-upload-file" data-target="audio-link-mp3" data-accept=".mp3,audio/mpeg" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                     <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir MP3
                                 </button>
@@ -762,7 +822,12 @@
                         <div class="input-group" style="margin-top: 8px;">
                             <label for="audio-link-wav"><i data-lucide="link"></i> Archivo WAV (O enlace)</label>
                             <div style="display: flex; gap: 8px; align-items: center;">
-                                <input type="text" id="audio-link-wav" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                                <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                    <input type="text" id="audio-link-wav" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                    <button type="button" class="btn-clear-input" data-target="audio-link-wav" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                        <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                    </button>
+                                </div>
                                 <button type="button" class="btn btn-secondary btn-upload-file" data-target="audio-link-wav" data-accept=".wav,audio/wav,audio/x-wav" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                     <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir WAV
                                 </button>
@@ -771,7 +836,12 @@
                         <div class="input-group" style="margin-top: 8px;">
                             <label for="audio-link-stems"><i data-lucide="link"></i> Archivo Stems/Tracks (O enlace)</label>
                             <div style="display: flex; gap: 8px; align-items: center;">
-                                <input type="text" id="audio-link-stems" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                                <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                    <input type="text" id="audio-link-stems" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                    <button type="button" class="btn-clear-input" data-target="audio-link-stems" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                        <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                    </button>
+                                </div>
                                 <button type="button" class="btn btn-secondary btn-upload-file" data-target="audio-link-stems" data-accept=".zip,.rar,.tar,.gz,application/zip,application/x-zip-compressed" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                     <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir Stems
                                 </button>
@@ -1192,7 +1262,12 @@
                                 <div class="input-group" style="margin-bottom: 12px;">
                                     <label for="tab-db-beat-mp3" style="font-size: 12px;">Archivo MP3 (O enlace de descarga)</label>
                                     <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" id="tab-db-beat-mp3" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                                        <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                            <input type="text" id="tab-db-beat-mp3" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                            <button type="button" class="btn-clear-input" data-target="tab-db-beat-mp3" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                                <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                            </button>
+                                        </div>
                                         <button type="button" class="btn btn-secondary btn-upload-file" data-target="tab-db-beat-mp3" data-accept=".mp3,audio/mpeg" style="padding: 0 10px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                             <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir MP3
                                         </button>
@@ -1202,7 +1277,12 @@
                                 <div class="input-group" style="margin-bottom: 12px;">
                                     <label for="tab-db-beat-wav" style="font-size: 12px;">Archivo WAV (O enlace de descarga)</label>
                                     <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" id="tab-db-beat-wav" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                                        <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                            <input type="text" id="tab-db-beat-wav" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                            <button type="button" class="btn-clear-input" data-target="tab-db-beat-wav" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                                <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                            </button>
+                                        </div>
                                         <button type="button" class="btn btn-secondary btn-upload-file" data-target="tab-db-beat-wav" data-accept=".wav,audio/wav" style="padding: 0 10px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                             <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir WAV
                                         </button>
@@ -1212,7 +1292,12 @@
                                 <div class="input-group" style="margin-bottom: 12px;">
                                     <label for="tab-db-beat-stems" style="font-size: 12px;">Archivo Stems/Tracks ZIP (O enlace)</label>
                                     <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" id="tab-db-beat-stems" placeholder="Pegar enlace o subir zip..." style="flex: 1; margin: 0;">
+                                        <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                            <input type="text" id="tab-db-beat-stems" placeholder="Pegar enlace o subir zip..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                            <button type="button" class="btn-clear-input" data-target="tab-db-beat-stems" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                                <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                            </button>
+                                        </div>
                                         <button type="button" class="btn btn-secondary btn-upload-file" data-target="tab-db-beat-stems" data-accept=".zip,.rar,.tar,.gz" style="padding: 0 10px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                             <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir Stems
                                         </button>
@@ -1222,7 +1307,12 @@
                                 <div class="input-group" style="margin-bottom: 12px;">
                                     <label for="tab-db-beat-artwork" style="font-size: 12px;">Miniatura / Carátula del Beat</label>
                                     <div style="display: flex; gap: 8px; align-items: center;">
-                                        <input type="text" id="tab-db-beat-artwork" placeholder="Enlace de imagen o subir..." style="flex: 1; margin: 0;">
+                                        <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                            <input type="text" id="tab-db-beat-artwork" placeholder="Enlace de imagen o subir..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                            <button type="button" class="btn-clear-input" data-target="tab-db-beat-artwork" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                                <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                            </button>
+                                        </div>
                                         <button type="button" class="btn btn-secondary btn-upload-file" data-target="tab-db-beat-artwork" data-accept="image/*" style="padding: 0 10px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                             <i data-lucide="image" style="width: 14px; height: 14px;"></i> Subir Portada
                                         </button>
@@ -1447,6 +1537,7 @@
                                 <tr>
                                     <th>Productor (Email)</th>
                                     <th>AKA</th>
+                                    <th>Plan</th>
                                     <th>Banco/Método</th>
                                     <th>Referencia</th>
                                     <th>Fecha</th>
@@ -1774,7 +1865,7 @@
                   </div>
                   <div class="input-group admin-only-field" id="cfg-gdrive-client-secret-container" style="display: none; margin-top: 8px;">
                       <label for="cfg-gdrive-client-secret">Google Drive Client Secret (Admin)</label>
-                      <input type="password" id="cfg-gdrive-client-secret" placeholder="••••••••••••••••••••••••">
+                      <input type="password" id="cfg-gdrive-client-secret" placeholder="Ingresa el Client Secret de Google Cloud">
                   </div>
                   <div class="input-group" style="margin-top: 8px;">
                       <label for="cfg-storage-provider">Almacenamiento Preferido para Beats</label>
@@ -1782,6 +1873,17 @@
                           <option value="gdrive-central">🏢 Google Drive de la Plataforma (SaaS - Sin Login)</option>
                           <option value="gdrive">☁️ Google Drive Personal (Requiere Login)</option>
                           <option value="alternative">🚀 Servidores Alternativos (Carga rápida sin login)</option>
+                      </select>
+                  </div>
+                  <div class="input-group" style="margin-top: 8px;">
+                      <label for="cfg-contract-color">Color de Contratos (PDF)</label>
+                      <select id="cfg-contract-color" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 13px; height: 38px; cursor: pointer; outline: none; box-sizing: border-box;">
+                          <option value="default">✨ Automático (Según aka/marca)</option>
+                          <option value="purple">🟣 Púrpura Sossa</option>
+                          <option value="red">🔴 Rojo Monarco</option>
+                          <option value="blue">🔵 Azul Eléctrico</option>
+                          <option value="charcoal">⚫ Gris Pizarra (Classic)</option>
+                          <option value="gold">🟡 Oro Premium</option>
                       </select>
                   </div>
                   <div class="input-group admin-only-field" id="cfg-gdrive-link-container" style="display: none; margin-top: 12px; border: 1px dashed var(--border-color); padding: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.01); box-sizing: border-box;">
@@ -1982,7 +2084,12 @@
                     <div class="input-group" style="margin-bottom: 10px;">
                         <label for="db-beat-mp3">Archivo MP3 (O enlace)</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="text" id="db-beat-mp3" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                            <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                <input type="text" id="db-beat-mp3" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                <button type="button" class="btn-clear-input" data-target="db-beat-mp3" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                    <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                </button>
+                            </div>
                             <button type="button" class="btn btn-secondary btn-upload-file" data-target="db-beat-mp3" data-accept=".mp3,audio/mpeg" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                 <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir MP3
                             </button>
@@ -1992,7 +2099,12 @@
                     <div class="input-group" style="margin-bottom: 10px;">
                         <label for="db-beat-wav">Archivo WAV (O enlace)</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="text" id="db-beat-wav" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                            <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                <input type="text" id="db-beat-wav" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                <button type="button" class="btn-clear-input" data-target="db-beat-wav" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                    <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                </button>
+                            </div>
                             <button type="button" class="btn btn-secondary btn-upload-file" data-target="db-beat-wav" data-accept=".wav,audio/wav,audio/x-wav" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                 <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir WAV
                             </button>
@@ -2002,7 +2114,12 @@
                     <div class="input-group" style="margin-bottom: 15px;">
                         <label for="db-beat-stems">Archivo Stems/Tracks (O enlace)</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="text" id="db-beat-stems" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                            <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                <input type="text" id="db-beat-stems" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                <button type="button" class="btn-clear-input" data-target="db-beat-stems" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                    <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                </button>
+                            </div>
                             <button type="button" class="btn btn-secondary btn-upload-file" data-target="db-beat-stems" data-accept=".zip,.rar,.tar,.gz,application/zip,application/x-zip-compressed" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                 <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir Stems
                             </button>
@@ -2012,7 +2129,12 @@
                     <div class="input-group" style="margin-bottom: 10px;">
                         <label for="db-beat-artwork">Miniatura / Carátula del Beat</label>
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="text" id="db-beat-artwork" placeholder="Pegar enlace o subir carátula (image)..." style="flex: 1; margin: 0;">
+                            <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                                <input type="text" id="db-beat-artwork" placeholder="Pegar enlace o subir carátula (image)..." style="flex: 1; margin: 0; padding-right: 32px;">
+                                <button type="button" class="btn-clear-input" data-target="db-beat-artwork" title="Borrar" style="position: absolute; right: 8px; background: transparent; border: none; cursor: pointer; color: #8a91a6; padding: 4px; display: none; align-items: center; justify-content: center; z-index: 5;">
+                                    <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+                                </button>
+                            </div>
                             <button type="button" class="btn btn-secondary btn-upload-file" data-target="db-beat-artwork" data-accept="image/*" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
                                 <i data-lucide="image" style="width: 14px; height: 14px;"></i> Subir Carátula
                             </button>
@@ -2148,6 +2270,40 @@
                     alert('Hubo un error con PayPal. Por favor intenta de nuevo o usa la transferencia bancaria.');
                 }
             }).render('#paypal-button-container');
+        }
+
+        window.switchPaymentMethodTab = function(method) {
+            // Ocultar todos los paneles de método de pago
+            document.querySelectorAll('.pay-method-panel').forEach(panel => {
+                panel.style.display = 'none';
+            });
+            // Mostrar el panel activo
+            const activePanel = document.getElementById(`pay-tab-${method}`);
+            if (activePanel) activePanel.style.display = 'block';
+
+            // Actualizar clases activas en los botones de pestañas
+            document.querySelectorAll('.pay-method-tab').forEach(btn => {
+                btn.classList.remove('active');
+                btn.style.color = '#8a91a6';
+                btn.style.borderBottom = 'none';
+                btn.style.fontWeight = '600';
+            });
+
+            // Encontrar el botón clickeado
+            const activeBtn = Array.from(document.querySelectorAll('.pay-method-tab')).find(btn => {
+                const onclickAttr = btn.getAttribute('onclick') || '';
+                return onclickAttr.includes(`'${method}'`) || onclickAttr.includes(`"${method}"`);
+            });
+
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+                activeBtn.style.color = '#00ccff';
+                activeBtn.style.borderBottom = '2px solid #00ccff';
+                activeBtn.style.fontWeight = '700';
+            }
+            
+            // Re-disparar iconos si Lucide está listo
+            if (window.lucide) window.lucide.createIcons();
         }
 
         window.switchPaymentPlan = function(plan) {
