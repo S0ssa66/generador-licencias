@@ -5563,6 +5563,11 @@ function openBeatForm(editId = null) {
             document.getElementById('db-beat-mp3').value = beat.mp3 || '';
             document.getElementById('db-beat-wav').value = beat.wav || '';
             document.getElementById('db-beat-stems').value = beat.stems || '';
+            document.getElementById('db-beat-artwork').value = beat.artwork || '';
+            document.getElementById('db-beat-bpm').value = beat.bpm || '';
+            document.getElementById('db-beat-key').value = beat.key || '';
+            document.getElementById('db-beat-genre').value = beat.genre || '';
+            document.getElementById('db-beat-tags').value = beat.tags || '';
         }
     } else {
         document.getElementById('beat-form-title').innerText = 'Agregar Nuevo Beat';
@@ -5571,6 +5576,11 @@ function openBeatForm(editId = null) {
         document.getElementById('db-beat-mp3').value = '';
         document.getElementById('db-beat-wav').value = '';
         document.getElementById('db-beat-stems').value = '';
+        document.getElementById('db-beat-artwork').value = '';
+        document.getElementById('db-beat-bpm').value = '';
+        document.getElementById('db-beat-key').value = '';
+        document.getElementById('db-beat-genre').value = '';
+        document.getElementById('db-beat-tags').value = '';
     }
 }
 
@@ -5585,6 +5595,11 @@ async function saveBeat() {
     const mp3 = document.getElementById('db-beat-mp3').value.trim();
     const wav = document.getElementById('db-beat-wav').value.trim();
     const stems = document.getElementById('db-beat-stems').value.trim();
+    const artwork = document.getElementById('db-beat-artwork').value.trim();
+    const bpm = document.getElementById('db-beat-bpm').value ? parseInt(document.getElementById('db-beat-bpm').value, 10) : null;
+    const key = document.getElementById('db-beat-key').value.trim();
+    const genre = document.getElementById('db-beat-genre').value.trim();
+    const tags = document.getElementById('db-beat-tags').value.trim();
 
     if (!name) {
         showToast('El nombre del beat es obligatorio', true);
@@ -5598,6 +5613,11 @@ async function saveBeat() {
         mp3,
         wav,
         stems,
+        artwork,
+        bpm,
+        key,
+        genre,
+        tags,
         updatedAt: Date.now()
     };
 
@@ -5658,6 +5678,8 @@ function selectBeat(id) {
     document.getElementById('audio-link-wav').value = beat.wav || '';
     document.getElementById('audio-link-stems').value = beat.stems || '';
 
+    // Si existen campos personalizados de BPM o Key en la pantalla, rellenarlos
+    // o si el usuario quiere que guarde BPM/Key, los tenemos mapeados en el beat
     closeBeatsModal();
     generatePreview(); // Actualizar la vista del contrato al instante
     showToast(`Beat "${beat.name}" cargado en el contrato.`);
@@ -5696,13 +5718,32 @@ function renderBeatsList() {
             ? `<span style="font-size: 10px; background: #2a2e39; color: #a0aec0; padding: 2px 6px; border-radius: 4px; margin-left: 8px;"><i data-lucide="link" style="width:10px;height:10px;display:inline-block;margin-right:3px;"></i>${linksCount}</span>` 
             : '';
 
+        const artworkImg = beat.artwork
+            ? `<img src="${beat.artwork}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`
+            : `<i data-lucide="music" style="width: 18px; height: 18px; color: #a0aec0;"></i>`;
+
+        let detailsText = '';
+        if (beat.bpm) detailsText += `${beat.bpm} BPM`;
+        if (beat.key) {
+            if (detailsText) detailsText += ' • ';
+            detailsText += beat.key;
+        }
+        if (beat.genre) {
+            if (detailsText) detailsText += ' • ';
+            detailsText += beat.genre;
+        }
+        const detailsHtml = detailsText 
+            ? `<div style="font-size: 11px; color: #8a91a6; margin-top: 2px;">${detailsText}</div>`
+            : '';
+
         item.innerHTML = `
             <div style="flex: 1; cursor: pointer; display: flex; align-items: center;" onclick="selectBeat('${beat.id}')">
-                <div style="width: 36px; height: 36px; border-radius: 6px; background: #2a2e39; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0;">
-                    <i data-lucide="music" style="width: 18px; height: 18px; color: #a0aec0;"></i>
+                <div style="width: 44px; height: 44px; border-radius: 6px; background: #2a2e39; display: flex; align-items: center; justify-content: center; margin-right: 12px; flex-shrink: 0; overflow: hidden;">
+                    ${artworkImg}
                 </div>
                 <div>
                     <div style="font-weight: 500; font-size: 14px; color: #fff; display: flex; align-items: center;">${beat.name} ${linksBadge}</div>
+                    ${detailsHtml}
                 </div>
             </div>
             <div style="display: flex; gap: 5px; margin-left: 10px;">

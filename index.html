@@ -1799,6 +1799,38 @@
                             </button>
                         </div>
                     </div>
+
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <label for="db-beat-artwork">Miniatura / Carátula del Beat</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="db-beat-artwork" placeholder="Pegar enlace o subir carátula (image)..." style="flex: 1; margin: 0;">
+                            <button type="button" class="btn btn-secondary btn-upload-file" data-target="db-beat-artwork" data-accept="image/*" style="padding: 0 12px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                <i data-lucide="image" style="width: 14px; height: 14px;"></i> Subir Carátula
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="input-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <div class="input-group" style="flex: 1;">
+                            <label for="db-beat-bpm">BPM (Tempo)</label>
+                            <input type="number" id="db-beat-bpm" placeholder="Ej: 140" style="width: 100%;">
+                        </div>
+                        <div class="input-group" style="flex: 1;">
+                            <label for="db-beat-key">Escala (Key)</label>
+                            <input type="text" id="db-beat-key" placeholder="Ej: Sol Menor (Gm)" style="width: 100%;">
+                        </div>
+                    </div>
+
+                    <div class="input-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <div class="input-group" style="flex: 1;">
+                            <label for="db-beat-genre">Género</label>
+                            <input type="text" id="db-beat-genre" placeholder="Ej: Trap / Reggaeton" style="width: 100%;">
+                        </div>
+                        <div class="input-group" style="flex: 1;">
+                            <label for="db-beat-tags">Etiquetas (Separadas por comas)</label>
+                            <input type="text" id="db-beat-tags" placeholder="Ej: dark, sad, typebeat" style="width: 100%;">
+                        </div>
+                    </div>
                     
                     <div style="display: flex; gap: 10px; justify-content: flex-end;">
                         <button class="btn btn-secondary" id="btn-cancel-beat" style="padding: 6px 12px; font-size: 13px;">Cancelar</button>
