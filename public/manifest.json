@@ -1,0 +1,17 @@
+{
+  "name": "BEATSS - Generador de Licencias",
+  "short_name": "BEATSS",
+  "description": "Licencias y Contratos de Uso Musical",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#0066ff",
+  "icons": [
+    {
+      "src": "/logo-sossa.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

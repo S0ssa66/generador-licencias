@@ -1,0 +1,14 @@
+.env
+*.env.local
+*.env.production
+*.env.development
+node_modules/
+dist/
+.vercel/
+*_backup_sincronizado.json
+sossa_backup_sincronizado.json
+cgmonarco_backup_sincronizado.json
+*.pem
+*.key
+firebase-adminsdk*.json
+service-account*.json
