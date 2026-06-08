@@ -2214,3 +2214,191 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     }
 }
 
+/* ==========================================================================
+   CATÁLOGO DE BEATS PREMIUM (Estilo Beatstars)
+   ========================================================================== */
+
+.beats-tab-container {
+    display: flex;
+    gap: 24px;
+    padding: 24px;
+    min-height: calc(100vh - 120px);
+    box-sizing: border-box;
+}
+
+.beats-list-section {
+    flex: 3;
+    min-width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.beats-form-section {
+    flex: 2;
+    min-width: 320px;
+    display: flex;
+    flex-direction: column;
+}
+
+.beat-card-premium {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.beat-card-premium:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.beat-cover-wrapper {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background-color: #1a1d24;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.beat-cover-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.beat-card-premium:hover .beat-cover-img {
+    transform: scale(1.05);
+}
+
+.beat-play-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.25s ease;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.beat-cover-wrapper:hover .beat-play-overlay,
+.beat-card-premium:hover .beat-play-overlay {
+    opacity: 1;
+}
+
+.play-btn-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(230, 0, 0, 0.4);
+    transform: scale(0.9);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s;
+}
+
+.play-btn-circle:hover {
+    transform: scale(1.05);
+    background-color: #ff3333;
+}
+
+.beat-badge-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.file-status-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.file-status-badge.active {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.file-status-badge.inactive {
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tag-badge-premium {
+    font-size: 10px;
+    background-color: rgba(0, 204, 255, 0.1);
+    color: #00ccff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 204, 255, 0.2);
+}
+
+.beat-stat-pill {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Formulario lateral pegajoso */
+.sticky-form-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    position: sticky;
+    top: 24px;
+    box-shadow: var(--shadow-md);
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+}
+
+@media (max-width: 1024px) {
+    .beats-tab-container {
+        flex-direction: column;
+        padding: 16px;
+    }
+    
+    .beats-form-section {
+        position: relative;
+    }
+    
+    .sticky-form-card {
+        position: relative;
+        top: 0;
+        max-height: none;
+    }
+}
+
+

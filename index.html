@@ -694,6 +694,17 @@
                         </div>
                     </div>
 
+                    <div class="input-row" style="display: flex; gap: 10px; margin-bottom: 12px; margin-top: -6px;">
+                        <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                            <label for="beat-bpm" style="font-size: 11px;"><i data-lucide="activity" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i> BPM (Tempo)</label>
+                            <input type="number" id="beat-bpm" placeholder="Ej. 140" style="padding: 6px 10px; font-size: 13px; height: 34px;">
+                        </div>
+                        <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                            <label for="beat-key" style="font-size: 11px;"><i data-lucide="music" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 3px;"></i> Escala (Key)</label>
+                            <input type="text" id="beat-key" placeholder="Ej. Sol Menor (Gm)" style="padding: 6px 10px; font-size: 13px; height: 34px;">
+                        </div>
+                    </div>
+
                     <div class="input-group">
                         <label for="buyer-name"><i data-lucide="user"></i> Nombre de quien compra</label>
                         <div style="display: flex; gap: 8px; width: 100%;">
@@ -949,6 +960,9 @@
                     <button class="tab-btn" data-tab="tab-history">
                         <i data-lucide="history"></i> Historial de Licencias <span class="badge" id="history-count">0</span>
                     </button>
+                    <button class="tab-btn" data-tab="tab-beats" id="tab-beats-btn">
+                        <i data-lucide="music"></i> Catálogo de Beats
+                    </button>
                     <button class="tab-btn" data-tab="tab-dashboard" id="tab-dashboard-btn">
                         <i data-lucide="bar-chart-3"></i> Dashboard de Ventas
                     </button>
@@ -1088,6 +1102,179 @@
                         <h3>No hay licencias registradas</h3>
                         <p>Las licencias que guardes aparecerán en esta lista para descargarlas o copiarlas rápidamente.</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Catálogo de Beats -->
+            <div class="tab-content" id="tab-beats" style="overflow-y: auto;">
+                <div class="beats-tab-container">
+                    
+                    <!-- Sección Izquierda: Catálogo y Filtros -->
+                    <div class="beats-list-section">
+                        <!-- Cabecera y Controles -->
+                        <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                <div>
+                                    <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                        <i data-lucide="music" style="color: var(--accent); width: 22px; height: 22px;"></i> Catálogo de Beats
+                                    </h2>
+                                    <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-secondary);">Administra tus instrumentales, carátulas y enlaces para los contratos estilo Beatstars.</p>
+                                </div>
+                                <button class="btn btn-primary" id="tab-btn-add-beat" style="height: 38px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; border-radius: 8px; padding: 0 16px;">
+                                    <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Subir Nuevo Beat
+                                </button>
+                            </div>
+                            
+                            <!-- Búsqueda y Filtros -->
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <div style="flex: 2; min-width: 200px; position: relative;">
+                                    <input type="text" id="tab-search-beats" placeholder="Buscar beat por nombre, escala o género..." style="width: 100%; padding: 8px 12px; padding-left: 36px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 13px; height: 38px; box-sizing: border-box;">
+                                    <i data-lucide="search" style="position: absolute; left: 12px; top: 11px; width: 16px; height: 16px; color: var(--text-secondary);"></i>
+                                </div>
+                                <div style="flex: 1; min-width: 120px;">
+                                    <select id="tab-filter-genre" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 13px; height: 38px; cursor: pointer; outline: none; box-sizing: border-box;">
+                                        <option value="">Todos los géneros</option>
+                                    </select>
+                                </div>
+                                <div style="flex: 1; min-width: 120px;">
+                                    <select id="tab-filter-key" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 13px; height: 38px; cursor: pointer; outline: none; box-sizing: border-box;">
+                                        <option value="">Todas las escalas</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Métricas Rápidas -->
+                            <div style="display: flex; gap: 20px; border-top: 1px solid var(--border-color); padding-top: 12px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap;">
+                                <div>Total Beats: <span id="tab-stats-total" style="font-weight: 600; color: #fff;">0</span></div>
+                                <div>Con MP3: <span id="tab-stats-mp3" style="font-weight: 600; color: #10b981;">0</span></div>
+                                <div>Con WAV: <span id="tab-stats-wav" style="font-weight: 600; color: #3b82f6;">0</span></div>
+                                <div>Con Stems: <span id="tab-stats-stems" style="font-weight: 600; color: #a855f7;">0</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Grid de Tarjetas de Beats -->
+                        <div id="tab-beats-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
+                            <!-- Dinámico -->
+                        </div>
+                        
+                        <div class="empty-state" id="tab-beats-empty" style="display: none; background: var(--bg-card); border: 1px solid var(--border-color); padding: 40px; border-radius: 12px; text-align: center;">
+                            <i data-lucide="music" style="width: 48px; height: 48px; color: var(--text-secondary); margin-bottom: 15px; opacity: 0.5;"></i>
+                            <h3>No hay beats en tu catálogo</h3>
+                            <p>Sube tus archivos MP3, WAV, Stems y carátulas para automatizar la creación de contratos.</p>
+                        </div>
+                    </div>
+
+                    <!-- Sección Derecha: Detalle y Formulario -->
+                    <div class="beats-form-section">
+                        <div class="sticky-form-card">
+                            
+                            <!-- Estado vacío -->
+                            <div id="tab-beat-form-empty-state" style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                                <i data-lucide="disc" style="width: 48px; height: 48px; color: var(--text-secondary); margin-bottom: 15px; opacity: 0.3; display: block; margin-left: auto; margin-right: auto;"></i>
+                                <h3 style="margin: 0; color: #fff; font-size: 15px;">Ningún Beat Seleccionado</h3>
+                                <p style="font-size: 12px; margin: 8px 0 0 0; line-height: 1.4;">Selecciona un beat para editar su información o haz clic en "Subir Nuevo Beat" para empezar a cargar archivos.</p>
+                            </div>
+
+                            <!-- Formulario Activo -->
+                            <div id="tab-beat-form-fields" style="display: none;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                                    <h3 id="tab-beat-form-title" style="margin: 0; font-size: 15px; color: #fff; font-weight: 700;">Agregar Nuevo Beat</h3>
+                                    <button type="button" class="close-modal" id="tab-btn-close-form" style="position: static; padding: 4px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary);"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
+                                </div>
+
+                                <input type="hidden" id="tab-edit-beat-id">
+
+                                <div class="input-group" style="margin-bottom: 12px;">
+                                    <label for="tab-db-beat-name" style="font-size: 12px;">Nombre del Beat *</label>
+                                    <input type="text" id="tab-db-beat-name" placeholder="Ej. Trap Dark Type Beat">
+                                </div>
+
+                                <div class="input-group" style="margin-bottom: 12px;">
+                                    <label for="tab-db-beat-mp3" style="font-size: 12px;">Archivo MP3 (O enlace de descarga)</label>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="text" id="tab-db-beat-mp3" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                                        <button type="button" class="btn btn-secondary btn-upload-file" data-target="tab-db-beat-mp3" data-accept=".mp3,audio/mpeg" style="padding: 0 10px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                            <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir MP3
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="input-group" style="margin-bottom: 12px;">
+                                    <label for="tab-db-beat-wav" style="font-size: 12px;">Archivo WAV (O enlace de descarga)</label>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="text" id="tab-db-beat-wav" placeholder="Pegar enlace o subir archivo..." style="flex: 1; margin: 0;">
+                                        <button type="button" class="btn btn-secondary btn-upload-file" data-target="tab-db-beat-wav" data-accept=".wav,audio/wav" style="padding: 0 10px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                            <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir WAV
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="input-group" style="margin-bottom: 12px;">
+                                    <label for="tab-db-beat-stems" style="font-size: 12px;">Archivo Stems/Tracks ZIP (O enlace)</label>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="text" id="tab-db-beat-stems" placeholder="Pegar enlace o subir zip..." style="flex: 1; margin: 0;">
+                                        <button type="button" class="btn btn-secondary btn-upload-file" data-target="tab-db-beat-stems" data-accept=".zip,.rar,.tar,.gz" style="padding: 0 10px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                            <i data-lucide="upload" style="width: 14px; height: 14px;"></i> Subir Stems
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="input-group" style="margin-bottom: 12px;">
+                                    <label for="tab-db-beat-artwork" style="font-size: 12px;">Miniatura / Carátula del Beat</label>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <input type="text" id="tab-db-beat-artwork" placeholder="Enlace de imagen o subir..." style="flex: 1; margin: 0;">
+                                        <button type="button" class="btn btn-secondary btn-upload-file" data-target="tab-db-beat-artwork" data-accept="image/*" style="padding: 0 10px; height: 38px; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 12px; white-space: nowrap; flex-shrink: 0; background-color: #2a2e39; border-color: #3f4453;">
+                                            <i data-lucide="image" style="width: 14px; height: 14px;"></i> Subir Portada
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="input-row" style="display: flex; gap: 10px; margin-bottom: 12px;">
+                                    <div class="input-group" style="flex: 1;">
+                                        <label for="tab-db-beat-bpm" style="font-size: 12px;">BPM</label>
+                                        <input type="number" id="tab-db-beat-bpm" placeholder="Ej: 140" style="width: 100%;">
+                                    </div>
+                                    <div class="input-group" style="flex: 1;">
+                                        <label for="tab-db-beat-key" style="font-size: 12px;">Escala (Key)</label>
+                                        <input type="text" id="tab-db-beat-key" placeholder="Ej: Gm" style="width: 100%;">
+                                    </div>
+                                </div>
+
+                                <div class="input-row" style="display: flex; gap: 10px; margin-bottom: 12px;">
+                                    <div class="input-group" style="flex: 1;">
+                                        <label for="tab-db-beat-genre" style="font-size: 12px;">Género</label>
+                                        <input type="text" id="tab-db-beat-genre" placeholder="Ej: Trap">
+                                    </div>
+                                    <div class="input-group" style="flex: 1;">
+                                        <label for="tab-db-beat-moods" style="font-size: 12px;">Ánimos (Moods)</label>
+                                        <input type="text" id="tab-db-beat-moods" placeholder="Ej: Oscuro, Triste">
+                                    </div>
+                                </div>
+
+                                <div class="input-group" style="margin-bottom: 12px;">
+                                    <label for="tab-db-beat-tags" style="font-size: 12px;">Etiquetas (Separadas por comas)</label>
+                                    <input type="text" id="tab-db-beat-tags" placeholder="Ej: type beat, guitar, dark">
+                                </div>
+
+                                <div class="input-group" style="margin-bottom: 12px;">
+                                    <label for="tab-db-beat-description" style="font-size: 12px;">Descripción / Notas</label>
+                                    <textarea id="tab-db-beat-description" placeholder="Información adicional del beat..." style="width: 100%; height: 60px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; padding: 8px; font-size: 13px; font-family: inherit; resize: none; box-sizing: border-box;"></textarea>
+                                </div>
+
+                                <div class="input-group" style="margin-bottom: 18px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                    <input type="checkbox" id="tab-db-beat-free-download" style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
+                                    <label for="tab-db-beat-free-download" style="margin: 0; font-size: 12px; cursor: pointer; user-select: none;">Permitir Descarga Gratuita (Free Download)</label>
+                                </div>
+
+                                <div style="display: flex; gap: 8px; margin-top: 15px;">
+                                    <button type="button" class="btn btn-primary" id="tab-btn-save-beat" style="flex: 2; height: 38px; font-size: 13px; font-weight: 600; border-radius: 8px;">Guardar Beat</button>
+                                    <button type="button" class="btn btn-secondary" id="tab-btn-cancel-beat" style="flex: 1; height: 38px; font-size: 13px; font-weight: 600; border-radius: 8px;">Cancelar</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -1585,7 +1772,17 @@
                       <label for="cfg-gdrive-client-id">Google Drive Client ID</label>
                       <input type="text" id="cfg-gdrive-client-id" placeholder="xxxxxx.apps.googleusercontent.com">
                   </div>
-                  <div id="drive-folder-warning" style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">🔒 Los contratos PDF se guardarán automáticamente en tu Drive en la carpeta <strong>Sossa Licencias/Contratos</strong>.</div>
+                  <div class="input-group" style="margin-top: 8px;">
+                      <label for="cfg-storage-provider">Almacenamiento Preferido para Beats</label>
+                      <select id="cfg-storage-provider" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 13px; height: 38px; cursor: pointer; outline: none; box-sizing: border-box;">
+                          <option value="gdrive">☁️ Google Drive (Sincronización con tu Cuenta)</option>
+                          <option value="alternative">🚀 Servidores Alternativos (Carga rápida sin login)</option>
+                      </select>
+                  </div>
+                  <div style="font-size: 11px; color: #8a91a6; margin-top: 6px; line-height: 1.4; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); box-sizing: border-box;">
+                      ℹ️ <strong>Ayuda de Google Drive:</strong> Si la autorización de Google falla (ej. origin_mismatch), ingresa a tu Consola de Google Cloud y agrega <code>https://generador-licencias.vercel.app</code> a <em>"Orígenes de JavaScript autorizados"</em> de tu Client ID. Si prefieres no configurarlo, selecciona <strong>Servidores Alternativos</strong>.
+                  </div>
+                  <div id="drive-folder-warning" style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">🔒 Los contratos PDF se guardarán automáticamente en tu Drive en la carpeta <strong>Sossa Licencias/Contratos</strong>.</div>
                    
                    <!-- Respaldo de Datos para Multi-dispositivo (iPhone) -->
                    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 12px 0 8px 0;">

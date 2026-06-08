@@ -52,7 +52,8 @@ let producerConfig = {
     emailjsServiceId: "",
     emailjsTemplateId: "",
     emailjsPublicKey: "",
-    gdriveClientId: "216966055009-03rjdnq87uh3h15e3qfglp2pnmos9t5k.apps.googleusercontent.com"
+    gdriveClientId: "216966055009-03rjdnq87uh3h15e3qfglp2pnmos9t5k.apps.googleusercontent.com",
+    storageProvider: "gdrive"
 };
 
 // Historial de licencias
@@ -691,7 +692,9 @@ async function loadProducerConfig() {
                     emailjsServiceId: "",
                     emailjsTemplateId: "",
                     emailjsPublicKey: "",
-                    gdriveClientId: ""
+                    emailjsPublicKey: "",
+                    gdriveClientId: "",
+                    storageProvider: "gdrive"
                 };
             } else if (currentEmail.toLowerCase() === 'sossabeatz1@gmail.com') {
                 producerConfig = {
@@ -712,7 +715,8 @@ async function loadProducerConfig() {
                     emailjsServiceId: "",
                     emailjsTemplateId: "",
                     emailjsPublicKey: "",
-                    gdriveClientId: "216966055009-03rjdnq87uh3h15e3qfglp2pnmos9t5k.apps.googleusercontent.com"
+                    gdriveClientId: "216966055009-03rjdnq87uh3h15e3qfglp2pnmos9t5k.apps.googleusercontent.com",
+                    storageProvider: "gdrive"
                 };
             } else {
                 // Nuevo productor (7-Day Pro Trial)
@@ -737,6 +741,7 @@ async function loadProducerConfig() {
                     emailjsTemplateId: "",
                     emailjsPublicKey: "",
                     gdriveClientId: "",
+                    storageProvider: "gdrive",
                     plan: 'pro',
                     expirationPro: sevenDaysLater.toISOString(),
                     trialStartedAt: now.toISOString()
@@ -814,6 +819,9 @@ async function loadProducerConfig() {
     document.getElementById('cfg-emailjs-template-id').value = producerConfig.emailjsTemplateId || "";
     document.getElementById('cfg-emailjs-public-key').value = producerConfig.emailjsPublicKey || "";
     document.getElementById('cfg-gdrive-client-id').value = producerConfig.gdriveClientId || "";
+    if (document.getElementById('cfg-storage-provider')) {
+        document.getElementById('cfg-storage-provider').value = producerConfig.storageProvider || "gdrive";
+    }
     
     // Rellenar firma manual
     if (producerConfig.signature) {
@@ -901,6 +909,9 @@ async function saveProducerConfig() {
 
     // Guardar Google Drive Client ID
     producerConfig.gdriveClientId = document.getElementById('cfg-gdrive-client-id').value.trim();
+    if (document.getElementById('cfg-storage-provider')) {
+        producerConfig.storageProvider = document.getElementById('cfg-storage-provider').value;
+    }
     // Si cambió el Client ID, limpiar token cacheado de Drive
     if (producerConfig.gdriveClientId !== (JSON.parse(localStorage.getItem(`${window.currentUser}_producer_config`) || '{}').gdriveClientId || '')) {
         sessionStorage.removeItem('gdrive_access_token');
@@ -1835,10 +1846,16 @@ function setupEventListeners() {
             document.getElementById(targetBtn.dataset.tab).classList.add('active');
 
             // Mostrar/ocultar sidebar según el tab activo
-            if (targetBtn.dataset.tab === 'tab-history' || targetBtn.dataset.tab === 'tab-dashboard' || targetBtn.dataset.tab === 'tab-admin') {
+            if (targetBtn.dataset.tab === 'tab-history' || targetBtn.dataset.tab === 'tab-dashboard' || targetBtn.dataset.tab === 'tab-admin' || targetBtn.dataset.tab === 'tab-beats') {
                 sidebarEl && sidebarEl.classList.add('sidebar-hidden');
             } else {
                 sidebarEl && sidebarEl.classList.remove('sidebar-hidden');
+            }
+
+            // Renderizar catálogo de beats si se selecciona la pestaña de beats
+            if (targetBtn.dataset.tab === 'tab-beats') {
+                renderBeatsGrid();
+                updateGenreAndKeyFilters();
             }
 
             // Cargar contabilidad si entra a pestaña admin
@@ -2703,6 +2720,8 @@ function compileContract() {
     const isExclusive = type === 'exclusive';
     
     const beatName = document.getElementById('beat-name').value.trim() || "[Nombre del Beat]";
+    const beatBpm = document.getElementById('beat-bpm') ? document.getElementById('beat-bpm').value.trim() : "";
+    const beatKey = document.getElementById('beat-key') ? document.getElementById('beat-key').value.trim() : "";
     const buyerName = document.getElementById('buyer-name').value.trim() || "[Nombre del Comprador]";
     const buyerId = document.getElementById('buyer-id').value.trim() || "[Cédula/DNI]";
     const buyerEmail = document.getElementById('buyer-email').value.trim() || "[Correo del Comprador]";
@@ -2772,6 +2791,8 @@ function compileContract() {
         buyer_country: buyerCountry,
         
         beat_name: beatName,
+        beat_bpm: beatBpm ? beatBpm + ' BPM' : '',
+        beat_key: beatKey,
         license_value: value.toFixed(2),
         license_value_letters: valueLetters,
         ref_code: refCode,
@@ -4464,7 +4485,7 @@ async function getGdriveToken() {
     return new Promise((resolve, reject) => {
         // Timeout de 20 segundos para no quedar colgado si Chrome bloquea el popup
         const timeoutId = setTimeout(() => {
-            reject(new Error('Timeout de autenticación con Google Drive. Asegúrate de permitir popups para localhost:8000 y vuelve a intentarlo.'));
+            reject(new Error(`Timeout de autenticación con Google Drive. Asegúrate de permitir popups para el dominio activo (${window.location.host}) y vuelve a intentarlo.`));
         }, 20000);
 
         const tokenClient = google.accounts.oauth2.initTokenClient({
@@ -4485,7 +4506,7 @@ async function getGdriveToken() {
                 if (err.type === 'popup_closed') {
                     reject(new Error('Cerraste la ventana de Google sin autorizar. Vuelve a intentarlo.'));
                 } else if (err.type === 'popup_failed_to_open') {
-                    reject(new Error('Chrome bloqueó el popup de Google Drive. Haz clic en el ícono de popup bloqueado en la barra de dirección y permite popups para localhost:8000.'));
+                    reject(new Error(`Chrome bloqueó el popup de Google Drive. Haz clic en el ícono de popup bloqueado en la barra de dirección y permite popups para el dominio activo (${window.location.host}).`));
                 } else {
                     reject(new Error('Error en popup de Google: ' + (err.type || JSON.stringify(err))));
                 }
@@ -4871,6 +4892,8 @@ function saveFormDraft() {
         const draft = {
             activeLicenseType: getActiveLicenseType(),
             beatName: document.getElementById('beat-name').value,
+            beatBpm: document.getElementById('beat-bpm') ? document.getElementById('beat-bpm').value : '',
+            beatKey: document.getElementById('beat-key') ? document.getElementById('beat-key').value : '',
             buyerName: document.getElementById('buyer-name').value,
             buyerId: document.getElementById('buyer-id').value,
             buyerEmail: document.getElementById('buyer-email').value,
@@ -4932,6 +4955,8 @@ function loadFormDraft() {
         // 2. Restaurar campos de texto y número
         const fields = {
             'beat-name': draft.beatName,
+            'beat-bpm': draft.beatBpm || '',
+            'beat-key': draft.beatKey || '',
             'buyer-name': draft.buyerName,
             'buyer-id': draft.buyerId,
             'buyer-email': draft.buyerEmail,
@@ -5474,6 +5499,16 @@ async function initBeatsDB() {
         document.getElementById('btn-cancel-beat')?.addEventListener('click', closeBeatForm);
         document.getElementById('btn-save-beat')?.addEventListener('click', saveBeat);
         document.getElementById('search-beats')?.addEventListener('input', renderBeatsList);
+        
+        // Eventos del Catálogo de la pestaña principal
+        document.getElementById('tab-btn-add-beat')?.addEventListener('click', () => openTabBeatForm());
+        document.getElementById('tab-btn-close-form')?.addEventListener('click', closeTabBeatForm);
+        document.getElementById('tab-btn-cancel-beat')?.addEventListener('click', closeTabBeatForm);
+        document.getElementById('tab-btn-save-beat')?.addEventListener('click', saveTabBeat);
+        document.getElementById('tab-search-beats')?.addEventListener('input', renderBeatsGrid);
+        document.getElementById('tab-filter-genre')?.addEventListener('change', renderBeatsGrid);
+        document.getElementById('tab-filter-key')?.addEventListener('change', renderBeatsGrid);
+        
         window._beatsDBEventsConfigured = true;
     }
 
@@ -5640,6 +5675,10 @@ async function saveBeat() {
         showToast(id ? 'Beat actualizado' : 'Nuevo beat guardado');
         closeBeatForm();
         renderBeatsList();
+        if (document.getElementById('tab-beats-grid')) {
+            renderBeatsGrid();
+            updateGenreAndKeyFilters();
+        }
     } catch (e) {
         console.error('Error saving beat:', e);
         showToast('Error al guardar el beat en la base de datos', true);
@@ -5660,6 +5699,10 @@ async function deleteBeat(id) {
             }
             
             renderBeatsList();
+            if (document.getElementById('tab-beats-grid')) {
+                renderBeatsGrid();
+                updateGenreAndKeyFilters();
+            }
             showToast('Beat eliminado correctamente');
         } catch (e) {
             console.error('Error deleting beat:', e);
@@ -5678,8 +5721,13 @@ function selectBeat(id) {
     document.getElementById('audio-link-wav').value = beat.wav || '';
     document.getElementById('audio-link-stems').value = beat.stems || '';
 
-    // Si existen campos personalizados de BPM o Key en la pantalla, rellenarlos
-    // o si el usuario quiere que guarde BPM/Key, los tenemos mapeados en el beat
+    if (document.getElementById('beat-bpm')) {
+        document.getElementById('beat-bpm').value = beat.bpm || '';
+    }
+    if (document.getElementById('beat-key')) {
+        document.getElementById('beat-key').value = beat.key || '';
+    }
+
     closeBeatsModal();
     generatePreview(); // Actualizar la vista del contrato al instante
     showToast(`Beat "${beat.name}" cargado en el contrato.`);
@@ -5821,6 +5869,9 @@ function initFileUploads() {
         if (window.lucide) window.lucide.createIcons();
 
         try {
+            if (producerConfig.storageProvider === 'alternative') {
+                throw new Error("Preferencia de almacenamiento establecida a servidores alternativos.");
+            }
             // Intentar subir a Google Drive
             const token = await getGdriveToken();
             activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo a Drive...`;
@@ -7781,4 +7832,329 @@ function parseBeatStarsDate(dateStr) {
     }
     return new Date().toISOString().split('T')[0];
 }
+
+// ============================================================
+// CATÁLOGO DE BEATS PREMIUM (ESTILO BEATSTARS)
+// ============================================================
+
+let currentPlayingAudio = null;
+let currentPlayingBeatId = null;
+
+// Reproducir/Pausar audio de beat en el catálogo
+function togglePlayBeat(beatId, mp3Url) {
+    if (!mp3Url) {
+        showToast("Este beat no tiene archivo MP3 para previsualizar.", true);
+        return;
+    }
+
+    if (currentPlayingBeatId === beatId) {
+        if (currentPlayingAudio) {
+            currentPlayingAudio.pause();
+            currentPlayingAudio = null;
+            currentPlayingBeatId = null;
+            renderBeatsGrid();
+            showToast("Audio pausado");
+        }
+    } else {
+        if (currentPlayingAudio) {
+            currentPlayingAudio.pause();
+        }
+        
+        showToast("Cargando vista previa de audio...");
+        currentPlayingAudio = new Audio(mp3Url);
+        currentPlayingBeatId = beatId;
+        
+        currentPlayingAudio.play().then(() => {
+            renderBeatsGrid();
+        }).catch(err => {
+            console.error("Error al reproducir audio:", err);
+            showToast("Error al reproducir audio previa", true);
+            currentPlayingAudio = null;
+            currentPlayingBeatId = null;
+            renderBeatsGrid();
+        });
+
+        currentPlayingAudio.addEventListener('ended', () => {
+            currentPlayingAudio = null;
+            currentPlayingBeatId = null;
+            renderBeatsGrid();
+        });
+    }
+}
+
+// Actualizar filtros de Género y Escala basados en los beats cargados
+function updateGenreAndKeyFilters() {
+    const genreSelect = document.getElementById('tab-filter-genre');
+    const keySelect = document.getElementById('tab-filter-key');
+    if (!genreSelect || !keySelect) return;
+
+    const currentGenre = genreSelect.value;
+    const currentKey = keySelect.value;
+
+    // Obtener valores únicos
+    const genres = new Set();
+    const keys = new Set();
+
+    localBeats.forEach(b => {
+        if (b.genre) genres.add(b.genre.trim());
+        if (b.key) keys.add(b.key.trim());
+    });
+
+    // Rellenar géneros
+    genreSelect.innerHTML = '<option value="">Todos los géneros</option>';
+    Array.from(genres).sort().forEach(g => {
+        genreSelect.innerHTML += `<option value="${g}">${g}</option>`;
+    });
+    genreSelect.value = currentGenre;
+
+    // Rellenar escalas
+    keySelect.innerHTML = '<option value="">Todas las escalas</option>';
+    Array.from(keys).sort().forEach(k => {
+        keySelect.innerHTML += `<option value="${k}">${k}</option>`;
+    });
+    keySelect.value = currentKey;
+}
+
+// Renderizar la cuadrícula de beats en la pestaña principal
+function renderBeatsGrid() {
+    const gridContainer = document.getElementById('tab-beats-grid');
+    const emptyState = document.getElementById('tab-beats-empty');
+    if (!gridContainer) return;
+
+    const query = document.getElementById('tab-search-beats').value.toLowerCase().trim();
+    const genreFilter = document.getElementById('tab-filter-genre').value;
+    const keyFilter = document.getElementById('tab-filter-key').value;
+
+    let filtered = [...localBeats];
+
+    // Aplicar filtros
+    if (query) {
+        filtered = filtered.filter(b => 
+            b.name.toLowerCase().includes(query) || 
+            (b.genre && b.genre.toLowerCase().includes(query)) ||
+            (b.tags && b.tags.toLowerCase().includes(query)) ||
+            (b.key && b.key.toLowerCase().includes(query))
+        );
+    }
+    if (genreFilter) {
+        filtered = filtered.filter(b => b.genre && b.genre.trim() === genreFilter.trim());
+    }
+    if (keyFilter) {
+        filtered = filtered.filter(b => b.key && b.key.trim() === keyFilter.trim());
+    }
+
+    // Ordenar por fecha de actualización descendente
+    filtered.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+    // Actualizar estadísticas rápidas
+    let mp3Count = 0;
+    let wavCount = 0;
+    let stemsCount = 0;
+
+    localBeats.forEach(b => {
+        if (b.mp3) mp3Count++;
+        if (b.wav) wavCount++;
+        if (b.stems) stemsCount++;
+    });
+
+    document.getElementById('tab-stats-total').textContent = localBeats.length;
+    document.getElementById('tab-stats-mp3').textContent = mp3Count;
+    document.getElementById('tab-stats-wav').textContent = wavCount;
+    document.getElementById('tab-stats-stems').textContent = stemsCount;
+
+    if (filtered.length === 0) {
+        gridContainer.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+    gridContainer.innerHTML = '';
+
+    filtered.forEach(beat => {
+        const card = document.createElement('div');
+        card.className = 'beat-card-premium';
+
+        const isPlaying = currentPlayingBeatId === beat.id;
+        const playIcon = isPlaying ? 'pause' : 'play';
+
+        const artworkHtml = beat.artwork
+            ? `<img src="${beat.artwork}" class="beat-cover-img" alt="${beat.name}">`
+            : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #222530; color: #8a91a6; min-height: 180px;"><i data-lucide="music" style="width: 32px; height: 32px;"></i></div>`;
+
+        // Tags badges
+        let tagsHtml = '';
+        if (beat.tags) {
+            const tagList = beat.tags.split(',').map(t => t.trim()).filter(t => t.length > 0).slice(0, 3);
+            tagList.forEach(t => {
+                tagsHtml += `<span class="tag-badge-premium">#${t}</span>`;
+            });
+        }
+
+        // Details pills
+        let detailsHtml = '';
+        if (beat.bpm) detailsHtml += `<span class="beat-stat-pill"><i data-lucide="activity" style="width: 10px; height: 10px;"></i>${beat.bpm} BPM</span>`;
+        if (beat.key) detailsHtml += `<span class="beat-stat-pill"><i data-lucide="music" style="width: 10px; height: 10px;"></i>${beat.key}</span>`;
+        if (beat.genre) detailsHtml += `<span class="beat-stat-pill">${beat.genre}</span>`;
+
+        card.innerHTML = `
+            <div class="beat-cover-wrapper">
+                ${artworkHtml}
+                <div class="beat-play-overlay" onclick="togglePlayBeat('${beat.id}', '${beat.mp3 || ''}')">
+                    <div class="play-btn-circle play-btn-${beat.id}">
+                        <i data-lucide="${playIcon}" style="width: 20px; height: 20px; ${playIcon === 'play' ? 'margin-left: 2px;' : ''}"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                <div style="font-weight: 700; font-size: 14px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${beat.name}">${beat.name}</div>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    ${detailsHtml}
+                </div>
+                <div class="beat-badge-row" style="margin-top: 4px;">
+                    <span class="file-status-badge ${beat.mp3 ? 'active' : 'inactive'}">MP3</span>
+                    <span class="file-status-badge ${beat.wav ? 'active' : 'inactive'}">WAV</span>
+                    <span class="file-status-badge ${beat.stems ? 'active' : 'inactive'}">Stems</span>
+                </div>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                    ${tagsHtml}
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 6px; border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: auto;">
+                <button class="btn btn-secondary" onclick="selectBeatForContract('${beat.id}')" style="flex: 1; font-size: 11px; padding: 6px; height: 28px; background: var(--bs-blue-60); border-color: var(--bs-blue-60); color: #fff; border-radius: 6px; border: none; cursor: pointer; font-weight: 600;">Usar</button>
+                <button class="btn btn-secondary" onclick="openTabBeatForm('${beat.id}')" style="padding: 6px; height: 28px; border-radius: 6px; width: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer;" title="Editar"><i data-lucide="edit-2" style="width: 12px; height: 12px;"></i></button>
+                <button class="btn btn-secondary" onclick="deleteBeat('${beat.id}')" style="padding: 6px; height: 28px; border-radius: 6px; width: 28px; display: flex; align-items: center; justify-content: center; color: var(--bs-red-50); cursor: pointer;" title="Eliminar"><i data-lucide="trash-2" style="width: 12px; height: 12px;"></i></button>
+            </div>
+        `;
+
+        gridContainer.appendChild(card);
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+// Cargar un beat en el contrato directamente desde la pestaña
+function selectBeatForContract(id) {
+    selectBeat(id);
+    // Cambiar de pestaña al preview del contrato
+    document.querySelector('.tab-btn[data-tab="tab-preview"]').click();
+}
+
+// Abrir formulario de beat en el catálogo principal
+function openTabBeatForm(editId = null) {
+    document.getElementById('tab-beat-form-empty-state').style.display = 'none';
+    document.getElementById('tab-beat-form-fields').style.display = 'block';
+
+    if (editId) {
+        const beat = localBeats.find(b => b.id === editId);
+        if (beat) {
+            document.getElementById('tab-beat-form-title').innerText = 'Editar Beat: ' + beat.name;
+            document.getElementById('tab-edit-beat-id').value = beat.id;
+            document.getElementById('tab-db-beat-name').value = beat.name || '';
+            document.getElementById('tab-db-beat-mp3').value = beat.mp3 || '';
+            document.getElementById('tab-db-beat-wav').value = beat.wav || '';
+            document.getElementById('tab-db-beat-stems').value = beat.stems || '';
+            document.getElementById('tab-db-beat-artwork').value = beat.artwork || '';
+            document.getElementById('tab-db-beat-bpm').value = beat.bpm || '';
+            document.getElementById('tab-db-beat-key').value = beat.key || '';
+            document.getElementById('tab-db-beat-genre').value = beat.genre || '';
+            document.getElementById('tab-db-beat-moods').value = beat.moods || '';
+            document.getElementById('tab-db-beat-tags').value = beat.tags || '';
+            document.getElementById('tab-db-beat-description').value = beat.description || '';
+            document.getElementById('tab-db-beat-free-download').checked = !!beat.freeDownload;
+        }
+    } else {
+        document.getElementById('tab-beat-form-title').innerText = 'Agregar Nuevo Beat';
+        document.getElementById('tab-edit-beat-id').value = '';
+        document.getElementById('tab-db-beat-name').value = '';
+        document.getElementById('tab-db-beat-mp3').value = '';
+        document.getElementById('tab-db-beat-wav').value = '';
+        document.getElementById('tab-db-beat-stems').value = '';
+        document.getElementById('tab-db-beat-artwork').value = '';
+        document.getElementById('tab-db-beat-bpm').value = '';
+        document.getElementById('tab-db-beat-key').value = '';
+        document.getElementById('tab-db-beat-genre').value = '';
+        document.getElementById('tab-db-beat-moods').value = '';
+        document.getElementById('tab-db-beat-tags').value = '';
+        document.getElementById('tab-db-beat-description').value = '';
+        document.getElementById('tab-db-beat-free-download').checked = false;
+    }
+    
+    if (window.lucide) window.lucide.createIcons();
+}
+
+// Cerrar formulario
+function closeTabBeatForm() {
+    document.getElementById('tab-beat-form-empty-state').style.display = 'block';
+    document.getElementById('tab-beat-form-fields').style.display = 'none';
+}
+
+// Guardar beat desde el catálogo principal (local y Firestore sync)
+async function saveTabBeat() {
+    const id = document.getElementById('tab-edit-beat-id').value;
+    const name = document.getElementById('tab-db-beat-name').value.trim();
+    const mp3 = document.getElementById('tab-db-beat-mp3').value.trim();
+    const wav = document.getElementById('tab-db-beat-wav').value.trim();
+    const stems = document.getElementById('tab-db-beat-stems').value.trim();
+    const artwork = document.getElementById('tab-db-beat-artwork').value.trim();
+    const bpm = document.getElementById('tab-db-beat-bpm').value ? parseInt(document.getElementById('tab-db-beat-bpm').value, 10) : null;
+    const key = document.getElementById('tab-db-beat-key').value.trim();
+    const genre = document.getElementById('tab-db-beat-genre').value.trim();
+    const moods = document.getElementById('tab-db-beat-moods').value.trim();
+    const tags = document.getElementById('tab-db-beat-tags').value.trim();
+    const description = document.getElementById('tab-db-beat-description').value.trim();
+    const freeDownload = document.getElementById('tab-db-beat-free-download').checked;
+
+    if (!name) {
+        showToast('El nombre del beat es obligatorio', true);
+        return;
+    }
+
+    const beatId = id || 'beat_' + Date.now();
+    const beatData = {
+        id: beatId,
+        name,
+        mp3,
+        wav,
+        stems,
+        artwork,
+        bpm,
+        key,
+        genre,
+        moods,
+        tags,
+        description,
+        freeDownload,
+        updatedAt: Date.now()
+    };
+
+    if (id) {
+        const index = localBeats.findIndex(b => b.id === id);
+        if (index !== -1) localBeats[index] = beatData;
+    } else {
+        localBeats.push(beatData);
+    }
+
+    try {
+        safeSetItem(`${window.currentUser}_beats`, JSON.stringify(localBeats));
+        
+        // Guardar en Firestore
+        if (window.currentUserIsPro) {
+            const beatDocRef = doc(db, "users", window.currentUser, "beats", beatId);
+            await setDoc(beatDocRef, beatData);
+        }
+        
+        showToast(id ? 'Beat actualizado' : 'Nuevo beat guardado');
+        closeTabBeatForm();
+        renderBeatsGrid();
+        renderBeatsList();
+        updateGenreAndKeyFilters();
+    } catch (e) {
+        console.error('Error saving beat from tab:', e);
+        showToast('Error al guardar el beat en la base de datos', true);
+    }
+}
+
 
