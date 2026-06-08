@@ -5822,68 +5822,46 @@ function initFileUploads() {
             }, 3000);
 
         } catch (driveErr) {
-            console.warn("Fallo en la subida a Google Drive, intentando fallback a Firebase Storage:", driveErr);
-            showToast("Usando Firebase Storage de respaldo...", false);
+            console.warn("Fallo en la subida a Google Drive, intentando fallback a servidores alternativos:", driveErr);
+            showToast("Usando servidores alternativos de respaldo...", false);
             
-            // Fallback a Firebase Storage
-            activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... 0%`;
+            // Fallback a servidores alternativos
+            activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo...`;
             if (window.lucide) window.lucide.createIcons();
-            
-            const uid = window.currentUser || 'anonymous';
-            const timestamp = Date.now();
-            const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-            const storagePath = `users/${uid}/beats/${timestamp}_${safeName}`;
-            const fileRef = ref(storage, storagePath);
 
-            const uploadTask = uploadBytesResumable(fileRef, file);
-
-            uploadTask.on('state_changed', 
-                (snapshot) => {
-                    const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-                    activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
-                }, 
-                (fbErr) => {
-                    console.error("Error al subir a Firebase Storage:", fbErr);
-                    showToast("Error al subir el archivo.", true);
-                    activeUploadButton.disabled = false;
-                    activeUploadButton.style.opacity = '1';
-                    activeUploadButton.innerHTML = originalBtnHTML;
-                    if (window.lucide) window.lucide.createIcons();
-                }, 
-                async () => {
-                    try {
-                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                        const targetInput = document.getElementById(activeUploadTarget);
-                        if (targetInput) {
-                            targetInput.value = downloadURL;
-                            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-                            if (typeof generatePreview === 'function') {
-                                generatePreview();
-                            }
-                        }
-                        showToast("¡Archivo guardado en Firebase Storage!");
-                        activeUploadButton.disabled = false;
-                        activeUploadButton.style.opacity = '1';
-                        activeUploadButton.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
-                        if (window.lucide) window.lucide.createIcons();
-                        
-                        const btnRef = activeUploadButton;
-                        setTimeout(() => {
-                            if (btnRef.innerHTML.includes('check')) {
-                                btnRef.innerHTML = originalBtnHTML;
-                                if (window.lucide) window.lucide.createIcons();
-                            }
-                        }, 3000);
-                    } catch (urlErr) {
-                        console.error("Error al obtener la URL del archivo:", urlErr);
-                        showToast("Error al obtener la URL de descarga.", true);
-                        activeUploadButton.disabled = false;
-                        activeUploadButton.style.opacity = '1';
-                        activeUploadButton.innerHTML = originalBtnHTML;
-                        if (window.lucide) window.lucide.createIcons();
+            try {
+                const downloadURL = await uploadAudioToAlternativeCloud(file);
+                
+                const targetInput = document.getElementById(activeUploadTarget);
+                if (targetInput) {
+                    targetInput.value = downloadURL;
+                    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    if (typeof generatePreview === 'function') {
+                        generatePreview();
                     }
                 }
-            );
+                
+                showToast("¡Archivo guardado en servidor alternativo!");
+                activeUploadButton.disabled = false;
+                activeUploadButton.style.opacity = '1';
+                activeUploadButton.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
+                if (window.lucide) window.lucide.createIcons();
+                
+                const btnRef = activeUploadButton;
+                setTimeout(() => {
+                    if (btnRef.innerHTML.includes('check')) {
+                        btnRef.innerHTML = originalBtnHTML;
+                        if (window.lucide) window.lucide.createIcons();
+                    }
+                }, 3000);
+            } catch (altErr) {
+                console.error("Error al subir a servidores alternativos:", altErr);
+                showToast("Error al subir el archivo.", true);
+                activeUploadButton.disabled = false;
+                activeUploadButton.style.opacity = '1';
+                activeUploadButton.innerHTML = originalBtnHTML;
+                if (window.lucide) window.lucide.createIcons();
+            }
         }
     });
 }
@@ -5966,6 +5944,111 @@ async function uploadFileToDriveWithProgress(file, token, folderId, onProgress) 
 
         reader.readAsArrayBuffer(file);
     });
+}
+
+// Subir archivo de audio a servidores alternativos como fallback si falla Google Drive
+async function uploadAudioToAlternativeCloud(file) {
+    // 1. Intentar con GoFile
+    try {
+        console.log('Subiendo audio a GoFile...');
+        const serverResponse = await fetch('https://api.gofile.io/getServer');
+        let server = 'store1';
+        if (serverResponse.ok) {
+            const serverData = await serverResponse.json();
+            if (serverData.status === 'ok' && serverData.data && serverData.data.server) {
+                server = serverData.data.server;
+            }
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+        
+        const uploadResponse = await fetch(`https://${server}.gofile.io/uploadFile`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json();
+            if (uploadData.status === 'ok' && uploadData.data && uploadData.data.downloadPage) {
+                console.log('Subido audio a GoFile con éxito:', uploadData.data.downloadPage);
+                return uploadData.data.downloadPage;
+            }
+        }
+    } catch (e) {
+        console.error('Error al subir audio a GoFile:', e);
+    }
+
+    // 2. Intentar con PixelDrain
+    try {
+        console.log('Subiendo audio a PixelDrain...');
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+
+        const response = await fetch('https://pixeldrain.com/api/file', {
+            method: 'POST',
+            body: formData,
+            credentials: 'omit'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                console.log('Subido audio a PixelDrain con éxito ID:', data.id);
+                return `https://pixeldrain.com/api/file/${data.id}`;
+            }
+        }
+    } catch (e) {
+        console.error('Error al subir audio a PixelDrain:', e);
+    }
+
+    // 3. Intentar con file.io
+    try {
+        console.log('Subiendo audio a file.io...');
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+
+        const response = await fetch('https://file.io/', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                console.log('Subido audio a file.io con éxito:', data.link);
+                return data.link;
+            }
+        }
+    } catch (e) {
+        console.error('Error al subir audio a file.io:', e);
+    }
+
+    // 4. Intentar con tmpfiles.org
+    try {
+        console.log('Subiendo audio a tmpfiles.org...');
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+
+        const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.status === 'success') {
+                const viewerUrl = data.data.url;
+                const downloadUrl = viewerUrl.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
+                console.log('Subido audio a tmpfiles.org con éxito:', downloadUrl);
+                return downloadUrl;
+            }
+        }
+    } catch (e) {
+        console.error('Error al subir audio a tmpfiles.org:', e);
+    }
+
+    throw new Error('No se pudo subir el archivo de audio a ningún servidor de almacenamiento alternativo.');
 }
 
 // Cargar la contabilidad consolidada de todos los productores (Sossa Admin)
