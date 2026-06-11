@@ -419,6 +419,8 @@ function setupAuthModalEvents() {
     // Formulario de login
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        window.isManualLoginAttempt = true;
+        sessionStorage.setItem('beatss_manual_login', 'true');
         const email = document.getElementById('auth-login-email').value.trim();
         const password = document.getElementById('auth-login-password').value;
         errorMsg.style.display = 'none';
@@ -437,6 +439,8 @@ function setupAuthModalEvents() {
     // Formulario de registro
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        window.isManualLoginAttempt = true;
+        sessionStorage.setItem('beatss_manual_login', 'true');
         const email = document.getElementById('auth-register-email').value.trim();
         const password = document.getElementById('auth-register-password').value;
         errorMsg.style.display = 'none';
@@ -456,6 +460,8 @@ function setupAuthModalEvents() {
     // Login con Google
     googleBtn.addEventListener('click', async () => {
         errorMsg.style.display = 'none';
+        window.isManualLoginAttempt = true;
+        sessionStorage.setItem('beatss_manual_login', 'true');
         try {
             showToast('Iniciando sesión con Google...');
             // Usar signInWithPopup como método primario porque signInWithRedirect suele fallar
@@ -474,6 +480,8 @@ function setupAuthModalEvents() {
                 await signInWithRedirect(auth, googleProvider);
             } catch (redirectErr) {
                 console.error('Redirección también falló:', redirectErr);
+                sessionStorage.removeItem('beatss_manual_login');
+                window.isManualLoginAttempt = false;
                 errorMsg.innerText = 'Error de Google: ' + redirectErr.message;
                 errorMsg.style.display = 'block';
                 showToast('Fallo al iniciar sesión con Google', true);
@@ -537,6 +545,12 @@ function parseAuthError(code) {
 
 // Inicialización de la aplicación
 const initAuthAndApp = () => {
+    // Detectar si venimos de un intento de inicio de sesión manual
+    if (sessionStorage.getItem('beatss_manual_login') === 'true') {
+        window.isManualLoginAttempt = true;
+        sessionStorage.removeItem('beatss_manual_login');
+    }
+
     // Desactivar y desregistrar todos los Service Workers para evitar problemas de caché
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -580,12 +594,15 @@ const initAuthAndApp = () => {
     getRedirectResult(auth)
         .then((result) => {
             if (result && result.user) {
+                window.isManualLoginAttempt = true;
                 console.log("Sesión de Google iniciada mediante redirección para:", result.user.email);
                 showToast("Sesión iniciada con Google");
             }
         })
         .catch((err) => {
             console.error("Error al procesar redirección de Google:", err);
+            sessionStorage.removeItem('beatss_manual_login');
+            window.isManualLoginAttempt = false;
             
             // Abrir el modal de inicio de sesión para que el usuario pueda ver el mensaje de error
             const modal = document.getElementById('login-modal');
@@ -604,12 +621,17 @@ const initAuthAndApp = () => {
 
     // Escuchar el estado de autenticación de Firebase
     onAuthStateChanged(auth, async (user) => {
-        if (window.isPublicStoreMode || window.isGlobalCatalogMode) {
+        if (user) {
+            window.currentUser = user.uid;
+            window.currentUserIsAdmin = (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com');
+        } else {
+            window.currentUser = null;
+            window.currentUserIsAdmin = false;
+        }
+
+        // Si estamos en la tienda pública o catálogo, y NO es un intento manual de login del admin, omitimos el flujo normal
+        if ((window.isPublicStoreMode || window.isGlobalCatalogMode) && !window.isManualLoginAttempt) {
             console.log("🛒 Tienda pública o catálogo activo. Omitiendo flujo normal de control de sesión.");
-            if (user) {
-                window.currentUser = user.uid;
-                window.currentUserIsAdmin = (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com');
-            }
             return;
         }
         if (user) {
