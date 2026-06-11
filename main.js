@@ -5968,12 +5968,6 @@ async function saveBeat() {
         updatedAt: Date.now()
     };
 
-    const isNew = !id;
-    if (!window.currentUserIsPro && isNew && localBeats.length >= 10) {
-        window.openPaymentModal("Límite alcanzado: Has alcanzado el límite de 10 beats del Plan Inicial. ¡Actualízate a PRO hoy para subir beats ilimitados!");
-        return;
-    }
-
     if (id) {
         const index = localBeats.findIndex(b => b.id === id);
         if (index !== -1) localBeats[index] = beatData;
