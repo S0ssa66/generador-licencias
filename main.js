@@ -9182,12 +9182,12 @@ window.openBeatCheckoutModal = function(beatId) {
     window.checkoutExclusivePrice = 500; // Reset de precio exclusivo
 
     // Reset fields
-    document.getElementById('buyer-name').value = '';
-    document.getElementById('buyer-email').value = '';
-    document.getElementById('buyer-phone').value = '';
-    document.getElementById('buyer-dni').value = '';
-    document.getElementById('buyer-city').value = '';
-    document.getElementById('buyer-country').value = 'Ecuador';
+    document.getElementById('store-buyer-name').value = '';
+    document.getElementById('store-buyer-email').value = '';
+    document.getElementById('store-buyer-phone').value = '';
+    document.getElementById('store-buyer-dni').value = '';
+    document.getElementById('store-buyer-city').value = '';
+    document.getElementById('store-buyer-country').value = 'Ecuador';
 
     document.getElementById('store-receipt-file-name').textContent = 'Ningún archivo seleccionado';
     document.getElementById('store-receipt-file').value = '';
@@ -9582,12 +9582,12 @@ function getSelectedStorePaymentMethod() {
 
 async function submitExclusiveOffer() {
     const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
-    const buyerName = document.getElementById('buyer-name').value.trim();
-    const buyerEmail = document.getElementById('buyer-email').value.trim();
-    const buyerPhone = document.getElementById('buyer-phone').value.trim();
-    const buyerDni = document.getElementById('buyer-dni').value.trim();
-    const buyerCity = document.getElementById('buyer-city').value.trim();
-    const buyerCountry = document.getElementById('buyer-country').value.trim();
+    const buyerName = document.getElementById('store-buyer-name').value.trim();
+    const buyerEmail = document.getElementById('store-buyer-email').value.trim();
+    const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
+    const buyerDni = document.getElementById('store-buyer-dni').value.trim();
+    const buyerCity = document.getElementById('store-buyer-city').value.trim();
+    const buyerCountry = document.getElementById('store-buyer-country').value.trim();
     const offerPrice = parseFloat(document.getElementById('offer-price-input').value);
     const offerMessage = document.getElementById('offer-message-input').value.trim();
 
@@ -9771,8 +9771,8 @@ function setupStoreCheckout() {
             // Nota: El botón Siguiente ya no se muestra en paso 1, pero lo dejamos como fallback
             updateCheckoutStepView(2);
         } else if (checkoutCurrentStep === 2) {
-            const buyerName = document.getElementById('buyer-name').value.trim();
-            const buyerEmail = document.getElementById('buyer-email').value.trim();
+            const buyerName = document.getElementById('store-buyer-name').value.trim();
+            const buyerEmail = document.getElementById('store-buyer-email').value.trim();
             if (!buyerName || !buyerEmail) {
                 showToast('Por favor escribe tu Nombre y Correo Electrónico.', true);
                 return;
@@ -9933,12 +9933,12 @@ function renderStorePayPalButton(clientId) {
 }
 
 async function submitBeatPurchasePayment(method, reference = '') {
-    const buyerName = document.getElementById('buyer-name').value.trim();
-    const buyerEmail = document.getElementById('buyer-email').value.trim();
-    const buyerPhone = document.getElementById('buyer-phone').value.trim();
-    const buyerDni = document.getElementById('buyer-dni').value.trim();
-    const buyerCity = document.getElementById('buyer-city').value.trim();
-    const buyerCountry = document.getElementById('buyer-country').value.trim();
+    const buyerName = document.getElementById('store-buyer-name').value.trim();
+    const buyerEmail = document.getElementById('store-buyer-email').value.trim();
+    const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
+    const buyerDni = document.getElementById('store-buyer-dni').value.trim();
+    const buyerCity = document.getElementById('store-buyer-city').value.trim();
+    const buyerCountry = document.getElementById('store-buyer-country').value.trim();
 
     if (!buyerName || !buyerEmail) {
         showToast('Por favor completa todos los campos del formulario.', true);
