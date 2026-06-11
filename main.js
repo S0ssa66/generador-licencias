@@ -5542,6 +5542,11 @@ function loadFormDraft() {
 function clearFormFields() {
     if (confirm('¿Estás seguro de que deseas limpiar todos los campos del formulario?')) {
         document.getElementById('beat-name').value = '';
+        const bpmEl = document.getElementById('beat-bpm');
+        if (bpmEl) bpmEl.value = '';
+        const keyEl = document.getElementById('beat-key');
+        if (keyEl) keyEl.value = '';
+        
         document.getElementById('buyer-name').value = '';
         document.getElementById('buyer-id').value = '';
         document.getElementById('buyer-email').value = '';
@@ -5551,6 +5556,11 @@ function clearFormFields() {
         document.getElementById('audio-link-mp3').value = '';
         document.getElementById('audio-link-wav').value = '';
         document.getElementById('audio-link-stems').value = '';
+        
+        const celebEl = document.getElementById('celebration-place');
+        if (celebEl) {
+            celebEl.value = producerConfig.place || 'Quito, Ecuador';
+        }
         
         initDefaultDate();
         
