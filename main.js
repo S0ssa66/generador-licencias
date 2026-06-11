@@ -523,6 +523,18 @@ const initAuthAndApp = () => {
 
     // Capturar código de referido si viene en la URL
     const urlParams = new URLSearchParams(window.location.search);
+    
+    // Configurar modo tienda o catálogo de inmediato para evitar conflictos con la sesión
+    const isStore = urlParams.get('p') || urlParams.get('producer');
+    const isCatalog = urlParams.has('catalogo') || window.location.hash === '#catalogo';
+    if (isStore) {
+        window.isPublicStoreMode = true;
+        window.isGlobalCatalogMode = false;
+    } else if (isCatalog) {
+        window.isPublicStoreMode = false;
+        window.isGlobalCatalogMode = true;
+    }
+
     const refCode = urlParams.get('ref');
     if (refCode) {
         localStorage.setItem('beatss_referred_by', refCode);
@@ -560,8 +572,8 @@ const initAuthAndApp = () => {
 
     // Escuchar el estado de autenticación de Firebase
     onAuthStateChanged(auth, async (user) => {
-        if (window.isPublicStoreMode) {
-            console.log("🛒 Tienda pública activa. Omitiendo flujo normal de control de sesión.");
+        if (window.isPublicStoreMode || window.isGlobalCatalogMode) {
+            console.log("🛒 Tienda pública o catálogo activo. Omitiendo flujo normal de control de sesión.");
             if (user) {
                 window.currentUser = user.uid;
                 window.currentUserIsAdmin = (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com');
@@ -8957,8 +8969,9 @@ window.initPublicStore = async function(producerAka) {
         // Cargar logotipo si existe
         const logoImg = document.getElementById('store-logo-img');
         const logoIcon = document.getElementById('store-logo-icon');
-        if (configData.logoBase64) {
-            logoImg.src = configData.logoBase64;
+        const resolvedLogo = window.getProducerAvatar ? window.getProducerAvatar(configData) : configData.logoBase64;
+        if (resolvedLogo) {
+            logoImg.src = resolvedLogo;
             logoImg.style.display = 'block';
             logoIcon.style.display = 'none';
         } else {
