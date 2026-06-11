@@ -1027,20 +1027,6 @@ async function saveProducerConfig() {
         generatePreview();
         updatePlanUI();
         showToast('Configuración del productor actualizada en la nube');
-
-        // Autenticar automáticamente con Google Drive si hay un Client ID y no hay token activo
-        if (producerConfig.gdriveClientId) {
-            const cachedToken = sessionStorage.getItem('gdrive_access_token');
-            const expiry = parseInt(sessionStorage.getItem('gdrive_token_expiry') || '0', 10);
-            if (!cachedToken || Date.now() >= expiry - 120000) {
-                getGdriveToken().then(() => {
-                    console.log('☁️ Auto-autenticado con Google Drive con éxito al guardar configuración.');
-                    autoBackupGoogleDrive();
-                }).catch(err => {
-                    console.warn('Auto-autenticación con Google Drive falló:', err.message);
-                });
-            }
-        }
     } catch (err) {
         console.error("Error al guardar config de productor en Firestore:", err);
         showToast("Error al guardar en la nube: " + err.message, true);
