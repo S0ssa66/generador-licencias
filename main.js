@@ -37,20 +37,35 @@ import {
 let currentLang = 'es';
 let salesChartInstance = null;
 
-// Convertir enlaces de Google Drive a enlaces de descarga directa para reproducción
+// Convertir enlaces de Google Drive a enlaces a través de nuestro proxy de audio (para evitar restricciones de CORS y CORP de Google)
 function getGDriveDirectLink(url) {
     if (!url) return '';
-    if (url.includes('drive.google.com/uc') || url.includes('docs.google.com/uc')) {
+    
+    // Si ya es un enlace a nuestro proxy, devolverlo
+    if (url.includes('/api/proxy-audio')) {
         return url;
     }
-    const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-    if (match && match[1]) {
-        return `https://docs.google.com/uc?export=download&id=${match[1]}`;
+    
+    let fileId = null;
+    
+    // Extraer fileId del enlace uc o docs
+    if (url.includes('drive.google.com/uc') || url.includes('docs.google.com/uc')) {
+        const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (idMatch && idMatch[1]) fileId = idMatch[1];
+    } else {
+        const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+        if (match && match[1]) {
+            fileId = match[1];
+        } else {
+            const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            if (idMatch && idMatch[1]) fileId = idMatch[1];
+        }
     }
-    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-    if (idMatch && idMatch[1]) {
-        return `https://docs.google.com/uc?export=download&id=${idMatch[1]}`;
+    
+    if (fileId) {
+        return `/api/proxy-audio?id=${fileId}`;
     }
+    
     return url;
 }
 
@@ -8410,9 +8425,15 @@ function togglePlayBeat(beatId, mp3Url) {
             currentPlayingAudio.pause();
         }
         
-        showToast("Cargando vista previa de audio...");
         currentPlayingAudio = new Audio(getGDriveDirectLink(mp3Url));
         currentPlayingBeatId = beatId;
+        
+        currentPlayingAudio.addEventListener('error', (e) => {
+            const err = currentPlayingAudio.error;
+            let errMsg = "Error de red o archivo inaccesible";
+            if (err) errMsg = `Código ${err.code}: ${err.message || ''}`;
+            showToast("Error de audio: " + errMsg, true);
+        });
         
         currentPlayingAudio.play().then(() => {
             renderBeatsGrid();
@@ -9194,6 +9215,22 @@ window.toggleStorePlay = function(beatId) {
         currentStorePlayingBeatId = beatId;
         currentStoreAudio = new Audio(getGDriveDirectLink(beat.mp3));
         currentStoreAudio.volume = parseFloat(volumeSlider.value || 0.8);
+
+        currentStoreAudio.addEventListener('error', (e) => {
+            const err = currentStoreAudio.error;
+            let errMsg = "Error de red o archivo inaccesible";
+            if (err) {
+                switch (err.code) {
+                    case 1: errMsg = "Reproducción abortada"; break;
+                    case 2: errMsg = "Error de red (CORS/bloqueo de origen)"; break;
+                    case 3: errMsg = "Error de decodificación de audio"; break;
+                    case 4: errMsg = "Formato de audio no soportado o enlace roto"; break;
+                }
+                errMsg += ` (Código ${err.code})`;
+            }
+            console.error("Audio error:", err);
+            showToast("Error de audio: " + errMsg, true);
+        });
 
         currentStoreAudio.addEventListener('timeupdate', updatePlayerProgress);
         currentStoreAudio.addEventListener('loadedmetadata', () => {
