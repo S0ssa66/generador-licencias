@@ -6073,8 +6073,9 @@ function renderBeatsList() {
             ? `<span style="font-size: 10px; background: #2a2e39; color: #a0aec0; padding: 2px 6px; border-radius: 4px; margin-left: 8px;"><i data-lucide="link" style="width:10px;height:10px;display:inline-block;margin-right:3px;"></i>${linksCount}</span>` 
             : '';
 
-        const artworkImg = beat.artwork
-            ? `<img src="${beat.artwork}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`
+        const finalArtworkUrl = beat.artwork || (window.producerConfig && window.producerConfig.logoBase64);
+        const artworkImg = finalArtworkUrl
+            ? `<img src="${finalArtworkUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`
             : `<i data-lucide="music" style="width: 18px; height: 18px; color: #a0aec0;"></i>`;
 
         let detailsText = '';
@@ -8713,7 +8714,7 @@ window.renderCartItems = function() {
     
     container.innerHTML = window.cart.map((item, index) => {
         const beat = window.storeBeats.find(b => b.id === item.beatId) || item;
-        const artwork = item.artwork || beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
+        const artwork = item.artwork || (beat.producerConfig && beat.producerConfig.logoBase64) || beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
         
         // Generar las opciones de licencia para el select
         const optionsHtml = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
@@ -8894,7 +8895,7 @@ function renderStoreBeats(beats) {
     emptyState.style.display = 'none';
 
     grid.innerHTML = beats.map(beat => {
-        const artworkUrl = beat.artwork || getDefaultBeatArtwork();
+        const artworkUrl = window.storeProducerConfig?.logoBase64 || beat.artwork || getDefaultBeatArtwork();
         const bpmText = beat.bpm ? `${beat.bpm} BPM` : 'N/A';
         const keyText = beat.key ? `${beat.key}` : 'N/A';
         
@@ -9016,7 +9017,8 @@ window.toggleStorePlay = function(beatId) {
 
         document.getElementById('player-title').textContent = beat.name;
         document.getElementById('player-info').textContent = `${beat.bpm ? beat.bpm + ' BPM' : ''} ${beat.key ? '• ' + beat.key : ''} ${beat.genre ? '• ' + beat.genre : ''}`;
-        document.getElementById('player-artwork').src = beat.artwork || 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=100&auto=format&fit=crop';
+        const pConfig = beat.producerConfig || {};
+        document.getElementById('player-artwork').src = pConfig.logoBase64 || beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=100&auto=format&fit=crop');
         player.style.display = 'block';
 
         document.getElementById('player-btn-buy').onclick = () => window.openBeatCheckoutModal(beatId);
@@ -10734,7 +10736,7 @@ function renderGlobalBeats(beats) {
         if (akaLower.includes('monarco')) pColor = '#ff4d4d';
         else if (akaLower.includes('sossa')) pColor = '#b28eff';
 
-        const artwork = beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
+        const artwork = config.logoBase64 || beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
         const price = beat.price_basic ? `$${beat.price_basic.toFixed(2)}` : 'Negociable';
         
         return `
