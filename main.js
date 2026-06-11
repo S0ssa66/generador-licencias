@@ -891,6 +891,37 @@ async function loadProducerConfig() {
         document.getElementById('cfg-contract-color').value = producerConfig.contractColor || "default";
     }
     
+    // Rellenar Brand Color y Cupones
+    if (document.getElementById('cfg-brand-color-hex')) {
+        document.getElementById('cfg-brand-color-hex').value = producerConfig.brandColor || "#00ccff";
+        document.getElementById('cfg-brand-color').value = producerConfig.brandColor || "#00ccff";
+        
+        // Setup listener (solo si no se ha añadido, para no duplicar en cada apertura)
+        if (!document.getElementById('cfg-brand-color').dataset.bound) {
+            document.getElementById('cfg-brand-color').addEventListener('input', (e) => {
+                document.getElementById('cfg-brand-color-hex').value = e.target.value;
+            });
+            document.getElementById('cfg-brand-color-hex').addEventListener('input', (e) => {
+                document.getElementById('cfg-brand-color').value = e.target.value;
+            });
+            
+            document.getElementById('btn-add-coupon').addEventListener('click', addCouponFromSettings);
+            document.getElementById('cfg-brand-color').dataset.bound = "true";
+        }
+        
+        if (producerConfig.plan !== 'elite') {
+            document.getElementById('cfg-brand-color-container').style.opacity = '0.5';
+            document.getElementById('cfg-brand-color-container').style.pointerEvents = 'none';
+            document.getElementById('brand-color-warning').style.display = 'block';
+        } else {
+            document.getElementById('cfg-brand-color-container').style.opacity = '1';
+            document.getElementById('cfg-brand-color-container').style.pointerEvents = 'auto';
+            document.getElementById('brand-color-warning').style.display = 'none';
+        }
+    }
+    
+    renderCouponsSettings();
+    
     // Toggle de campos de admin
     const adminFields = document.querySelectorAll('.admin-only-field');
     adminFields.forEach(el => {
@@ -996,6 +1027,11 @@ async function saveProducerConfig() {
     if (document.getElementById('cfg-contract-color')) {
         producerConfig.contractColor = document.getElementById('cfg-contract-color').value;
     }
+    if (document.getElementById('cfg-brand-color-hex') && producerConfig.plan === 'elite') {
+        producerConfig.brandColor = document.getElementById('cfg-brand-color-hex').value.trim() || "#00ccff";
+    } else if (producerConfig.plan !== 'elite') {
+        producerConfig.brandColor = "";
+    }
     
     // Guardar datos de cobro de tienda pública
     producerConfig.bankPichinchaAcc = document.getElementById('cfg-bank-pichincha-acc').value.trim();
@@ -1032,6 +1068,78 @@ async function saveProducerConfig() {
         console.error("Error al guardar config de productor en Firestore:", err);
         showToast("Error al guardar en la nube: " + err.message, true);
     }
+}
+
+// Lógica de Cupones
+function renderCouponsSettings() {
+    const listEl = document.getElementById('cfg-coupons-list');
+    if (!listEl) return;
+    
+    if (!producerConfig.coupons) {
+        producerConfig.coupons = [];
+    }
+    
+    if (producerConfig.coupons.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: #8a91a6; font-size: 11px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">No hay cupones creados</div>';
+        return;
+    }
+    
+    listEl.innerHTML = '';
+    producerConfig.coupons.forEach((coupon, index) => {
+        const item = document.createElement('div');
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.justifyContent = 'space-between';
+        item.style.padding = '8px 12px';
+        item.style.background = 'rgba(255,255,255,0.05)';
+        item.style.border = '1px solid rgba(255,255,255,0.1)';
+        item.style.borderRadius = '6px';
+        
+        item.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 12px; font-weight: 700; color: #fff; background: rgba(0, 204, 255, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px dashed rgba(0, 204, 255, 0.3); text-transform: uppercase;">${coupon.code}</span>
+                <span style="font-size: 12px; font-weight: 600; color: #10b981;">-${coupon.discount}%</span>
+            </div>
+            <button type="button" class="btn-icon-only" onclick="removeCoupon(${index})" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+            </button>
+        `;
+        listEl.appendChild(item);
+    });
+    lucide.createIcons();
+}
+
+function addCouponFromSettings() {
+    const codeEl = document.getElementById('cfg-coupon-code');
+    const descEl = document.getElementById('cfg-coupon-discount');
+    const code = codeEl.value.trim().toUpperCase();
+    const discount = parseInt(descEl.value, 10);
+    
+    if (!code || isNaN(discount) || discount < 1 || discount > 99) {
+        showToast('Código inválido o descuento no válido (1-99).', true);
+        return;
+    }
+    
+    if (!producerConfig.coupons) {
+        producerConfig.coupons = [];
+    }
+    
+    if (producerConfig.coupons.find(c => c.code === code)) {
+        showToast('Ya existe un cupón con ese código.', true);
+        return;
+    }
+    
+    producerConfig.coupons.push({ code, discount });
+    codeEl.value = '';
+    descEl.value = '';
+    renderCouponsSettings();
+    showToast('Cupón agregado. Guarda los cambios para aplicarlo en la nube.');
+}
+
+window.removeCoupon = function(index) {
+    if (!producerConfig.coupons) return;
+    producerConfig.coupons.splice(index, 1);
+    renderCouponsSettings();
 }
 
 // Exponer función global para obtener el token de sesión de Firebase
@@ -6074,7 +6182,7 @@ function renderBeatsList() {
             ? `<span style="font-size: 10px; background: #2a2e39; color: #a0aec0; padding: 2px 6px; border-radius: 4px; margin-left: 8px;"><i data-lucide="link" style="width:10px;height:10px;display:inline-block;margin-right:3px;"></i>${linksCount}</span>` 
             : '';
 
-        const finalArtworkUrl = beat.artwork || (window.producerConfig && window.producerConfig.logoBase64);
+        const finalArtworkUrl = beat.artwork || (window.getProducerAvatar ? window.getProducerAvatar(window.producerConfig) : (window.producerConfig && window.producerConfig.logoBase64));
         const artworkImg = finalArtworkUrl
             ? `<img src="${finalArtworkUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`
             : `<i data-lucide="music" style="width: 18px; height: 18px; color: #a0aec0;"></i>`;
@@ -8391,8 +8499,10 @@ function renderBeatsGrid() {
         const isPlaying = currentPlayingBeatId === beat.id;
         const playIcon = isPlaying ? 'pause' : 'play';
 
-        const artworkHtml = beat.artwork
-            ? `<img src="${beat.artwork}" class="beat-cover-img" alt="${beat.name}">`
+        const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(window.producerConfig) : (window.producerConfig && window.producerConfig.logoBase64);
+        const finalArtworkUrl = beat.artwork || producerLogo;
+        const artworkHtml = finalArtworkUrl
+            ? `<img src="${finalArtworkUrl}" class="beat-cover-img" alt="${beat.name}">`
             : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #222530; color: #8a91a6; min-height: 180px;"><i data-lucide="music" style="width: 32px; height: 32px;"></i></div>`;
 
         // Tags badges
@@ -8715,7 +8825,8 @@ window.renderCartItems = function() {
     
     container.innerHTML = window.cart.map((item, index) => {
         const beat = window.storeBeats.find(b => b.id === item.beatId) || item;
-        const artwork = item.artwork || (beat.producerConfig && beat.producerConfig.logoBase64) || beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
+        const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(beat.producerConfig) : (beat.producerConfig && beat.producerConfig.logoBase64);
+        const artwork = beat.artwork || producerLogo || item.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
         
         // Generar las opciones de licencia para el select
         const optionsHtml = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
@@ -8749,7 +8860,7 @@ window.renderCartItems = function() {
     if (window.lucide) window.lucide.createIcons();
     
     // Actualizar total
-    const total = window.getCartTotal();
+    const total = window.getCheckoutPrice();
     const totalStr = '$' + total.toFixed(2) + ' USD';
     document.getElementById('cart-total-price-display').textContent = totalStr;
     document.getElementById('deuna-total-price').textContent = totalStr;
@@ -8762,12 +8873,14 @@ let currentStorePlayingBeatId = null;
 
 let checkoutSelectedBeatId = null;
 let checkoutSelectedLicense = 'basic';
+window.checkoutDiscountPercent = 0;
+window.checkoutAppliedCoupon = null;
 let checkoutCurrentStep = 1;
 let storePaymentReceiptBase64 = null;
 let checkoutIsOfferMode = false;
 
 // Inicialización de Tienda Pública
-async function initPublicStore(producerAka) {
+window.initPublicStore = async function(producerAka) {
     console.log("🛒 Cargando tienda de beats para:", producerAka);
     const storeView = document.getElementById('public-store-view');
     const grid = document.getElementById('store-beats-grid');
@@ -8824,16 +8937,22 @@ async function initPublicStore(producerAka) {
 
         // Aplicar branding de color
         const akaLower = (configData.aka || '').toLowerCase();
-        if (akaLower.includes('monarco')) {
-            document.documentElement.style.setProperty('--accent', '#ff4d4d');
-            document.documentElement.style.setProperty('--accent-rgb', '255, 77, 77');
+        let storeColor = '#00ccff';
+        if (configData.brandColor) {
+            storeColor = configData.brandColor;
+        } else if (akaLower.includes('monarco')) {
+            storeColor = '#ff4d4d';
         } else if (akaLower.includes('sossa')) {
-            document.documentElement.style.setProperty('--accent', '#b28eff');
-            document.documentElement.style.setProperty('--accent-rgb', '178, 142, 255');
-        } else {
-            document.documentElement.style.setProperty('--accent', '#00ccff');
-            document.documentElement.style.setProperty('--accent-rgb', '0, 204, 255');
+            storeColor = '#b28eff';
         }
+
+        const hexToRgb = hex => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '0, 204, 255';
+        };
+
+        document.documentElement.style.setProperty('--accent', storeColor);
+        document.documentElement.style.setProperty('--accent-rgb', hexToRgb(storeColor));
 
         // Cargar logotipo si existe
         const logoImg = document.getElementById('store-logo-img');
@@ -8850,6 +8969,25 @@ async function initPublicStore(producerAka) {
         // Redes sociales
         document.getElementById('store-email-link').href = `mailto:${configData.email || 'soporte@beatss.com'}`;
         document.getElementById('store-phone-link').href = `https://wa.me/${(configData.phone || '').replace(/\+/g, '').replace(/\s/g, '')}`;
+
+        // WhatsApp flotante
+        let waFloat = document.getElementById('store-wa-float');
+        if (configData.phone) {
+            if (!waFloat) {
+                waFloat = document.createElement('a');
+                waFloat.id = 'store-wa-float';
+                waFloat.style.cssText = 'position: fixed; bottom: 20px; right: 20px; background: #25D366; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 9999; text-decoration: none; transition: transform 0.2s;';
+                waFloat.innerHTML = '<i data-lucide="message-circle" style="width: 24px; height: 24px; fill: white;"></i>';
+                waFloat.onmouseover = () => waFloat.style.transform = 'scale(1.1)';
+                waFloat.onmouseout = () => waFloat.style.transform = 'scale(1)';
+                document.body.appendChild(waFloat);
+                if (window.lucide) window.lucide.createIcons({root: waFloat});
+            }
+            waFloat.href = `https://wa.me/${configData.phone.replace(/\+/g, '').replace(/\s/g, '')}?text=Hola,%20me%20gustar%C3%ADa%20comprar%20un%20beat.`;
+            waFloat.style.display = 'flex';
+        } else if (waFloat) {
+            waFloat.style.display = 'none';
+        }
 
         // Obtener beats de la base de datos
         const beatsCol = collection(db, "users", producerUid, "beats");
@@ -8896,7 +9034,8 @@ function renderStoreBeats(beats) {
     emptyState.style.display = 'none';
 
     grid.innerHTML = beats.map(beat => {
-        const artworkUrl = window.storeProducerConfig?.logoBase64 || beat.artwork || getDefaultBeatArtwork();
+        const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(window.storeProducerConfig) : window.storeProducerConfig?.logoBase64;
+        const artworkUrl = beat.artwork || producerLogo || getDefaultBeatArtwork();
         const bpmText = beat.bpm ? `${beat.bpm} BPM` : 'N/A';
         const keyText = beat.key ? `${beat.key}` : 'N/A';
         
@@ -8919,13 +9058,16 @@ function renderStoreBeats(beats) {
         return `
             <div class="store-beat-card" data-id="${beat.id}" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box;">
                 <div>
-                    <div class="store-beat-cover">
+                    <div class="store-beat-cover" style="position: relative;">
                         <img src="${artworkUrl}" alt="${beat.name}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">
                         <div class="store-play-overlay" onclick="window.toggleStorePlay('${beat.id}')">
                             <button class="store-play-btn" id="btn-play-store-${beat.id}">
                                 <i data-lucide="play" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>
                             </button>
                         </div>
+                        <button onclick="window.shareBeat('${beat.id}', '${beat.name.replace(/'/g, "\\'")}')" style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'" title="Compartir">
+                            <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
+                        </button>
                     </div>
                     <div class="store-beat-title" style="margin-top: 10px; font-size: 15px; font-weight: 700; color: #fff;">${beat.name}</div>
                     <div class="store-beat-meta" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
@@ -8944,6 +9086,22 @@ function renderStoreBeats(beats) {
 
     if (window.lucide) window.lucide.createIcons();
 }
+
+window.shareBeat = function(beatId, beatName) {
+    if (event) event.stopPropagation();
+    const url = window.location.href.split('?')[0] + '?p=' + encodeURIComponent(window.storeProducerConfig.aka || window.storeProducerConfig.name) + '&beat=' + beatId;
+    if (navigator.share) {
+        navigator.share({
+            title: `Escucha "${beatName}"`,
+            text: `🎵 Escucha este increíble beat: "${beatName}"`,
+            url: url
+        }).catch((error) => console.log('Error sharing', error));
+    } else {
+        navigator.clipboard.writeText(url).then(() => {
+            showToast("Enlace copiado al portapapeles.");
+        });
+    }
+};
 
 function setupStoreFilters() {
     const searchInput = document.getElementById('store-search-input');
@@ -9019,7 +9177,8 @@ window.toggleStorePlay = function(beatId) {
         document.getElementById('player-title').textContent = beat.name;
         document.getElementById('player-info').textContent = `${beat.bpm ? beat.bpm + ' BPM' : ''} ${beat.key ? '• ' + beat.key : ''} ${beat.genre ? '• ' + beat.genre : ''}`;
         const pConfig = beat.producerConfig || {};
-        document.getElementById('player-artwork').src = pConfig.logoBase64 || beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=100&auto=format&fit=crop');
+        const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(pConfig) : pConfig.logoBase64;
+        document.getElementById('player-artwork').src = beat.artwork || producerLogo || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=100&auto=format&fit=crop');
         player.style.display = 'block';
 
         document.getElementById('player-btn-buy').onclick = () => window.openBeatCheckoutModal(beatId);
@@ -9084,18 +9243,86 @@ function playPrevBeat() {
 }
 
 window.getCheckoutPrice = function() {
+    let basePrice = 0;
     if (checkoutSelectedBeatId) {
         if (checkoutSelectedLicense === 'exclusive') {
             const input = document.getElementById('exclusive-price-input');
             if (input) {
                 const val = parseFloat(input.value);
-                if (!isNaN(val)) return val;
+                if (!isNaN(val)) basePrice = val;
+            } else {
+                basePrice = window.checkoutExclusivePrice || 500;
             }
-            return window.checkoutExclusivePrice || 500;
+        } else {
+            basePrice = LICENSE_CONFIGS[checkoutSelectedLicense] ? LICENSE_CONFIGS[checkoutSelectedLicense].price : 0;
         }
-        return LICENSE_CONFIGS[checkoutSelectedLicense] ? LICENSE_CONFIGS[checkoutSelectedLicense].price : 0;
     } else {
-        return window.getCartTotal();
+        basePrice = window.getCartTotal();
+    }
+    
+    // Aplicar descuento de cupón
+    if (window.checkoutDiscountPercent > 0) {
+        const discount = basePrice * (window.checkoutDiscountPercent / 100);
+        return Math.max(0, basePrice - discount);
+    }
+    
+    return basePrice;
+};
+
+window.applyCheckoutCoupon = function() {
+    const inputEl = document.getElementById('checkout-coupon-code');
+    const msgEl = document.getElementById('checkout-coupon-msg');
+    if (!inputEl || !msgEl) return;
+    
+    const code = inputEl.value.trim().toUpperCase();
+    if (!code) {
+        msgEl.textContent = 'Por favor ingresa un código.';
+        msgEl.style.color = '#ef4444';
+        msgEl.style.display = 'block';
+        return;
+    }
+    
+    const coupons = window.storeProducerConfig?.coupons || [];
+    const foundCoupon = coupons.find(c => c.code === code);
+    
+    if (foundCoupon) {
+        window.checkoutDiscountPercent = foundCoupon.discount;
+        window.checkoutAppliedCoupon = code;
+        msgEl.innerHTML = `✅ Cupón aplicado: <strong>-${foundCoupon.discount}% de descuento</strong>`;
+        msgEl.style.color = '#10b981';
+        msgEl.style.display = 'block';
+        
+        // Update Prices
+        const price = window.getCheckoutPrice();
+        const priceStr = '$' + price.toFixed(2) + ' USD';
+        
+        const deunaTotal = document.getElementById('deuna-total-price');
+        const transferTotal = document.getElementById('transfer-total-price');
+        if (deunaTotal) deunaTotal.textContent = priceStr;
+        if (transferTotal) transferTotal.textContent = priceStr;
+        
+        // Re-render PayPal button with new price
+        const activeTab = getSelectedStorePaymentMethod();
+        if (activeTab === 'paypal') {
+            const clientId = window.storeProducerConfig.paypalClientId || "";
+            if (clientId) {
+                renderStorePayPalButton(clientId);
+            }
+        }
+    } else {
+        window.checkoutDiscountPercent = 0;
+        window.checkoutAppliedCoupon = null;
+        msgEl.textContent = '❌ Cupón inválido o expirado.';
+        msgEl.style.color = '#ef4444';
+        msgEl.style.display = 'block';
+        
+        // Reset Prices
+        const price = window.getCheckoutPrice();
+        const priceStr = '$' + price.toFixed(2) + ' USD';
+        const deunaTotal = document.getElementById('deuna-total-price');
+        const transferTotal = document.getElementById('transfer-total-price');
+        if (deunaTotal) deunaTotal.textContent = priceStr;
+        if (transferTotal) transferTotal.textContent = priceStr;
     }
 };
 
@@ -9192,6 +9419,15 @@ window.openBeatCheckoutModal = function(beatId) {
         // Modo compra individual / Selección de licencia
         singleView.style.display = 'block';
         multiView.style.display = 'none';
+
+        // Urgencia / Social Proof
+        const urgencyBanner = document.getElementById('checkout-urgency-banner');
+        const urgencyText = document.getElementById('checkout-urgency-text');
+        if (urgencyBanner && urgencyText) {
+            const viewers = Math.floor(Math.random() * 6) + 2; // entre 2 y 7
+            urgencyText.textContent = `${viewers} personas están viendo este beat ahora mismo`;
+            urgencyBanner.style.display = 'flex';
+        }
 
         const container = document.getElementById('license-options-container');
         container.innerHTML = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
@@ -9361,7 +9597,7 @@ window.updateCheckoutStepView = function(step) {
             const offerTab = document.getElementById('btn-pay-offer');
             
             if (offerTab) {
-                offerTab.style.display = checkoutSelectedLicense === 'exclusive' ? 'block' : 'none';
+                offerTab.style.display = (checkoutSelectedBeatId && checkoutSelectedLicense === 'exclusive') ? 'block' : 'none';
             }
 
             const deunaPhone = window.storeProducerConfig.deunaPhone || "";
@@ -9726,6 +9962,83 @@ window.submitFreeDownloadLead = async function() {
     }
 };
 
+function getProducerAvatar(config) {
+    if (!config) return null;
+    if (config.logoBase64) return config.logoBase64;
+    const name = (config.aka || config.name || '').toLowerCase();
+    if (name.includes('sossa')) {
+        return '/producer_sossa.png';
+    }
+    if (name.includes('monarco')) {
+        return '/producer_monarco.jpg';
+    }
+    return null;
+}
+window.getProducerAvatar = getProducerAvatar;
+
+window.showAppView = function(viewName, params = null, pushState = true) {
+    console.log("🚦 Cambiando a vista:", viewName, "con parámetros:", params);
+    
+    // 1. Ocultar todos los contenedores principales
+    const landing = document.getElementById('landing-page');
+    if (landing) landing.style.display = 'none';
+    
+    const appContainer = document.getElementById('app-container');
+    if (appContainer) appContainer.style.display = 'none';
+    
+    const globalCatalog = document.getElementById('global-catalog-view');
+    if (globalCatalog) globalCatalog.style.display = 'none';
+    
+    const publicStore = document.getElementById('public-store-view');
+    if (publicStore) publicStore.style.display = 'none';
+    
+    const loginModal = document.getElementById('login-modal');
+    if (loginModal) loginModal.style.display = 'none';
+
+    // 2. Mostrar y configurar el contenedor de la vista solicitada
+    if (viewName === 'home') {
+        if (window.currentUser) {
+            if (appContainer) appContainer.style.display = 'flex';
+        } else {
+            if (landing) landing.style.display = 'block';
+        }
+        if (pushState) {
+            history.pushState({ view: 'home' }, '', window.location.pathname);
+        }
+        // Ocultar reproductor si se vuelve a home
+        const player = document.getElementById('store-audio-player');
+        if (player) player.style.display = 'none';
+    } 
+    else if (viewName === 'catalog') {
+        window.isGlobalCatalogMode = true;
+        window.isPublicStoreMode = false;
+        
+        if (globalCatalog) globalCatalog.style.display = 'block';
+        
+        if (pushState) {
+            history.pushState({ view: 'catalog' }, '', '?catalogo=1');
+        }
+        
+        window.initGlobalCatalog();
+    } 
+    else if (viewName === 'store') {
+        window.isGlobalCatalogMode = false;
+        window.isPublicStoreMode = true;
+        
+        if (publicStore) publicStore.style.display = 'block';
+        
+        const producerAka = params?.producer;
+        if (producerAka) {
+            if (pushState) {
+                history.pushState({ view: 'store', producer: producerAka }, '', '?p=' + encodeURIComponent(producerAka));
+            }
+            if (window.initPublicStore) {
+                window.initPublicStore(producerAka);
+            }
+        }
+    }
+};
+
 function getDefaultBeatArtwork() {
     const accentColor = document.documentElement.style.getPropertyValue('--accent') || '#00ccff';
     const colorHex = accentColor.trim().replace('#', '%23');
@@ -9748,11 +10061,11 @@ function setupStoreCheckout() {
     const receiptFileInput = document.getElementById('store-receipt-file');
     
     closeBtn.addEventListener('click', () => {
-        document.getElementById('beat-checkout-modal').style.display = 'none';
+        window.closeBeatCheckoutModal();
     });
     
     cancelBtn.addEventListener('click', () => {
-        document.getElementById('beat-checkout-modal').style.display = 'none';
+        window.closeBeatCheckoutModal();
     });
 
     prevBtn.addEventListener('click', () => {
@@ -9971,6 +10284,9 @@ async function submitBeatPurchasePayment(method, reference = '') {
         return;
     }
 
+    const discountPercent = window.checkoutDiscountPercent || 0;
+    const discountCode = window.checkoutAppliedCoupon || '';
+
     const nextBtn = document.getElementById('btn-checkout-next');
     const originalText = nextBtn ? nextBtn.innerHTML : 'Confirmar Compra';
     if (nextBtn) {
@@ -10000,6 +10316,10 @@ async function submitBeatPurchasePayment(method, reference = '') {
                 reference: transactionId,
                 receiptUrl: storePaymentReceiptBase64 || '',
                 status: method === 'paypal' ? 'approved' : 'pending',
+                discountPercent: discountPercent,
+                couponCode: discountCode,
+                originalPrice: item.price,
+                finalPrice: item.price * (1 - (discountPercent / 100)),
                 timestamp: new Date().toISOString()
             };
 
@@ -10596,23 +10916,8 @@ window.acceptExclusiveOffer = async function(paymentId) {
     }
 };
 
-// Activar detector de URL en carga
-function checkPublicStorefront() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const producerAka = urlParams.get('p') || urlParams.get('producer');
-    if (producerAka) {
-        window.isPublicStoreMode = true;
-        initPublicStore(producerAka);
-        return true;
-    }
-    return false;
-}
-
 // Escuchar el evento de recarga del dashboard de ventas en el panel
 document.getElementById('btn-sales-refresh')?.addEventListener('click', loadSalesData);
-
-// Ejecutar check en inicio
-setTimeout(checkPublicStorefront, 400);
 
 // =======================================================
 // GLOBAL CATALOG IMPLEMENTATION (MARKETPLACE)
@@ -10734,10 +11039,16 @@ function renderGlobalBeats(beats) {
         
         const akaLower = producerName.toLowerCase();
         let pColor = '#00ccff';
-        if (akaLower.includes('monarco')) pColor = '#ff4d4d';
-        else if (akaLower.includes('sossa')) pColor = '#b28eff';
+        if (config.brandColor) {
+            pColor = config.brandColor;
+        } else if (akaLower.includes('monarco')) {
+            pColor = '#ff4d4d';
+        } else if (akaLower.includes('sossa')) {
+            pColor = '#b28eff';
+        }
 
-        const artwork = config.logoBase64 || beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
+        const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(config) : config.logoBase64;
+        const artwork = beat.artwork || producerLogo || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
         const price = beat.price_basic ? `$${beat.price_basic.toFixed(2)}` : 'Negociable';
         
         const isElite = config.plan === 'elite';
@@ -10760,7 +11071,7 @@ function renderGlobalBeats(beats) {
                     </div>
                     <div style="color: #8a91a6; font-size: 13px; font-weight: 600; margin-bottom: 12px; display:flex; align-items:center; gap:6px;">
                         <i data-lucide="user" style="width:14px; height:14px; color:${pColor};"></i> 
-                        <span style="color: #fff;">${producerName}</span> ${eliteBadge}
+                        <span style="color: #fff; cursor: pointer; text-decoration: underline;" onclick="window.showAppView('store', { producer: '${(config.aka || config.name || '').replace(/'/g, "\\'")}' })">${producerName}</span> ${eliteBadge}
                     </div>
                     <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
                         <span style="font-size: 11px; font-weight: 600; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: #8a91a6;">${beat.bpm || '--'} BPM</span>
@@ -10927,21 +11238,12 @@ onDOMReady(() => {
     const catalogLogo = document.getElementById('catalog-logo-home');
     const loginBtn = document.getElementById('catalog-btn-login');
 
-    if(navBtn) navBtn.addEventListener('click', () => window.initGlobalCatalog());
-    if(heroBtn) heroBtn.addEventListener('click', () => window.initGlobalCatalog());
-    if(prodBtn) prodBtn.addEventListener('click', () => window.initGlobalCatalog());
+    if(navBtn) navBtn.addEventListener('click', () => window.showAppView('catalog'));
+    if(heroBtn) heroBtn.addEventListener('click', () => window.showAppView('catalog'));
+    if(prodBtn) prodBtn.addEventListener('click', () => window.showAppView('catalog'));
     
     if(catalogLogo) catalogLogo.addEventListener('click', () => {
-        document.getElementById('global-catalog-view').style.display = 'none';
-        
-        const player = document.getElementById('store-audio-player');
-        if (player) player.style.display = 'none';
-        
-        if (window.currentUser) {
-            document.getElementById('app-container').style.display = 'flex';
-        } else {
-            document.getElementById('landing-page').style.display = 'block';
-        }
+        window.showAppView('home');
     });
 
     if(loginBtn) loginBtn.addEventListener('click', () => {
@@ -10949,14 +11251,31 @@ onDOMReady(() => {
     });
 });
 
-function checkGlobalCatalogUrl() {
+function handleInitialRouting() {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('catalogo') || window.location.hash === '#catalogo') {
-        window.initGlobalCatalog();
-        return true;
+    const producerAka = urlParams.get('p') || urlParams.get('producer');
+    if (producerAka) {
+        window.showAppView('store', { producer: producerAka }, false);
+    } else if (urlParams.has('catalogo') || window.location.hash === '#catalogo') {
+        window.showAppView('catalog', null, false);
+    } else {
+        window.showAppView('home', null, false);
     }
-    return false;
 }
-setTimeout(checkGlobalCatalogUrl, 500);
+
+// Escuchar popstate para navegación del navegador (Atrás/Adelante)
+window.addEventListener('popstate', (event) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const producerAka = urlParams.get('p') || urlParams.get('producer');
+    if (producerAka) {
+        window.showAppView('store', { producer: producerAka }, false);
+    } else if (urlParams.has('catalogo')) {
+        window.showAppView('catalog', null, false);
+    } else {
+        window.showAppView('home', null, false);
+    }
+});
+
+setTimeout(handleInitialRouting, 500);
 
 
