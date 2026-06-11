@@ -832,12 +832,13 @@ async function loadProducerConfig() {
     }
 
     // Comprobar expiración del Plan Pro o Elite
-    if ((producerConfig.plan === 'pro' || producerConfig.plan === 'elite') && producerConfig.expirationPro) {
-        const expirationDate = new Date(producerConfig.expirationPro);
+    const expDateStr = producerConfig.planExpirationDate || producerConfig.expirationPro;
+    if ((producerConfig.plan === 'pro' || producerConfig.plan === 'elite') && expDateStr) {
+        const expirationDate = new Date(expDateStr);
         if (expirationDate < new Date()) {
             const expiredPlan = producerConfig.plan;
             console.log(`El Plan ${expiredPlan} ha expirado. Degradando a Plan Inicial.`);
-            producerConfig.plan = 'inicial';
+            producerConfig.plan = 'free'; // 'free' represents the free tier
             // Guardar cambio de plan en segundo plano para no demorar la carga inicial
             const userConfigRef = doc(db, "users", window.currentUser, "config", "producer");
             setDoc(userConfigRef, producerConfig).then(() => {
@@ -5946,6 +5947,12 @@ async function saveBeat() {
         return;
     }
 
+    const isNew = !id;
+    if (isNew && !window.currentUserIsPro && localBeats.length >= 5) {
+        openPaymentModal(`Límite alcanzado: El Plan Inicial solo permite subir hasta 5 beats. Mejora al Plan Pro hoy para subir beats ilimitados.`);
+        return;
+    }
+
     const beatId = id || 'beat_' + Date.now();
     const beatData = {
         id: beatId,
@@ -10739,6 +10746,9 @@ function renderGlobalBeats(beats) {
         const artwork = config.logoBase64 || beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
         const price = beat.price_basic ? `$${beat.price_basic.toFixed(2)}` : 'Negociable';
         
+        const isElite = config.plan === 'elite';
+        const eliteBadge = isElite ? `<span style="background: linear-gradient(135deg, #a855f7 0%, #f59e0b 100%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; margin-left: 6px;">👑 Elite</span>` : '';
+        
         return `
             <div class="store-beat-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;">
                 <div style="position: relative; aspect-ratio: 1; background: #1a1e27; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="window.playGlobalBeat('${beat.id}')">
@@ -10756,7 +10766,7 @@ function renderGlobalBeats(beats) {
                     </div>
                     <div style="color: #8a91a6; font-size: 13px; font-weight: 600; margin-bottom: 12px; display:flex; align-items:center; gap:6px;">
                         <i data-lucide="user" style="width:14px; height:14px; color:${pColor};"></i> 
-                        <span style="color: #fff;">${producerName}</span>
+                        <span style="color: #fff;">${producerName}</span> ${eliteBadge}
                     </div>
                     <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
                         <span style="font-size: 11px; font-weight: 600; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: #8a91a6;">${beat.bpm || '--'} BPM</span>

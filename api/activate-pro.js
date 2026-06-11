@@ -106,11 +106,16 @@ export default async function handler(req, res) {
 
         const amount = parseFloat(order.purchase_units?.[0]?.amount?.value || 0);
         let planToActivate = 'pro';
-        if (amount >= 29.90) {
+        if (amount >= 29.00) {
             planToActivate = 'elite';
-        } else if (amount < 9.90) {
+        } else if (amount < 9.00) {
             return res.status(400).json({ error: `Monto inválido: $${amount}` });
         }
+
+        // Calcular fecha de expiración (30 días desde hoy)
+        const activationDate = new Date();
+        const expirationDate = new Date(activationDate);
+        expirationDate.setDate(expirationDate.getDate() + 30);
 
         // 2. Inicializar Firebase Admin y actualizar Firestore
         initFirebaseAdmin();
@@ -120,7 +125,8 @@ export default async function handler(req, res) {
         const configRef = db.collection('users').doc(uid).collection('config').doc('producer');
         await configRef.set({
             plan: planToActivate,
-            planActivatedAt: new Date().toISOString(),
+            planActivatedAt: activationDate.toISOString(),
+            planExpirationDate: expirationDate.toISOString(),
             planPayPalOrderId: orderId,
             planPayerEmail: email || order.payer?.email_address || '',
         }, { merge: true });
@@ -129,7 +135,8 @@ export default async function handler(req, res) {
         const userRef = db.collection('users').doc(uid);
         await userRef.set({
             plan: planToActivate,
-            planActivatedAt: new Date().toISOString(),
+            planActivatedAt: activationDate.toISOString(),
+            planExpirationDate: expirationDate.toISOString(),
         }, { merge: true });
 
         console.log(`✅ Plan ${planToActivate} activado para uid: ${uid}, email: ${email}, order: ${orderId}`);
