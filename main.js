@@ -424,24 +424,24 @@ function setupAuthModalEvents() {
     googleBtn.addEventListener('click', async () => {
         errorMsg.style.display = 'none';
         try {
-            showToast('Redirigiendo a Google...');
-            // Usar signInWithRedirect como método primario — funciona con cualquier dominio de Vercel
-            // sin necesidad de agregar el dominio como origen autorizado en Google Cloud Console
-            await signInWithRedirect(auth, googleProvider);
+            showToast('Iniciando sesión con Google...');
+            // Usar signInWithPopup como método primario porque signInWithRedirect suele fallar
+            // o resolver como null en navegadores modernos (Safari/Chrome macOS/iOS) debido
+            // a restricciones de cookies de terceros en dominios personalizados de Vercel.
+            const result = await signInWithPopup(auth, googleProvider);
+            if (result && result.user) {
+                console.log("Sesión de Google iniciada mediante popup para:", result.user.email);
+                showToast("Sesión iniciada con Google");
+            }
         } catch (err) {
-            console.error(err);
-            // Si la redirección falla (ej. iOS Safari en modo privado), intentar popup como fallback
-            if (err.code === 'auth/operation-not-supported-in-this-environment' || err.code === 'auth/cancelled-popup-request') {
-                try {
-                    await signInWithPopup(auth, googleProvider);
-                } catch (popupErr) {
-                    console.error('Popup también falló:', popupErr);
-                    errorMsg.innerText = 'Error de Google: ' + popupErr.message;
-                    errorMsg.style.display = 'block';
-                    showToast('Fallo al iniciar sesión con Google', true);
-                }
-            } else {
-                errorMsg.innerText = 'Error de Google: ' + err.message;
+            console.error('Popup falló o fue bloqueado, intentando redirección...', err);
+            // Si el popup es bloqueado o no se soporta, intentar redirect como fallback
+            try {
+                showToast('Redirigiendo a Google...');
+                await signInWithRedirect(auth, googleProvider);
+            } catch (redirectErr) {
+                console.error('Redirección también falló:', redirectErr);
+                errorMsg.innerText = 'Error de Google: ' + redirectErr.message;
                 errorMsg.style.display = 'block';
                 showToast('Fallo al iniciar sesión con Google', true);
             }

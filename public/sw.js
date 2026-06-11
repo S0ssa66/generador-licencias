@@ -17,7 +17,13 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Cacheando recursos iniciales...');
-      return cache.addAll(ASSETS_TO_CACHE);
+      // Cargar recursos individualmente usando Promise.allSettled para que si un recurso
+      // no existe (por ejemplo, en producción de Vite), no falle toda la instalación.
+      return Promise.allSettled(
+        ASSETS_TO_CACHE.map(asset => 
+          cache.add(asset).catch(err => console.warn(`[Service Worker] Omitiendo recurso no disponible: ${asset}`))
+        )
+      );
     }).then(() => self.skipWaiting())
   );
 });
