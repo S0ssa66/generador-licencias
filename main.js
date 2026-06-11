@@ -9302,7 +9302,7 @@ window.selectCheckoutLicense = function(licenseKey) {
 window.updateCheckoutStepView = function(step) {
     checkoutCurrentStep = step;
 
-    // Update indicators
+    // 1. Actualizar indicadores de pasos
     document.querySelectorAll('.checkout-step-indicator').forEach(el => {
         const s = parseInt(el.getAttribute('data-step'), 10);
         if (s <= step) {
@@ -9312,162 +9312,176 @@ window.updateCheckoutStepView = function(step) {
         }
     });
 
-    // Update progress bar
+    // 2. Actualizar barra de progreso
     const progressPercent = step === 1 ? 0 : (step === 2 ? 50 : 100);
-    document.getElementById('checkout-step-progress').style.width = progressPercent + '%';
-
-    // Show/hide panels
-    document.getElementById('checkout-panel-1').style.display = step === 1 ? 'block' : 'none';
-    document.getElementById('checkout-panel-2').style.display = step === 2 ? 'block' : 'none';
-    document.getElementById('checkout-panel-3').style.display = step === 3 ? 'block' : 'none';
-
-    // Footer buttons
-    const prevBtn = document.getElementById('btn-checkout-prev');
-    const cancelBtn = document.getElementById('btn-checkout-cancel');
-    const nextBtn = document.getElementById('btn-checkout-next');
-
-    if (step === 1) {
-        prevBtn.style.display = 'none';
-        cancelBtn.style.display = 'none';
-        nextBtn.style.display = 'none';
-    } else {
-        prevBtn.style.display = 'block';
-        cancelBtn.style.display = 'none';
+    const stepProgress = document.getElementById('checkout-step-progress');
+    if (stepProgress) {
+        stepProgress.style.width = progressPercent + '%';
     }
 
-    if (step === 3) {
-        // Populate config details and visible tabs
-        const deunaTab = document.getElementById('btn-pay-deuna');
-        const transferTab = document.getElementById('btn-pay-transfer');
-        const paypalTab = document.getElementById('btn-pay-paypal');
-        const offerTab = document.getElementById('btn-pay-offer');
-        
-        if (offerTab) {
-            offerTab.style.display = checkoutSelectedLicense === 'exclusive' ? 'block' : 'none';
-        }
+    // 3. Mostrar/ocultar paneles de pasos
+    const panel1 = document.getElementById('checkout-panel-1');
+    const panel2 = document.getElementById('checkout-panel-2');
+    const panel3 = document.getElementById('checkout-panel-3');
+    if (panel1) panel1.style.display = step === 1 ? 'block' : 'none';
+    if (panel2) panel2.style.display = step === 2 ? 'block' : 'none';
+    if (panel3) panel3.style.display = step === 3 ? 'block' : 'none';
 
-        const deunaPhone = window.storeProducerConfig.deunaPhone || "";
-        const deunaName = window.storeProducerConfig.deunaName || "";
-        const pichinchaAcc = window.storeProducerConfig.bankPichinchaAcc || "";
-        const guayaquilAcc = window.storeProducerConfig.bankGuayaquilAcc || "";
-        const paypalClientId = window.storeProducerConfig.paypalClientId || "";
-        const paypalEmail = window.storeProducerConfig.paypalEmail || "";
+    // 4. Configurar visibilidad y textos de botones del footer
+    const footerPrevBtn = document.getElementById('btn-checkout-prev');
+    const footerCancelBtn = document.getElementById('btn-checkout-cancel');
+    const footerNextBtn = document.getElementById('btn-checkout-next');
 
-        let deunaVisible = false;
-        let transferVisible = false;
-        let paypalVisible = false;
-
-        // Deuna
-        if (deunaPhone) {
-            deunaTab.style.display = 'block';
-            // Construir deeplink de Deuna para pago en un toque
-            const cleanPhone = deunaPhone.replace(/\D/g, '');
-            const deunaDeeplink = `deuna://payment?phone=${cleanPhone}`;
-            const deunaWhatsapp = `https://wa.me/${cleanPhone}`;
-            document.getElementById('deuna-info-phone').innerHTML = `
-                Celular: <strong style="font-size: 18px; letter-spacing: 1px;">${deunaPhone}</strong>
-                <button onclick="navigator.clipboard.writeText('${deunaPhone}').then(()=>window.showToast('¡Número copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 4px 8px; font-size: 11px; margin-left: 8px; vertical-align: middle;">📋 Copiar</button>
-            `;
-            document.getElementById('deuna-info-name').innerHTML = `
-                Titular: <span style="color: #fff; font-weight: 600;">${deunaName}</span>
-                <a href="${deunaDeeplink}" style="margin-left: 12px; background: linear-gradient(135deg, #ff6b35, #ff9500); color: #fff; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 8px; text-decoration: none; display: inline-block; vertical-align: middle;" onclick="setTimeout(()=>window.open('${deunaWhatsapp}', '_blank'), 800)">⚡ Abrir Deuna!</a>
-            `;
-            deunaVisible = true;
-        } else {
-            deunaTab.style.display = 'none';
-        }
-
-        // Helper para copiar texto
-        function makeCopyBtn(text, label) {
-            return `<button onclick="navigator.clipboard.writeText('${text}').then(()=>window.showToast('¡${label} copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 3px 8px; font-size: 11px; margin-left: 6px;">📋</button>`;
-        }
-
-        // Pichincha
-        const pichinchaCard = document.getElementById('store-bank-pichincha-card');
-        if (pichinchaAcc) {
-            pichinchaCard.style.display = 'block';
-            const pichName = window.storeProducerConfig.bankPichinchaName || "";
-            const pichDni = window.storeProducerConfig.bankPichinchaDni || "";
-            pichinchaCard.innerHTML = `
-                <div style="font-weight: 700; font-size: 12px; color: #f59e0b; margin-bottom: 8px;">🏦 BANCO PICHINCHA</div>
-                <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta: <strong id="pichincha-info-acc">${pichinchaAcc}</strong> ${makeCopyBtn(pichinchaAcc, 'Cuenta')}</div>
-                <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="pichincha-info-name">${pichName}</span> ${makeCopyBtn(pichName, 'Titular')}</div>
-                <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="pichincha-info-dni">${pichDni}</span> ${makeCopyBtn(pichDni, 'CI/RUC')}</div>
-            `;
-            transferVisible = true;
-        } else {
-            pichinchaCard.style.display = 'none';
-        }
-
-        // Guayaquil
-        const guayaquilCard = document.getElementById('store-bank-guayaquil-card');
-        if (guayaquilAcc) {
-            guayaquilCard.style.display = 'block';
-            const guayName = window.storeProducerConfig.bankGuayaquilName || "";
-            const guayDni = window.storeProducerConfig.bankGuayaquilDni || "";
-            guayaquilCard.innerHTML = `
-                <div style="font-weight: 700; font-size: 12px; color: #ec4899; margin-bottom: 8px;">🏦 BANCO GUAYAQUIL</div>
-                <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta: <strong id="guayaquil-info-acc">${guayaquilAcc}</strong> ${makeCopyBtn(guayaquilAcc, 'Cuenta')}</div>
-                <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="guayaquil-info-name">${guayName}</span> ${makeCopyBtn(guayName, 'Titular')}</div>
-                <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="guayaquil-info-dni">${guayDni}</span> ${makeCopyBtn(guayDni, 'CI/RUC')}</div>
-            `;
-            transferVisible = true;
-        } else {
-            guayaquilCard.style.display = 'none';
-        }
-
-        if (transferVisible) {
-            transferTab.style.display = 'block';
-        } else {
-            transferTab.style.display = 'none';
-        }
-
-        // PayPal
-        if (paypalClientId || paypalEmail) {
-            paypalTab.style.display = 'block';
-            paypalVisible = true;
-        } else {
-            paypalTab.style.display = 'none';
-        }
-
-        // Check visible methods
-        if (!deunaVisible && !transferVisible && !paypalVisible && checkoutSelectedLicense !== 'exclusive') {
-            document.getElementById('store-pay-deuna').style.display = 'none';
-            document.getElementById('store-pay-transfer').style.display = 'none';
-            document.getElementById('store-pay-paypal').style.display = 'block';
-            document.getElementById('store-pay-paypal').innerHTML = `
-                <div style="color: #ef4444; font-size: 13px; text-align: center; padding: 20px;">
-                    El productor no ha configurado ningún método de pago. Por favor, contáctalo directamente.
-                </div>
-            `;
-            document.getElementById('store-receipt-upload-section').style.display = 'none';
-            nextBtn.style.display = 'none';
-        } else {
-            // Select default active tab among visible ones
-            let defaultTab = 'deuna';
-            const currentTab = getSelectedStorePaymentMethod();
+    if (footerPrevBtn && footerCancelBtn && footerNextBtn) {
+        if (step === 1) {
+            // En el Paso 1 (selección de licencia/carrito), los botones están dentro del panel del paso, no en el footer.
+            footerPrevBtn.style.display = 'none';
+            footerCancelBtn.style.display = 'none';
+            footerNextBtn.style.display = 'none';
+        } else if (step === 2) {
+            // Paso 2 (formulario de facturación): Botón "Atrás" y "Continuar" en el footer
+            footerPrevBtn.style.display = 'block';
+            footerCancelBtn.style.display = 'none';
+            footerNextBtn.style.display = 'block';
+            footerNextBtn.textContent = 'Continuar';
+        } else if (step === 3) {
+            // Paso 3 (pago): Botón "Atrás" siempre visible. "Confirmar Compra" se gestiona según el método.
+            footerPrevBtn.style.display = 'block';
+            footerCancelBtn.style.display = 'none';
             
-            // Si estaba en oferta y ya no es exclusiva, cambiamos
-            if (currentTab === 'offer' && checkoutSelectedLicense !== 'exclusive') {
-                if (deunaVisible) defaultTab = 'deuna';
-                else if (transferVisible) defaultTab = 'transfer';
-                else if (paypalVisible) defaultTab = 'paypal';
-            } else if (currentTab === 'offer' && checkoutSelectedLicense === 'exclusive') {
-                defaultTab = 'offer';
-            } else if (deunaVisible) {
-                defaultTab = 'deuna';
-            } else if (transferVisible) {
-                defaultTab = 'transfer';
-            } else if (paypalVisible) {
-                defaultTab = 'paypal';
-            } else if (checkoutSelectedLicense === 'exclusive') {
-                defaultTab = 'offer';
+            // Cargar datos del productor para pasarelas
+            const deunaTab = document.getElementById('btn-pay-deuna');
+            const transferTab = document.getElementById('btn-pay-transfer');
+            const paypalTab = document.getElementById('btn-pay-paypal');
+            const offerTab = document.getElementById('btn-pay-offer');
+            
+            if (offerTab) {
+                offerTab.style.display = checkoutSelectedLicense === 'exclusive' ? 'block' : 'none';
             }
-            window.switchStorePaymentMethod(defaultTab);
+
+            const deunaPhone = window.storeProducerConfig.deunaPhone || "";
+            const deunaName = window.storeProducerConfig.deunaName || "";
+            const pichinchaAcc = window.storeProducerConfig.bankPichinchaAcc || "";
+            const guayaquilAcc = window.storeProducerConfig.bankGuayaquilAcc || "";
+            const paypalClientId = window.storeProducerConfig.paypalClientId || "";
+            const paypalEmail = window.storeProducerConfig.paypalEmail || "";
+
+            let deunaVisible = false;
+            let transferVisible = false;
+            let paypalVisible = false;
+
+            if (deunaPhone && deunaTab) {
+                deunaTab.style.display = 'block';
+                const cleanPhone = deunaPhone.replace(/\D/g, '');
+                const deunaDeeplink = `deuna://payment?phone=${cleanPhone}`;
+                const deunaWhatsapp = `https://wa.me/${cleanPhone}`;
+                
+                const deunaPhoneEl = document.getElementById('deuna-info-phone');
+                if (deunaPhoneEl) {
+                    deunaPhoneEl.innerHTML = `
+                        Celular: <strong style="font-size: 18px; letter-spacing: 1px;">${deunaPhone}</strong>
+                        <button onclick="navigator.clipboard.writeText('${deunaPhone}').then(()=>window.showToast('¡Número copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 4px 8px; font-size: 11px; margin-left: 8px; vertical-align: middle;">📋 Copiar</button>
+                    `;
+                }
+                
+                const deunaNameEl = document.getElementById('deuna-info-name');
+                if (deunaNameEl) {
+                    deunaNameEl.innerHTML = `
+                        Titular: <span style="color: #fff; font-weight: 600;">${deunaName}</span>
+                        <a href="${deunaDeeplink}" style="margin-left: 12px; background: linear-gradient(135deg, #ff6b35, #ff9500); color: #fff; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 8px; text-decoration: none; display: inline-block; vertical-align: middle;" onclick="setTimeout(()=>window.open('${deunaWhatsapp}', '_blank'), 800)">⚡ Abrir Deuna!</a>
+                    `;
+                }
+                deunaVisible = true;
+            } else if (deunaTab) {
+                deunaTab.style.display = 'none';
+            }
+
+            function makeCopyBtn(text, label) {
+                return `<button onclick="navigator.clipboard.writeText('${text}').then(()=>window.showToast('¡${label} copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 3px 8px; font-size: 11px; margin-left: 6px;">📋</button>`;
+            }
+
+            const pichinchaCard = document.getElementById('store-bank-pichincha-card');
+            if (pichinchaAcc && pichinchaCard) {
+                pichinchaCard.style.display = 'block';
+                const pichName = window.storeProducerConfig.bankPichinchaName || "";
+                const pichDni = window.storeProducerConfig.bankPichinchaDni || "";
+                pichinchaCard.innerHTML = `
+                    <div style="font-weight: 700; font-size: 12px; color: #f59e0b; margin-bottom: 8px;">🏦 BANCO PICHINCHA</div>
+                    <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta: <strong id="pichincha-info-acc">${pichinchaAcc}</strong> ${makeCopyBtn(pichinchaAcc, 'Cuenta')}</div>
+                    <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="pichincha-info-name">${pichName}</span> ${makeCopyBtn(pichName, 'Titular')}</div>
+                    <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="pichincha-info-dni">${pichDni}</span> ${makeCopyBtn(pichDni, 'CI/RUC')}</div>
+                `;
+                transferVisible = true;
+            } else if (pichinchaCard) {
+                pichinchaCard.style.display = 'none';
+            }
+
+            const guayaquilCard = document.getElementById('store-bank-guayaquil-card');
+            if (guayaquilAcc && guayaquilCard) {
+                guayaquilCard.style.display = 'block';
+                const guayName = window.storeProducerConfig.bankGuayaquilName || "";
+                const guayDni = window.storeProducerConfig.bankGuayaquilDni || "";
+                guayaquilCard.innerHTML = `
+                    <div style="font-weight: 700; font-size: 12px; color: #ec4899; margin-bottom: 8px;">🏦 BANCO GUAYAQUIL</div>
+                    <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta: <strong id="guayaquil-info-acc">${guayaquilAcc}</strong> ${makeCopyBtn(guayaquilAcc, 'Cuenta')}</div>
+                    <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="guayaquil-info-name">${guayName}</span> ${makeCopyBtn(guayName, 'Titular')}</div>
+                    <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="guayaquil-info-dni">${guayDni}</span> ${makeCopyBtn(guayDni, 'CI/RUC')}</div>
+                `;
+                transferVisible = true;
+            } else if (guayaquilCard) {
+                guayaquilCard.style.display = 'none';
+            }
+
+            if (transferTab) {
+                transferTab.style.display = transferVisible ? 'block' : 'none';
+            }
+
+            if ((paypalClientId || paypalEmail) && paypalTab) {
+                paypalTab.style.display = 'block';
+                paypalVisible = true;
+            } else if (paypalTab) {
+                paypalTab.style.display = 'none';
+            }
+
+            if (!deunaVisible && !transferVisible && !paypalVisible && checkoutSelectedLicense !== 'exclusive') {
+                const deunaPanel = document.getElementById('store-pay-deuna');
+                const transferPanel = document.getElementById('store-pay-transfer');
+                const paypalPanel = document.getElementById('store-pay-paypal');
+                if (deunaPanel) deunaPanel.style.display = 'none';
+                if (transferPanel) transferPanel.style.display = 'none';
+                if (paypalPanel) {
+                    paypalPanel.style.display = 'block';
+                    paypalPanel.innerHTML = `
+                        <div style="color: #ef4444; font-size: 13px; text-align: center; padding: 20px;">
+                            El productor no ha configurado ningún método de pago. Por favor, contáctalo directamente.
+                        </div>
+                    `;
+                }
+                const receiptSec = document.getElementById('store-receipt-upload-section');
+                if (receiptSec) receiptSec.style.display = 'none';
+                footerNextBtn.style.display = 'none';
+            } else {
+                let defaultTab = 'deuna';
+                const currentTab = getSelectedStorePaymentMethod();
+                
+                if (currentTab === 'offer' && checkoutSelectedLicense !== 'exclusive') {
+                    if (deunaVisible) defaultTab = 'deuna';
+                    else if (transferVisible) defaultTab = 'transfer';
+                    else if (paypalVisible) defaultTab = 'paypal';
+                } else if (currentTab === 'offer' && checkoutSelectedLicense === 'exclusive') {
+                    defaultTab = 'offer';
+                } else if (deunaVisible) {
+                    defaultTab = 'deuna';
+                } else if (transferVisible) {
+                    defaultTab = 'transfer';
+                } else if (paypalVisible) {
+                    defaultTab = 'paypal';
+                } else if (checkoutSelectedLicense === 'exclusive') {
+                    defaultTab = 'offer';
+                }
+                window.switchStorePaymentMethod(defaultTab);
+            }
         }
-    } else {
-        nextBtn.style.display = 'block';
-        nextBtn.textContent = 'Continuar';
     }
 };
 
@@ -10875,9 +10889,14 @@ window.openGlobalBeatCheckoutModal = function(beatId) {
     }
 };
 
+// Export functions to window to prevent global/local mismatch and allow catalog integration
+window.setupStoreCheckout = setupStoreCheckout;
+window.setupStoreAudioPlayer = setupStoreAudioPlayer;
+
 document.addEventListener('DOMContentLoaded', () => {
-    if (window.setupStoreCheckout) {
-        window.setupStoreCheckout();
+    // Inicializar listeners inmediatamente para botones estáticos de checkout y reproductor
+    if (typeof setupStoreCheckout === 'function') {
+        setupStoreCheckout();
     }
     if (typeof setupStoreAudioPlayer === 'function') {
         setupStoreAudioPlayer();
