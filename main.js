@@ -505,11 +505,20 @@ function parseAuthError(code) {
 
 // Inicialización de la aplicación
 document.addEventListener('DOMContentLoaded', () => {
-    // Registrar Service Worker para soporte PWA offline
+    // Desactivar y desregistrar todos los Service Workers para evitar problemas de caché
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
-            .then((reg) => console.log('🟢 Service Worker registrado con éxito. Scope:', reg.scope))
-            .catch((err) => console.error('🔴 Falló el registro del Service Worker:', err));
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (let registration of registrations) {
+                registration.unregister().then(() => {
+                    console.log('🗑️ Service Worker desregistrado.');
+                });
+            }
+        });
+        if (window.caches) {
+            caches.keys().then((keys) => {
+                keys.forEach(key => caches.delete(key));
+            });
+        }
     }
 
     // Capturar código de referido si viene en la URL
