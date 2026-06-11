@@ -26,6 +26,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Regla para referidos (referrals)
+    match /referrals/{referralId} {
+      allow read: if request.auth != null && (resource.data.referrerId == request.auth.uid || request.auth.token.email.lower() == 'masterjuego25@gmail.com');
+      allow create: if request.auth != null && request.auth.uid == referralId;
+      allow update: if request.auth != null && (request.auth.uid == referralId || request.auth.token.email.lower() == 'masterjuego25@gmail.com');
+      allow delete: if request.auth != null && request.auth.token.email.lower() == 'masterjuego25@gmail.com';
+    }
+
     // Regla para códigos VIP
     match /vip_codes/{codeId} {
       allow get: if request.auth != null;

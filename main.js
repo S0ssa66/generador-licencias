@@ -7492,17 +7492,9 @@ async function loadPendingPaymentsAdmin() {
 
     try {
         const paymentsCol = collection(db, "payments");
-        // Consulta para obtener solicitudes pendientes
-        const q = query(paymentsCol, where("status", "==", "pending"), orderBy("timestamp", "desc"));
-        
-        let querySnapshot;
-        try {
-            querySnapshot = await getDocs(q);
-        } catch (indexErr) {
-            console.warn("Fallo orderBy en pagos, intentando consulta simple sin orden", indexErr);
-            const simpleQ = query(paymentsCol, where("status", "==", "pending"));
-            querySnapshot = await getDocs(simpleQ);
-        }
+        // Consulta para obtener solicitudes pendientes (ordenadas en memoria para evitar requerir índices compuestos de Firestore)
+        const q = query(paymentsCol, where("status", "==", "pending"));
+        const querySnapshot = await getDocs(q);
 
         const pendingPayments = [];
         querySnapshot.forEach((docSnap) => {
@@ -7510,10 +7502,8 @@ async function loadPendingPaymentsAdmin() {
             pendingPayments.push({ id: docSnap.id, ...data });
         });
 
-        // Ordenar en memoria si falló la consulta ordenada
-        if (pendingPayments.length > 0 && !q.toString().includes('orderBy')) {
-            pendingPayments.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
-        }
+        // Ordenar en memoria por fecha descendente
+        pendingPayments.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 
         tbody.innerHTML = '';
         
@@ -9729,10 +9719,10 @@ function initSalesRealtimeListener() {
     window.storePayments = [];
 
     const paymentsCol = collection(db, "payments");
+    // Consulta sin ordenar para evitar requerir índices compuestos en Firestore
     const q = query(
         paymentsCol,
-        where("producerId", "==", window.currentUser),
-        orderBy("timestamp", "desc")
+        where("producerId", "==", window.currentUser)
     );
 
     _salesUnsubscribe = onSnapshot(q, (snapshot) => {
@@ -9759,6 +9749,9 @@ function initSalesRealtimeListener() {
                 window.storePayments.push({ id: d.id, ...data });
             }
         });
+
+        // Ordenar en memoria por fecha descendente
+        window.storePayments.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 
         renderSalesTable();
         renderSalesStats();
@@ -9847,8 +9840,7 @@ async function loadSalesDataFallback() {
     try {
         const q = query(
             collection(db, "payments"),
-            where("producerId", "==", window.currentUser),
-            orderBy("timestamp", "desc")
+            where("producerId", "==", window.currentUser)
         );
         const snap = await getDocs(q);
         window.storePayments = [];
@@ -9858,6 +9850,8 @@ async function loadSalesDataFallback() {
                 window.storePayments.push({ id: d.id, ...data });
             }
         });
+        // Ordenar en memoria por fecha descendente
+        window.storePayments.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
         renderSalesTable();
         renderSalesStats();
         updateSalesBadge();
