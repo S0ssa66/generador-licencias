@@ -9072,7 +9072,7 @@ function renderStoreBeats(beats) {
             <div class="store-beat-card" data-id="${beat.id}" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box;">
                 <div>
                     <div class="store-beat-cover" style="position: relative;">
-                        <img src="${artworkUrl}" alt="${beat.name}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">
+                        <img src="${artworkUrl}" alt="${beat.name}" style="width:100%; height:100%; object-fit:cover; object-position:top; border-radius:12px;">
                         <div class="store-play-overlay" onclick="window.toggleStorePlay('${beat.id}')">
                             <button class="store-play-btn" id="btn-play-store-${beat.id}">
                                 <i data-lucide="play" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>
@@ -11077,7 +11077,7 @@ function renderGlobalBeats(beats) {
         return `
             <div class="store-beat-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;">
                 <div style="position: relative; aspect-ratio: 1; background: #1a1e27; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="window.playGlobalBeat('${beat.id}')">
-                    <img src='${artwork}' style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8; transition: opacity 0.2s;">
+                    <img src='${artwork}' style="width: 100%; height: 100%; object-fit: cover; object-position: top; opacity: 0.8; transition: opacity 0.2s;">
                     <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;" class="play-overlay">
                         <button class="global-play-btn-${beat.id}" style="width: 50px; height: 50px; border-radius: 50%; background: ${pColor}; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
                             <i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>
