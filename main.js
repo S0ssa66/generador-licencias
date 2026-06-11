@@ -37,6 +37,23 @@ import {
 let currentLang = 'es';
 let salesChartInstance = null;
 
+// Convertir enlaces de Google Drive a enlaces de descarga directa para reproducción
+function getGDriveDirectLink(url) {
+    if (!url) return '';
+    if (url.includes('drive.google.com/uc') || url.includes('docs.google.com/uc')) {
+        return url;
+    }
+    const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+        return `https://docs.google.com/uc?export=download&id=${match[1]}`;
+    }
+    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (idMatch && idMatch[1]) {
+        return `https://docs.google.com/uc?export=download&id=${idMatch[1]}`;
+    }
+    return url;
+}
+
 // Configuración de Productor por defecto
 let producerConfig = {
     name: "Joao David Dominguez",
@@ -8394,7 +8411,7 @@ function togglePlayBeat(beatId, mp3Url) {
         }
         
         showToast("Cargando vista previa de audio...");
-        currentPlayingAudio = new Audio(mp3Url);
+        currentPlayingAudio = new Audio(getGDriveDirectLink(mp3Url));
         currentPlayingBeatId = beatId;
         
         currentPlayingAudio.play().then(() => {
@@ -9175,7 +9192,7 @@ window.toggleStorePlay = function(beatId) {
         }
 
         currentStorePlayingBeatId = beatId;
-        currentStoreAudio = new Audio(beat.mp3);
+        currentStoreAudio = new Audio(getGDriveDirectLink(beat.mp3));
         currentStoreAudio.volume = parseFloat(volumeSlider.value || 0.8);
 
         currentStoreAudio.addEventListener('timeupdate', updatePlayerProgress);
