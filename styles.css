@@ -2489,5 +2489,235 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     transform: scale(0.9);
 }
 
+/* ==========================================================================
+   ESTILOS DE TIENDA PÚBLICA DE BEATS (STOREFRONT)
+   ========================================================================== */
+
+#public-store-view input, #public-store-view select {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+#public-store-view input:focus, #public-store-view select:focus {
+    border-color: var(--accent, #00ccff) !important;
+    box-shadow: 0 0 0 2px rgba(0, 204, 255, 0.1) !important;
+}
+
+.store-beat-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.store-beat-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 15px 30px rgba(0, 204, 255, 0.1);
+    border-color: rgba(0, 204, 255, 0.2);
+}
+
+.store-beat-cover {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    background: #151722;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.store-beat-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.store-beat-card:hover .store-beat-cover img {
+    transform: scale(1.06);
+}
+
+.store-play-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.store-beat-cover:hover .store-play-overlay,
+.store-beat-card:hover .store-play-overlay {
+    opacity: 1;
+}
+
+.store-play-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--accent, #00ccff);
+    border: none;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(0, 204, 255, 0.4);
+    transform: scale(0.9);
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.store-play-btn:hover {
+    transform: scale(1.05);
+}
+
+.store-beat-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+}
+
+.store-beat-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #8a91a6;
+}
+
+.license-option-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.license-option-card:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(0, 204, 255, 0.2);
+}
+
+.license-option-card.active {
+    background: rgba(0, 204, 255, 0.06);
+    border-color: var(--accent, #00ccff);
+    box-shadow: 0 0 15px rgba(0, 204, 255, 0.1);
+}
+
+.checkout-step-indicator {
+    transition: all 0.3s ease;
+}
+.checkout-step-indicator.active {
+    background: var(--accent, #00ccff) !important;
+    border-color: var(--accent, #00ccff) !important;
+    color: #000 !important;
+    box-shadow: 0 0 10px rgba(0, 204, 255, 0.4);
+}
+
+/* Mobile adjustments for Storefront */
+@media (max-width: 768px) {
+    #public-store-view .store-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    #public-store-view .store-controls select {
+        flex: 1;
+    }
+    #store-audio-player {
+        padding: 12px 16px;
+    }
+    #store-audio-player > div {
+        flex-direction: column;
+        gap: 12px;
+    }
+    #store-audio-player > div > div {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Estilos adicionales estilo Beatstars */
+.store-genre-badge {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #a8aebf;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+}
+
+.store-mood-badge {
+    background: rgba(var(--accent-rgb, 0, 204, 255), 0.06);
+    border: 1px solid rgba(var(--accent-rgb, 0, 204, 255), 0.12);
+    color: var(--accent, #00ccff);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.store-beat-tags-container {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    justify-content: flex-start;
+}
+
+.store-beat-tag {
+    color: #8a91a6;
+    font-size: 11px;
+    font-weight: 500;
+    transition: color 0.2s;
+    text-decoration: none;
+}
+
+.store-beat-tag:hover {
+    color: var(--accent, #00ccff);
+}
+
+/* Imagen de beat por defecto */
+.default-beat-cover {
+    transition: all 0.3s ease;
+}
+.store-beat-card:hover .default-beat-cover {
+    transform: scale(1.05);
+}
+
+/* Ajustes de botones para Descargas Gratuitas y Ofertas */
+.btn-free-download {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    transition: all 0.2s;
+}
+.btn-free-download:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
 
 

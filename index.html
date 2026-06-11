@@ -42,9 +42,14 @@
                 </svg>
                 <span>BEATSS</span>
             </div>
-            <button id="landing-btn-login" class="btn btn-secondary" style="height: 40px; font-size: 14px; font-weight: 600; padding: 0 24px; border-radius: 8px; cursor: pointer; border-color: rgba(255,255,255,0.1); background: transparent; color: #ffffff; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="log-in" style="width: 15px; height: 15px;"></i> Iniciar Sesión
-            </button>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <button id="landing-btn-nav-catalog" class="btn btn-secondary" style="height: 40px; font-size: 14px; font-weight: 600; padding: 0 24px; border-radius: 8px; cursor: pointer; border-color: rgba(255,255,255,0.1); background: transparent; color: #ffffff; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="headphones" style="width: 15px; height: 15px;"></i> Explorar Catálogo
+                </button>
+                <button id="landing-btn-login" class="btn btn-secondary" style="height: 40px; font-size: 14px; font-weight: 600; padding: 0 24px; border-radius: 8px; cursor: pointer; border-color: rgba(255,255,255,0.1); background: transparent; color: #ffffff; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="log-in" style="width: 15px; height: 15px;"></i> Iniciar Sesión
+                </button>
+            </div>
         </header>
 
         <!-- Hero Section -->
@@ -59,9 +64,14 @@
             <p style="font-size: clamp(15px, 2.5vw, 18px); color: #8a91a6; line-height: 1.6; max-width: 700px; margin: 0 auto 36px auto;">
                 Agiliza tus ventas de beats. BEATSS te permite generar contratos PDF profesionales de forma automática, gestionar tus clientes y catálogo de instrumentales, enviar firmas digitales y automatizar las entregas por correo.
             </p>
-            <button id="landing-btn-start" class="btn btn-primary" style="height: 52px; font-size: 16px; font-weight: 700; padding: 0 36px; border-radius: 10px; cursor: pointer; background: linear-gradient(135deg, #0055ee 0%, #00aacc 100%); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 10px 20px rgba(0, 102, 255, 0.3); transition: transform 0.2s, box-shadow 0.2s;">
-                Empezar Gratis <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-            </button>
+            <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+                <button id="landing-btn-start" class="btn btn-primary" style="height: 52px; font-size: 16px; font-weight: 700; padding: 0 36px; border-radius: 10px; cursor: pointer; background: linear-gradient(135deg, #0055ee 0%, #00aacc 100%); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 10px 20px rgba(0, 102, 255, 0.3); transition: transform 0.2s, box-shadow 0.2s;">
+                    Empezar Gratis <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+                </button>
+                <button id="landing-btn-catalog" class="btn btn-secondary" style="height: 52px; font-size: 16px; font-weight: 700; padding: 0 36px; border-radius: 10px; cursor: pointer; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #ffffff; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s;">
+                    <i data-lucide="headphones" style="width: 18px; height: 18px;"></i> Explorar Catálogo
+                </button>
+            </div>
         </section>
 
         <!-- Features grid -->
@@ -695,6 +705,9 @@
                     </div>
                 </div>
                 <div class="header-actions" style="display: flex; gap: 4px;">
+                    <button class="btn-icon-only" id="btn-global-catalog" title="Explorar Catálogo Global" data-tooltip="Marketplace">
+                        <i data-lucide="globe"></i>
+                    </button>
                     <button class="btn-icon-only" id="btn-language" title="Cambiar Idioma del Contrato (ES/EN)">
                         <span id="lang-icon" style="font-size: 14px; line-height: 1; font-weight: bold;">ES</span>
                     </button>
@@ -1039,6 +1052,9 @@
                     <button class="tab-btn" data-tab="tab-dashboard" id="tab-dashboard-btn">
                         <i data-lucide="bar-chart-3"></i> Dashboard de Ventas
                     </button>
+                    <button class="tab-btn" data-tab="tab-sales" id="tab-sales-btn">
+                        <i data-lucide="shopping-cart"></i> Pedidos de Beats <span class="badge" id="sales-pending-count" style="display: none; background: #ef4444; color: white;">0</span>
+                    </button>
                     <button class="tab-btn" data-tab="tab-admin" id="tab-admin-btn" style="display: none;">
                         <i data-lucide="trending-up"></i> Contabilidad General
                     </button>
@@ -1354,7 +1370,7 @@
                                     <textarea id="tab-db-beat-description" placeholder="Información adicional del beat..." style="width: 100%; height: 60px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; padding: 8px; font-size: 13px; font-family: inherit; resize: none; box-sizing: border-box;"></textarea>
                                 </div>
 
-                                <div class="input-group" style="margin-bottom: 18px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <div class="input-group" style="margin-bottom: 18px; display: none; align-items: center; gap: 8px; cursor: pointer;">
                                     <input type="checkbox" id="tab-db-beat-free-download" style="width: 16px; height: 16px; margin: 0; cursor: pointer;">
                                     <label for="tab-db-beat-free-download" style="margin: 0; font-size: 12px; cursor: pointer; user-select: none;">Permitir Descarga Gratuita (Free Download)</label>
                                 </div>
@@ -1485,6 +1501,76 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Pedidos de Beats -->
+            <div class="tab-content" id="tab-sales">
+                <div class="history-controls" style="margin-bottom: 20px;">
+                    <h2 style="font-family: var(--font-title); font-size: 20px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; margin: 0;">
+                        <i data-lucide="shopping-cart" style="color: var(--accent); width: 22px; height: 22px;"></i> Pedidos y Ventas de Beats
+                    </h2>
+                    <div class="history-actions" style="margin-left: auto;">
+                        <button class="btn btn-secondary" id="btn-sales-refresh" title="Recargar pedidos desde la nube">
+                            <i data-lucide="refresh-cw"></i> Actualizar Pedidos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Resumen de Pedidos -->
+                <div class="history-stats-cards" style="margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                            <i data-lucide="clock"></i>
+                        </div>
+                        <div class="stat-details">
+                            <span class="stat-label">Pendientes</span>
+                            <h3 class="stat-value" id="sales-stat-pending">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                            <i data-lucide="check-circle-2"></i>
+                        </div>
+                        <div class="stat-details">
+                            <span class="stat-label">Aprobadas</span>
+                            <h3 class="stat-value" id="sales-stat-approved">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+                            <i data-lucide="dollar-sign"></i>
+                        </div>
+                        <div class="stat-details">
+                            <span class="stat-label">Ingresos de Tienda</span>
+                            <h3 class="stat-value" id="sales-stat-revenue">$0.00</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="history-table-container">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha / ID</th>
+                                <th>Beat / Licencia</th>
+                                <th>Comprador</th>
+                                <th>Monto</th>
+                                <th>Método / Pago</th>
+                                <th>Comprobante</th>
+                                <th>Estado</th>
+                                <th style="text-align: right;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sales-table-tbody">
+                            <!-- Filas de ventas/pedidos generadas dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="empty-state" id="sales-empty-state" style="display: none; background: var(--bg-card); border: 1px solid var(--border-color); padding: 40px; border-radius: 12px; text-align: center; margin-top: 20px;">
+                    <i data-lucide="shopping-bag" style="width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.3; color: var(--text-secondary);"></i>
+                    <p style="color: var(--text-secondary); margin: 0; font-size: 14px;">No hay pedidos de beats registrados.</p>
                 </div>
             </div>
 
@@ -1888,6 +1974,67 @@
                           <option value="charcoal">⚫ Gris Pizarra (Classic)</option>
                           <option value="gold">🟡 Oro Premium</option>
                       </select>
+                  </div>
+
+                  <!-- Configuración de Cobro (Tienda Pública de Beats) -->
+                  <hr style="border: none; border-top: 1px solid var(--border-color); margin: 12px 0 8px 0;">
+                  <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.8px; margin-bottom: 6px;">💳 Cuentas de Cobro (Tienda de Beats)</div>
+                  <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">Configura tus datos para recibir pagos directos de clientes en tu tienda pública de beats.</div>
+                  
+                  <div style="font-weight: 600; font-size: 11px; color: var(--text-primary); margin-top: 8px; margin-bottom: 4px;">Banco Pichincha:</div>
+                  <div class="input-row">
+                      <div class="input-group">
+                          <label for="cfg-bank-pichincha-acc">Número de Cuenta</label>
+                          <input type="text" id="cfg-bank-pichincha-acc" placeholder="Ej: 220xxxxxx (Ahorros)">
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-bank-pichincha-name">Titular de la Cuenta</label>
+                          <input type="text" id="cfg-bank-pichincha-name" placeholder="Nombre completo">
+                      </div>
+                  </div>
+                  <div class="input-group" style="margin-top: 4px;">
+                      <label for="cfg-bank-pichincha-dni">Identificación (Cédula/RUC)</label>
+                      <input type="text" id="cfg-bank-pichincha-dni" placeholder="Ej: 17xxxxxxx">
+                  </div>
+
+                  <div style="font-weight: 600; font-size: 11px; color: var(--text-primary); margin-top: 8px; margin-bottom: 4px;">Banco Guayaquil:</div>
+                  <div class="input-row">
+                      <div class="input-group">
+                          <label for="cfg-bank-guayaquil-acc">Número de Cuenta</label>
+                          <input type="text" id="cfg-bank-guayaquil-acc" placeholder="Ej: 11xxxxxx (Corriente)">
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-bank-guayaquil-name">Titular de la Cuenta</label>
+                          <input type="text" id="cfg-bank-guayaquil-name" placeholder="Nombre completo">
+                      </div>
+                  </div>
+                  <div class="input-group" style="margin-top: 4px;">
+                      <label for="cfg-bank-guayaquil-dni">Identificación (Cédula/RUC)</label>
+                      <input type="text" id="cfg-bank-guayaquil-dni" placeholder="Ej: 17xxxxxxx">
+                  </div>
+
+                  <div style="font-weight: 600; font-size: 11px; color: var(--text-primary); margin-top: 8px; margin-bottom: 4px;">Deuna! (Ecuador):</div>
+                  <div class="input-row">
+                      <div class="input-group">
+                          <label for="cfg-deuna-phone">Celular Asociado</label>
+                          <input type="text" id="cfg-deuna-phone" placeholder="Ej: 099xxxxxxx">
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-deuna-name">Nombre Registrado</label>
+                          <input type="text" id="cfg-deuna-name" placeholder="Nombre completo">
+                      </div>
+                  </div>
+
+                  <div style="font-weight: 600; font-size: 11px; color: var(--text-primary); margin-top: 8px; margin-bottom: 4px;">PayPal:</div>
+                  <div class="input-row">
+                      <div class="input-group">
+                          <label for="cfg-paypal-email">Correo PayPal</label>
+                          <input type="email" id="cfg-paypal-email" placeholder="correo@paypal.com">
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-paypal-client-id">PayPal Client ID</label>
+                          <input type="text" id="cfg-paypal-client-id" placeholder="Client ID (Opcional)">
+                      </div>
                   </div>
                   <div class="input-group admin-only-field" id="cfg-gdrive-link-container" style="display: none; margin-top: 12px; border: 1px dashed var(--border-color); padding: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.01); box-sizing: border-box;">
                       <label style="font-weight: 600; margin-bottom: 4px;">Vincular Google Drive Central (SaaS)</label>
@@ -2355,6 +2502,399 @@
             initPayPalButton();
         }
     </script>
+    <!-- ======================================================= -->
+    <!-- CATÁLOGO GLOBAL DE BEATSS (MARKETPLACE)                 -->
+    <!-- ======================================================= -->
+    <div id="global-catalog-view" style="display: none; height: 100vh; overflow-y: auto; background: radial-gradient(circle at top, #0b0e14, #05070a); color: #fff; font-family: 'Inter', sans-serif;">
+        <!-- Header del Catálogo Global -->
+        <header style="padding: 24px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); background: rgba(11, 14, 20, 0.8); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 50;">
+            <div style="max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" id="catalog-logo-home">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #0066ff;">
+                        <path d="M12 2v20M17 5v14M7 9v6M22 8v8M2 11v2"></path>
+                    </svg>
+                    <span style="font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 900; letter-spacing: -1px;">BEATSS <span style="color:#00ccff; font-weight:700;">Marketplace</span></span>
+                </div>
+                
+                <!-- Buscador principal -->
+                <div style="flex: 1; min-width: 280px; max-width: 500px; position: relative;">
+                    <i data-lucide="search" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #8a91a6;"></i>
+                    <input type="text" id="global-search-input" placeholder="Buscar beats, productores o géneros..." style="width: 100%; padding: 12px 20px 12px 48px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 100px; color: #fff; font-size: 14px; outline: none; transition: all 0.2s;">
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button id="catalog-btn-login" class="btn btn-secondary" style="height: 40px; padding: 0 20px; border-radius: 100px; font-size: 13px; font-weight: 600; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #fff;">Soy Productor</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Contenido Principal -->
+        <main style="max-width: 1200px; margin: 0 auto; padding: 40px 20px 140px 20px; display: flex; gap: 32px; flex-direction: column;">
+            
+            <!-- Hero Banner Opcional -->
+            <div style="background: linear-gradient(135deg, rgba(0, 102, 255, 0.1) 0%, rgba(0, 204, 255, 0.05) 100%); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 24px; padding: 40px; text-align: center; position: relative; overflow: hidden;">
+                <h2 style="font-family: 'Montserrat', sans-serif; font-size: clamp(28px, 4vw, 42px); font-weight: 900; margin: 0 0 16px 0;">Encuentra el Beat Perfecto</h2>
+                <p style="color: #8a91a6; font-size: 16px; max-width: 600px; margin: 0 auto;">Licencias directas de los mejores productores independientes de la escena. Cero comisiones ocultas, pago directo al creador.</p>
+            </div>
+
+            <!-- Zona de Filtros -->
+            <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap; background: rgba(255,255,255,0.02); padding: 16px 24px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                <span style="font-size: 13px; font-weight: 600; color: #8a91a6; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="filter" style="width: 16px; height: 16px;"></i> Filtros:
+                </span>
+                
+                <select id="global-genre-select" style="padding: 10px 16px; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 100px; color: #fff; font-size: 13px; outline: none; cursor: pointer; min-width: 140px;">
+                    <option value="">Cualquier Género</option>
+                </select>
+
+                <select id="global-price-select" style="padding: 10px 16px; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 100px; color: #fff; font-size: 13px; outline: none; cursor: pointer; min-width: 140px;">
+                    <option value="">Cualquier Precio</option>
+                    <option value="0-20">Hasta $20</option>
+                    <option value="20-50">$20 - $50</option>
+                    <option value="50-100">$50 - $100</option>
+                    <option value="100+">Más de $100</option>
+                </select>
+
+                <select id="global-bpm-select" style="padding: 10px 16px; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 100px; color: #fff; font-size: 13px; outline: none; cursor: pointer; min-width: 140px;">
+                    <option value="">Cualquier BPM</option>
+                    <option value="0-90">Lento (&lt; 90)</option>
+                    <option value="90-130">Medio (90 - 130)</option>
+                    <option value="130-999">Rápido (&gt; 130)</option>
+                </select>
+                
+                <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 12px; color: #8a91a6;">Ordenar por:</span>
+                    <select id="global-sort-select" style="padding: 10px 16px; background: transparent; border: none; color: #00ccff; font-weight: 600; font-size: 13px; outline: none; cursor: pointer;">
+                        <option value="newest">Más Recientes</option>
+                        <option value="price_asc">Menor Precio</option>
+                        <option value="price_desc">Mayor Precio</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Grid de Beats -->
+            <div id="global-beats-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
+                <!-- Skeleton / Loading state se inyecta via JS -->
+            </div>
+            
+            <div id="global-empty-state" style="display: none; text-align: center; padding: 80px 20px; color: #8a91a6; background: rgba(255,255,255,0.01); border-radius: 24px; border: 1px dashed rgba(255,255,255,0.05);">
+                <i data-lucide="music-4" style="width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <h3 style="color: #fff; font-size: 18px; margin: 0 0 8px 0;">No se encontraron beats</h3>
+                <p style="font-size: 14px; margin: 0;">Intenta ajustando los filtros de búsqueda.</p>
+                <button id="global-btn-clear-filters" class="btn btn-secondary" style="margin-top: 16px; height: 36px;">Limpiar Filtros</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- TIENDA PÚBLICA DE BEATS (STOREFRONT INDIVIDUAL)         -->
+    <!-- ======================================================= -->
+    <div id="public-store-view" style="display: none; height: 100vh; overflow-y: auto; background: radial-gradient(circle at top left, #121520, #0a0b10); color: #fff; font-family: 'Inter', sans-serif;">
+        <!-- Header de la Tienda -->
+        <header class="store-header" style="padding: 40px 20px; text-align: center; background: rgba(255, 255, 255, 0.02); border-bottom: 1px solid rgba(255, 255, 255, 0.05); position: relative; overflow: hidden; backdrop-filter: blur(10px); box-sizing: border-box;">
+            <div class="store-header-mesh" style="position: absolute; top: -100px; left: 50%; transform: translateX(-50%); width: 600px; height: 300px; background: radial-gradient(circle, rgba(0, 204, 255, 0.15) 0%, transparent 70%); pointer-events: none;"></div>
+            
+            <div class="store-brand" style="position: relative; z-index: 2; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                <div class="store-logo-wrapper" style="width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, var(--accent, #00ccff) 0%, #0055ee 100%); display: flex; align-items: center; justify-content: center; padding: 3px; box-shadow: 0 10px 30px rgba(0, 204, 255, 0.3); border: 2px solid rgba(255, 255, 255, 0.1); box-sizing: border-box;">
+                    <img id="store-logo-img" src="" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: none;" alt="Logo">
+                    <div id="store-logo-icon" style="font-size: 40px; color: #fff; display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="music" style="width: 44px; height: 44px;"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 id="store-producer-name" style="font-size: 36px; font-weight: 800; margin: 0; letter-spacing: -1px; background: linear-gradient(135deg, #fff 30%, #a8aebf 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Sossa</h1>
+                    <p id="store-producer-aka-sub" style="font-size: 14px; color: var(--accent, #00ccff); font-weight: 600; text-transform: uppercase; letter-spacing: 2px; margin: 4px 0 0 0;">Catálogo Oficial de Beats</p>
+                </div>
+                <div class="store-socials" style="display: flex; gap: 16px; margin-top: 8px;">
+                    <a id="store-email-link" href="#" style="color: #8a91a6; transition: color 0.2s;" title="Email"><i data-lucide="mail" style="width: 20px; height: 20px;"></i></a>
+                    <a id="store-phone-link" href="#" style="color: #8a91a6; transition: color 0.2s;" title="WhatsApp"><i data-lucide="message-square" style="width: 20px; height: 20px;"></i></a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Filtros y Grid de Beats -->
+        <main class="store-container" style="max-width: 1200px; margin: 0 auto; padding: 40px 20px 140px 20px; box-sizing: border-box;">
+            <!-- Buscador y Filtros -->
+            <div class="store-controls" style="display: flex; gap: 16px; margin-bottom: 30px; flex-wrap: wrap; align-items: center; background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 16px; backdrop-filter: blur(5px); box-sizing: border-box;">
+                <div style="flex: 1; min-width: 280px; position: relative;">
+                    <i data-lucide="search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: #8a91a6;"></i>
+                    <input type="text" id="store-search-input" placeholder="Buscar instrumentales..." style="width: 100%; padding: 12px 16px; padding-left: 44px; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; color: #fff; font-size: 14px; box-sizing: border-box; outline: none; transition: border-color 0.2s;">
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <select id="store-genre-select" style="padding: 12px 16px; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; color: #fff; font-size: 14px; outline: none; cursor: pointer; min-width: 140px; box-sizing: border-box;">
+                        <option value="">Todos los géneros</option>
+                    </select>
+                    <select id="store-key-select" style="padding: 12px 16px; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; color: #fff; font-size: 14px; outline: none; cursor: pointer; min-width: 120px; box-sizing: border-box;">
+                        <option value="">Todas las escalas</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Catálogo de Beats -->
+            <div id="store-beats-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
+                <!-- Tarjetas de beats generadas dinámicamente -->
+            </div>
+            
+            <div id="store-empty-state" style="display: none; text-align: center; padding: 80px 20px; color: #8a91a6;">
+                <i data-lucide="music-2" style="width: 48px; height: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p style="font-size: 16px; margin: 0;">No se encontraron beats en este catálogo.</p>
+            </div>
+        </main>
+    </div>
+
+
+        <!-- Reproductor de Audio Flotante Inferior -->
+        <div id="store-audio-player" class="glassmorphism-player" style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(10, 11, 16, 0.95); border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 16px 24px; display: none; z-index: 1000; box-shadow: 0 -10px 35px rgba(0,0,0,0.5); backdrop-filter: blur(20px); box-sizing: border-box;">
+            <div style="max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; box-sizing: border-box;">
+                
+                <!-- Beat Info -->
+                <div style="display: flex; align-items: center; gap: 14px; min-width: 220px; flex: 1; box-sizing: border-box;">
+                    <img id="player-artwork" src="" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; background: #222;" alt="Artwork">
+                    <div style="overflow: hidden; text-align: left;">
+                        <div id="player-title" style="font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;">Título del Beat</div>
+                        <div id="player-info" style="font-size: 12px; color: #8a91a6; margin-top: 2px;">BPM • Key</div>
+                    </div>
+                </div>
+
+                <!-- Controls & Progress -->
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 2; min-width: 300px; box-sizing: border-box;">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <button id="player-btn-prev" style="background: none; border: none; color: #8a91a6; cursor: pointer; padding: 4px;"><i data-lucide="skip-back" style="width: 18px; height: 18px;"></i></button>
+                        <button id="player-btn-play" style="background: var(--accent, #00ccff); border: none; color: #000; cursor: pointer; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0, 204, 255, 0.3); transition: transform 0.2s;"><i data-lucide="play" style="width: 18px; height: 18px; fill: #000;"></i></button>
+                        <button id="player-btn-next" style="background: none; border: none; color: #8a91a6; cursor: pointer; padding: 4px;"><i data-lucide="skip-forward" style="width: 18px; height: 18px;"></i></button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box;">
+                        <span id="player-time-current" style="font-size: 11px; color: #8a91a6; font-family: monospace;">0:00</span>
+                        <div id="player-progress-container" style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer; position: relative;">
+                            <div id="player-progress-bar" style="width: 0%; height: 100%; background: var(--accent, #00ccff); border-radius: 2px; position: relative; transition: width 0.1s linear;">
+                                <div style="position: absolute; right: -6px; top: -4px; width: 12px; height: 12px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>
+                            </div>
+                        </div>
+                        <span id="player-time-duration" style="font-size: 11px; color: #8a91a6; font-family: monospace;">0:00</span>
+                    </div>
+                </div>
+
+                <!-- Volume & Action -->
+                <div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end; min-width: 220px; flex: 1; box-sizing: border-box;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="volume-2" style="width: 18px; height: 18px; color: #8a91a6;"></i>
+                        <input type="range" id="player-volume" min="0" max="1" step="0.05" value="0.8" style="width: 80px; height: 4px; cursor: pointer; accent-color: var(--accent, #00ccff);">
+                    </div>
+                    <button id="player-btn-buy" class="btn btn-primary" style="height: 38px; padding: 0 20px; font-weight: 700; border-radius: 10px; font-size: 13px;">Comprar</button>
+                </div>
+
+            </div>
+        </div>
+
+    <!-- Modal: Checkout de Beat -->
+    <div class="modal-backdrop" id="beat-checkout-modal" style="display: none; z-index: 99999; background: rgba(11, 14, 20, 0.8); backdrop-filter: blur(8px);">
+        <div class="modal" style="max-width: 600px; width: 95%; background: #0c0e14; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden;">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 20px 24px; box-sizing: border-box;">
+                <h2 style="font-size: 20px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <i data-lucide="shopping-bag" style="color: var(--accent, #00ccff);"></i> Adquirir Beat
+                </h2>
+                <button class="icon-btn" id="btn-close-checkout-modal"><i data-lucide="x"></i></button>
+            </div>
+            
+            <div class="modal-body" style="padding: 24px; max-height: 65vh; overflow-y: auto; box-sizing: border-box; text-align: left;">
+                <!-- Step Indicators -->
+                <div style="display: flex; justify-content: space-between; margin-bottom: 24px; position: relative; width: 100%; box-sizing: border-box; padding: 0 10px;">
+                    <div style="position: absolute; top: 15px; left: 10%; right: 10%; height: 2px; background: rgba(255,255,255,0.05); z-index: 1;">
+                        <div id="checkout-step-progress" style="width: 0%; height: 100%; background: var(--accent, #00ccff); transition: width 0.3s ease;"></div>
+                    </div>
+                    <div class="checkout-step-indicator active" data-step="1" style="position: relative; z-index: 2; background: #0c0e14; border: 2px solid var(--accent, #00ccff); color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">1</div>
+                    <div class="checkout-step-indicator" data-step="2" style="position: relative; z-index: 2; background: #0c0e14; border: 2px solid rgba(255,255,255,0.1); color: #8a91a6; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">2</div>
+                    <div class="checkout-step-indicator" data-step="3" style="position: relative; z-index: 2; background: #0c0e14; border: 2px solid rgba(255,255,255,0.1); color: #8a91a6; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">3</div>
+                </div>
+
+                <!-- PASO 1: Selección de Licencia -->
+                <div class="checkout-step-panel" id="checkout-panel-1">
+                    <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;">1. Selecciona el Tipo de Licencia:</h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px;" id="license-options-container">
+                        <!-- Cargado dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- PASO 2: Datos del Comprador -->
+                <div class="checkout-step-panel" id="checkout-panel-2" style="display: none;">
+                    <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;">2. Datos para el Contrato y Entrega:</h3>
+                    <form id="checkout-billing-form" style="display: flex; flex-direction: column; gap: 14px; box-sizing: border-box;">
+                        <div class="input-group">
+                            <label for="buyer-name" style="font-size: 12px; font-weight: 600; color: #8a91a6;">Nombre Artístico / Real Completo *</label>
+                            <input type="text" id="buyer-name" required placeholder="Nombre para firmar la licencia" style="width: 100%; box-sizing: border-box;">
+                        </div>
+                        <div class="input-group">
+                            <label for="buyer-email" style="font-size: 12px; font-weight: 600; color: #8a91a6;">Correo Electrónico * (Para recibir la licencia)</label>
+                            <input type="email" id="buyer-email" required placeholder="tu-correo@ejemplo.com" style="width: 100%; box-sizing: border-box;">
+                        </div>
+                        <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <div class="input-group" style="flex: 1; min-width: 120px;">
+                                <label for="buyer-phone" style="font-size: 12px; font-weight: 600; color: #8a91a6;">WhatsApp</label>
+                                <input type="text" id="buyer-phone" placeholder="Ej: +5939xxxxxxxx" style="width: 100%; box-sizing: border-box;">
+                            </div>
+                            <div class="input-group" style="flex: 1; min-width: 120px;">
+                                <label for="buyer-dni" style="font-size: 12px; font-weight: 600; color: #8a91a6;">Identificación / DNI</label>
+                                <input type="text" id="buyer-dni" placeholder="Cédula/RUC" style="width: 100%; box-sizing: border-box;">
+                            </div>
+                        </div>
+                        <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <div class="input-group" style="flex: 1; min-width: 120px;">
+                                <label for="buyer-city" style="font-size: 12px; font-weight: 600; color: #8a91a6;">Ciudad</label>
+                                <input type="text" id="buyer-city" placeholder="Ej: Quito" style="width: 100%; box-sizing: border-box;">
+                            </div>
+                            <div class="input-group" style="flex: 1; min-width: 120px;">
+                                <label for="buyer-country" style="font-size: 12px; font-weight: 600; color: #8a91a6;">País</label>
+                                <input type="text" id="buyer-country" value="Ecuador" style="width: 100%; box-sizing: border-box;">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- PASO 3: Método de Pago -->
+                <div class="checkout-step-panel" id="checkout-panel-3" style="display: none;">
+                    <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 12px;">3. Selecciona tu Método de Pago:</h3>
+                    
+                    <div class="pay-method-tabs" style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 16px; box-sizing: border-box; flex-wrap: wrap;">
+                        <button type="button" class="pay-tab-btn active" id="btn-pay-deuna" onclick="window.switchStorePaymentMethod('deuna')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 700; color: var(--accent, #00ccff); border-bottom: 2px solid var(--accent, #00ccff); cursor: pointer; outline: none;">Deuna!</button>
+                        <button type="button" class="pay-tab-btn" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">Transferencia</button>
+                        <button type="button" class="pay-tab-btn" id="btn-pay-paypal" onclick="window.switchStorePaymentMethod('paypal')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">PayPal</button>
+                        <button type="button" class="pay-tab-btn" id="btn-pay-offer" onclick="window.switchStorePaymentMethod('offer')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #f59e0b; border-bottom: 2px solid transparent; cursor: pointer; outline: none; white-space: nowrap;">🏷️ Oferta</button>
+                    </div>
+
+                    <!-- Panel Deuna -->
+                    <div class="store-payment-panel" id="store-pay-deuna">
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 12px; margin-top: 0;">Sigue los pasos para completar tu pago con <strong style="color: #fff;">Deuna!</strong>:</p>
+                        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+                            <div style="display: flex; align-items: flex-start; gap: 10px;">
+                                <span style="background: var(--accent, #00ccff); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; margin-top: 1px;">1</span>
+                                <span style="font-size: 13px; color: #cdd;">Copia el número de celular y envía el pago desde tu app <strong style="color: #fff;">Deuna!</strong></span>
+                            </div>
+                            <div style="display: flex; align-items: flex-start; gap: 10px;">
+                                <span style="background: var(--accent, #00ccff); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; margin-top: 1px;">2</span>
+                                <span style="font-size: 13px; color: #cdd;">Toma una captura del comprobante y súbelo abajo</span>
+                            </div>
+                            <div style="display: flex; align-items: flex-start; gap: 10px;">
+                                <span style="background: var(--accent, #00ccff); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; margin-top: 1px;">3</span>
+                                <span style="font-size: 13px; color: #cdd;">Confirma tu compra — el productor aprobará y recibirás los archivos por correo</span>
+                            </div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 16px; text-align: center; box-sizing: border-box;">
+                            <div style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px;" id="deuna-info-phone">Celular: -</div>
+                            <div style="font-size: 13px; color: #8a91a6; margin-bottom: 12px;" id="deuna-info-name">Titular: -</div>
+                            <div style="font-size: 12px; background: rgba(0, 204, 255, 0.08); color: var(--accent, #00ccff); padding: 8px 16px; border-radius: 8px; display: inline-block; font-weight: 700;">
+                                💳 Total a Pagar: <strong id="deuna-total-price">$0.00 USD</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel Transferencia -->
+                    <div class="store-payment-panel" id="store-pay-transfer" style="display: none;">
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 12px; margin-top: 0;">Transfiere a cualquiera de las siguientes cuentas directas del productor:</p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; box-sizing: border-box;">
+                            <!-- Banco Pichincha -->
+                            <div id="store-bank-pichincha-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 14px; box-sizing: border-box;">
+                                <div style="font-weight: 700; font-size: 12px; color: #f59e0b; margin-bottom: 6px;">BANCO PICHINCHA</div>
+                                <div style="font-size: 13px; color: #fff;">Cuenta: <strong id="pichincha-info-acc">-</strong></div>
+                                <div style="font-size: 12px; color: #8a91a6; margin-top: 2px;">Titular: <span id="pichincha-info-name">-</span></div>
+                                <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="pichincha-info-dni">-</span></div>
+                            </div>
+                            <!-- Banco Guayaquil -->
+                            <div id="store-bank-guayaquil-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 14px; box-sizing: border-box;">
+                                <div style="font-weight: 700; font-size: 12px; color: #ec4899; margin-bottom: 6px;">BANCO GUAYAQUIL</div>
+                                <div style="font-size: 13px; color: #fff;">Cuenta: <strong id="guayaquil-info-acc">-</strong></div>
+                                <div style="font-size: 12px; color: #8a91a6; margin-top: 2px;">Titular: <span id="guayaquil-info-name">-</span></div>
+                                <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="guayaquil-info-dni">-</span></div>
+                            </div>
+                        </div>
+                        <div style="font-size: 11px; background: rgba(0, 204, 255, 0.08); color: var(--accent, #00ccff); padding: 6px 12px; border-radius: 6px; display: inline-block; width: 100%; text-align: center; box-sizing: border-box; margin-bottom: 12px;">
+                            Total a Pagar: <strong id="transfer-total-price">$0.00 USD</strong>
+                        </div>
+                    </div>
+
+                    <!-- Panel PayPal -->
+                    <div class="store-payment-panel" id="store-pay-paypal" style="display: none;">
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;">Paga de manera instantánea y segura con tu cuenta PayPal o tarjeta de crédito:</p>
+                        
+                        <div id="store-paypal-button-container" style="min-height: 150px; text-align: center; width: 100%; box-sizing: border-box;">
+                            <!-- Botón de PayPal cargado dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Panel Hacer Oferta (Licencia Exclusiva) -->
+                    <div class="store-payment-panel" id="store-pay-offer" style="display: none;">
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;">Propón un precio de oferta al productor para adquirir los derechos exclusivos de esta instrumental:</p>
+                        <div style="display: flex; flex-direction: column; gap: 14px; box-sizing: border-box;">
+                            <div class="input-group">
+                                <label for="offer-price-input" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;">Tu Propuesta Económica ($ USD) *</label>
+                                <input type="number" id="offer-price-input" min="250" step="5" placeholder="Ej: 400" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; font-weight: 700; font-size: 16px; outline: none;">
+                                <span style="font-size: 11px; color: #8a91a6; margin-top: 6px; display: block;">Monto mínimo de negociación: <strong style="color: var(--accent, #00ccff); font-weight: 700;">$250.00 USD</strong></span>
+                            </div>
+                            <div class="input-group">
+                                <label for="offer-message-input" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;">Mensaje para el Productor</label>
+                                <textarea id="offer-message-input" placeholder="Ej: Hola, me interesa mucho este beat. Mi presupuesto máximo actual es de $400..." rows="3" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; font-family: inherit; font-size: 13px; resize: none; outline: none;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subida de Comprobante -->
+                    <div id="store-receipt-upload-section" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px; box-sizing: border-box;">
+                        <label style="font-size: 12px; font-weight: 600; color: #8a91a6; display: block; margin-bottom: 8px;">📸 Sube tu Comprobante de Pago *</label>
+                        <div style="display: flex; gap: 12px; align-items: center; box-sizing: border-box;">
+                            <input type="file" id="store-receipt-file" accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-secondary" id="btn-store-upload-receipt" style="flex: 1; height: 38px; font-size: 12px; justify-content: center; gap: 6px; box-sizing: border-box; background: rgba(0, 204, 255, 0.08); border-color: rgba(0, 204, 255, 0.3); color: var(--accent, #00ccff);">
+                                <i data-lucide="upload" style="width: 15px; height: 15px;"></i> Subir Comprobante
+                            </button>
+                            <span id="store-receipt-file-name" style="font-size: 11px; color: #8a91a6; flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">Ningún archivo seleccionado</span>
+                        </div>
+                        <p style="font-size: 11px; color: #8a91a6; margin-top: 8px; margin-bottom: 0; line-height: 1.4;">⚠️ El productor revisará tu comprobante y te enviará los archivos por correo en las próximas horas.</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display: flex; justify-content: space-between; box-sizing: border-box;">
+                <button class="btn btn-secondary" id="btn-checkout-prev" style="display: none; height: 38px; padding: 0 16px; font-size: 13px;">Atrás</button>
+                <button class="btn btn-secondary" id="btn-checkout-cancel" style="height: 38px; padding: 0 16px; font-size: 13px;">Cancelar</button>
+                <button class="btn btn-primary" id="btn-checkout-next" style="height: 38px; padding: 0 24px; font-size: 13px; font-weight: 700;">Continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Descarga Gratuita -->
+    <div class="modal-backdrop" id="free-download-modal" style="display: none; z-index: 99999; background: rgba(11, 14, 20, 0.8); backdrop-filter: blur(8px);">
+        <div class="modal" style="max-width: 450px; width: 90%; background: #0c0e14; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden;">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 20px 24px; box-sizing: border-box;">
+                <h2 style="font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <i data-lucide="download" style="color: var(--accent, #00ccff);"></i> Descargar Beat Gratis
+                </h2>
+                <button class="icon-btn" id="btn-close-free-modal" onclick="document.getElementById('free-download-modal').style.display='none';"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 24px; box-sizing: border-box; text-align: left;">
+                <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-top: 0; margin-bottom: 16px;">
+                    Ingresa tus datos para registrarte en el boletín del productor y descargar la versión de preescucha (MP3 con marca de agua) totalmente gratis.
+                </p>
+                <form id="free-download-form" onsubmit="event.preventDefault(); window.submitFreeDownloadLead();" style="display: flex; flex-direction: column; gap: 14px;">
+                    <input type="hidden" id="free-download-beat-id">
+                    <div class="input-group">
+                        <label for="free-buyer-name" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;">Nombre Artístico *</label>
+                        <input type="text" id="free-buyer-name" required placeholder="Tu nombre artístico o real" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; outline: none; font-size: 13px;">
+                    </div>
+                    <div class="input-group">
+                        <label for="free-buyer-email" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;">Correo Electrónico *</label>
+                        <input type="email" id="free-buyer-email" required placeholder="tu-correo@ejemplo.com" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; outline: none; font-size: 13px;">
+                    </div>
+                    <div class="input-group">
+                        <label for="free-buyer-phone" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;">WhatsApp (Opcional)</label>
+                        <input type="text" id="free-buyer-phone" placeholder="Ej: +5939xxxxxxxx" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; outline: none; font-size: 13px;">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; height: 42px; font-weight: 700; margin-top: 10px; border-radius: 10px; font-size: 13px;">Comenzar Descarga</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden shared file uploader -->
     <input type="file" id="shared-file-uploader" style="display: none;">
 </body>

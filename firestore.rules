@@ -5,32 +5,37 @@ service cloud.firestore {
 
     // Regla para la contabilidad consolidada de Sossa Admin (Collection Group query)
     match /{path=**}/licencias/{document} {
-      allow read: if request.auth != null && request.auth.token.email.lower() == 'sossabeatz1@gmail.com';
+      allow read: if request.auth != null && request.auth.token.email.lower() == 'masterjuego25@gmail.com';
     }
 
-    // Regla para consulta consolidada de configuraciones de todos los productores (Sossa Admin)
+    // Regla para consulta de configuraciones de todos los productores (Sossa Admin y Tienda Pública)
     match /{path=**}/config/{document} {
-      allow read: if request.auth != null && request.auth.token.email.lower() == 'sossabeatz1@gmail.com';
+      allow read: if true;
     }
 
-    // Regla para solicitudes de pago local
+    // Regla para consulta global de beats (Catálogo Global)
+    match /{path=**}/beats/{document} {
+      allow read: if true;
+    }
+
+    // Regla para solicitudes de pago local y compras de beats
     match /payments/{paymentId} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.email.lower() == 'sossabeatz1@gmail.com');
-      allow update: if request.auth != null && request.auth.token.email.lower() == 'sossabeatz1@gmail.com';
+      allow create: if request.resource.data.type == 'beat_purchase' || (request.auth != null && request.resource.data.userId == request.auth.uid);
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || resource.data.producerId == request.auth.uid || request.auth.token.email.lower() == 'masterjuego25@gmail.com');
+      allow update: if request.auth != null && (request.auth.token.email.lower() == 'masterjuego25@gmail.com' || resource.data.producerId == request.auth.uid);
       allow delete: if false;
     }
 
     // Regla para códigos VIP
     match /vip_codes/{codeId} {
       allow get: if request.auth != null;
-      allow list, write: if request.auth != null && request.auth.token.email.lower() == 'sossabeatz1@gmail.com';
+      allow list, write: if request.auth != null && request.auth.token.email.lower() == 'masterjuego25@gmail.com';
     }
 
     // Regla principal por usuario
     match /users/{userId} {
       // Sossa Admin tiene acceso completo
-      allow read, write: if request.auth != null && request.auth.token.email.lower() == 'sossabeatz1@gmail.com';
+      allow read, write: if request.auth != null && request.auth.token.email.lower() == 'masterjuego25@gmail.com';
 
       // El propio usuario puede leer su documento
       allow read: if request.auth != null && request.auth.uid == userId;
@@ -46,12 +51,12 @@ service cloud.firestore {
 
       // Reglas para subcolección config/producer
       match /config/producer {
-        allow read: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == 'sossabeatz1@gmail.com');
+        allow read: if true;
         allow create: if request.auth != null && request.auth.uid == userId && (
           !request.resource.data.keys().hasAny(['plan', 'expirationPro', 'redeemedCodes']) || 
           request.resource.data.plan == 'inicial'
         );
-        allow update: if request.auth != null && (request.auth.token.email.lower() == 'sossabeatz1@gmail.com' || (
+        allow update: if request.auth != null && (request.auth.token.email.lower() == 'masterjuego25@gmail.com' || (
           request.auth.uid == userId && (
             // Permitir actualización si no se tocan los campos de plan
             (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan', 'expirationPro', 'redeemedCodes'])) ||
@@ -63,19 +68,22 @@ service cloud.firestore {
 
       // Reglas para subcolecciones normales
       match /beats/{beatId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == 'sossabeatz1@gmail.com');
+        allow read: if true;
+        allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == 'masterjuego25@gmail.com');
       }
 
       match /templates/{templateId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == 'sossabeatz1@gmail.com');
+        allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == 'masterjuego25@gmail.com');
       }
 
       match /licencias/{licenciaId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == 'sossabeatz1@gmail.com');
+        allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == 'masterjuego25@gmail.com');
       }
 
       match /contacts/{contactId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == 'sossabeatz1@gmail.com');
+        allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.token.email.lower() == 'masterjuego25@gmail.com');
+        // Permitir creación/actualización pública para captura de leads desde la tienda (descargas gratis y ofertas)
+        allow create, update: if true;
       }
     }
   }

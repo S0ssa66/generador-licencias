@@ -12,6 +12,7 @@ import {
     signInWithRedirect,
     getRedirectResult,
     onAuthStateChanged,
+    unlink,
     doc,
     setDoc,
     getDoc,
@@ -20,10 +21,12 @@ import {
     query,
     where,
     orderBy,
+    limit,
     collectionGroup,
     deleteDoc,
     addDoc,
     updateDoc,
+    onSnapshot,
     ref,
     uploadBytesResumable,
     getDownloadURL
@@ -37,7 +40,7 @@ let salesChartInstance = null;
 let producerConfig = {
     name: "Joao David Dominguez",
     aka: "Sossa",
-    email: "sossabeatz1@gmail.com",
+    email: "masterjuego25@gmail.com",
     phone: "+593961201184",
     place: "Quito, Ecuador",
     id: "0803743111",
@@ -421,25 +424,27 @@ function setupAuthModalEvents() {
     googleBtn.addEventListener('click', async () => {
         errorMsg.style.display = 'none';
         try {
-            showToast('Abriendo Google...');
-            // Intentar con Popup primero en todos los dispositivos ya que mantiene el estado de la app en segundo plano y es más inmediato
-            try {
-                await signInWithPopup(auth, googleProvider);
-            } catch (popupErr) {
-                console.warn("Popup falló o fue bloqueado, intentando redirección:", popupErr);
-                // Si el popup fue bloqueado por el navegador o cerrado por el usuario, usar redirección como fallback
-                if (popupErr.code === 'auth/popup-blocked' || popupErr.code === 'auth/popup-closed-by-user' || popupErr.message.includes('popup')) {
-                    showToast('Redireccionando a Google...');
-                    await signInWithRedirect(auth, googleProvider);
-                } else {
-                    throw popupErr;
-                }
-            }
+            showToast('Redirigiendo a Google...');
+            // Usar signInWithRedirect como método primario — funciona con cualquier dominio de Vercel
+            // sin necesidad de agregar el dominio como origen autorizado en Google Cloud Console
+            await signInWithRedirect(auth, googleProvider);
         } catch (err) {
             console.error(err);
-            errorMsg.innerText = 'Error de Google: ' + err.message;
-            errorMsg.style.display = 'block';
-            showToast('Fallo al iniciar sesión con Google', true);
+            // Si la redirección falla (ej. iOS Safari en modo privado), intentar popup como fallback
+            if (err.code === 'auth/operation-not-supported-in-this-environment' || err.code === 'auth/cancelled-popup-request') {
+                try {
+                    await signInWithPopup(auth, googleProvider);
+                } catch (popupErr) {
+                    console.error('Popup también falló:', popupErr);
+                    errorMsg.innerText = 'Error de Google: ' + popupErr.message;
+                    errorMsg.style.display = 'block';
+                    showToast('Fallo al iniciar sesión con Google', true);
+                }
+            } else {
+                errorMsg.innerText = 'Error de Google: ' + err.message;
+                errorMsg.style.display = 'block';
+                showToast('Fallo al iniciar sesión con Google', true);
+            }
         }
     });
 
@@ -545,6 +550,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Escuchar el estado de autenticación de Firebase
     onAuthStateChanged(auth, async (user) => {
+        if (window.isPublicStoreMode) {
+            console.log("🛒 Tienda pública activa. Omitiendo flujo normal de control de sesión.");
+            if (user) {
+                window.currentUser = user.uid;
+                window.currentUserIsAdmin = (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com');
+            }
+            return;
+        }
         if (user) {
             console.log("Sesión activa de Firebase:", user.email, user.uid);
             document.getElementById('login-modal').style.display = 'none';
@@ -552,7 +565,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (landing) landing.style.display = 'none';
             
             // Sossa Admin es quien ingresa con sossabeatz1@gmail.com
-            window.currentUserIsAdmin = (user.email && user.email.toLowerCase() === 'sossabeatz1@gmail.com');
+            window.currentUserIsAdmin = (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com');
+            
+            // Auto-desvincular Google antiguo si el usuario inicia sesión con email y contraseña masterjuego25
+            // pero el proveedor Google sigue apuntando a sossabeatz1
+            if (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com' && user.providerData) {
+                const googleProv = user.providerData.find(p => p.providerId === 'google.com');
+                if (googleProv && googleProv.email && googleProv.email.toLowerCase() === 'sossabeatz1@gmail.com') {
+                    console.log("Detectado proveedor de Google antiguo. Desvinculando...");
+                    unlink(user, 'google.com')
+                        .then(() => console.log("🔒 Cuenta de Google antigua (sossabeatz1) desvinculada con éxito. Listo para vincular la nueva en la próxima sesión con Google."))
+                        .catch(err => console.error("Error al desvincular Google antiguo:", err));
+                }
+            }
             
             await initApp(user.uid);
         } else {
@@ -639,6 +664,8 @@ async function initApp(user) {
     loadFormDraft(); // Restaurar borrador si existe
     window.isInitializing = false;
     await loadReferralData(); // Cargar datos del programa de referidos
+    await loadSalesData(); // Iniciar listener en tiempo real de pedidos de beats
+    requestNotificationPermission(); // Solicitar permiso de notificaciones nativas
     safeCreateIcons();
     initTooltips();
     
@@ -702,11 +729,11 @@ async function loadProducerConfig() {
                     gdriveClientId: "",
                     storageProvider: "gdrive"
                 };
-            } else if (currentEmail.toLowerCase() === 'sossabeatz1@gmail.com') {
+            } else if (currentEmail.toLowerCase() === 'masterjuego25@gmail.com') {
                 producerConfig = {
                     name: "Joao David Dominguez",
                     aka: "Sossa",
-                    email: "sossabeatz1@gmail.com",
+                    email: "masterjuego25@gmail.com",
                     phone: "+593961201184",
                     place: "Quito, Ecuador",
                     id: "0803743111",
@@ -825,6 +852,19 @@ async function loadProducerConfig() {
     document.getElementById('cfg-emailjs-template-id').value = producerConfig.emailjsTemplateId || "";
     document.getElementById('cfg-emailjs-public-key').value = producerConfig.emailjsPublicKey || "";
     document.getElementById('cfg-gdrive-client-id').value = producerConfig.gdriveClientId || "";
+    
+    // Rellenar datos de cobro de tienda pública
+    document.getElementById('cfg-bank-pichincha-acc').value = producerConfig.bankPichinchaAcc || "";
+    document.getElementById('cfg-bank-pichincha-name').value = producerConfig.bankPichinchaName || "";
+    document.getElementById('cfg-bank-pichincha-dni').value = producerConfig.bankPichinchaDni || "";
+    document.getElementById('cfg-bank-guayaquil-acc').value = producerConfig.bankGuayaquilAcc || "";
+    document.getElementById('cfg-bank-guayaquil-name').value = producerConfig.bankGuayaquilName || "";
+    document.getElementById('cfg-bank-guayaquil-dni').value = producerConfig.bankGuayaquilDni || "";
+    document.getElementById('cfg-deuna-phone').value = producerConfig.deunaPhone || "";
+    document.getElementById('cfg-deuna-name').value = producerConfig.deunaName || "";
+    document.getElementById('cfg-paypal-email').value = producerConfig.paypalEmail || "";
+    document.getElementById('cfg-paypal-client-id').value = producerConfig.paypalClientId || "";
+
     if (document.getElementById('cfg-storage-provider')) {
         document.getElementById('cfg-storage-provider').value = producerConfig.storageProvider || "gdrive-central";
     }
@@ -896,7 +936,7 @@ async function saveProducerConfig() {
     producerConfig.id = document.getElementById('cfg-producer-id').value.trim() || "0803743111";
     producerConfig.aka = document.getElementById('cfg-producer-aka').value.trim() || "Sossa";
     producerConfig.place = document.getElementById('cfg-default-place').value.trim() || "Quito, Ecuador";
-    producerConfig.email = document.getElementById('cfg-producer-email').value.trim() || "sossabeatz1@gmail.com";
+    producerConfig.email = document.getElementById('cfg-producer-email').value.trim() || "masterjuego25@gmail.com";
     producerConfig.phone = document.getElementById('cfg-producer-phone').value.trim() || "+593961201184";
     producerConfig.pro = document.getElementById('cfg-producer-pro').value.trim() || "BMI";
     producerConfig.ipi = document.getElementById('cfg-producer-ipi').value.trim() || "01170943066";
@@ -934,6 +974,19 @@ async function saveProducerConfig() {
     if (document.getElementById('cfg-contract-color')) {
         producerConfig.contractColor = document.getElementById('cfg-contract-color').value;
     }
+    
+    // Guardar datos de cobro de tienda pública
+    producerConfig.bankPichinchaAcc = document.getElementById('cfg-bank-pichincha-acc').value.trim();
+    producerConfig.bankPichinchaName = document.getElementById('cfg-bank-pichincha-name').value.trim();
+    producerConfig.bankPichinchaDni = document.getElementById('cfg-bank-pichincha-dni').value.trim();
+    producerConfig.bankGuayaquilAcc = document.getElementById('cfg-bank-guayaquil-acc').value.trim();
+    producerConfig.bankGuayaquilName = document.getElementById('cfg-bank-guayaquil-name').value.trim();
+    producerConfig.bankGuayaquilDni = document.getElementById('cfg-bank-guayaquil-dni').value.trim();
+    producerConfig.deunaPhone = document.getElementById('cfg-deuna-phone').value.trim();
+    producerConfig.deunaName = document.getElementById('cfg-deuna-name').value.trim();
+    producerConfig.paypalEmail = document.getElementById('cfg-paypal-email').value.trim();
+    producerConfig.paypalClientId = document.getElementById('cfg-paypal-client-id').value.trim();
+
     // Si cambió el Client ID, limpiar token cacheado de Drive
     if (producerConfig.gdriveClientId !== (JSON.parse(localStorage.getItem(`${window.currentUser}_producer_config`) || '{}').gdriveClientId || '')) {
         sessionStorage.removeItem('gdrive_access_token');
@@ -1874,7 +1927,7 @@ function setupEventListeners() {
             document.getElementById(targetBtn.dataset.tab).classList.add('active');
 
             // Mostrar/ocultar sidebar según el tab activo
-            if (targetBtn.dataset.tab === 'tab-history' || targetBtn.dataset.tab === 'tab-dashboard' || targetBtn.dataset.tab === 'tab-admin' || targetBtn.dataset.tab === 'tab-beats') {
+            if (targetBtn.dataset.tab === 'tab-history' || targetBtn.dataset.tab === 'tab-dashboard' || targetBtn.dataset.tab === 'tab-admin' || targetBtn.dataset.tab === 'tab-beats' || targetBtn.dataset.tab === 'tab-sales') {
                 sidebarEl && sidebarEl.classList.add('sidebar-hidden');
             } else {
                 sidebarEl && sidebarEl.classList.remove('sidebar-hidden');
@@ -1894,6 +1947,11 @@ function setupEventListeners() {
             // Cargar dashboard si entra a pestaña dashboard
             if (targetBtn.dataset.tab === 'tab-dashboard') {
                 updateDashboardView();
+            }
+
+            // Cargar ventas si entra a pestaña de ventas/pedidos
+            if (targetBtn.dataset.tab === 'tab-sales') {
+                loadSalesData();
             }
         });
     });
@@ -1974,13 +2032,17 @@ function setupEventListeners() {
     const switchBtn = document.getElementById('btn-switch-user');
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
+            // Cancelar listener de pagos en tiempo real antes de cerrar sesión
+            if (typeof _salesUnsubscribe === 'function') {
+                _salesUnsubscribe();
+                _salesUnsubscribe = null;
+            }
             signOut(auth).then(() => {
                 localStorage.removeItem('active_user');
                 console.log("Sesión de Firebase cerrada con éxito.");
                 window.location.reload();
             }).catch(err => {
                 console.error("Error al cerrar sesión de Firebase:", err);
-                // Fallback en caso de fallo
                 localStorage.removeItem('active_user');
                 window.location.reload();
             });
@@ -2806,7 +2868,7 @@ function compileContract() {
         producer_name: producerConfig.name || "Joao David Dominguez",
         producer_aka: producerConfig.aka || "Sossa",
         producer_id: producerConfig.id || "0803743111",
-        producer_email: producerConfig.email || "sossabeatz1@gmail.com",
+        producer_email: producerConfig.email || "masterjuego25@gmail.com",
         producer_phone: producerConfig.phone || "",
         producer_pro: producerConfig.pro || "BMI",
         producer_ipi: producerConfig.ipi || "01170943066",
@@ -3610,6 +3672,8 @@ function showToast(message, isError = false) {
         setTimeout(() => toast.remove(), 300);
     }, 3500);
 }
+// Exponer como global para uso en onclick inline
+window.showToast = showToast;
 
 // Exportar historial de licencias a formato CSV para Excel
 function exportHistoryToCSV() {
@@ -4878,9 +4942,9 @@ async function sendEmailDelivery() {
         return;
     }
 
-    const serviceId = 'service_7ofza2v';
-    const templateId = 'template_mlimkld';
-    const publicKey = 'Xwfa8Ai2WcXXGThLI';
+    const serviceId = producerConfig.emailjsServiceId || 'service_7ofza2v';
+    const templateId = producerConfig.emailjsTemplateId || 'template_mlimkld';
+    const publicKey = producerConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
 
     if (typeof emailjs === 'undefined') {
         showToast('El cargador de EmailJS no está disponible. Conéctate a Internet.', true);
@@ -5669,7 +5733,7 @@ async function initBeatsDB() {
 
     let savedList = [];
     let firestoreLoaded = false;
-    if (window.currentUserIsPro) {
+    if (window.currentUser) {
         try {
             const colRef = collection(db, "users", window.currentUser, "beats");
             const querySnapshot = await getDocs(colRef);
@@ -5712,13 +5776,19 @@ async function initBeatsDB() {
 
     if (needsSaveToFirestore) {
         safeSetItem(`${window.currentUser}_beats`, JSON.stringify(localBeats));
-        if (firestoreLoaded && window.currentUserIsPro) {
+        if (firestoreLoaded) {
             console.log("Subiendo beats locales combinados a Firestore...");
+            let count = 0;
             for (const beat of localBeats) {
                 if (!beat.id) continue;
+                // Si no es PRO, limitamos la subida a 10 beats máximo
+                if (!window.currentUserIsPro && count >= 10) {
+                    break;
+                }
                 try {
                     const beatDocRef = doc(db, "users", window.currentUser, "beats", beat.id);
                     await setDoc(beatDocRef, beat);
+                    count++;
                 } catch (err) {
                     console.error("Error al guardar beat en Firestore:", err);
                 }
@@ -5812,6 +5882,12 @@ async function saveBeat() {
         updatedAt: Date.now()
     };
 
+    const isNew = !id;
+    if (!window.currentUserIsPro && isNew && localBeats.length >= 10) {
+        window.openPaymentModal("Límite alcanzado: Has alcanzado el límite de 10 beats del Plan Inicial. ¡Actualízate a PRO hoy para subir beats ilimitados!");
+        return;
+    }
+
     if (id) {
         const index = localBeats.findIndex(b => b.id === id);
         if (index !== -1) localBeats[index] = beatData;
@@ -5822,11 +5898,9 @@ async function saveBeat() {
     try {
         safeSetItem(`${window.currentUser}_beats`, JSON.stringify(localBeats));
         
-        // Guardar en Firestore
-        if (window.currentUserIsPro) {
-            const beatDocRef = doc(db, "users", window.currentUser, "beats", beatId);
-            await setDoc(beatDocRef, beatData);
-        }
+        // Guardar en Firestore para todos
+        const beatDocRef = doc(db, "users", window.currentUser, "beats", beatId);
+        await setDoc(beatDocRef, beatData);
         
         showToast(id ? 'Beat actualizado' : 'Nuevo beat guardado');
         closeBeatForm();
@@ -5849,10 +5923,8 @@ async function deleteBeat(id) {
             safeSetItem(`${window.currentUser}_beats`, JSON.stringify(localBeats));
             
             // Eliminar de Firestore
-            if (window.currentUserIsPro) {
-                const beatDocRef = doc(db, "users", window.currentUser, "beats", id);
-                await deleteDoc(beatDocRef);
-            }
+            const beatDocRef = doc(db, "users", window.currentUser, "beats", id);
+            await deleteDoc(beatDocRef);
             
             renderBeatsList();
             if (document.getElementById('tab-beats-grid')) {
@@ -6519,8 +6591,8 @@ async function loadConsolidatedAccounting() {
         producerConfigs.sort((a, b) => {
             const emailA = (a.email || "").toLowerCase();
             const emailB = (b.email || "").toLowerCase();
-            if (emailA === 'sossabeatz1@gmail.com') return -1;
-            if (emailB === 'sossabeatz1@gmail.com') return 1;
+            if (emailA === 'masterjuego25@gmail.com') return -1;
+            if (emailB === 'masterjuego25@gmail.com') return 1;
             
             const akaA = (a.aka || a.name || a.email || "").toLowerCase();
             const akaB = (b.aka || b.name || b.email || "").toLowerCase();
@@ -8395,6 +8467,12 @@ async function saveTabBeat() {
         updatedAt: Date.now()
     };
 
+    const isNew = !id;
+    if (!window.currentUserIsPro && isNew && localBeats.length >= 10) {
+        window.openPaymentModal("Límite alcanzado: Has alcanzado el límite de 10 beats del Plan Inicial. ¡Actualízate a PRO hoy para subir beats ilimitados!");
+        return;
+    }
+
     if (id) {
         const index = localBeats.findIndex(b => b.id === id);
         if (index !== -1) localBeats[index] = beatData;
@@ -8405,11 +8483,9 @@ async function saveTabBeat() {
     try {
         safeSetItem(`${window.currentUser}_beats`, JSON.stringify(localBeats));
         
-        // Guardar en Firestore
-        if (window.currentUserIsPro) {
-            const beatDocRef = doc(db, "users", window.currentUser, "beats", beatId);
-            await setDoc(beatDocRef, beatData);
-        }
+        // Guardar en Firestore para todos
+        const beatDocRef = doc(db, "users", window.currentUser, "beats", beatId);
+        await setDoc(beatDocRef, beatData);
         
         showToast(id ? 'Beat actualizado' : 'Nuevo beat guardado');
         closeTabBeatForm();
@@ -8421,5 +8497,2047 @@ async function saveTabBeat() {
         showToast('Error al guardar el beat en la base de datos', true);
     }
 }
+
+
+// ==========================================================================
+// TIENDA PÚBLICA DE BEATS & PROCESAMIENTO DE PEDIDOS (STOREFRONT)
+// ==========================================================================
+
+window.isPublicStoreMode = false;
+window.storeProducerUid = null;
+window.storeProducerConfig = {};
+window.storeBeats = [];
+window.storePayments = [];
+
+let currentStoreAudio = null;
+let currentStorePlayingBeatId = null;
+
+let checkoutSelectedBeatId = null;
+let checkoutSelectedLicense = 'basic';
+let checkoutCurrentStep = 1;
+let storePaymentReceiptBase64 = null;
+let checkoutIsOfferMode = false;
+
+// Inicialización de Tienda Pública
+async function initPublicStore(producerAka) {
+    console.log("🛒 Cargando tienda de beats para:", producerAka);
+    const storeView = document.getElementById('public-store-view');
+    const grid = document.getElementById('store-beats-grid');
+    
+    // Ocultar otras pantallas
+    document.getElementById('login-modal').style.display = 'none';
+    const landing = document.getElementById('landing-page');
+    if (landing) landing.style.display = 'none';
+    document.getElementById('app-container').style.display = 'none';
+    
+    storeView.style.display = 'block';
+    grid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 60px;">
+            <div class="animate-spin" style="display: inline-block; width: 32px; height: 32px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--accent, #00ccff); border-radius: 50%;"></div>
+            <p style="margin-top: 15px; color: #8a91a6; font-size: 14px;">Cargando catálogo...</p>
+        </div>
+    `;
+
+    try {
+        // Consultar todos los documentos "config" para buscar el AKA localmente (evitando errores por falta de índice)
+        const allConfigs = await getDocs(collectionGroup(db, "config"));
+        let producerDoc = null;
+        let producerUid = null;
+
+        for (const doc of allConfigs.docs) {
+            const akaVal = (doc.data().aka || '').toLowerCase();
+            if (akaVal === producerAka.toLowerCase()) {
+                producerDoc = doc;
+                const docPath = doc.ref.path;
+                const pathParts = docPath.split('/');
+                producerUid = pathParts[1];
+                break;
+            }
+        }
+
+        if (!producerUid || !producerDoc) {
+            grid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ef4444;">
+                    <i data-lucide="alert-circle" style="width: 36px; height: 36px;"></i>
+                    <p style="margin-top: 10px; font-weight: 600;">Productor "${producerAka}" no encontrado.</p>
+                </div>
+            `;
+            if (window.lucide) window.lucide.createIcons();
+            return;
+        }
+
+        const configData = producerDoc.data();
+        window.storeProducerUid = producerUid;
+        window.storeProducerConfig = configData;
+
+        // Renderizar cabecera de la tienda
+        document.getElementById('store-producer-name').textContent = configData.aka || configData.name || "Productor";
+        document.getElementById('store-producer-aka-sub').textContent = `Catálogo Oficial de ${configData.aka || "Beats"}`;
+
+        // Aplicar branding de color
+        const akaLower = (configData.aka || '').toLowerCase();
+        if (akaLower.includes('monarco')) {
+            document.documentElement.style.setProperty('--accent', '#ff4d4d');
+            document.documentElement.style.setProperty('--accent-rgb', '255, 77, 77');
+        } else if (akaLower.includes('sossa')) {
+            document.documentElement.style.setProperty('--accent', '#b28eff');
+            document.documentElement.style.setProperty('--accent-rgb', '178, 142, 255');
+        } else {
+            document.documentElement.style.setProperty('--accent', '#00ccff');
+            document.documentElement.style.setProperty('--accent-rgb', '0, 204, 255');
+        }
+
+        // Cargar logotipo si existe
+        const logoImg = document.getElementById('store-logo-img');
+        const logoIcon = document.getElementById('store-logo-icon');
+        if (configData.logoBase64) {
+            logoImg.src = configData.logoBase64;
+            logoImg.style.display = 'block';
+            logoIcon.style.display = 'none';
+        } else {
+            logoImg.style.display = 'none';
+            logoIcon.style.display = 'flex';
+        }
+
+        // Redes sociales
+        document.getElementById('store-email-link').href = `mailto:${configData.email || 'soporte@beatss.com'}`;
+        document.getElementById('store-phone-link').href = `https://wa.me/${(configData.phone || '').replace(/\+/g, '').replace(/\s/g, '')}`;
+
+        // Obtener beats de la base de datos
+        const beatsCol = collection(db, "users", producerUid, "beats");
+        const beatsSnapshot = await getDocs(beatsCol);
+        window.storeBeats = [];
+        
+        beatsSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.mp3) { // Sólo beats con preescucha MP3
+                window.storeBeats.push({
+                    id: doc.id,
+                    ...data
+                });
+            }
+        });
+
+        // Renderizar grilla y configurar eventos
+        renderStoreBeats(window.storeBeats);
+        setupStoreFilters();
+        setupStoreAudioPlayer();
+        setupStoreCheckout();
+
+    } catch (err) {
+        console.error("Error cargando la tienda:", err);
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ef4444;">
+                <p>Error de conexión al cargar la tienda. Intenta nuevamente.</p>
+            </div>
+        `;
+    }
+}
+
+function renderStoreBeats(beats) {
+    const grid = document.getElementById('store-beats-grid');
+    const emptyState = document.getElementById('store-empty-state');
+    
+    if (beats.length === 0) {
+        grid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    grid.style.display = 'grid';
+    emptyState.style.display = 'none';
+
+    grid.innerHTML = beats.map(beat => {
+        const artworkUrl = beat.artwork || getDefaultBeatArtwork();
+        const bpmText = beat.bpm ? `${beat.bpm} BPM` : 'N/A';
+        const keyText = beat.key ? `${beat.key}` : 'N/A';
+        
+        // Formatear etiquetas de tags
+        const tagsList = (beat.tags || '')
+            .split(/[\s,]+/)
+            .filter(t => t.trim().length > 0)
+            .map(t => t.startsWith('#') ? t : `#${t}`);
+        const tagsHtml = tagsList.length > 0
+            ? `<div class="store-beat-tags-container">${tagsList.map(tag => `<span class="store-beat-tag">${tag}</span>`).join('')}</div>`
+            : '';
+
+        // Formatear badges de género y moods
+        const genreBadge = beat.genre ? `<span class="store-genre-badge">${beat.genre}</span>` : '';
+        const moodBadge = beat.moods ? `<span class="store-mood-badge">${beat.moods}</span>` : '';
+        const badgesHtml = (genreBadge || moodBadge)
+            ? `<div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">${genreBadge}${moodBadge}</div>`
+            : '';
+        
+        return `
+            <div class="store-beat-card" data-id="${beat.id}" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box;">
+                <div>
+                    <div class="store-beat-cover">
+                        <img src="${artworkUrl}" alt="${beat.name}" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">
+                        <div class="store-play-overlay" onclick="window.toggleStorePlay('${beat.id}')">
+                            <button class="store-play-btn" id="btn-play-store-${beat.id}">
+                                <i data-lucide="play" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="store-beat-title" style="margin-top: 10px; font-size: 15px; font-weight: 700; color: #fff;">${beat.name}</div>
+                    <div class="store-beat-meta" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; color: #8a91a6;">${bpmText} • ${keyText}</span>
+                        <span style="color: var(--accent, #00ccff); font-weight: 800; background: rgba(var(--accent-rgb, 0, 204, 255), 0.08); padding: 3px 10px; border-radius: 8px; font-size: 13px;">$${(LICENSE_CONFIGS.basic.price || 30.00).toFixed(2)}</span>
+                    </div>
+                    ${badgesHtml}
+                    ${tagsHtml}
+                </div>
+                <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;">
+                    <button class="btn btn-primary" onclick="window.openBeatCheckoutModal('${beat.id}')" style="width: 100%; height: 38px; font-weight: 700; border-radius: 10px; font-size: 13px; margin: 0;">Adquirir Licencia</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function setupStoreFilters() {
+    const searchInput = document.getElementById('store-search-input');
+    const genreSelect = document.getElementById('store-genre-select');
+    const keySelect = document.getElementById('store-key-select');
+
+    const genres = new Set();
+    const keys = new Set();
+    window.storeBeats.forEach(b => {
+        if (b.genre) genres.add(b.genre);
+        if (b.key) keys.add(b.key);
+    });
+
+    genreSelect.innerHTML = '<option value="">Todos los géneros</option>' + Array.from(genres).map(g => `<option value="${g}">${g}</option>`).join('');
+    keySelect.innerHTML = '<option value="">Todas las escalas</option>' + Array.from(keys).map(k => `<option value="${k}">${k}</option>`).join('');
+
+    function filterBeats() {
+        const query = searchInput.value.toLowerCase();
+        const genre = genreSelect.value;
+        const key = keySelect.value;
+
+        const filtered = window.storeBeats.filter(b => {
+            const matchesSearch = b.name.toLowerCase().includes(query) || (b.tags || '').toLowerCase().includes(query);
+            const matchesGenre = !genre || b.genre === genre;
+            const matchesKey = !key || b.key === key;
+            return matchesSearch && matchesGenre && matchesKey;
+        });
+
+        renderStoreBeats(filtered);
+    }
+
+    searchInput.addEventListener('input', filterBeats);
+    genreSelect.addEventListener('change', filterBeats);
+    keySelect.addEventListener('change', filterBeats);
+}
+
+// Lógica de Reproducción de Audio en Tienda
+window.toggleStorePlay = function(beatId) {
+    const beat = window.storeBeats.find(b => b.id === beatId);
+    if (!beat || !beat.mp3) return;
+
+    const player = document.getElementById('store-audio-player');
+    const playBtn = document.getElementById('player-btn-play');
+    const volumeSlider = document.getElementById('player-volume');
+
+    if (currentStorePlayingBeatId === beatId) {
+        if (currentStoreAudio.paused) {
+            currentStoreAudio.play();
+            setPlayButtonState(beatId, true);
+        } else {
+            currentStoreAudio.pause();
+            setPlayButtonState(beatId, false);
+        }
+    } else {
+        if (currentStoreAudio) {
+            currentStoreAudio.pause();
+            setPlayButtonState(currentStorePlayingBeatId, false);
+        }
+
+        currentStorePlayingBeatId = beatId;
+        currentStoreAudio = new Audio(beat.mp3);
+        currentStoreAudio.volume = parseFloat(volumeSlider.value || 0.8);
+
+        currentStoreAudio.addEventListener('timeupdate', updatePlayerProgress);
+        currentStoreAudio.addEventListener('loadedmetadata', () => {
+            document.getElementById('player-time-duration').textContent = formatAudioTime(currentStoreAudio.duration);
+        });
+        currentStoreAudio.addEventListener('ended', () => {
+            setPlayButtonState(beatId, false);
+            playNextBeat();
+        });
+
+        document.getElementById('player-title').textContent = beat.name;
+        document.getElementById('player-info').textContent = `${beat.bpm ? beat.bpm + ' BPM' : ''} ${beat.key ? '• ' + beat.key : ''} ${beat.genre ? '• ' + beat.genre : ''}`;
+        document.getElementById('player-artwork').src = beat.artwork || 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=100&auto=format&fit=crop';
+        player.style.display = 'block';
+
+        document.getElementById('player-btn-buy').onclick = () => window.openBeatCheckoutModal(beatId);
+
+        currentStoreAudio.play();
+        setPlayButtonState(beatId, true);
+    }
+};
+
+function setupStoreAudioPlayer() {
+    const playBtn = document.getElementById('player-btn-play');
+    const prevBtn = document.getElementById('player-btn-prev');
+    const nextBtn = document.getElementById('player-btn-next');
+    const volumeSlider = document.getElementById('player-volume');
+    const progressContainer = document.getElementById('player-progress-container');
+
+    playBtn.addEventListener('click', () => {
+        if (currentStorePlayingBeatId) {
+            window.toggleStorePlay(currentStorePlayingBeatId);
+        }
+    });
+
+    prevBtn.addEventListener('click', () => {
+        playPrevBeat();
+    });
+
+    nextBtn.addEventListener('click', () => {
+        playNextBeat();
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+        if (currentStoreAudio) {
+            currentStoreAudio.volume = parseFloat(e.target.value);
+        }
+    });
+
+    progressContainer.addEventListener('click', (e) => {
+        if (currentStoreAudio && currentStoreAudio.duration) {
+            const rect = progressContainer.getBoundingClientRect();
+            const percentage = (e.clientX - rect.left) / rect.width;
+            currentStoreAudio.currentTime = percentage * currentStoreAudio.duration;
+        }
+    });
+}
+
+function playNextBeat() {
+    if (!currentStorePlayingBeatId || !window.storeBeats || window.storeBeats.length === 0) return;
+    const currentIndex = window.storeBeats.findIndex(b => b.id === currentStorePlayingBeatId);
+    let nextIndex = currentIndex + 1;
+    if (nextIndex >= window.storeBeats.length) nextIndex = 0;
+    window.toggleStorePlay(window.storeBeats[nextIndex].id);
+}
+function playPrevBeat() {
+    if (!currentStorePlayingBeatId || !window.storeBeats || window.storeBeats.length === 0) return;
+    const currentIndex = window.storeBeats.findIndex(b => b.id === currentStorePlayingBeatId);
+    let prevIndex = currentIndex - 1;
+    if (prevIndex < 0) prevIndex = window.storeBeats.length - 1;
+    window.toggleStorePlay(window.storeBeats[prevIndex].id);
+}
+
+window.getCheckoutPrice = function() {
+    if (checkoutSelectedLicense === 'exclusive') {
+        const input = document.getElementById('exclusive-price-input');
+        if (input) {
+            const val = parseFloat(input.value);
+            if (!isNaN(val)) return val;
+        }
+        return window.checkoutExclusivePrice || 500;
+    }
+    return LICENSE_CONFIGS[checkoutSelectedLicense] ? LICENSE_CONFIGS[checkoutSelectedLicense].price : 0;
+};
+
+window.updateExclusivePrice = function(val) {
+    const parsed = parseFloat(val);
+    if (!parsed || parsed < 0) return;
+    
+    window.checkoutExclusivePrice = parsed;
+    const priceStr = '$' + parsed.toFixed(2) + ' USD';
+    const deunaTotal = document.getElementById('deuna-total-price');
+    const transferTotal = document.getElementById('transfer-total-price');
+    const offerInput = document.getElementById('offer-price-input');
+    
+    if (deunaTotal) deunaTotal.textContent = priceStr;
+    if (transferTotal) transferTotal.textContent = priceStr;
+    if (offerInput) offerInput.value = parsed;
+    
+    // Recargar PayPal para reflejar monto
+    const activeTab = getSelectedStorePaymentMethod();
+    if (activeTab === 'paypal') {
+        const clientId = window.storeProducerConfig.paypalClientId || "";
+        if (clientId) {
+            renderStorePayPalButton(clientId);
+        }
+    }
+};
+
+function formatAudioTime(secs) {
+    if (isNaN(secs)) return '0:00';
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+function updatePlayerProgress() {
+    if (currentStoreAudio && currentStoreAudio.duration) {
+        const percent = (currentStoreAudio.currentTime / currentStoreAudio.duration) * 100;
+        document.getElementById('player-progress-bar').style.width = `${percent}%`;
+        document.getElementById('player-time-current').textContent = formatAudioTime(currentStoreAudio.currentTime);
+    }
+}
+
+function setPlayButtonState(beatId, isPlaying) {
+    const playBtn = document.getElementById('player-btn-play');
+    const cardBtn = document.getElementById(`btn-play-store-${beatId}`);
+    
+    const iconHtml = isPlaying 
+        ? '<i data-lucide="pause" style="width: 18px; height: 18px; fill: #000; stroke: #000;"></i>'
+        : '<i data-lucide="play" style="width: 18px; height: 18px; fill: #000; stroke: #000;"></i>';
+    
+    playBtn.innerHTML = iconHtml;
+
+    if (cardBtn) {
+        cardBtn.innerHTML = isPlaying
+            ? '<i data-lucide="pause" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>'
+            : '<i data-lucide="play" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>';
+    }
+
+    // Resetear las demás tarjetas
+    window.storeBeats.forEach(b => {
+        if (b.id !== beatId) {
+            const otherBtn = document.getElementById(`btn-play-store-${b.id}`);
+            if (otherBtn) {
+                otherBtn.innerHTML = '<i data-lucide="play" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>';
+            }
+        }
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+window.openBeatCheckoutModal = function(beatId) {
+    checkoutSelectedBeatId = beatId;
+    checkoutSelectedLicense = 'basic';
+    checkoutCurrentStep = 1;
+    storePaymentReceiptBase64 = null;
+    window.checkoutExclusivePrice = 500; // Reset de precio exclusivo
+
+    // Reset fields
+    document.getElementById('buyer-name').value = '';
+    document.getElementById('buyer-email').value = '';
+    document.getElementById('buyer-phone').value = '';
+    document.getElementById('buyer-dni').value = '';
+    document.getElementById('buyer-city').value = '';
+    document.getElementById('buyer-country').value = 'Ecuador';
+
+    document.getElementById('store-receipt-file-name').textContent = 'Ningún archivo seleccionado';
+    document.getElementById('store-receipt-file').value = '';
+
+    const container = document.getElementById('license-options-container');
+    container.innerHTML = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
+        const isActive = key === checkoutSelectedLicense;
+        const isExclusive = key === 'exclusive';
+        const priceText = isExclusive ? 'Negociable (Mín. $250)' : `$${config.price.toFixed(2)}`;
+        
+        return `
+            <div class="license-option-card ${isActive ? 'active' : ''}" onclick="window.selectCheckoutLicense('${key}')" style="display: flex; flex-direction: column; width: 100%; box-sizing: border-box; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="text-align: left;">
+                        <div style="font-weight: 700; color: #fff; font-size: 14px;">${config.name}</div>
+                        <div style="font-size: 11px; color: #8a91a6; margin-top: 4px;">
+                            ${config.formats} • ${config.streams} streams • ${config.years}
+                        </div>
+                    </div>
+                    <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
+                        <span style="font-weight: 800; color: var(--accent, #00ccff); font-size: 15px;">${priceText}</span>
+                        <div class="license-check" style="width: 18px; height: 18px; border-radius: 50%; border: 2px solid ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.2)'}; display: flex; align-items: center; justify-content: center; background: ${isActive ? 'var(--accent)' : 'transparent'};">
+                            ${isActive ? '<i data-lucide="check" style="width: 12px; height: 12px; stroke: #000; stroke-width: 3;"></i>' : ''}
+                        </div>
+                    </div>
+                </div>
+                ${isExclusive ? `
+                    <div class="exclusive-price-container" style="display: ${isActive ? 'flex' : 'none'}; align-items: center; gap: 8px; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 8px; width: 100%;" onclick="event.stopPropagation()">
+                        <label style="font-size: 12px; color: #8a91a6;">Tu Propuesta ($ USD):</label>
+                        <input type="number" id="exclusive-price-input" min="250" value="500" oninput="window.updateExclusivePrice(this.value)" style="width: 80px; background: #12141c; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 4px 8px; font-size: 13px; font-weight: 700; outline: none; text-align: center;">
+                        <span style="font-size: 11px; color: #8a91a6;">(Mínimo: $250)</span>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
+
+    if (window.lucide) window.lucide.createIcons();
+
+    // Reset total prices
+    const priceStr = '$' + LICENSE_CONFIGS.basic.price.toFixed(2) + ' USD';
+    document.getElementById('deuna-total-price').textContent = priceStr;
+    document.getElementById('transfer-total-price').textContent = priceStr;
+
+    updateCheckoutStepView(1);
+    document.getElementById('beat-checkout-modal').style.display = 'flex';
+};
+
+window.selectCheckoutLicense = function(licenseKey) {
+    checkoutSelectedLicense = licenseKey;
+
+    // Update active class on option cards
+    const container = document.getElementById('license-options-container');
+    const cards = container.querySelectorAll('.license-option-card');
+    const keys = Object.keys(LICENSE_CONFIGS);
+    
+    cards.forEach((card, index) => {
+        const key = keys[index];
+        const isActive = key === checkoutSelectedLicense;
+        
+        if (isActive) {
+            card.classList.add('active');
+            const check = card.querySelector('.license-check');
+            if (check) {
+                check.style.borderColor = 'var(--accent)';
+                check.style.background = 'var(--accent)';
+                check.innerHTML = '<i data-lucide="check" style="width: 12px; height: 12px; stroke: #000; stroke-width: 3;"></i>';
+            }
+        } else {
+            card.classList.remove('active');
+            const check = card.querySelector('.license-check');
+            if (check) {
+                check.style.borderColor = 'rgba(255,255,255,0.2)';
+                check.style.background = 'transparent';
+                check.innerHTML = '';
+            }
+        }
+
+        // Toggle input container de exclusiva
+        if (key === 'exclusive') {
+            const exclusiveContainer = card.querySelector('.exclusive-price-container');
+            if (exclusiveContainer) {
+                exclusiveContainer.style.display = isActive ? 'flex' : 'none';
+            }
+        }
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+
+    // Update prices
+    const price = window.getCheckoutPrice();
+    const priceStr = '$' + price.toFixed(2) + ' USD';
+    document.getElementById('deuna-total-price').textContent = priceStr;
+    document.getElementById('transfer-total-price').textContent = priceStr;
+
+    // If active tab is PayPal, re-initialize PayPal button
+    const activeTab = getSelectedStorePaymentMethod();
+    if (activeTab === 'paypal') {
+        const clientId = window.storeProducerConfig.paypalClientId || "";
+        if (clientId) {
+            renderStorePayPalButton(clientId);
+        }
+    }
+};
+
+window.updateCheckoutStepView = function(step) {
+    checkoutCurrentStep = step;
+
+    // Update indicators
+    document.querySelectorAll('.checkout-step-indicator').forEach(el => {
+        const s = parseInt(el.getAttribute('data-step'), 10);
+        if (s <= step) {
+            el.classList.add('active');
+        } else {
+            el.classList.remove('active');
+        }
+    });
+
+    // Update progress bar
+    const progressPercent = step === 1 ? 0 : (step === 2 ? 50 : 100);
+    document.getElementById('checkout-step-progress').style.width = progressPercent + '%';
+
+    // Show/hide panels
+    document.getElementById('checkout-panel-1').style.display = step === 1 ? 'block' : 'none';
+    document.getElementById('checkout-panel-2').style.display = step === 2 ? 'block' : 'none';
+    document.getElementById('checkout-panel-3').style.display = step === 3 ? 'block' : 'none';
+
+    // Footer buttons
+    const prevBtn = document.getElementById('btn-checkout-prev');
+    const cancelBtn = document.getElementById('btn-checkout-cancel');
+    const nextBtn = document.getElementById('btn-checkout-next');
+
+    if (step === 1) {
+        prevBtn.style.display = 'none';
+        cancelBtn.style.display = 'block';
+    } else {
+        prevBtn.style.display = 'block';
+        cancelBtn.style.display = 'none';
+    }
+
+    if (step === 3) {
+        // Populate config details and visible tabs
+        const deunaTab = document.getElementById('btn-pay-deuna');
+        const transferTab = document.getElementById('btn-pay-transfer');
+        const paypalTab = document.getElementById('btn-pay-paypal');
+        const offerTab = document.getElementById('btn-pay-offer');
+        
+        if (offerTab) {
+            offerTab.style.display = checkoutSelectedLicense === 'exclusive' ? 'block' : 'none';
+        }
+
+        const deunaPhone = window.storeProducerConfig.deunaPhone || "";
+        const deunaName = window.storeProducerConfig.deunaName || "";
+        const pichinchaAcc = window.storeProducerConfig.bankPichinchaAcc || "";
+        const guayaquilAcc = window.storeProducerConfig.bankGuayaquilAcc || "";
+        const paypalClientId = window.storeProducerConfig.paypalClientId || "";
+        const paypalEmail = window.storeProducerConfig.paypalEmail || "";
+
+        let deunaVisible = false;
+        let transferVisible = false;
+        let paypalVisible = false;
+
+        // Deuna
+        if (deunaPhone) {
+            deunaTab.style.display = 'block';
+            // Construir deeplink de Deuna para pago en un toque
+            const cleanPhone = deunaPhone.replace(/\D/g, '');
+            const deunaDeeplink = `deuna://payment?phone=${cleanPhone}`;
+            const deunaWhatsapp = `https://wa.me/${cleanPhone}`;
+            document.getElementById('deuna-info-phone').innerHTML = `
+                Celular: <strong style="font-size: 18px; letter-spacing: 1px;">${deunaPhone}</strong>
+                <button onclick="navigator.clipboard.writeText('${deunaPhone}').then(()=>window.showToast('¡Número copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 4px 8px; font-size: 11px; margin-left: 8px; vertical-align: middle;">📋 Copiar</button>
+            `;
+            document.getElementById('deuna-info-name').innerHTML = `
+                Titular: <span style="color: #fff; font-weight: 600;">${deunaName}</span>
+                <a href="${deunaDeeplink}" style="margin-left: 12px; background: linear-gradient(135deg, #ff6b35, #ff9500); color: #fff; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 8px; text-decoration: none; display: inline-block; vertical-align: middle;" onclick="setTimeout(()=>window.open('${deunaWhatsapp}', '_blank'), 800)">⚡ Abrir Deuna!</a>
+            `;
+            deunaVisible = true;
+        } else {
+            deunaTab.style.display = 'none';
+        }
+
+        // Helper para copiar texto
+        function makeCopyBtn(text, label) {
+            return `<button onclick="navigator.clipboard.writeText('${text}').then(()=>window.showToast('¡${label} copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 3px 8px; font-size: 11px; margin-left: 6px;">📋</button>`;
+        }
+
+        // Pichincha
+        const pichinchaCard = document.getElementById('store-bank-pichincha-card');
+        if (pichinchaAcc) {
+            pichinchaCard.style.display = 'block';
+            const pichName = window.storeProducerConfig.bankPichinchaName || "";
+            const pichDni = window.storeProducerConfig.bankPichinchaDni || "";
+            pichinchaCard.innerHTML = `
+                <div style="font-weight: 700; font-size: 12px; color: #f59e0b; margin-bottom: 8px;">🏦 BANCO PICHINCHA</div>
+                <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta: <strong id="pichincha-info-acc">${pichinchaAcc}</strong> ${makeCopyBtn(pichinchaAcc, 'Cuenta')}</div>
+                <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="pichincha-info-name">${pichName}</span> ${makeCopyBtn(pichName, 'Titular')}</div>
+                <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="pichincha-info-dni">${pichDni}</span> ${makeCopyBtn(pichDni, 'CI/RUC')}</div>
+            `;
+            transferVisible = true;
+        } else {
+            pichinchaCard.style.display = 'none';
+        }
+
+        // Guayaquil
+        const guayaquilCard = document.getElementById('store-bank-guayaquil-card');
+        if (guayaquilAcc) {
+            guayaquilCard.style.display = 'block';
+            const guayName = window.storeProducerConfig.bankGuayaquilName || "";
+            const guayDni = window.storeProducerConfig.bankGuayaquilDni || "";
+            guayaquilCard.innerHTML = `
+                <div style="font-weight: 700; font-size: 12px; color: #ec4899; margin-bottom: 8px;">🏦 BANCO GUAYAQUIL</div>
+                <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta: <strong id="guayaquil-info-acc">${guayaquilAcc}</strong> ${makeCopyBtn(guayaquilAcc, 'Cuenta')}</div>
+                <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="guayaquil-info-name">${guayName}</span> ${makeCopyBtn(guayName, 'Titular')}</div>
+                <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="guayaquil-info-dni">${guayDni}</span> ${makeCopyBtn(guayDni, 'CI/RUC')}</div>
+            `;
+            transferVisible = true;
+        } else {
+            guayaquilCard.style.display = 'none';
+        }
+
+        if (transferVisible) {
+            transferTab.style.display = 'block';
+        } else {
+            transferTab.style.display = 'none';
+        }
+
+        // PayPal
+        if (paypalClientId || paypalEmail) {
+            paypalTab.style.display = 'block';
+            paypalVisible = true;
+        } else {
+            paypalTab.style.display = 'none';
+        }
+
+        // Check visible methods
+        if (!deunaVisible && !transferVisible && !paypalVisible && checkoutSelectedLicense !== 'exclusive') {
+            document.getElementById('store-pay-deuna').style.display = 'none';
+            document.getElementById('store-pay-transfer').style.display = 'none';
+            document.getElementById('store-pay-paypal').style.display = 'block';
+            document.getElementById('store-pay-paypal').innerHTML = `
+                <div style="color: #ef4444; font-size: 13px; text-align: center; padding: 20px;">
+                    El productor no ha configurado ningún método de pago. Por favor, contáctalo directamente.
+                </div>
+            `;
+            document.getElementById('store-receipt-upload-section').style.display = 'none';
+            nextBtn.style.display = 'none';
+        } else {
+            // Select default active tab among visible ones
+            let defaultTab = 'deuna';
+            const currentTab = getSelectedStorePaymentMethod();
+            
+            // Si estaba en oferta y ya no es exclusiva, cambiamos
+            if (currentTab === 'offer' && checkoutSelectedLicense !== 'exclusive') {
+                if (deunaVisible) defaultTab = 'deuna';
+                else if (transferVisible) defaultTab = 'transfer';
+                else if (paypalVisible) defaultTab = 'paypal';
+            } else if (currentTab === 'offer' && checkoutSelectedLicense === 'exclusive') {
+                defaultTab = 'offer';
+            } else if (deunaVisible) {
+                defaultTab = 'deuna';
+            } else if (transferVisible) {
+                defaultTab = 'transfer';
+            } else if (paypalVisible) {
+                defaultTab = 'paypal';
+            } else if (checkoutSelectedLicense === 'exclusive') {
+                defaultTab = 'offer';
+            }
+            window.switchStorePaymentMethod(defaultTab);
+        }
+    } else {
+        nextBtn.style.display = 'block';
+        nextBtn.textContent = 'Continuar';
+    }
+};
+
+window.switchStorePaymentMethod = function(method) {
+    // Update active tab styles
+    document.querySelectorAll('.pay-tab-btn').forEach(btn => {
+        const id = btn.id;
+        const isCurrent = id === `btn-pay-${method}`;
+        if (isCurrent) {
+            btn.classList.add('active');
+            // Usar color ámbar para la pestaña de oferta, acento para el resto
+            const activeColor = method === 'offer' ? '#f59e0b' : 'var(--accent, #00ccff)';
+            btn.style.color = activeColor;
+            btn.style.borderBottomColor = activeColor;
+            btn.style.fontWeight = '700';
+        } else {
+            btn.classList.remove('active');
+            btn.style.color = '#8a91a6';
+            btn.style.borderBottomColor = 'transparent';
+            btn.style.fontWeight = '600';
+        }
+    });
+
+    // Show/hide payment sections
+    document.getElementById('store-pay-deuna').style.display = method === 'deuna' ? 'block' : 'none';
+    document.getElementById('store-pay-transfer').style.display = method === 'transfer' ? 'block' : 'none';
+    document.getElementById('store-pay-paypal').style.display = method === 'paypal' ? 'block' : 'none';
+    const offerPanel = document.getElementById('store-pay-offer');
+    if (offerPanel) offerPanel.style.display = method === 'offer' ? 'block' : 'none';
+
+    // Handle receipt section & Confirm button visibility
+    const nextBtn = document.getElementById('btn-checkout-next');
+    const receiptSection = document.getElementById('store-receipt-upload-section');
+
+    if (method === 'offer') {
+        // Oferta: no se necesita comprobante, solo el precio y el mensaje
+        receiptSection.style.display = 'none';
+        nextBtn.style.display = 'block';
+        nextBtn.textContent = '📩 Enviar Oferta';
+        // Mostrar precio exclusivo original en el campo de oferta para referencia
+        const offerPriceInput = document.getElementById('offer-price-input');
+        const offerOriginalSpan = offerPanel && offerPanel.querySelector('strong');
+        if (offerOriginalSpan) {
+            const exclusivePrice = (window.LICENSE_CONFIGS || {}).exclusive ? window.LICENSE_CONFIGS.exclusive.price : 500;
+            offerOriginalSpan.textContent = `$${parseFloat(exclusivePrice).toFixed(2)} USD`;
+        }
+    } else if (method === 'paypal') {
+        const clientId = window.storeProducerConfig.paypalClientId || "";
+        if (clientId) {
+            receiptSection.style.display = 'none';
+            nextBtn.style.display = 'none';
+            document.getElementById('store-paypal-button-container').innerHTML = '<div style="color: #8a91a6; font-size: 13px;">Cargando botones de PayPal...</div>';
+            loadStorePayPalSDK(clientId, () => {
+                renderStorePayPalButton(clientId);
+            });
+        } else if (window.storeProducerConfig.paypalEmail) {
+            receiptSection.style.display = 'block';
+            nextBtn.style.display = 'block';
+            nextBtn.textContent = 'Confirmar Compra';
+            document.getElementById('store-paypal-button-container').innerHTML = `
+                <div style="text-align: center; padding: 16px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; box-sizing: border-box;">
+                    <p style="font-size: 13px; color: #8a91a6; margin-top: 0; margin-bottom: 8px;">Envía tu pago a la dirección PayPal del productor:</p>
+                    <div style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 8px; font-family: monospace;">${window.storeProducerConfig.paypalEmail}</div>
+                    <p style="font-size: 11px; color: #8a91a6; margin-bottom: 0;">(Sube una captura de tu transferencia de PayPal abajo)</p>
+                </div>
+            `;
+        } else {
+            receiptSection.style.display = 'none';
+            nextBtn.style.display = 'none';
+            document.getElementById('store-paypal-button-container').innerHTML = `
+                <div style="color: #ef4444; font-size: 13px;">El productor no ha configurado PayPal.</div>
+            `;
+        }
+    } else {
+        receiptSection.style.display = 'block';
+        nextBtn.style.display = 'block';
+        nextBtn.textContent = 'Confirmar Compra';
+    }
+};
+
+function getSelectedStorePaymentMethod() {
+    const activeTab = document.querySelector('.pay-tab-btn.active');
+    if (!activeTab) return 'transfer';
+    return activeTab.id.replace('btn-pay-', '');
+}
+
+async function submitExclusiveOffer() {
+    const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+    const buyerName = document.getElementById('buyer-name').value.trim();
+    const buyerEmail = document.getElementById('buyer-email').value.trim();
+    const buyerPhone = document.getElementById('buyer-phone').value.trim();
+    const buyerDni = document.getElementById('buyer-dni').value.trim();
+    const buyerCity = document.getElementById('buyer-city').value.trim();
+    const buyerCountry = document.getElementById('buyer-country').value.trim();
+    const offerPrice = parseFloat(document.getElementById('offer-price-input').value);
+    const offerMessage = document.getElementById('offer-message-input').value.trim();
+
+    if (!buyerName || !buyerEmail) {
+        showToast('Por favor completa tu Nombre y Correo Electrónico.', true);
+        updateCheckoutStepView(2);
+        return;
+    }
+    if (!offerPrice || offerPrice < 250) {
+        showToast('El monto mínimo para ofertas es de $250 USD.', true);
+        return;
+    }
+
+    const originalPrice = (window.LICENSE_CONFIGS || {}).exclusive ? window.LICENSE_CONFIGS.exclusive.price : 500;
+
+    const offerData = {
+        type: 'exclusive_offer',
+        producerId: window.storeProducerUid,
+        beatId: checkoutSelectedBeatId,
+        beatName: beat ? beat.name : '',
+        licenseType: 'exclusive',
+        price: offerPrice,
+        originalPrice: originalPrice,
+        offerMessage: offerMessage || '',
+        buyerName: buyerName,
+        buyerEmail: buyerEmail,
+        buyerPhone: buyerPhone,
+        buyerDni: buyerDni,
+        buyerCity: buyerCity,
+        buyerCountry: buyerCountry,
+        method: 'offer',
+        reference: 'OFERTA-' + Date.now(),
+        receiptUrl: '',
+        status: 'pending',
+        timestamp: new Date().toISOString()
+    };
+
+    try {
+        const nextBtn = document.getElementById('btn-checkout-next');
+        const originalText = nextBtn.innerHTML;
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = '⏳ Enviando oferta...';
+
+        // Guardar oferta en Firestore
+        const colRef = collection(db, "payments");
+        await addDoc(colRef, offerData);
+
+        // Guardar contacto del cantante
+        try {
+            const contactId = buyerEmail.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const contactDocRef = doc(db, "users", window.storeProducerUid, "contacts", contactId);
+            await setDoc(contactDocRef, {
+                name: buyerName,
+                email: buyerEmail,
+                phone: buyerPhone || "",
+                city: buyerCity || "Oferta",
+                country: buyerCountry || "",
+                updatedAt: Date.now(),
+                source: 'exclusive_offer'
+            });
+        } catch (ce) { console.warn('No se pudo guardar contacto de oferta:', ce); }
+
+        showToast('✅ ¡Oferta enviada! El productor la revisará y te contactará pronto.');
+        document.getElementById('beat-checkout-modal').style.display = 'none';
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = originalText;
+    } catch (e) {
+        console.error("Error al enviar oferta:", e);
+        showToast("Error al enviar oferta: " + e.message, true);
+        const nextBtn = document.getElementById('btn-checkout-next');
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = '📩 Enviar Oferta';
+    }
+}
+
+window.openFreeDownloadModal = function(beatId) {
+    const beat = window.storeBeats.find(b => b.id === beatId);
+    if (!beat) return;
+
+    document.getElementById('free-download-beat-id').value = beatId;
+    document.getElementById('free-buyer-name').value = '';
+    document.getElementById('free-buyer-email').value = '';
+    document.getElementById('free-buyer-phone').value = '';
+    
+    document.getElementById('free-download-modal').style.display = 'flex';
+};
+
+window.submitFreeDownloadLead = async function() {
+    const beatId = document.getElementById('free-download-beat-id').value;
+    const beat = window.storeBeats.find(b => b.id === beatId);
+    if (!beat) return;
+
+    const buyerName = document.getElementById('free-buyer-name').value.trim();
+    const buyerEmail = document.getElementById('free-buyer-email').value.trim();
+    const buyerPhone = document.getElementById('free-buyer-phone').value.trim();
+
+    if (!buyerName || !buyerEmail) {
+        showToast('Por favor escribe tu Nombre y Correo', true);
+        return;
+    }
+
+    const submitBtn = document.querySelector('#free-download-form button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Procesando...';
+
+    try {
+        // Guardar contacto en Firestore
+        const contactId = buyerEmail.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const contactDocRef = doc(db, "users", window.storeProducerUid, "contacts", contactId);
+        
+        await setDoc(contactDocRef, {
+            name: buyerName,
+            email: buyerEmail,
+            phone: buyerPhone || "",
+            city: "Descarga Gratis",
+            country: "Tienda Pública",
+            updatedAt: Date.now(),
+            source: 'free_download'
+        });
+
+        // Ocultar modal
+        document.getElementById('free-download-modal').style.display = 'none';
+
+        // Disparar descarga en el navegador
+        const link = document.createElement('a');
+        link.href = beat.mp3;
+        link.download = `${beat.name} (Prod. ${window.storeProducerConfig.aka || 'BEATSS'}).mp3`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast('¡Descarga iniciada! Te has registrado en el boletín del productor.');
+    } catch (e) {
+        console.error("Error al registrar lead de descarga:", e);
+        showToast('Error al iniciar la descarga: ' + e.message, true);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+};
+
+function getDefaultBeatArtwork() {
+    const accentColor = document.documentElement.style.getPropertyValue('--accent') || '#00ccff';
+    const colorHex = accentColor.trim().replace('#', '%23');
+    return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" style="background:%2311121a;"><circle cx="50" cy="50" r="38" fill="none" stroke="${colorHex}" stroke-width="2" stroke-dasharray="4 4" opacity="0.2"/><path d="M42 65V35l26-4v30" fill="none" stroke="${colorHex}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="35" cy="65" r="7" fill="${colorHex}"/><circle cx="61" cy="61" r="7" fill="${colorHex}"/></svg>`;
+}
+window.getDefaultBeatArtwork = getDefaultBeatArtwork;
+
+// Lógica de Checkout de Beats para Clientes
+function setupStoreCheckout() {
+    if (window._storeCheckoutConfigured) return;
+    window._storeCheckoutConfigured = true;
+
+    const cancelBtn = document.getElementById('btn-checkout-cancel');
+    const prevBtn = document.getElementById('btn-checkout-prev');
+    const nextBtn = document.getElementById('btn-checkout-next');
+    const closeBtn = document.getElementById('btn-close-checkout-modal');
+    
+    // File upload
+    const uploadReceiptBtn = document.getElementById('btn-store-upload-receipt');
+    const receiptFileInput = document.getElementById('store-receipt-file');
+    
+    closeBtn.addEventListener('click', () => {
+        document.getElementById('beat-checkout-modal').style.display = 'none';
+    });
+    
+    cancelBtn.addEventListener('click', () => {
+        document.getElementById('beat-checkout-modal').style.display = 'none';
+    });
+
+    prevBtn.addEventListener('click', () => {
+        if (checkoutCurrentStep > 1) {
+            updateCheckoutStepView(checkoutCurrentStep - 1);
+        }
+    });
+
+    nextBtn.addEventListener('click', async () => {
+        if (checkoutCurrentStep === 1) {
+            // Validar monto para exclusiva si está seleccionada
+            if (checkoutSelectedLicense === 'exclusive') {
+                const price = window.getCheckoutPrice();
+                if (isNaN(price) || price < 250) {
+                    showToast('El monto mínimo para la licencia Exclusiva es de $250 USD.', true);
+                    return;
+                }
+            }
+            updateCheckoutStepView(2);
+        } else if (checkoutCurrentStep === 2) {
+            const buyerName = document.getElementById('buyer-name').value.trim();
+            const buyerEmail = document.getElementById('buyer-email').value.trim();
+            if (!buyerName || !buyerEmail) {
+                showToast('Por favor escribe tu Nombre y Correo Electrónico.', true);
+                return;
+            }
+            updateCheckoutStepView(3);
+        } else if (checkoutCurrentStep === 3) {
+            const method = getSelectedStorePaymentMethod();
+            if (method === 'offer') {
+                await submitExclusiveOffer();
+            } else if (method !== 'paypal') {
+                await submitBeatPurchasePayment(method);
+            } else {
+                document.getElementById('beat-checkout-modal').style.display = 'none';
+            }
+        }
+    });
+
+    uploadReceiptBtn.addEventListener('click', () => {
+        receiptFileInput.click();
+    });
+
+    receiptFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            document.getElementById('store-receipt-file-name').textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                storePaymentReceiptBase64 = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+function loadStorePayPalSDK(clientId, callback) {
+    const existingScript = document.getElementById('store-paypal-sdk-script');
+    if (existingScript) {
+        if (existingScript.getAttribute('data-client-id') === clientId) {
+            callback();
+            return;
+        } else {
+            existingScript.remove();
+        }
+    }
+    const sdk = document.createElement('script');
+    sdk.id = 'store-paypal-sdk-script';
+    sdk.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=capture`;
+    sdk.setAttribute('data-client-id', clientId);
+    sdk.onload = callback;
+    document.head.appendChild(sdk);
+}
+
+function renderStorePayPalButton(clientId) {
+    const container = document.getElementById('store-paypal-button-container');
+    container.innerHTML = '';
+    
+    const price = window.getCheckoutPrice();
+    const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+    
+    if (window.paypal) {
+        window.paypal.Buttons({
+            createOrder: function(data, actions) {
+                return actions.order.create({
+                    purchase_units: [{
+                        amount: {
+                            currency_code: 'USD',
+                            value: price.toFixed(2)
+                        },
+                        description: `Licencia ${checkoutSelectedLicense.toUpperCase()} - Beat: ${beat.name}`
+                    }]
+                });
+            },
+            onApprove: async function(data, actions) {
+                return actions.order.capture().then(async function(details) {
+                    console.log('PayPal transaction completed:', details);
+                    showToast('Pago aprobado por PayPal. Procesando entrega...');
+                    await submitBeatPurchasePayment('paypal', details.id);
+                });
+            },
+            onError: function(err) {
+                console.error('PayPal store error:', err);
+                showToast('Error en el pago de PayPal.', true);
+            }
+        }).render('#store-paypal-button-container');
+    }
+}
+
+async function submitBeatPurchasePayment(method, reference = '') {
+    const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+    const buyerName = document.getElementById('buyer-name').value.trim();
+    const buyerEmail = document.getElementById('buyer-email').value.trim();
+    const buyerPhone = document.getElementById('buyer-phone').value.trim();
+    const buyerDni = document.getElementById('buyer-dni').value.trim();
+    const buyerCity = document.getElementById('buyer-city').value.trim();
+    const buyerCountry = document.getElementById('buyer-country').value.trim();
+
+    if (!buyerName || !buyerEmail) {
+        showToast('Por favor completa todos los campos del formulario.', true);
+        updateCheckoutStepView(2);
+        return;
+    }
+
+    if (method !== 'paypal' && !storePaymentReceiptBase64) {
+        showToast('Por favor sube la captura de tu comprobante de pago.', true);
+        return;
+    }
+
+    const price = window.getCheckoutPrice();
+    
+    const orderData = {
+        type: 'beat_purchase',
+        producerId: window.storeProducerUid,
+        beatId: checkoutSelectedBeatId,
+        beatName: beat.name,
+        licenseType: checkoutSelectedLicense,
+        price: price,
+        buyerName: buyerName,
+        buyerEmail: buyerEmail,
+        buyerPhone: buyerPhone,
+        buyerDni: buyerDni,
+        buyerCity: buyerCity,
+        buyerCountry: buyerCountry,
+        method: method,
+        reference: reference || ('REF-' + Date.now()),
+        receiptUrl: storePaymentReceiptBase64 || '',
+        status: method === 'paypal' ? 'approved' : 'pending',
+        timestamp: new Date().toISOString()
+    };
+
+    try {
+        const nextBtn = document.getElementById('btn-checkout-next');
+        const originalText = nextBtn.innerHTML;
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = '⏳ Guardando pedido...';
+
+        const colRef = collection(db, "payments");
+        const docRef = await addDoc(colRef, orderData);
+        
+        if (method === 'paypal') {
+            showToast('¡Pago procesado con éxito!');
+            await autoDeliverBeatSale(docRef.id, orderData);
+        } else {
+            showToast('¡Pedido registrado! Esperando aprobación del productor.');
+        }
+        
+        document.getElementById('beat-checkout-modal').style.display = 'none';
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = originalText;
+    } catch (e) {
+        console.error("Error al registrar pedido:", e);
+        showToast("Error al procesar el pedido: " + e.message, true);
+        const nextBtn = document.getElementById('btn-checkout-next');
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = 'Confirmar Compra';
+    }
+}
+
+// Entrega automática en checkout (PayPal)
+async function autoDeliverBeatSale(paymentId, orderData) {
+    try {
+        console.log("🚀 Iniciando entrega automatizada de PayPal para el pago:", paymentId);
+        
+        // Fetch beat details
+        const beatCol = collection(db, "users", orderData.producerId, "beats");
+        const beatSnapshot = await getDocs(beatCol);
+        let beatData = null;
+        beatSnapshot.forEach(doc => {
+            if (doc.id === orderData.beatId) {
+                beatData = doc.data();
+            }
+        });
+
+        if (!beatData) {
+            console.warn("Beat no encontrado en catálogo para la entrega automática.");
+            return;
+        }
+
+        // Configurar credenciales de EmailJS del productor
+        const serviceId = window.storeProducerConfig.emailjsServiceId || 'service_7ofza2v';
+        const templateId = window.storeProducerConfig.emailjsTemplateId || 'template_mlimkld';
+        const publicKey = window.storeProducerConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
+
+        // Lógica simplificada de EmailJS directo en background
+        if (typeof emailjs !== 'undefined') {
+            emailjs.init(publicKey);
+
+            const mp3 = beatData.mp3 || "";
+            const wav = beatData.wav || "";
+            const stems = beatData.stems || "";
+
+            const typeLabels = {
+                basic: 'Básica',
+                premium: 'Premium',
+                premium_plus: 'Premium Plus',
+                unlimited_flp: 'Ilimitada + FLP',
+                exclusive: 'Exclusiva'
+            };
+
+            const linksText = `
+<div style="font-family: -apple-system, sans-serif;">
+    <h3>Instrumental: ${beatData.name}</h3>
+    <p>Gracias por tu compra. Aquí tienes tus enlaces de descarga directa:</p>
+    <ul>
+        ${mp3 ? `<li><strong>MP3 (320kbps):</strong> <a href="${mp3}">Descargar</a></li>` : ''}
+        ${wav && (orderData.licenseType !== 'basic') ? `<li><strong>WAV (Master):</strong> <a href="${wav}">Descargar</a></li>` : ''}
+        ${stems && (orderData.licenseType !== 'basic' && orderData.licenseType !== 'premium') ? `<li><strong>Stems (Pistas Separadas):</strong> <a href="${stems}">Descargar</a></li>` : ''}
+    </ul>
+    <p>Tu contrato y licencia oficial PDF serán procesados y firmados por el productor muy pronto.</p>
+</div>`;
+
+            const templateParams = {
+                to_name: orderData.buyerName,
+                to_email: orderData.buyerEmail,
+                beat_name: orderData.beatName,
+                license_type: typeLabels[orderData.licenseType] || orderData.licenseType,
+                delivery_links: linksText,
+                producer_name: window.storeProducerConfig.aka || "Productor",
+                producer_email: window.storeProducerConfig.email || "",
+                pdf_filename: `Licencia_PayPal_${orderData.reference}.pdf`
+            };
+
+            await emailjs.send(serviceId, templateId, templateParams);
+            console.log("📧 Correo de entrega directa de PayPal enviado al comprador con éxito.");
+        }
+    } catch (err) {
+        console.error("Fallo al enviar correo automático de PayPal:", err);
+    }
+}
+
+// PANEL DEL PRODUCTOR: GESTIÓN DE VENTAS
+// ── Listener de pagos en tiempo real ──────────────────────────────────────────
+let _salesUnsubscribe = null;          // guarda el unsubscribe para limpieza
+let _salesFirstLoad   = true;          // para no notificar en la carga inicial
+let _knownPaymentIds  = new Set();     // IDs ya conocidos
+
+function initSalesRealtimeListener() {
+    if (!window.currentUser) return;
+
+    // Cancelar listener anterior si existe
+    if (_salesUnsubscribe) { _salesUnsubscribe(); _salesUnsubscribe = null; }
+    _salesFirstLoad   = true;
+    _knownPaymentIds  = new Set();
+    window.storePayments = [];
+
+    const paymentsCol = collection(db, "payments");
+    const q = query(
+        paymentsCol,
+        where("producerId", "==", window.currentUser),
+        orderBy("timestamp", "desc")
+    );
+
+    _salesUnsubscribe = onSnapshot(q, (snapshot) => {
+        const newDocs = [];
+
+        snapshot.docChanges().forEach(change => {
+            const data = change.doc.data();
+            if (data.type !== 'beat_purchase' && data.type !== 'exclusive_offer') return;
+
+            if (change.type === 'added') {
+                // Si ya lo conocíamos, ignorar (evita notificar duplicados en hot-reload)
+                if (!_salesFirstLoad && !_knownPaymentIds.has(change.doc.id)) {
+                    newDocs.push({ id: change.doc.id, ...data });
+                }
+                _knownPaymentIds.add(change.doc.id);
+            }
+        });
+
+        // Reconstruir array completo
+        window.storePayments = [];
+        snapshot.forEach(d => {
+            const data = d.data();
+            if (data.type === 'beat_purchase' || data.type === 'exclusive_offer') {
+                window.storePayments.push({ id: d.id, ...data });
+            }
+        });
+
+        renderSalesTable();
+        renderSalesStats();
+        updateSalesBadge();
+
+        // Notificaciones de nuevos pedidos (solo tras carga inicial)
+        if (!_salesFirstLoad && newDocs.length > 0) {
+            newDocs.forEach(pay => {
+                const isOffer = pay.type === 'exclusive_offer';
+                const icon    = isOffer ? '🏷️' : '🛒';
+                const title   = isOffer ? '¡Nueva Oferta Exclusiva!' : '¡Nuevo Pedido!';
+                const beat    = pay.beatName || 'Beat';
+                const buyer   = pay.buyerName || 'Comprador';
+                const amount  = `$${parseFloat(pay.price || 0).toFixed(2)}`;
+
+                showToast(`${icon} ${title}: ${buyer} quiere "${beat}" por ${amount}`, false);
+
+                // Notificación nativa del browser si está permitida
+                if (Notification?.permission === 'granted') {
+                    new Notification(`${icon} BEATSS – ${title}`, {
+                        body: `${buyer} → "${beat}" · ${amount}`,
+                        icon: '/favicon.ico'
+                    });
+                }
+            });
+        }
+
+        _salesFirstLoad = false;
+    }, (err) => {
+        console.error("Error en listener de pagos:", err);
+        // Fallback a getDocs si el listener falla (ej. sin índice)
+        loadSalesDataFallback();
+    });
+}
+
+// Actualiza el badge numérico en el tab de Ventas
+function updateSalesBadge() {
+    const pending = (window.storePayments || []).filter(p => p.status === 'pending').length;
+    let badge = document.getElementById('sales-tab-badge');
+    const salesTab = document.querySelector('[data-tab="beats-store"]') ||
+                     document.querySelector('#tab-beats-store') ||
+                     document.querySelector('.nav-btn[data-section="beats-store"]');
+
+    if (pending > 0) {
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.id = 'sales-tab-badge';
+            badge.style.cssText = `
+                display: inline-flex; align-items: center; justify-content: center;
+                background: #ef4444; color: #fff; font-size: 10px; font-weight: 800;
+                border-radius: 999px; min-width: 18px; height: 18px; padding: 0 5px;
+                margin-left: 6px; line-height: 1; animation: pulse-badge 1.5s ease-in-out infinite;
+            `;
+            if (!document.getElementById('sales-badge-style')) {
+                const st = document.createElement('style');
+                st.id = 'sales-badge-style';
+                st.textContent = `
+                    @keyframes pulse-badge {
+                        0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
+                        50%       { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+                    }
+                `;
+                document.head.appendChild(st);
+            }
+            if (salesTab) salesTab.appendChild(badge);
+            else document.body.appendChild(badge); // fallback temporal
+        }
+        badge.textContent = pending > 99 ? '99+' : pending;
+        badge.style.display = 'inline-flex';
+    } else if (badge) {
+        badge.style.display = 'none';
+    }
+}
+
+// Solicitar permiso de notificaciones nativas al browser
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+        try { await Notification.requestPermission(); } catch (_) {}
+    }
+}
+
+// Fallback: carga única (sin tiempo real) si onSnapshot falla
+async function loadSalesDataFallback() {
+    if (!window.currentUser) return;
+    try {
+        const q = query(
+            collection(db, "payments"),
+            where("producerId", "==", window.currentUser),
+            orderBy("timestamp", "desc")
+        );
+        const snap = await getDocs(q);
+        window.storePayments = [];
+        snap.forEach(d => {
+            const data = d.data();
+            if (data.type === 'beat_purchase' || data.type === 'exclusive_offer') {
+                window.storePayments.push({ id: d.id, ...data });
+            }
+        });
+        renderSalesTable();
+        renderSalesStats();
+        updateSalesBadge();
+    } catch (e) { console.error("Error cargando pedidos (fallback):", e); }
+}
+
+// Mantener compatibilidad con llamadas existentes a loadSalesData()
+async function loadSalesData() {
+    initSalesRealtimeListener();
+}
+
+
+function renderSalesTable() {
+    const tbody = document.getElementById('sales-table-tbody');
+    const emptyState = document.getElementById('sales-empty-state');
+    
+    if (!window.storePayments || window.storePayments.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.style.display = 'block';
+        document.getElementById('sales-pending-count').style.display = 'none';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+
+    let pendingCount = 0;
+
+    tbody.innerHTML = window.storePayments.map(pay => {
+        const dateStr = pay.timestamp ? pay.timestamp.split('T')[0] : 'N/A';
+        const isOffer = pay.type === 'exclusive_offer';
+        const methodLabel = isOffer ? '💬 Oferta' : (pay.method === 'deuna' ? 'Deuna!' : (pay.method === 'paypal' ? 'PayPal' : 'Transf.'));
+        
+        let statusBadge = '';
+        let actionButtons = '';
+        
+        if (pay.status === 'pending') {
+            pendingCount++;
+            statusBadge = `<span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">${isOffer ? 'Oferta Pendiente' : 'Pendiente'}</span>`;
+            if (isOffer) {
+                actionButtons = `
+                    <button class="btn btn-primary" onclick="window.acceptExclusiveOffer('${pay.id}')" style="padding: 4px 8px; font-size: 11px; height: 26px;">✓ Aceptar</button>
+                    <button class="btn" onclick="window.rejectBeatSale('${pay.id}')" style="padding: 4px 8px; font-size: 11px; height: 26px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; margin-left: 4px;">✕ Rechazar</button>
+                `;
+            } else {
+                actionButtons = `
+                    <button class="btn btn-primary" onclick="window.approveBeatSale('${pay.id}')" style="padding: 4px 8px; font-size: 11px; height: 26px;">Aprobar</button>
+                    <button class="btn" onclick="window.rejectBeatSale('${pay.id}')" style="padding: 4px 8px; font-size: 11px; height: 26px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; margin-left: 4px;">Rechazar</button>
+                `;
+            }
+        } else if (pay.status === 'approved') {
+            statusBadge = `<span style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Aprobado</span>`;
+            actionButtons = `<span style="font-size: 11px; color: #8a91a6;">Completado</span>`;
+        } else {
+            statusBadge = `<span style="background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Rechazado</span>`;
+            actionButtons = `<span style="font-size: 11px; color: #8a91a6;">Cancelado</span>`;
+        }
+
+        const receiptLink = pay.receiptUrl 
+            ? `<a href="${pay.receiptUrl}" target="_blank" style="color: var(--accent); font-weight: 600; text-decoration: underline;">Ver Captura</a>` 
+            : `<span style="color: #8a91a6;">${isOffer ? 'N/A' : 'N/A (PayPal)'}</span>`;
+
+        // Mostrar precio propuesto en la oferta vs precio original
+        const priceDisplay = isOffer
+            ? `<div style="font-weight: 700; color: #f59e0b;">$${parseFloat(pay.price).toFixed(2)}</div><div style="font-size: 10px; color: #8a91a6;">Precio orig: $${parseFloat(pay.originalPrice || pay.price).toFixed(2)}</div>`
+            : `<div style="font-weight: 700; color: #fff;">$${parseFloat(pay.price).toFixed(2)}</div>`;
+
+        // Mensaje de la oferta si existe
+        const offerMessageRow = isOffer && pay.offerMessage
+            ? `<tr><td colspan="8" style="background: rgba(245, 158, 11, 0.05); padding: 8px 12px; font-size: 12px; color: #8a91a6; font-style: italic; border-bottom: 1px solid rgba(255,255,255,0.04);">💬 Mensaje: "${pay.offerMessage}"</td></tr>`
+            : '';
+
+        // Detectar si el pedido es "nuevo" (menos de 5 minutos)
+        const tsMs = pay.timestamp ? new Date(pay.timestamp).getTime() : 0;
+        const isNew = pay.status === 'pending' && (Date.now() - tsMs) < 5 * 60 * 1000;
+        const newBadge = isNew ? `<span style="background: #ef4444; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px; animation: pulse-badge 1.5s ease-in-out infinite; vertical-align: middle;">NUEVO</span>` : '';
+
+        return `
+            ${offerMessageRow}
+            <tr style="${isOffer ? 'border-left: 3px solid #f59e0b;' : (isNew ? 'border-left: 3px solid #ef4444;' : '')}">
+                <td data-label="Fecha / ID">
+                    <div style="font-weight: 600;">${dateStr}${newBadge}</div>
+                    <div style="font-size: 10px; color: #8a91a6;">ID: ${pay.reference}</div>
+                </td>
+                <td data-label="Beat / Licencia">
+                    <div style="font-weight: 600; color: #fff;">${pay.beatName}</div>
+                    <div style="font-size: 11px; text-transform: uppercase; color: var(--accent);">${pay.licenseType}${isOffer ? ' 🏷️' : ''}</div>
+                </td>
+                <td data-label="Comprador">
+                    <div>${pay.buyerName}</div>
+                    <div style="font-size: 11px; color: #8a91a6;">${pay.buyerEmail}</div>
+                </td>
+                <td data-label="Monto">${priceDisplay}</td>
+                <td data-label="Método">${methodLabel}</td>
+                <td data-label="Comprobante">${receiptLink}</td>
+                <td data-label="Estado">${statusBadge}</td>
+                <td class="actions-cell" style="text-align: right; white-space: nowrap;">${actionButtons}</td>
+            </tr>
+        `;
+    }).join('');
+
+    const badge = document.getElementById('sales-pending-count');
+    if (pendingCount > 0) {
+        badge.textContent = pendingCount;
+        badge.style.display = 'inline-block';
+    } else {
+        badge.style.display = 'none';
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function renderSalesStats() {
+    let pending = 0;
+    let approved = 0;
+    let revenue = 0.0;
+
+    window.storePayments.forEach(pay => {
+        if (pay.status === 'pending') pending++;
+        if (pay.status === 'approved') {
+            approved++;
+            revenue += parseFloat(pay.price) || 0.0;
+        }
+    });
+
+    document.getElementById('sales-stat-pending').textContent = pending;
+    document.getElementById('sales-stat-approved').textContent = approved;
+    document.getElementById('sales-stat-revenue').textContent = `$${revenue.toFixed(2)}`;
+}
+
+window.approveBeatSale = async function(paymentId) {
+    const payment = window.storePayments.find(p => p.id === paymentId);
+    if (!payment) return;
+
+    if (!confirm(`¿Estás seguro de que deseas aprobar la venta de $${payment.price} por "${payment.beatName}"? Esto compilará el contrato PDF, guardará la licencia en el historial y enviará la entrega por EmailJS.`)) {
+        return;
+    }
+
+    try {
+        // 1. Obtener datos del beat de la base de datos
+        const beatDocRef = doc(db, "users", window.currentUser, "beats", payment.beatId);
+        const beatSnap = await getDoc(beatDocRef);
+        let beatData = null;
+        if (beatSnap.exists()) {
+            beatData = beatSnap.data();
+        } else {
+            beatData = localBeats.find(b => b.id === payment.beatId);
+        }
+
+        if (!beatData) {
+            alert("Error: No se encontraron los datos del beat en el catálogo. Verifica que el beat aún exista.");
+            return;
+        }
+
+        // 2. Guardar estado actual del formulario de licencias
+        const originalForm = {
+            beatName: document.getElementById('beat-name').value,
+            buyerName: document.getElementById('buyer-name').value,
+            buyerEmail: document.getElementById('buyer-email').value,
+            buyerPhone: document.getElementById('buyer-phone').value,
+            buyerDni: document.getElementById('buyer-id').value,
+            buyerCity: document.getElementById('buyer-city').value,
+            buyerCountry: document.getElementById('buyer-country').value,
+            refCode: document.getElementById('ref-code').value,
+            effectiveDate: document.getElementById('effective-date').value,
+            audioMp3: document.getElementById('audio-link-mp3').value,
+            audioWav: document.getElementById('audio-link-wav').value,
+            audioStems: document.getElementById('audio-link-stems').value,
+            licenseType: getActiveLicenseType(),
+            licenseValue: document.getElementById('license-value').value,
+            paymentMethod: document.getElementById('payment-method').value
+        };
+
+        // 3. Rellenar formulario con los datos de la venta
+        document.getElementById('beat-name').value = payment.beatName;
+        document.getElementById('buyer-name').value = payment.buyerName;
+        document.getElementById('buyer-email').value = payment.buyerEmail;
+        document.getElementById('buyer-phone').value = payment.buyerPhone || "";
+        document.getElementById('buyer-id').value = payment.buyerDni || "";
+        document.getElementById('buyer-city').value = payment.buyerCity || "";
+        document.getElementById('buyer-country').value = payment.buyerCountry || "";
+        document.getElementById('ref-code').value = payment.reference;
+        document.getElementById('effective-date').value = payment.timestamp.split('T')[0];
+        document.getElementById('audio-link-mp3').value = beatData.mp3 || "";
+        document.getElementById('audio-link-wav').value = beatData.wav || "";
+        document.getElementById('audio-link-stems').value = beatData.stems || "";
+        document.getElementById('license-value').value = payment.price;
+        document.getElementById('payment-method').value = payment.method === 'deuna' ? 'Deuna!' : (payment.method === 'paypal' ? 'PayPal' : 'Transferencia Bancaria');
+
+        // Seleccionar tipo de licencia
+        selectLicenseType(payment.licenseType);
+
+        // Compilar contrato en pantalla
+        compileContract();
+
+        // 4. Ejecutar entrega por correo y generación de PDF
+        await sendEmailDelivery();
+
+        // 5. Actualizar estado del pago en Firestore
+        const payDocRef = doc(db, "payments", paymentId);
+        await updateDoc(payDocRef, { status: 'approved' });
+
+        payment.status = 'approved';
+
+        // 6. Restaurar el estado previo del formulario
+        document.getElementById('beat-name').value = originalForm.beatName;
+        document.getElementById('buyer-name').value = originalForm.buyerName;
+        document.getElementById('buyer-email').value = originalForm.buyerEmail;
+        document.getElementById('buyer-phone').value = originalForm.buyerPhone;
+        document.getElementById('buyer-id').value = originalForm.buyerDni;
+        document.getElementById('buyer-city').value = originalForm.buyerCity;
+        document.getElementById('buyer-country').value = originalForm.buyerCountry;
+        document.getElementById('ref-code').value = originalForm.refCode;
+        document.getElementById('effective-date').value = originalForm.effectiveDate;
+        document.getElementById('audio-link-mp3').value = originalForm.audioMp3;
+        document.getElementById('audio-link-wav').value = originalForm.audioWav;
+        document.getElementById('audio-link-stems').value = originalForm.audioStems;
+        document.getElementById('license-value').value = originalForm.licenseValue;
+        document.getElementById('payment-method').value = originalForm.paymentMethod;
+
+        selectLicenseType(originalForm.licenseType);
+        compileContract();
+
+        showToast("¡Venta de beat aprobada y entregada con éxito!");
+        loadSalesData();
+
+    } catch (err) {
+        console.error("Error al aprobar venta de beat:", err);
+        showToast("Error al aprobar: " + err.message, true);
+    }
+};
+
+window.rejectBeatSale = async function(paymentId) {
+    if (!confirm("¿Estás seguro de que deseas rechazar este pedido? Esto cancelará la transacción.")) {
+        return;
+    }
+    try {
+        const payDocRef = doc(db, "payments", paymentId);
+        await updateDoc(payDocRef, { status: 'rejected' });
+        showToast("Pedido rechazado.");
+        loadSalesData();
+    } catch (err) {
+        console.error("Error al rechazar:", err);
+        showToast("Error al rechazar: " + err.message, true);
+    }
+};
+
+window.acceptExclusiveOffer = async function(paymentId) {
+    const payment = window.storePayments.find(p => p.id === paymentId);
+    if (!payment) return;
+
+    if (!confirm(`¿Aceptar la oferta exclusiva de $${payment.price} USD por "${payment.beatName}"? Se generará el contrato y se enviará al comprador.`)) {
+        return;
+    }
+
+    try {
+        // 1. Obtener datos del beat
+        const beatDocRef = doc(db, "users", window.currentUser, "beats", payment.beatId);
+        const beatSnap = await getDoc(beatDocRef);
+        let beatData = beatSnap.exists() ? beatSnap.data() : localBeats.find(b => b.id === payment.beatId);
+
+        if (!beatData) {
+            alert("Error: No se encontraron los datos del beat.");
+            return;
+        }
+
+        // 2. Guardar formulario actual
+        const originalForm = {
+            beatName: document.getElementById('beat-name').value,
+            buyerName: document.getElementById('buyer-name').value,
+            buyerEmail: document.getElementById('buyer-email').value,
+            buyerPhone: document.getElementById('buyer-phone').value,
+            buyerDni: document.getElementById('buyer-id').value,
+            buyerCity: document.getElementById('buyer-city').value,
+            buyerCountry: document.getElementById('buyer-country').value,
+            refCode: document.getElementById('ref-code').value,
+            effectiveDate: document.getElementById('effective-date').value,
+            audioMp3: document.getElementById('audio-link-mp3').value,
+            audioWav: document.getElementById('audio-link-wav').value,
+            audioStems: document.getElementById('audio-link-stems').value,
+            licenseType: getActiveLicenseType(),
+            licenseValue: document.getElementById('license-value').value,
+            paymentMethod: document.getElementById('payment-method').value
+        };
+
+        // 3. Rellenar formulario con datos de la oferta aceptada
+        document.getElementById('beat-name').value = payment.beatName;
+        document.getElementById('buyer-name').value = payment.buyerName;
+        document.getElementById('buyer-email').value = payment.buyerEmail;
+        document.getElementById('buyer-phone').value = payment.buyerPhone || "";
+        document.getElementById('buyer-id').value = payment.buyerDni || "";
+        document.getElementById('buyer-city').value = payment.buyerCity || "";
+        document.getElementById('buyer-country').value = payment.buyerCountry || "";
+        document.getElementById('ref-code').value = payment.reference;
+        document.getElementById('effective-date').value = payment.timestamp.split('T')[0];
+        document.getElementById('audio-link-mp3').value = beatData.mp3 || "";
+        document.getElementById('audio-link-wav').value = beatData.wav || "";
+        document.getElementById('audio-link-stems').value = beatData.stems || "";
+        document.getElementById('license-value').value = payment.price; // precio negociado
+        document.getElementById('payment-method').value = 'Oferta Aceptada';
+
+        // Seleccionar tipo de licencia (exclusiva)
+        selectLicenseType('exclusive');
+
+        // Compilar contrato y enviar
+        compileContract();
+        await sendEmailDelivery();
+
+        // 4. Marcar como aprobado en Firestore
+        const payDocRef = doc(db, "payments", paymentId);
+        await updateDoc(payDocRef, { status: 'approved' });
+        payment.status = 'approved';
+
+        // 5. Restaurar formulario anterior
+        document.getElementById('beat-name').value = originalForm.beatName;
+        document.getElementById('buyer-name').value = originalForm.buyerName;
+        document.getElementById('buyer-email').value = originalForm.buyerEmail;
+        document.getElementById('buyer-phone').value = originalForm.buyerPhone;
+        document.getElementById('buyer-id').value = originalForm.buyerDni;
+        document.getElementById('buyer-city').value = originalForm.buyerCity;
+        document.getElementById('buyer-country').value = originalForm.buyerCountry;
+        document.getElementById('ref-code').value = originalForm.refCode;
+        document.getElementById('effective-date').value = originalForm.effectiveDate;
+        document.getElementById('audio-link-mp3').value = originalForm.audioMp3;
+        document.getElementById('audio-link-wav').value = originalForm.audioWav;
+        document.getElementById('audio-link-stems').value = originalForm.audioStems;
+        document.getElementById('license-value').value = originalForm.licenseValue;
+        document.getElementById('payment-method').value = originalForm.paymentMethod;
+        selectLicenseType(originalForm.licenseType);
+        compileContract();
+
+        showToast("✅ Oferta exclusiva aceptada y contrato enviado al comprador.");
+        loadSalesData();
+
+    } catch (err) {
+        console.error("Error al aceptar oferta exclusiva:", err);
+        showToast("Error al aceptar oferta: " + err.message, true);
+    }
+};
+
+// Activar detector de URL en carga
+function checkPublicStorefront() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const producerAka = urlParams.get('p') || urlParams.get('producer');
+    if (producerAka) {
+        window.isPublicStoreMode = true;
+        initPublicStore(producerAka);
+        return true;
+    }
+    return false;
+}
+
+// Escuchar el evento de recarga del dashboard de ventas en el panel
+document.getElementById('btn-sales-refresh')?.addEventListener('click', loadSalesData);
+
+// Ejecutar check en inicio
+setTimeout(checkPublicStorefront, 400);
+
+// =======================================================
+// GLOBAL CATALOG IMPLEMENTATION (MARKETPLACE)
+// =======================================================
+window.isGlobalCatalogMode = false;
+window.globalProducersConfig = {};
+window.globalBeats = [];
+window.filteredGlobalBeats = [];
+
+window.initGlobalCatalog = async function() {
+    console.log("🌍 Cargando Catálogo Global de BEATSS...");
+    window.isGlobalCatalogMode = true;
+    window.isPublicStoreMode = false;
+
+    // Ocultar otras pantallas
+    document.getElementById('login-modal').style.display = 'none';
+    const landing = document.getElementById('landing-page');
+    if (landing) landing.style.display = 'none';
+    document.getElementById('app-container').style.display = 'none';
+    document.getElementById('public-store-view').style.display = 'none';
+    
+    // Ocultar reproductor si estaba
+    const player = document.getElementById('store-audio-player');
+    if (player) player.style.display = 'none';
+
+    // Mostrar vista del catálogo
+    const catalogView = document.getElementById('global-catalog-view');
+    catalogView.style.display = 'block';
+
+    const grid = document.getElementById('global-beats-grid');
+    grid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 80px;">
+            <div class="animate-spin" style="display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #00ccff; border-radius: 50%;"></div>
+            <p style="margin-top: 20px; color: #8a91a6; font-size: 15px; font-weight: 600;">Cargando catálogo global...</p>
+        </div>
+    `;
+
+    try {
+        // Importante: No importamos db ni getDocs porque ya existen en main.js
+        // 1. Obtener todos los perfiles de productores
+        const configsSnap = await getDocs(collectionGroup(db, 'config'));
+        window.globalProducersConfig = {};
+        configsSnap.forEach(doc => {
+            const docPath = doc.ref.path;
+            const uid = docPath.split('/')[1];
+            window.globalProducersConfig[uid] = doc.data();
+        });
+
+        // 2. Obtener todos los beats
+        const beatsSnap = await getDocs(collectionGroup(db, 'beats'));
+        window.globalBeats = [];
+        beatsSnap.forEach(doc => {
+            const data = doc.data();
+            const docPath = doc.ref.path;
+            const uid = docPath.split('/')[1];
+            
+            // Filtrar solo beats con MP3, listos para preescucha
+            if (data.mp3) {
+                window.globalBeats.push({
+                    id: doc.id,
+                    producerUid: uid,
+                    producerConfig: window.globalProducersConfig[uid] || {},
+                    ...data
+                });
+            }
+        });
+
+        // Ordenamiento por defecto: más recientes
+        window.globalBeats.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        window.filteredGlobalBeats = [...window.globalBeats];
+
+        populateGlobalFilters(window.globalBeats);
+        renderGlobalBeats(window.filteredGlobalBeats);
+        setupGlobalEvents();
+
+    } catch (error) {
+        console.error("Error al cargar el Catálogo Global:", error);
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ef4444;">
+                <i data-lucide="alert-triangle" style="width: 48px; height: 48px;"></i>
+                <p style="margin-top: 15px; font-weight: 600;">Ocurrió un error al cargar el catálogo.</p>
+            </div>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+    }
+};
+
+function populateGlobalFilters(beats) {
+    const genres = new Set();
+    beats.forEach(b => {
+        if (b.genre && b.genre.trim() !== '') {
+            genres.add(b.genre.trim());
+        }
+    });
+    const genreSelect = document.getElementById('global-genre-select');
+    if (genreSelect) {
+        genreSelect.innerHTML = '<option value="">Cualquier Género</option>';
+        Array.from(genres).sort().forEach(g => {
+            genreSelect.innerHTML += `<option value="${g}">${g}</option>`;
+        });
+    }
+}
+
+function renderGlobalBeats(beats) {
+    const grid = document.getElementById('global-beats-grid');
+    const emptyState = document.getElementById('global-empty-state');
+    
+    if (beats.length === 0) {
+        grid.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    grid.innerHTML = beats.map(beat => {
+        const config = beat.producerConfig || {};
+        const producerName = config.aka || config.name || 'Productor';
+        
+        const akaLower = producerName.toLowerCase();
+        let pColor = '#00ccff';
+        if (akaLower.includes('monarco')) pColor = '#ff4d4d';
+        else if (akaLower.includes('sossa')) pColor = '#b28eff';
+
+        const artwork = beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
+        const price = beat.price_basic ? `$${beat.price_basic.toFixed(2)}` : 'Negociable';
+        
+        return `
+            <div class="store-beat-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;">
+                <div style="position: relative; aspect-ratio: 1; background: #1a1e27; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="window.playGlobalBeat('${beat.id}')">
+                    <img src='${artwork}' style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8; transition: opacity 0.2s;">
+                    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;" class="play-overlay">
+                        <button class="global-play-btn-${beat.id}" style="width: 50px; height: 50px; border-radius: 50%; background: ${pColor}; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                            <i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div style="padding: 20px; display: flex; flex-direction: column; flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                        <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${beat.name || 'Beat'}</h3>
+                        <span style="font-weight: 800; color: ${pColor}; font-size: 15px;">${price}</span>
+                    </div>
+                    <div style="color: #8a91a6; font-size: 13px; font-weight: 600; margin-bottom: 12px; display:flex; align-items:center; gap:6px;">
+                        <i data-lucide="user" style="width:14px; height:14px; color:${pColor};"></i> 
+                        <span style="color: #fff;">${producerName}</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+                        <span style="font-size: 11px; font-weight: 600; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: #8a91a6;">${beat.bpm || '--'} BPM</span>
+                        <span style="font-size: 11px; font-weight: 600; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: #8a91a6;">${beat.key || '--'}</span>
+                        <span style="font-size: 11px; font-weight: 600; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: #8a91a6;">${beat.genre || 'Variado'}</span>
+                    </div>
+                    <div style="margin-top: auto;">
+                        <button class="btn btn-primary" onclick="window.openGlobalBeatCheckoutModal('${beat.id}')" style="width: 100%; height: 38px; font-weight: 700; border-radius: 10px; font-size: 13px; margin: 0; background: ${pColor}; color: #000; border: none;">Adquirir Licencia</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function setupGlobalEvents() {
+    const searchInput = document.getElementById('global-search-input');
+    const genreSelect = document.getElementById('global-genre-select');
+    const priceSelect = document.getElementById('global-price-select');
+    const bpmSelect = document.getElementById('global-bpm-select');
+    const sortSelect = document.getElementById('global-sort-select');
+    const clearBtn = document.getElementById('global-btn-clear-filters');
+    
+    const applyFilters = () => {
+        const query = searchInput.value.toLowerCase().trim();
+        const genre = genreSelect.value;
+        const priceLevel = priceSelect.value;
+        const bpmLevel = bpmSelect.value;
+        const sort = sortSelect.value;
+
+        window.filteredGlobalBeats = window.globalBeats.filter(beat => {
+            const prodAka = (beat.producerConfig?.aka || '').toLowerCase();
+            const beatName = (beat.name || '').toLowerCase();
+            const beatGenre = (beat.genre || '').toLowerCase();
+            const matchesSearch = !query || beatName.includes(query) || prodAka.includes(query) || beatGenre.includes(query);
+
+            const matchesGenre = !genre || beat.genre === genre;
+
+            let matchesBpm = true;
+            if (bpmLevel && beat.bpm) {
+                const bpmVal = parseInt(beat.bpm);
+                if (bpmLevel === '0-90' && bpmVal >= 90) matchesBpm = false;
+                else if (bpmLevel === '90-130' && (bpmVal < 90 || bpmVal > 130)) matchesBpm = false;
+                else if (bpmLevel === '130-999' && bpmVal <= 130) matchesBpm = false;
+            } else if (bpmLevel && !beat.bpm) {
+                matchesBpm = false;
+            }
+
+            let matchesPrice = true;
+            if (priceLevel && beat.price_basic) {
+                const p = beat.price_basic;
+                if (priceLevel === '0-20' && p > 20) matchesPrice = false;
+                else if (priceLevel === '20-50' && (p <= 20 || p > 50)) matchesPrice = false;
+                else if (priceLevel === '50-100' && (p <= 50 || p > 100)) matchesPrice = false;
+                else if (priceLevel === '100+' && p <= 100) matchesPrice = false;
+            } else if (priceLevel && !beat.price_basic) {
+                matchesPrice = false;
+            }
+
+            return matchesSearch && matchesGenre && matchesBpm && matchesPrice;
+        });
+
+        if (sort === 'price_asc') {
+            window.filteredGlobalBeats.sort((a,b) => (a.price_basic || 9999) - (b.price_basic || 9999));
+        } else if (sort === 'price_desc') {
+            window.filteredGlobalBeats.sort((a,b) => (b.price_basic || 0) - (a.price_basic || 0));
+        } else {
+            window.filteredGlobalBeats.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        }
+
+        renderGlobalBeats(window.filteredGlobalBeats);
+    };
+
+    if(searchInput) searchInput.addEventListener('input', applyFilters);
+    if(genreSelect) genreSelect.addEventListener('change', applyFilters);
+    if(priceSelect) priceSelect.addEventListener('change', applyFilters);
+    if(bpmSelect) bpmSelect.addEventListener('change', applyFilters);
+    if(sortSelect) sortSelect.addEventListener('change', applyFilters);
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            genreSelect.value = '';
+            priceSelect.value = '';
+            bpmSelect.value = '';
+            sortSelect.value = 'newest';
+            applyFilters();
+        });
+    }
+}
+
+window.playGlobalBeat = function(beatId) {
+    window.storeBeats = window.globalBeats;
+    
+    const beat = window.globalBeats.find(b => b.id === beatId);
+    if(beat) {
+        const akaLower = (beat.producerConfig?.aka || '').toLowerCase();
+        let pColor = '#00ccff';
+        if (akaLower.includes('monarco')) pColor = '#ff4d4d';
+        else if (akaLower.includes('sossa')) pColor = '#b28eff';
+        document.documentElement.style.setProperty('--accent', pColor);
+    }
+
+    if(window.playStoreBeat) {
+        window.playStoreBeat(beatId);
+    }
+
+    const player = document.getElementById('store-audio-player');
+    if(player) player.style.display = 'block';
+};
+
+window.openGlobalBeatCheckoutModal = function(beatId) {
+    const beat = window.globalBeats.find(b => b.id === beatId);
+    if (!beat) return;
+
+    window.storeBeats = window.globalBeats;
+    window.storeProducerUid = beat.producerUid;
+    window.storeProducerConfig = beat.producerConfig;
+
+    const akaLower = (beat.producerConfig?.aka || '').toLowerCase();
+    if (akaLower.includes('monarco')) {
+        document.documentElement.style.setProperty('--accent', '#ff4d4d');
+        document.documentElement.style.setProperty('--accent-rgb', '255, 77, 77');
+    } else if (akaLower.includes('sossa')) {
+        document.documentElement.style.setProperty('--accent', '#b28eff');
+        document.documentElement.style.setProperty('--accent-rgb', '178, 142, 255');
+    } else {
+        document.documentElement.style.setProperty('--accent', '#00ccff');
+        document.documentElement.style.setProperty('--accent-rgb', '0, 204, 255');
+    }
+
+    if(window.openBeatCheckoutModal) {
+        window.openBeatCheckoutModal(beatId);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.setupStoreCheckout) {
+        window.setupStoreCheckout();
+    }
+    
+    const navBtn = document.getElementById('landing-btn-nav-catalog');
+    const heroBtn = document.getElementById('landing-btn-catalog');
+    const prodBtn = document.getElementById('btn-global-catalog');
+    const catalogLogo = document.getElementById('catalog-logo-home');
+    const loginBtn = document.getElementById('catalog-btn-login');
+
+    if(navBtn) navBtn.addEventListener('click', () => window.initGlobalCatalog());
+    if(heroBtn) heroBtn.addEventListener('click', () => window.initGlobalCatalog());
+    if(prodBtn) prodBtn.addEventListener('click', () => window.initGlobalCatalog());
+    
+    if(catalogLogo) catalogLogo.addEventListener('click', () => {
+        document.getElementById('global-catalog-view').style.display = 'none';
+        
+        const player = document.getElementById('store-audio-player');
+        if (player) player.style.display = 'none';
+        
+        if (window.currentUser) {
+            document.getElementById('app-container').style.display = 'flex';
+        } else {
+            document.getElementById('landing-page').style.display = 'block';
+        }
+    });
+
+    if(loginBtn) loginBtn.addEventListener('click', () => {
+        document.getElementById('login-modal').style.display = 'flex';
+    });
+});
+
+function checkGlobalCatalogUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('catalogo') || window.location.hash === '#catalogo') {
+        window.initGlobalCatalog();
+        return true;
+    }
+    return false;
+}
+setTimeout(checkGlobalCatalogUrl, 500);
 
 

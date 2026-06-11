@@ -8,7 +8,8 @@ import {
     signInWithPopup, 
     signInWithRedirect,
     getRedirectResult,
-    onAuthStateChanged 
+    onAuthStateChanged,
+    unlink
 } from "firebase/auth";
 import { 
     getFirestore, 
@@ -20,10 +21,12 @@ import {
     query, 
     where, 
     orderBy,
+    limit,
     collectionGroup,
     deleteDoc,
     addDoc,
-    updateDoc
+    updateDoc,
+    onSnapshot
 } from "firebase/firestore";
 import {
     getStorage,
@@ -62,6 +65,7 @@ export {
     signInWithRedirect,
     getRedirectResult,
     onAuthStateChanged,
+    unlink,
     doc,
     setDoc,
     getDoc,
@@ -70,10 +74,12 @@ export {
     query,
     where,
     orderBy,
+    limit,
     collectionGroup,
     deleteDoc,
     addDoc,
     updateDoc,
+    onSnapshot,
     ref,
     uploadBytesResumable,
     getDownloadURL,
