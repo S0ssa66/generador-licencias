@@ -8582,6 +8582,177 @@ window.storeProducerConfig = {};
 window.storeBeats = [];
 window.storePayments = [];
 
+// ==========================================================================
+// CARRITO DE COMPRAS MULTI-BEAT
+// ==========================================================================
+window.cart = [];
+
+// Cargar carrito desde localStorage si existe
+function loadCartFromStorage() {
+    try {
+        const storedCart = localStorage.getItem('beatss_cart');
+        if (storedCart) {
+            window.cart = JSON.parse(storedCart);
+        }
+    } catch (e) {
+        console.error("Error al cargar el carrito:", e);
+    }
+}
+loadCartFromStorage();
+
+function saveCartToStorage() {
+    try {
+        localStorage.setItem('beatss_cart', JSON.stringify(window.cart));
+    } catch (e) {
+        console.error("Error al guardar el carrito:", e);
+    }
+}
+
+window.addToCart = function(beatId, licenseType, price, beatName, producerId, producerName, artwork) {
+    // Verificar consistencia de productor
+    if (window.cart.length > 0 && window.cart[0].producerId !== producerId) {
+        const confirmChange = confirm(`Tu carrito contiene beats de "${window.cart[0].producerName}". ¿Deseas vaciar tu carrito para agregar este beat de "${producerName}"?`);
+        if (confirmChange) {
+            window.cart = [];
+        } else {
+            return false;
+        }
+    }
+
+    // Verificar si el beat ya está en el carrito
+    const exists = window.cart.some(item => item.beatId === beatId);
+    if (exists) {
+        showToast("Este beat ya está en tu carrito.", true);
+        return false;
+    }
+
+    window.cart.push({
+        beatId,
+        licenseType,
+        price,
+        beatName,
+        producerId,
+        producerName,
+        artwork: artwork || ''
+    });
+
+    saveCartToStorage();
+    window.updateCartUI();
+    showToast("¡Beat agregado al carrito!");
+    return true;
+};
+
+window.removeFromCart = function(index) {
+    if (index >= 0 && index < window.cart.length) {
+        const removed = window.cart.splice(index, 1);
+        saveCartToStorage();
+        window.updateCartUI();
+        showToast(`Removido: ${removed[0].beatName}`);
+        
+        // Si el modal está abierto en modo carrito, refrescar el listado
+        if (document.getElementById('beat-checkout-modal').style.display === 'flex' && !checkoutSelectedBeatId) {
+            window.renderCartItems();
+        }
+    }
+};
+
+window.updateCartItemLicense = function(index, newLicenseType) {
+    if (index >= 0 && index < window.cart.length) {
+        window.cart[index].licenseType = newLicenseType;
+        // Calcular precio de la nueva licencia
+        const config = LICENSE_CONFIGS[newLicenseType];
+        if (config) {
+            window.cart[index].price = config.price;
+        }
+        saveCartToStorage();
+        window.updateCartUI();
+        
+        // Si el modal está abierto en modo carrito, refrescar el listado
+        if (document.getElementById('beat-checkout-modal').style.display === 'flex' && !checkoutSelectedBeatId) {
+            window.renderCartItems();
+        }
+    }
+};
+
+window.getCartTotal = function() {
+    return window.cart.reduce((sum, item) => sum + item.price, 0);
+};
+
+window.updateCartUI = function() {
+    const badge = document.getElementById('cart-count-badge');
+    const floatBtn = document.getElementById('floating-cart-btn');
+    
+    if (!badge || !floatBtn) return;
+    
+    const count = window.cart.length;
+    badge.textContent = count;
+    
+    // Mostrar botón flotante si hay elementos en el carrito Y estamos en modo tienda o catálogo
+    if (count > 0 && (window.isPublicStoreMode || window.isGlobalCatalogMode)) {
+        floatBtn.style.display = 'flex';
+    } else {
+        floatBtn.style.display = 'none';
+    }
+};
+
+window.renderCartItems = function() {
+    const container = document.getElementById('cart-items-container');
+    if (!container) return;
+    
+    if (window.cart.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: #8a91a6;">
+                <p>Tu carrito está vacío.</p>
+            </div>
+        `;
+        document.getElementById('cart-total-price-display').textContent = "$0.00 USD";
+        return;
+    }
+    
+    container.innerHTML = window.cart.map((item, index) => {
+        const beat = window.storeBeats.find(b => b.id === item.beatId) || item;
+        const artwork = item.artwork || beat.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
+        
+        // Generar las opciones de licencia para el select
+        const optionsHtml = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
+            const isSelected = key === item.licenseType;
+            const priceText = key === 'exclusive' ? 'Exclusiva (Min. $250)' : `$${config.price.toFixed(2)}`;
+            return `<option value="${key}" ${isSelected ? 'selected' : ''}>${config.name} - ${priceText}</option>`;
+        }).join('');
+        
+        return `
+            <div class="cart-item-row" style="display: flex; gap: 12px; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; box-sizing: border-box; width: 100%;">
+                <img src="${artwork}" style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover; background: #222;" alt="Artwork">
+                <div style="flex: 1; text-align: left; overflow: hidden;">
+                    <div style="font-weight: 700; color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.beatName}</div>
+                    <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                        <select onchange="window.updateCartItemLicense(${index}, this.value)" style="background: #12141c; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 2px 6px; font-size: 11px; outline: none; cursor: pointer;">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                </div>
+                <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
+                    <span style="font-weight: 800; color: var(--accent, #00ccff); font-size: 14px;">$${item.price.toFixed(2)}</span>
+                    <button type="button" onclick="window.removeFromCart(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Eliminar">
+                        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Si Lucide está cargado, renderizar iconos
+    if (window.lucide) window.lucide.createIcons();
+    
+    // Actualizar total
+    const total = window.getCartTotal();
+    const totalStr = '$' + total.toFixed(2) + ' USD';
+    document.getElementById('cart-total-price-display').textContent = totalStr;
+    document.getElementById('deuna-total-price').textContent = totalStr;
+    document.getElementById('transfer-total-price').textContent = totalStr;
+};
+
+
 let currentStoreAudio = null;
 let currentStorePlayingBeatId = null;
 
@@ -8905,15 +9076,19 @@ function playPrevBeat() {
 }
 
 window.getCheckoutPrice = function() {
-    if (checkoutSelectedLicense === 'exclusive') {
-        const input = document.getElementById('exclusive-price-input');
-        if (input) {
-            const val = parseFloat(input.value);
-            if (!isNaN(val)) return val;
+    if (checkoutSelectedBeatId) {
+        if (checkoutSelectedLicense === 'exclusive') {
+            const input = document.getElementById('exclusive-price-input');
+            if (input) {
+                const val = parseFloat(input.value);
+                if (!isNaN(val)) return val;
+            }
+            return window.checkoutExclusivePrice || 500;
         }
-        return window.checkoutExclusivePrice || 500;
+        return LICENSE_CONFIGS[checkoutSelectedLicense] ? LICENSE_CONFIGS[checkoutSelectedLicense].price : 0;
+    } else {
+        return window.getCartTotal();
     }
-    return LICENSE_CONFIGS[checkoutSelectedLicense] ? LICENSE_CONFIGS[checkoutSelectedLicense].price : 0;
 };
 
 window.updateExclusivePrice = function(val) {
@@ -9002,45 +9177,63 @@ window.openBeatCheckoutModal = function(beatId) {
     document.getElementById('store-receipt-file-name').textContent = 'Ningún archivo seleccionado';
     document.getElementById('store-receipt-file').value = '';
 
-    const container = document.getElementById('license-options-container');
-    container.innerHTML = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
-        const isActive = key === checkoutSelectedLicense;
-        const isExclusive = key === 'exclusive';
-        const priceText = isExclusive ? 'Negociable (Mín. $250)' : `$${config.price.toFixed(2)}`;
-        
-        return `
-            <div class="license-option-card ${isActive ? 'active' : ''}" onclick="window.selectCheckoutLicense('${key}')" style="display: flex; flex-direction: column; width: 100%; box-sizing: border-box; gap: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <div style="text-align: left;">
-                        <div style="font-weight: 700; color: #fff; font-size: 14px;">${config.name}</div>
-                        <div style="font-size: 11px; color: #8a91a6; margin-top: 4px;">
-                            ${config.formats} • ${config.streams} streams • ${config.years}
+    const singleView = document.getElementById('checkout-single-beat-view');
+    const multiView = document.getElementById('checkout-multi-beat-view');
+
+    if (beatId) {
+        // Modo compra individual / Selección de licencia
+        singleView.style.display = 'block';
+        multiView.style.display = 'none';
+
+        const container = document.getElementById('license-options-container');
+        container.innerHTML = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
+            const isActive = key === checkoutSelectedLicense;
+            const isExclusive = key === 'exclusive';
+            const priceText = isExclusive ? 'Negociable (Mín. $250)' : `$${config.price.toFixed(2)}`;
+            
+            return `
+                <div class="license-option-card ${isActive ? 'active' : ''}" onclick="window.selectCheckoutLicense('${key}')" style="display: flex; flex-direction: column; width: 100%; box-sizing: border-box; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div style="text-align: left;">
+                            <div style="font-weight: 700; color: #fff; font-size: 14px;">${config.name}</div>
+                            <div style="font-size: 11px; color: #8a91a6; margin-top: 4px;">
+                                ${config.formats} • ${config.streams} streams • ${config.years}
+                            </div>
+                        </div>
+                        <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
+                            <span style="font-weight: 800; color: var(--accent, #00ccff); font-size: 15px;">${priceText}</span>
+                            <div class="license-check" style="width: 18px; height: 18px; border-radius: 50%; border: 2px solid ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.2)'}; display: flex; align-items: center; justify-content: center; background: ${isActive ? 'var(--accent)' : 'transparent'};">
+                                ${isActive ? '<i data-lucide="check" style="width: 12px; height: 12px; stroke: #000; stroke-width: 3;"></i>' : ''}
+                            </div>
                         </div>
                     </div>
-                    <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
-                        <span style="font-weight: 800; color: var(--accent, #00ccff); font-size: 15px;">${priceText}</span>
-                        <div class="license-check" style="width: 18px; height: 18px; border-radius: 50%; border: 2px solid ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.2)'}; display: flex; align-items: center; justify-content: center; background: ${isActive ? 'var(--accent)' : 'transparent'};">
-                            ${isActive ? '<i data-lucide="check" style="width: 12px; height: 12px; stroke: #000; stroke-width: 3;"></i>' : ''}
+                    ${isExclusive ? `
+                        <div class="exclusive-price-container" style="display: ${isActive ? 'flex' : 'none'}; align-items: center; gap: 8px; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 8px; width: 100%;" onclick="event.stopPropagation()">
+                            <label style="font-size: 12px; color: #8a91a6;">Tu Propuesta ($ USD):</label>
+                            <input type="number" id="exclusive-price-input" min="250" value="500" oninput="window.updateExclusivePrice(this.value)" style="width: 80px; background: #12141c; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 4px 8px; font-size: 13px; font-weight: 700; outline: none; text-align: center;">
+                            <span style="font-size: 11px; color: #8a91a6;">(Mínimo: $250)</span>
                         </div>
-                    </div>
+                    ` : ''}
                 </div>
-                ${isExclusive ? `
-                    <div class="exclusive-price-container" style="display: ${isActive ? 'flex' : 'none'}; align-items: center; gap: 8px; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 8px; width: 100%;" onclick="event.stopPropagation()">
-                        <label style="font-size: 12px; color: #8a91a6;">Tu Propuesta ($ USD):</label>
-                        <input type="number" id="exclusive-price-input" min="250" value="500" oninput="window.updateExclusivePrice(this.value)" style="width: 80px; background: #12141c; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 4px 8px; font-size: 13px; font-weight: 700; outline: none; text-align: center;">
-                        <span style="font-size: 11px; color: #8a91a6;">(Mínimo: $250)</span>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+
+        // Reset total prices based on basic license
+        const priceStr = '$' + LICENSE_CONFIGS.basic.price.toFixed(2) + ' USD';
+        document.getElementById('deuna-total-price').textContent = priceStr;
+        document.getElementById('transfer-total-price').textContent = priceStr;
+    } else {
+        // Modo Carrito
+        if (window.cart.length === 0) {
+            showToast("Tu carrito está vacío.", true);
+            return;
+        }
+        singleView.style.display = 'none';
+        multiView.style.display = 'block';
+        window.renderCartItems();
+    }
 
     if (window.lucide) window.lucide.createIcons();
-
-    // Reset total prices
-    const priceStr = '$' + LICENSE_CONFIGS.basic.price.toFixed(2) + ' USD';
-    document.getElementById('deuna-total-price').textContent = priceStr;
-    document.getElementById('transfer-total-price').textContent = priceStr;
 
     updateCheckoutStepView(1);
     document.getElementById('beat-checkout-modal').style.display = 'flex';
@@ -9132,7 +9325,8 @@ window.updateCheckoutStepView = function(step) {
 
     if (step === 1) {
         prevBtn.style.display = 'none';
-        cancelBtn.style.display = 'block';
+        cancelBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
     } else {
         prevBtn.style.display = 'block';
         cancelBtn.style.display = 'none';
@@ -9545,14 +9739,7 @@ function setupStoreCheckout() {
 
     nextBtn.addEventListener('click', async () => {
         if (checkoutCurrentStep === 1) {
-            // Validar monto para exclusiva si está seleccionada
-            if (checkoutSelectedLicense === 'exclusive') {
-                const price = window.getCheckoutPrice();
-                if (isNaN(price) || price < 250) {
-                    showToast('El monto mínimo para la licencia Exclusiva es de $250 USD.', true);
-                    return;
-                }
-            }
+            // Nota: El botón Siguiente ya no se muestra en paso 1, pero lo dejamos como fallback
             updateCheckoutStepView(2);
         } else if (checkoutCurrentStep === 2) {
             const buyerName = document.getElementById('buyer-name').value.trim();
@@ -9572,6 +9759,71 @@ function setupStoreCheckout() {
                 document.getElementById('beat-checkout-modal').style.display = 'none';
             }
         }
+    });
+
+    // Escuchadores para nuevos botones del carrito e individuales en Paso 1
+    document.getElementById('btn-checkout-add-to-cart').addEventListener('click', () => {
+        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+        if (!beat) return;
+        const price = window.getCheckoutPrice();
+        const producerId = window.storeProducerUid;
+        const producerName = window.storeProducerConfig.aka || window.storeProducerConfig.name || 'Productor';
+        const artwork = beat.artwork || '';
+
+        // Exclusiva validar precio mínimo
+        if (checkoutSelectedLicense === 'exclusive' && (isNaN(price) || price < 250)) {
+            showToast('El monto mínimo para la licencia Exclusiva es de $250 USD.', true);
+            return;
+        }
+
+        const added = window.addToCart(checkoutSelectedBeatId, checkoutSelectedLicense, price, beat.name, producerId, producerName, artwork);
+        if (added) {
+            document.getElementById('beat-checkout-modal').style.display = 'none';
+        }
+    });
+
+    document.getElementById('btn-checkout-buy-now').addEventListener('click', () => {
+        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+        if (!beat) return;
+        const price = window.getCheckoutPrice();
+        const producerId = window.storeProducerUid;
+        const producerName = window.storeProducerConfig.aka || window.storeProducerConfig.name || 'Productor';
+        const artwork = beat.artwork || '';
+
+        // Exclusiva validar precio mínimo
+        if (checkoutSelectedLicense === 'exclusive' && (isNaN(price) || price < 250)) {
+            showToast('El monto mínimo para la licencia Exclusiva es de $250 USD.', true);
+            return;
+        }
+
+        window.cart = [{
+            beatId: checkoutSelectedBeatId,
+            licenseType: checkoutSelectedLicense,
+            price: price,
+            beatName: beat.name,
+            producerId: producerId,
+            producerName: producerName,
+            artwork: artwork
+        }];
+        saveCartToStorage();
+        window.updateCartUI();
+        updateCheckoutStepView(2);
+    });
+
+    document.getElementById('btn-checkout-keep-shopping').addEventListener('click', () => {
+        document.getElementById('beat-checkout-modal').style.display = 'none';
+    });
+
+    document.getElementById('btn-checkout-proceed-billing').addEventListener('click', () => {
+        if (window.cart.length === 0) {
+            showToast("Tu carrito está vacío.", true);
+            return;
+        }
+        updateCheckoutStepView(2);
+    });
+
+    document.getElementById('floating-cart-btn')?.addEventListener('click', () => {
+        window.openBeatCheckoutModal(null);
     });
 
     uploadReceiptBtn.addEventListener('click', () => {
@@ -9614,7 +9866,14 @@ function renderStorePayPalButton(clientId) {
     container.innerHTML = '';
     
     const price = window.getCheckoutPrice();
-    const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+    let description = '';
+    
+    if (checkoutSelectedBeatId) {
+        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+        description = `Licencia ${checkoutSelectedLicense.toUpperCase()} - Beat: ${beat ? beat.name : 'Desconocido'}`;
+    } else {
+        description = `Licencias de Beats: ${window.cart.map(item => `${item.beatName} (${item.licenseType.toUpperCase()})`).join(', ')}`;
+    }
     
     if (window.paypal) {
         window.paypal.Buttons({
@@ -9625,7 +9884,7 @@ function renderStorePayPalButton(clientId) {
                             currency_code: 'USD',
                             value: price.toFixed(2)
                         },
-                        description: `Licencia ${checkoutSelectedLicense.toUpperCase()} - Beat: ${beat.name}`
+                        description: description.substring(0, 127)
                     }]
                 });
             },
@@ -9645,7 +9904,6 @@ function renderStorePayPalButton(clientId) {
 }
 
 async function submitBeatPurchasePayment(method, reference = '') {
-    const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
     const buyerName = document.getElementById('buyer-name').value.trim();
     const buyerEmail = document.getElementById('buyer-email').value.trim();
     const buyerPhone = document.getElementById('buyer-phone').value.trim();
@@ -9664,53 +9922,93 @@ async function submitBeatPurchasePayment(method, reference = '') {
         return;
     }
 
-    const price = window.getCheckoutPrice();
-    
-    const orderData = {
-        type: 'beat_purchase',
-        producerId: window.storeProducerUid,
-        beatId: checkoutSelectedBeatId,
-        beatName: beat.name,
-        licenseType: checkoutSelectedLicense,
-        price: price,
-        buyerName: buyerName,
-        buyerEmail: buyerEmail,
-        buyerPhone: buyerPhone,
-        buyerDni: buyerDni,
-        buyerCity: buyerCity,
-        buyerCountry: buyerCountry,
-        method: method,
-        reference: reference || ('REF-' + Date.now()),
-        receiptUrl: storePaymentReceiptBase64 || '',
-        status: method === 'paypal' ? 'approved' : 'pending',
-        timestamp: new Date().toISOString()
-    };
+    // Identificar los items a comprar
+    let itemsToProcess = [];
+    if (checkoutSelectedBeatId) {
+        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+        if (!beat) return;
+        itemsToProcess.push({
+            beatId: checkoutSelectedBeatId,
+            beatName: beat.name,
+            licenseType: checkoutSelectedLicense,
+            price: window.getCheckoutPrice()
+        });
+    } else {
+        itemsToProcess = window.cart.map(item => ({
+            beatId: item.beatId,
+            beatName: item.beatName,
+            licenseType: item.licenseType,
+            price: item.price
+        }));
+    }
 
-    try {
-        const nextBtn = document.getElementById('btn-checkout-next');
-        const originalText = nextBtn.innerHTML;
+    if (itemsToProcess.length === 0) {
+        showToast("No hay beats en tu pedido.", true);
+        return;
+    }
+
+    const nextBtn = document.getElementById('btn-checkout-next');
+    const originalText = nextBtn ? nextBtn.innerHTML : 'Confirmar Compra';
+    if (nextBtn) {
         nextBtn.disabled = true;
         nextBtn.innerHTML = '⏳ Guardando pedido...';
+    }
 
-        const colRef = collection(db, "payments");
-        const docRef = await addDoc(colRef, orderData);
-        
+    const transactionId = reference || ('TXN-' + Date.now());
+    const colRef = collection(db, "payments");
+
+    try {
+        for (const item of itemsToProcess) {
+            const orderData = {
+                type: 'beat_purchase',
+                producerId: window.storeProducerUid,
+                beatId: item.beatId,
+                beatName: item.beatName,
+                licenseType: item.licenseType,
+                price: item.price,
+                buyerName: buyerName,
+                buyerEmail: buyerEmail,
+                buyerPhone: buyerPhone,
+                buyerDni: buyerDni,
+                buyerCity: buyerCity,
+                buyerCountry: buyerCountry,
+                method: method,
+                reference: transactionId,
+                receiptUrl: storePaymentReceiptBase64 || '',
+                status: method === 'paypal' ? 'approved' : 'pending',
+                timestamp: new Date().toISOString()
+            };
+
+            const docRef = await addDoc(colRef, orderData);
+            
+            if (method === 'paypal') {
+                await autoDeliverBeatSale(docRef.id, orderData);
+            }
+        }
+
         if (method === 'paypal') {
-            showToast('¡Pago procesado con éxito!');
-            await autoDeliverBeatSale(docRef.id, orderData);
+            showToast('¡Pago procesado y licencias enviadas con éxito!');
         } else {
             showToast('¡Pedido registrado! Esperando aprobación del productor.');
         }
-        
+
+        // Vaciar el carrito
+        window.cart = [];
+        saveCartToStorage();
+        window.updateCartUI();
+
         document.getElementById('beat-checkout-modal').style.display = 'none';
-        nextBtn.disabled = false;
-        nextBtn.innerHTML = originalText;
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = originalText;
+        }
     } catch (e) {
         console.error("Error al registrar pedido:", e);
         showToast("Error al procesar el pedido: " + e.message, true);
-        const nextBtn = document.getElementById('btn-checkout-next');
-        nextBtn.disabled = false;
-        nextBtn.innerHTML = 'Confirmar Compra';
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = 'Confirmar Compra';
+        }
     }
 }
 

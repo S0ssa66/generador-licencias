@@ -2716,11 +2716,33 @@
                     <div class="checkout-step-indicator" data-step="3" style="position: relative; z-index: 2; background: #0c0e14; border: 2px solid rgba(255,255,255,0.1); color: #8a91a6; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">3</div>
                 </div>
 
-                <!-- PASO 1: Selección de Licencia -->
+                <!-- PASO 1: Selección de Licencia / Carrito -->
                 <div class="checkout-step-panel" id="checkout-panel-1">
-                    <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;">1. Selecciona el Tipo de Licencia:</h3>
-                    <div style="display: flex; flex-direction: column; gap: 12px;" id="license-options-container">
-                        <!-- Cargado dinámicamente -->
+                    <!-- Vista de selección para un solo beat -->
+                    <div id="checkout-single-beat-view">
+                        <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;">1. Selecciona el Tipo de Licencia:</h3>
+                        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;" id="license-options-container">
+                            <!-- Cargado dinámicamente -->
+                        </div>
+                        <div style="display: flex; gap: 12px; margin-top: 20px;">
+                            <button type="button" class="btn btn-secondary" id="btn-checkout-add-to-cart" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Agregar al Carrito</button>
+                            <button type="button" class="btn btn-primary" id="btn-checkout-buy-now" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Comprar Ahora</button>
+                        </div>
+                    </div>
+                    <!-- Vista de múltiples beats en el carrito -->
+                    <div id="checkout-multi-beat-view" style="display: none;">
+                        <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;">1. Tu Carrito de Compras:</h3>
+                        <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; box-sizing: border-box;" id="cart-items-container">
+                            <!-- Items del carrito cargados dinámicamente -->
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 16px; border-radius: 12px; box-sizing: border-box; margin-bottom: 16px;">
+                            <span style="font-size: 14px; font-weight: 600; color: #8a91a6;">Total del Carrito:</span>
+                            <span id="cart-total-price-display" style="font-size: 18px; font-weight: 800; color: var(--accent, #00ccff);">$0.00 USD</span>
+                        </div>
+                        <div style="display: flex; gap: 12px; margin-top: 20px;">
+                            <button type="button" class="btn btn-secondary" id="btn-checkout-keep-shopping" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Seguir Comprando</button>
+                            <button type="button" class="btn btn-primary" id="btn-checkout-proceed-billing" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Continuar</button>
+                        </div>
                     </div>
                 </div>
 
@@ -2906,6 +2928,12 @@
 
     <!-- Hidden shared file uploader -->
     <input type="file" id="shared-file-uploader" style="display: none;">
+
+    <!-- Botón Flotante del Carrito -->
+    <div id="floating-cart-btn" style="position: fixed; bottom: 100px; right: 24px; z-index: 999; display: none; align-items: center; justify-content: center; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--accent, #00ccff) 0%, #0055ee 100%); box-shadow: 0 10px 30px rgba(0, 204, 255, 0.3); border: 2px solid rgba(255,255,255,0.1); cursor: pointer; transition: transform 0.2s, hover 0.2s;">
+        <i data-lucide="shopping-cart" style="width: 26px; height: 26px; color: #fff;"></i>
+        <span id="cart-count-badge" style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: #fff; font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 10px; border: 2px solid #0c0e14;">0</span>
+    </div>
 </body>
 </html>
 
