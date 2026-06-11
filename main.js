@@ -10176,7 +10176,7 @@ window.showAppView = function(viewName, params = null, pushState = true) {
     // 2. Mostrar y configurar el contenedor de la vista solicitada
     if (viewName === 'home') {
         if (window.currentUser) {
-            if (appContainer) appContainer.style.display = 'flex';
+            if (appContainer) appContainer.style.display = 'grid';
         } else {
             if (landing) landing.style.display = 'block';
         }
