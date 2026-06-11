@@ -13,6 +13,7 @@ import {
     getRedirectResult,
     onAuthStateChanged,
     unlink,
+    linkWithPopup,
     doc,
     setDoc,
     getDoc,
@@ -928,6 +929,9 @@ async function loadProducerConfig() {
             }
         }
     }
+
+    // Cargar estado de la vinculación de Google para iniciar sesión
+    updateGoogleLoginLinkStatus();
 }
 
 // Guardar configuración de productor
@@ -1777,6 +1781,12 @@ function setupEventListeners() {
     const btnLinkCentralGDrive = document.getElementById('btn-link-central-gdrive');
     if (btnLinkCentralGDrive) {
         btnLinkCentralGDrive.addEventListener('click', initPlatformGDriveOAuth);
+    }
+
+    // Vinculación de Google Account para Login
+    const btnLinkGoogleLogin = document.getElementById('btn-link-google-login');
+    if (btnLinkGoogleLogin) {
+        btnLinkGoogleLogin.addEventListener('click', linkGoogleAccountForLogin);
     }
 
     // Evento Canjear Código VIP
@@ -4656,6 +4666,70 @@ function initPlatformGDriveOAuth() {
         }
     });
     client.requestCode();
+}
+
+// Cargar estado de la cuenta de Google vinculada para iniciar sesión
+function updateGoogleLoginLinkStatus() {
+    const statusEl = document.getElementById('cfg-google-login-status');
+    const btnLink = document.getElementById('btn-link-google-login');
+    if (!statusEl || !btnLink) return;
+
+    const user = auth.currentUser;
+    if (user) {
+        const googleProv = user.providerData.find(p => p.providerId === 'google.com');
+        if (googleProv) {
+            statusEl.innerHTML = `<span style="color: #48bb78; font-weight: 600;">✓ Vinculado a:</span> ${googleProv.email || user.email}`;
+            btnLink.innerHTML = `<i data-lucide="link-2-off" style="width: 14px; height: 14px;"></i> Desvincular Cuenta`;
+            btnLink.className = "btn btn-secondary";
+            btnLink.style.background = "rgba(239, 68, 68, 0.1)";
+            btnLink.style.borderColor = "rgba(239, 68, 68, 0.2)";
+            btnLink.style.color = "#ef4444";
+        } else {
+            statusEl.innerHTML = `<span style="color: #e53e3e; font-weight: 600;">✗ No vinculado</span><br><span style="font-size: 10px; color: #8a91a6;">Vincula tu cuenta de Google para iniciar sesión con un solo clic.</span>`;
+            btnLink.innerHTML = `<i data-lucide="link" style="width: 14px; height: 14px;"></i> Vincular Cuenta de Google`;
+            btnLink.className = "btn btn-secondary";
+            btnLink.style.background = "rgba(255, 255, 255, 0.05)";
+            btnLink.style.borderColor = "var(--border-color)";
+            btnLink.style.color = "#fff";
+        }
+        safeCreateIcons();
+    }
+}
+
+// Iniciar flujo para vincular/desvincular cuenta de Google de inicio de sesión
+async function linkGoogleAccountForLogin() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const googleProv = user.providerData.find(p => p.providerId === 'google.com');
+    if (googleProv) {
+        if (!confirm("¿Estás seguro de desvincular tu cuenta de Google? Tendrás que iniciar sesión con tu correo y contraseña.")) return;
+        try {
+            showToast("Desvinculando cuenta de Google...");
+            await unlink(user, 'google.com');
+            showToast("Cuenta de Google desvinculada");
+            updateGoogleLoginLinkStatus();
+        } catch (err) {
+            console.error("Error al desvincular Google:", err);
+            showToast("Error al desvincular: " + err.message, true);
+        }
+    } else {
+        try {
+            showToast("Iniciando vinculación con Google...");
+            const result = await linkWithPopup(user, googleProvider);
+            if (result && result.user) {
+                showToast("¡Cuenta de Google vinculada con éxito!");
+                updateGoogleLoginLinkStatus();
+            }
+        } catch (err) {
+            console.error("Error al vincular Google:", err);
+            if (err.code === 'auth/credential-already-in-use') {
+                showToast("Esta cuenta de Google ya está vinculada a otro usuario.", true);
+            } else {
+                showToast("Error al vincular: " + err.message, true);
+            }
+        }
+    }
 }
 
 // Obtener token de acceso para la cuenta central de Google Drive de Sossa

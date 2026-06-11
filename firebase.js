@@ -9,7 +9,8 @@ import {
     signInWithRedirect,
     getRedirectResult,
     onAuthStateChanged,
-    unlink
+    unlink,
+    linkWithPopup
 } from "firebase/auth";
 import { 
     getFirestore, 
@@ -66,6 +67,7 @@ export {
     getRedirectResult,
     onAuthStateChanged,
     unlink,
+    linkWithPopup,
     doc,
     setDoc,
     getDoc,

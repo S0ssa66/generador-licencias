@@ -2036,6 +2036,15 @@
                           <input type="text" id="cfg-paypal-client-id" placeholder="Client ID (Opcional)">
                       </div>
                   </div>
+                  <!-- Vinculación de cuenta de Google para Inicio de Sesión -->
+                  <div class="input-group" style="margin-top: 12px; border: 1px dashed var(--border-color); padding: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.01); box-sizing: border-box;">
+                      <label style="font-weight: 600; margin-bottom: 4px;">Acceso con Google</label>
+                      <div id="cfg-google-login-status" style="font-size: 11px; color: #8a91a6; margin-bottom: 8px; line-height: 1.4;">Verificando estado...</div>
+                      <button type="button" id="btn-link-google-login" class="btn btn-secondary" style="width: 100%; height: 36px; font-size: 12px; justify-content: center; gap: 4px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: #fff; border-radius: 8px; cursor: pointer;">
+                          <i data-lucide="link" style="width: 14px; height: 14px;"></i> Vincular Cuenta de Google
+                      </button>
+                  </div>
+
                   <div class="input-group admin-only-field" id="cfg-gdrive-link-container" style="display: none; margin-top: 12px; border: 1px dashed var(--border-color); padding: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.01); box-sizing: border-box;">
                       <label style="font-weight: 600; margin-bottom: 4px;">Vincular Google Drive Central (SaaS)</label>
                       <div id="cfg-gdrive-central-status" style="font-size: 11px; color: #8a91a6; margin-bottom: 8px; line-height: 1.4;">Estado: cargando...</div>
