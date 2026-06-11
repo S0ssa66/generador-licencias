@@ -9025,6 +9025,9 @@ window.toggleStorePlay = function(beatId) {
 };
 
 function setupStoreAudioPlayer() {
+    if (window._storeAudioPlayerConfigured) return;
+    window._storeAudioPlayerConfigured = true;
+
     const playBtn = document.getElementById('player-btn-play');
     const prevBtn = document.getElementById('player-btn-prev');
     const nextBtn = document.getElementById('player-btn-next');
@@ -10832,6 +10835,9 @@ window.playGlobalBeat = function(beatId) {
     
     const beat = window.globalBeats.find(b => b.id === beatId);
     if(beat) {
+        window.storeProducerUid = beat.producerUid;
+        window.storeProducerConfig = beat.producerConfig || {};
+
         const akaLower = (beat.producerConfig?.aka || '').toLowerCase();
         let pColor = '#00ccff';
         if (akaLower.includes('monarco')) pColor = '#ff4d4d';
@@ -10839,12 +10845,9 @@ window.playGlobalBeat = function(beatId) {
         document.documentElement.style.setProperty('--accent', pColor);
     }
 
-    if(window.playStoreBeat) {
-        window.playStoreBeat(beatId);
+    if(window.toggleStorePlay) {
+        window.toggleStorePlay(beatId);
     }
-
-    const player = document.getElementById('store-audio-player');
-    if(player) player.style.display = 'block';
 };
 
 window.openGlobalBeatCheckoutModal = function(beatId) {
@@ -10875,6 +10878,9 @@ window.openGlobalBeatCheckoutModal = function(beatId) {
 document.addEventListener('DOMContentLoaded', () => {
     if (window.setupStoreCheckout) {
         window.setupStoreCheckout();
+    }
+    if (typeof setupStoreAudioPlayer === 'function') {
+        setupStoreAudioPlayer();
     }
     
     const navBtn = document.getElementById('landing-btn-nav-catalog');
