@@ -1413,10 +1413,11 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     border: 1px solid rgba(255, 79, 112, 0.15);
 }
 
-.history-table td .actions-cell {
+.history-table td.actions-cell {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
+    white-space: nowrap;
 }
 
 .text-right {
