@@ -10051,6 +10051,13 @@ function setupStoreCheckout() {
     if (window._storeCheckoutConfigured) return;
     window._storeCheckoutConfigured = true;
 
+    window.closeBeatCheckoutModal = function() {
+        const modal = document.getElementById('beat-checkout-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    };
+
     const cancelBtn = document.getElementById('btn-checkout-cancel');
     const prevBtn = document.getElementById('btn-checkout-prev');
     const nextBtn = document.getElementById('btn-checkout-next');
