@@ -3055,6 +3055,17 @@ function compileContract() {
     const dateFormatted = (currentLang === 'en' ? formatFechaIngles(effectiveDate) : formatFechaEspanol(effectiveDate)) || "[Fecha]";
     const celebrationPlace = document.getElementById('celebration-place').value.trim() || "[Lugar de Celebración]";
     const paymentMethod = document.getElementById('payment-method').value;
+    let displayPaymentMethod = paymentMethod;
+    if (currentLang === 'en') {
+        const paymentTranslations = {
+            'PayPal': 'PayPal',
+            'Transferencia Bancaria': 'Bank Transfer',
+            'Tarjeta de Crédito': 'Credit Card',
+            'Western Union': 'Western Union',
+            'Otro': 'Other'
+        };
+        displayPaymentMethod = paymentTranslations[paymentMethod] || paymentMethod;
+    }
     
     // Cláusulas editadas
     const formats = document.getElementById('clause-formats').value.trim() || "[Formatos]";
@@ -3129,6 +3140,7 @@ function compileContract() {
         ref_code: refCode,
         effective_date: dateFormatted,
         celebration_place: celebrationPlace,
+        payment_method: displayPaymentMethod,
         jurisdiction_city: cityOfJurisdiction,
         current_year: effectiveDate ? new Date(effectiveDate + 'T00:00:00').getFullYear() : new Date().getFullYear(),
         
