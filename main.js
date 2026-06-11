@@ -871,9 +871,11 @@ async function loadProducerConfig() {
     
     // Rellenar datos de cobro de tienda pública
     document.getElementById('cfg-bank-pichincha-acc').value = producerConfig.bankPichinchaAcc || "";
+    document.getElementById('cfg-bank-pichincha-type').value = producerConfig.bankPichinchaType || "Ahorros";
     document.getElementById('cfg-bank-pichincha-name').value = producerConfig.bankPichinchaName || "";
     document.getElementById('cfg-bank-pichincha-dni').value = producerConfig.bankPichinchaDni || "";
     document.getElementById('cfg-bank-guayaquil-acc').value = producerConfig.bankGuayaquilAcc || "";
+    document.getElementById('cfg-bank-guayaquil-type').value = producerConfig.bankGuayaquilType || "Corriente";
     document.getElementById('cfg-bank-guayaquil-name').value = producerConfig.bankGuayaquilName || "";
     document.getElementById('cfg-bank-guayaquil-dni').value = producerConfig.bankGuayaquilDni || "";
     document.getElementById('cfg-deuna-phone').value = producerConfig.deunaPhone || "";
@@ -996,9 +998,11 @@ async function saveProducerConfig() {
     
     // Guardar datos de cobro de tienda pública
     producerConfig.bankPichinchaAcc = document.getElementById('cfg-bank-pichincha-acc').value.trim();
+    producerConfig.bankPichinchaType = document.getElementById('cfg-bank-pichincha-type').value;
     producerConfig.bankPichinchaName = document.getElementById('cfg-bank-pichincha-name').value.trim();
     producerConfig.bankPichinchaDni = document.getElementById('cfg-bank-pichincha-dni').value.trim();
     producerConfig.bankGuayaquilAcc = document.getElementById('cfg-bank-guayaquil-acc').value.trim();
+    producerConfig.bankGuayaquilType = document.getElementById('cfg-bank-guayaquil-type').value;
     producerConfig.bankGuayaquilName = document.getElementById('cfg-bank-guayaquil-name').value.trim();
     producerConfig.bankGuayaquilDni = document.getElementById('cfg-bank-guayaquil-dni').value.trim();
     producerConfig.deunaPhone = document.getElementById('cfg-deuna-phone').value.trim();
@@ -9417,9 +9421,10 @@ window.updateCheckoutStepView = function(step) {
                 pichinchaCard.style.display = 'block';
                 const pichName = window.storeProducerConfig.bankPichinchaName || "";
                 const pichDni = window.storeProducerConfig.bankPichinchaDni || "";
+                const pichType = window.storeProducerConfig.bankPichinchaType || "Ahorros";
                 pichinchaCard.innerHTML = `
                     <div style="font-weight: 700; font-size: 12px; color: #f59e0b; margin-bottom: 8px;">🏦 BANCO PICHINCHA</div>
-                    <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta: <strong id="pichincha-info-acc">${pichinchaAcc}</strong> ${makeCopyBtn(pichinchaAcc, 'Cuenta')}</div>
+                    <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta (${pichType}): <strong id="pichincha-info-acc">${pichinchaAcc}</strong> ${makeCopyBtn(pichinchaAcc, 'Cuenta')}</div>
                     <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="pichincha-info-name">${pichName}</span> ${makeCopyBtn(pichName, 'Titular')}</div>
                     <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="pichincha-info-dni">${pichDni}</span> ${makeCopyBtn(pichDni, 'CI/RUC')}</div>
                 `;
@@ -9433,9 +9438,10 @@ window.updateCheckoutStepView = function(step) {
                 guayaquilCard.style.display = 'block';
                 const guayName = window.storeProducerConfig.bankGuayaquilName || "";
                 const guayDni = window.storeProducerConfig.bankGuayaquilDni || "";
+                const guayType = window.storeProducerConfig.bankGuayaquilType || "Corriente";
                 guayaquilCard.innerHTML = `
                     <div style="font-weight: 700; font-size: 12px; color: #ec4899; margin-bottom: 8px;">🏦 BANCO GUAYAQUIL</div>
-                    <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta: <strong id="guayaquil-info-acc">${guayaquilAcc}</strong> ${makeCopyBtn(guayaquilAcc, 'Cuenta')}</div>
+                    <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta (${guayType}): <strong id="guayaquil-info-acc">${guayaquilAcc}</strong> ${makeCopyBtn(guayaquilAcc, 'Cuenta')}</div>
                     <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="guayaquil-info-name">${guayName}</span> ${makeCopyBtn(guayName, 'Titular')}</div>
                     <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="guayaquil-info-dni">${guayDni}</span> ${makeCopyBtn(guayDni, 'CI/RUC')}</div>
                 `;
