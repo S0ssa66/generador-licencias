@@ -8434,6 +8434,16 @@ function togglePlayBeat(beatId, mp3Url) {
             if (err) errMsg = `Código ${err.code}: ${err.message || ''}`;
             showToast("Error de audio: " + errMsg, true);
         });
+
+        currentPlayingAudio.addEventListener('timeupdate', () => {
+            if (currentPlayingAudio && currentPlayingAudio.currentTime >= 30) {
+                currentPlayingAudio.pause();
+                currentPlayingAudio = null;
+                currentPlayingBeatId = null;
+                renderBeatsGrid();
+                showToast("Fin del preview de 30 segundos");
+            }
+        });
         
         currentPlayingAudio.play().then(() => {
             renderBeatsGrid();
@@ -9232,9 +9242,10 @@ window.toggleStorePlay = function(beatId) {
             showToast("Error de audio: " + errMsg, true);
         });
 
-        currentStoreAudio.addEventListener('timeupdate', updatePlayerProgress);
         currentStoreAudio.addEventListener('loadedmetadata', () => {
-            document.getElementById('player-time-duration').textContent = formatAudioTime(currentStoreAudio.duration);
+            const d = currentStoreAudio.duration;
+            const maxDuration = (!d || d === Infinity || isNaN(d) || d > 30) ? 30 : d;
+            document.getElementById('player-time-duration').textContent = formatAudioTime(maxDuration);
         });
         currentStoreAudio.addEventListener('ended', () => {
             setPlayButtonState(beatId, false);
@@ -9242,11 +9253,14 @@ window.toggleStorePlay = function(beatId) {
         });
 
         document.getElementById('player-title').textContent = beat.name;
+        document.getElementById('player-time-duration').textContent = '0:30';
         document.getElementById('player-info').textContent = `${beat.bpm ? beat.bpm + ' BPM' : ''} ${beat.key ? '• ' + beat.key : ''} ${beat.genre ? '• ' + beat.genre : ''}`;
         const pConfig = beat.producerConfig || {};
         const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(pConfig) : pConfig.logoBase64;
         document.getElementById('player-artwork').src = beat.artwork || producerLogo || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=100&auto=format&fit=crop');
         player.style.display = 'block';
+
+        currentStoreAudio.addEventListener('timeupdate', updatePlayerProgress);
 
         document.getElementById('player-btn-buy').onclick = () => window.openBeatCheckoutModal(beatId);
 
@@ -9286,10 +9300,12 @@ function setupStoreAudioPlayer() {
     });
 
     progressContainer.addEventListener('click', (e) => {
-        if (currentStoreAudio && currentStoreAudio.duration) {
+        if (currentStoreAudio) {
             const rect = progressContainer.getBoundingClientRect();
             const percentage = (e.clientX - rect.left) / rect.width;
-            currentStoreAudio.currentTime = percentage * currentStoreAudio.duration;
+            const d = currentStoreAudio.duration;
+            const maxDuration = (!d || d === Infinity || isNaN(d) || d > 30) ? 30 : d;
+            currentStoreAudio.currentTime = percentage * maxDuration;
         }
     });
 }
@@ -9418,17 +9434,30 @@ window.updateExclusivePrice = function(val) {
 };
 
 function formatAudioTime(secs) {
-    if (isNaN(secs)) return '0:00';
+    if (isNaN(secs) || secs === Infinity) return '0:00';
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
 function updatePlayerProgress() {
-    if (currentStoreAudio && currentStoreAudio.duration) {
-        const percent = (currentStoreAudio.currentTime / currentStoreAudio.duration) * 100;
+    if (currentStoreAudio) {
+        const d = currentStoreAudio.duration;
+        const maxDuration = (!d || d === Infinity || isNaN(d) || d > 30) ? 30 : d;
+        
+        // Si superamos los 30 segundos, detenemos y pasamos al siguiente
+        if (currentStoreAudio.currentTime >= maxDuration) {
+            currentStoreAudio.pause();
+            currentStoreAudio.currentTime = 0;
+            setPlayButtonState(currentStorePlayingBeatId, false);
+            playNextBeat();
+            return;
+        }
+        
+        const percent = (currentStoreAudio.currentTime / maxDuration) * 100;
         document.getElementById('player-progress-bar').style.width = `${percent}%`;
         document.getElementById('player-time-current').textContent = formatAudioTime(currentStoreAudio.currentTime);
+        document.getElementById('player-time-duration').textContent = formatAudioTime(maxDuration);
     }
 }
 
