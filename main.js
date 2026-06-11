@@ -2739,6 +2739,46 @@ function formatFechaEspanol(dateString) {
     return `${diaSemana}, ${diaMes} de ${mes} de ${anio}`;
 }
 
+function formatFechaIngles(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString + 'T00:00:00');
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    const dayName = days[date.getDay()];
+    const month = months[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+    
+    return `${dayName}, ${month} ${day}, ${year}`;
+}
+
+function numberToEnglishWords(num) {
+    const decs = Math.round((num - Math.floor(num)) * 100);
+    const entero = Math.floor(num);
+
+    const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 
+                  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+    const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+    function convert(n) {
+        if (n < 20) return ones[n];
+        if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 > 0 ? '-' + ones[n % 10] : '');
+        if (n < 1000) return ones[Math.floor(n / 100)] + ' hundred' + (n % 100 > 0 ? ' and ' + convert(n % 100) : '');
+        if (n < 1000000) return convert(Math.floor(n / 1000)) + ' thousand' + (n % 1000 > 0 ? ' ' + convert(n % 1000) : '');
+        return '';
+    }
+
+    let result = entero === 0 ? 'zero' : convert(entero);
+    result = result.trim();
+
+    if (decs > 0) {
+        return `${result} and ${decs}/100`;
+    }
+    return result;
+}
+
+
 // Obtener nombre del tipo de licencia activo
 function getActiveLicenseType() {
     const activeBtn = document.querySelector('.license-btn.active');
@@ -3012,7 +3052,7 @@ function compileContract() {
     const value = parseFloat(document.getElementById('license-value').value) || 0;
     const refCode = document.getElementById('ref-code').value.trim() || "[Código Referencia]";
     const effectiveDate = document.getElementById('effective-date').value;
-    const dateFormatted = formatFechaEspanol(effectiveDate) || "[Fecha]";
+    const dateFormatted = (currentLang === 'en' ? formatFechaIngles(effectiveDate) : formatFechaEspanol(effectiveDate)) || "[Fecha]";
     const celebrationPlace = document.getElementById('celebration-place').value.trim() || "[Lugar de Celebración]";
     const paymentMethod = document.getElementById('payment-method').value;
     
@@ -3029,8 +3069,10 @@ function compileContract() {
     const credits = document.getElementById('clause-credits').value.trim() || "[Créditos]";
     const contentIdProhibited = document.getElementById('clause-content-id').checked;
 
-    const valueLetters = numeroALetras(value);
-    const tierName = LICENSE_CONFIGS[type] ? LICENSE_CONFIGS[type].name : "Personalizada";
+    const valueLetters = currentLang === 'en' ? numberToEnglishWords(value) : numeroALetras(value);
+    const tierName = LICENSE_CONFIGS[type] 
+        ? (currentLang === 'en' ? (type === 'exclusive' ? 'Exclusive' : type === 'premium' ? 'Premium' : type === 'premium_plus' ? 'Premium Plus' : type === 'unlimited_flp' ? 'Unlimited' : 'Basic') : LICENSE_CONFIGS[type].name)
+        : (currentLang === 'en' ? 'Custom' : 'Personalizada');
 
     // Extraer ciudad del lugar de firma para la jurisdicción
     const cityParts = celebrationPlace.split(',');
@@ -3046,12 +3088,20 @@ function compileContract() {
 
     // Resolver cláusulas condicionales
     const clause_rescission_rules = isExclusive 
-        ? 'Una vez vencido o perpetuo el acuerdo, los derechos se mantendrán según lo estipulado sin necesidad de renovación.'
-        : 'En consecuencia, esta licencia expirará automáticamente al cumplirse el término estipulado contados a partir de la fecha estipulada en el encabezado.';
+        ? (currentLang === 'en' 
+            ? 'Once the agreement expires or becomes perpetual, the rights will be maintained as stipulated without the need for renewal.'
+            : 'Una vez vencido o perpetuo el acuerdo, los derechos se mantendrán según lo estipulado sin necesidad de renovación.')
+        : (currentLang === 'en'
+            ? 'Consequently, this license will automatically expire upon the completion of the term stipulated, counted from the date stipulated in the header.'
+            : 'En consecuencia, esta licencia expirará automáticamente al cumplirse el término estipulado contados a partir de la fecha estipulada en el encabezado.');
 
     const clause_content_id_rules = contentIdProhibited
-        ? 'El Licenciatario tiene **estrictamente prohibido** registrar el Beat o la Nueva Canción en cualquier plataforma de identificación automatizada de contenido (*Content ID*, *Facebook Rights Manager*, *Identifyy*, o herramientas de distribución digital automáticas como TuneCore, CD Baby o DistroKid que indexen huellas de audio). Esta medida es obligatoria para resguardar los derechos de otros licenciatarios legítimos del mismo Beat. El material original ya ha sido indexado y protegido preventivamente por el Productor. El incumplimiento de esta norma provocará la revocación inmediata de la licencia.'
-        : 'Al tratarse de una Licencia Exclusiva, el Licenciatario está facultado para la distribución digital estándar y el uso del sistema Content ID de manera controlada sobre su versión final (la Nueva Canción) siempre y cuando no reclame derechos de autoría exclusiva sobre la pista instrumental en sí misma.';
+        ? (currentLang === 'en'
+            ? 'The Licensee is **strictly prohibited** from registering the Beat or the New Song in any automated content identification system (such as *Content ID*, *Facebook Rights Manager*, *Identifyy*, or automatic digital distribution tools like TuneCore, CD Baby, or DistroKid that index audio fingerprints). This measure is mandatory to protect the rights of other legitimate licensees of the same Beat. The original material has already been indexed and preventively protected by the Producer. Failure to comply with this rule will result in the immediate revocation of the license.'
+            : 'El Licenciatario tiene **estrictamente prohibido** registrar el Beat o la Nueva Canción en cualquier plataforma de identificación automatizada de contenido (*Content ID*, *Facebook Rights Manager*, *Identifyy*, o herramientas de distribución digital automáticas como TuneCore, CD Baby o DistroKid que indexen huellas de audio). Esta medida es obligatoria para resguardar los derechos de otros licenciatarios legítimos del mismo Beat. El material original ya ha sido indexado y protegido preventivamente por el Productor. El incumplimiento de esta norma provocará la revocación inmediata de la licencia.')
+        : (currentLang === 'en'
+            ? 'As this is an Exclusive License, the Licensee is authorized to execute standard digital distribution and use the Content ID system in a controlled manner on their final version (the New Song) as long as they do not claim exclusive authorship rights over the instrumental track itself.'
+            : 'Al tratarse de una Licencia Exclusiva, el Licenciatario está facultado para la distribución digital estándar y el uso del sistema Content ID de manera controlada sobre su versión final (la Nueva Canción) siempre y cuando no reclame derechos de autoría exclusiva sobre la pista instrumental en sí misma.');
 
     // Configurar variables de reemplazo
     const vars = {
@@ -3079,7 +3129,6 @@ function compileContract() {
         ref_code: refCode,
         effective_date: dateFormatted,
         celebration_place: celebrationPlace,
-        payment_method: paymentMethod,
         jurisdiction_city: cityOfJurisdiction,
         current_year: effectiveDate ? new Date(effectiveDate + 'T00:00:00').getFullYear() : new Date().getFullYear(),
         
@@ -3095,8 +3144,8 @@ function compileContract() {
         clause_credits: credits,
         
         license_type: tierName,
-        license_exclusivity: isExclusive ? 'Exclusiva' : 'No Exclusiva',
-        license_exclusivity_lower: isExclusive ? 'exclusiva' : 'no exclusiva',
+        license_exclusivity: isExclusive ? (currentLang === 'en' ? 'Exclusive' : 'Exclusiva') : (currentLang === 'en' ? 'Non-Exclusive' : 'No Exclusiva'),
+        license_exclusivity_lower: isExclusive ? (currentLang === 'en' ? 'exclusive' : 'exclusiva') : (currentLang === 'en' ? 'non-exclusive' : 'no exclusiva'),
         clause_rescission_rules: clause_rescission_rules,
         clause_content_id_rules: clause_content_id_rules
     };
@@ -3118,7 +3167,8 @@ function compileContract() {
     }
 
     // Compilar Markdown
-    let md = activeTemplate.markdown.replace(/\{\{(\w+)\}\}/g, (match, tag) => {
+    const templateMarkdown = (currentLang === 'en' && activeTemplate.markdown_en) ? activeTemplate.markdown_en : activeTemplate.markdown;
+    let md = templateMarkdown.replace(/\{\{(\w+)\}\}/g, (match, tag) => {
         const tagLower = tag.toLowerCase();
         return tagLower in vars ? vars[tagLower] : match;
     });

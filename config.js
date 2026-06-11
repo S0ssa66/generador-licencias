@@ -246,7 +246,92 @@ No obstante, en caso de no mediar una firma manuscrita, el Licenciatario declara
 Como medida de seguridad e integridad contractual, este documento incorpora el logotipo oficial de **{{producer_aka}}** en marca de agua y un código de referencia único Invoice # **{{ref_code}}**. La remoción, ocultamiento o alteración digital de cualquiera de estos elementos de seguridad anula de forma automática e inmediata la validez de la presente licencia y los derechos de explotación sobre el Beat.
 
 ---
-*Fin del Contrato de Licencia Comercial {{license_type}} — {{producer_aka}} {{current_year}}.*`
+*Fin del Contrato de Licencia Comercial {{license_type}} — {{producer_aka}} {{current_year}}.*`,
+        markdown_en: `# {{producer_aka}}: {{license_type}} Music License Agreement
+## {{license_exclusivity}} License Agreement for the Exploitation of the Work "{{beat_name}}"
+
+---
+
+### General Document Information
+* **Reference Code:** Invoice # {{ref_code}}
+* **Effective Date:** {{effective_date}}
+* **Place of Celebration:** {{celebration_place}}
+* **Payment Method:** {{payment_method}}
+
+---
+
+## Intervening Parties
+This {{license_type}} {{license_exclusivity}} License Agreement (hereinafter, the "Agreement") is entered into and declared in force by and between the following parties:
+
+1. **The Licensor (Producer):** {{producer_name}}, professionally known in the music industry as **{{producer_aka}}** (hereinafter, the "Producer"), with ID/Passport No. {{producer_id}}, contact email: {{producer_email}}, and phone/WhatsApp: {{producer_phone}}.
+2. **The Licensee (User):** {{buyer_name}}, with ID/Passport No. {{buyer_id}}, registered legal address in the city of {{buyer_city}}, {{buyer_country}}, contact email registered on the platform: {{buyer_email}}, and phone/WhatsApp: {{buyer_phone}} (hereinafter, the "Licensee").
+
+Both parties, by mutual agreement and with full legal capacity to bind themselves, subscribe to the clauses and conditions detailed below in this legal instrument.
+
+---
+
+## Contractual Clauses
+
+### Clause 1. Object of the Contract and License Fee
+This Agreement regulates the terms, limitations, and rights granted over the instrumental audio file of exclusive property of the Producer titled **"{{beat_name}}"** (hereinafter, the "Beat").
+
+The granting of these rights is executed in consideration of the single and immediate payment by the Licensee of the amount of **\${{license_value}} USD** ({{license_value_letters}} United States Dollars), referred to as the "License Fee". The rights described herein are strictly conditioned upon the timely and complete payment of said fee; this document lacks legal validity if the payment has not been effectively processed.
+
+### Clause 2. Delivery of Musical Material
+* **2.1. Formats of Delivery:** The Licensor agrees to deliver the Beat in high-quality commercial audio files under the formats **{{clause_formats}}**, in accordance with current technical standards in the phonographic industry.
+* **2.2. Shipping Method:** The Licensor will execute relevant commercial efforts to send the material to the Licensee immediately after payment validation. The files will be sent via email or through a secure direct digital download link.
+
+### Clause 3. Term of Validity
+The validity of the rights granted in this license will be **{{clause_years}}** from the Effective Date. {{clause_rescission_rules}}
+
+### Clause 4. Rights of Use and Limits of Commercial Exploitation
+In exchange for the payment of the License Fee, the Producer grants a limited, worldwide, {{license_exclusivity_lower}}, and non-transferable license to incorporate the Beat in the creation of **one (1) new derivative song** (hereinafter, the "New Song"). The Licensee may record their own lyrics and vocals over the Beat, as well as modify its structure, tempo, pitch, and length to adapt it to their musical interpretation.
+
+The exploitation of the New Song is subject to the following quantitative limits and restrictions:
+* **Digital Audio Streaming:** A maximum of **{{clause_streams}}** monetized audio streams is authorized on digital distribution platforms (such as Spotify, Apple Music, Deezer, or Amazon Music).
+* **Physical Copies and Paid Downloads:** The manufacture, sale, and distribution of up to **{{clause_physical}}** physical copies (CD, Vinyl, Cassette formats) or permanent paid downloads through online stores is permitted.
+* **Free Distribution:** An unlimited number of free non-profit digital downloads is permitted.
+* **Phonographic Royalties (Master Royalties):** Unless otherwise provided in an attached Royalty Distribution Agreement (Split Sheet), the Licensee will be entitled to receive 100% of the net income derived from the exploitation of the sound recording (Master) of the New Song on digital distribution platforms (Spotify, Apple Music, etc.) up to the quantitative limit of streams stipulated in this contract.
+
+If the Licensee exceeds any of these reproduction or sales limits, this license will be considered saturated and the Licensee will be required to purchase a higher-tier commercial license (*upgrade*) to continue exploiting the work.
+
+### Clause 5. Audiovisual Synchronization
+* **5.1. Synchronization Scope:** The Licensee is granted the non-exclusive right to synchronize the New Song with moving images for the creation of a maximum of **{{clause_videos}}** independent videos (Videos).
+* **5.2. Duration and Broadcast:** Each Video may not exceed **{{clause_video_duration}}** of screen duration (or the total duration of the New Song if it is longer). Such videos may be distributed on social networks and public digital video platforms (such as YouTube and Vevo).
+* **5.3. Major Restrictions:** The synchronization of the Beat or the New Song in film productions, short films, television programs, video games, or commercial advertisements of mass consumer brands is expressly prohibited, except by independent agreement and licensing with the Producer.
+
+### Clause 6. Restrictions of Use and Prohibition of Content ID / Digital Registration
+The Licensee absolutely agrees to comply with the following operational prohibitions:
+* **6.1. Non-transferability:** The rights granted in this contract are personal and cannot be sold, assigned, sublicensed, or transferred to any third party or record label without the prior written consent of the Producer.
+* **6.2. Digital Registration (Content ID):** {{clause_content_id_rules}}
+
+### Clause 7. Intellectual Property and Copyright (Publishing)
+* **7.1. Ownership of the Original Master:** The Producer retains absolute, exclusive, and total ownership over the copyright of the Beat, its underlying musical compositions, and its original sound recording. The Licensee will under no circumstances register or attempt to register the Beat or the New Song with the local or international Copyright Office as their own instrumental work.
+* **7.2. Composition Rights (Writer's Share):** Concerning the resulting musical work (the New Song), a division of authorship percentage is established of **{{clause_writer_share}}% for the Licensee ({{buyer_name}})** for their lyrics and original contributions, and **{{clause_producer_share}}% for the Licensor ({{producer_name}} / {{producer_aka}})** for the musical composition of the Beat (affiliated with the performance rights organization **{{producer_pro}}** under IPI number **{{producer_ipi}}** and co-published through **{{producer_publisher}}**). This percentage will apply to all publishing royalties, including but not limited to mechanical royalties, public performance royalties, and digital synchronization royalties.
+* **7.3. Publishing Rights (Publisher's Share):** The Producer will exclusively own and administer their corresponding share of the publishing rights (Publisher's Share) of the musical composition (equivalent to their **{{clause_producer_share}}%** participation share). If the Licensee registers the work with their respective Collective Management Organization or PRO (e.g., SAYCO, BMI, ASCAP, SGAE), they are required by law to simultaneously register the Producer's participation and details.
+* **7.4. Mechanical Royalties:** The payment of the License Fee constitutes a mechanical reproduction license paid only for the authorized number of physical copies and permanent downloads established in this contract. In case of exceeding these limits or as required by law, the Licensee must pay additional mechanical royalties at the current legal rate in favor of the Producer.
+
+### Clause 8. Mandatory Credit
+The Licensee will maintain the commercial and moral obligation to grant corresponding credits to the Producer in any physical, digital, or audiovisual format where the New Song is exposed to the public. The standardized and mandatory credit format must be:
+> **{{clause_credits}}**
+
+### Clause 9. Licensor's Termination Option (Safeguard Clause)
+The Licensor reserves the discretionary power and exclusive option, executable within the first **three (3) years** from the signing of this Contract, to terminate this agreement early and unilaterally by written notice. For this termination to take effect, the Licensor will pay the Licensee compensation equivalent to **{{clause_termination_fee}}**. Following notification and payment of said penalty, the Licensee will have a period of seven (7) days to take down and withdraw the New Song from all physical and digital distribution channels in the market.
+
+### Clause 10. Breach and Penalties
+Any direct or indirect violation of the clauses described in this document will entitle the Producer to terminate the license immediately and without right to refunds. The Licensee will be civilly and financially responsible for all damages, losses, legal costs, attorney fees, and court expenses incurred by the Producer to defend their intellectual property rights against unauthorized use of the musical work.
+
+### Clause 11. Applicable Law, Jurisdiction, and Competence
+This agreement is governed exclusively by the laws of the Republic of Ecuador. For any controversy, litigation, or claim arising from the interpretation, validity, or execution of this Contract, the parties expressly waive any other jurisdiction that may correspond to them by reason of their domicile and expressly submit to the jurisdiction of the competent judges and **courts of the city of {{jurisdiction_city}}**.
+
+### Clause 12. Consent, Acceptance by Payment Act, and Security Measures
+The parties agree that this contract may be executed physically, digitally, or via scanned signatures exchanged by electronic means.
+However, in the absence of a handwritten signature, the Licensee declares to have read this document and expresses their **tacit acceptance, legal consent, and absolute ratification** of each and every one of the terms described herein by executing the payment of the License Fee (\${{license_value}} USD) and the conforming receipt of the Beat musical files.
+
+As a measure of security and contractual integrity, this document incorporates the official logo of **{{producer_aka}}** as a watermark and a unique reference code Invoice # **{{ref_code}}**. The removal, concealment, or digital alteration of any of these security elements automatically and immediately nullifies the validity of this license and the exploitation rights over the Beat.
+
+---
+*End of Commercial License Agreement {{license_type}} — {{producer_aka}} {{current_year}}.*`
     },
     {
         id: "split_sheet",
@@ -290,7 +375,47 @@ En cualquier medio digital, físico o red social, se otorgará el crédito de co
 > **{{clause_credits}}**
 
 ---
-*Fin del Acuerdo de Splits — BEATSS.*`
+*Fin del Acuerdo de Splits — BEATSS.*`,
+        markdown_en: `# {{producer_aka}}: Split Sheet Agreement (Royalty Distribution)
+## Declaration and Assignment of Splits for the Co-written Song over the Instrumental "{{beat_name}}"
+
+---
+
+* **Reference Code:** Invoice # {{ref_code}}
+* **Effective Date:** {{effective_date}}
+* **Place of Celebration:** {{celebration_place}}
+
+This document (hereinafter, the "Split Agreement") confirms the participation percentages agreed in good faith and shared authorship over the musical work tentatively titled "New Song", which incorporates the instrumental audio file created by the Producer titled **"{{beat_name}}"**.
+
+---
+
+## 1. Composition and Publishing Splits
+The parties declare before their respective performance rights organizations (PROs) the following irrevocable percentages for the composition of the musical work:
+
+1. **{{producer_name}} (Affiliated/AKA: {{producer_aka}})**
+   - **Participation (Composer/Music):** {{clause_producer_share}}%
+   - **Performance Rights Organization:** {{producer_pro}}
+   - **IPI Code:** {{producer_ipi}}
+   - **Publisher / Administrator:** {{producer_publisher}}
+
+2. **{{buyer_name}} (Affiliated/AKA: Writer/Artist)**
+   - **Participation (Author/Lyrics/Vocals):** {{clause_writer_share}}%
+   - **ID/Passport No.:** {{buyer_id}}
+   - **Performance Rights Organization:** Registered independently
+
+## 2. Sound Recording Splits (Master Splits)
+Any commercial income derived from the sale or reproduction of the master sound recording (streaming on Spotify, Apple Music, digital downloads, etc.) administered by the Licensee through digital distributors (such as DistroKid, TuneCore, etc.) will be divided as follows:
+- **Artist/Licensee Share:** {{clause_writer_share}}% of net revenues received.
+- **Producer/Licensor Share:** {{clause_producer_share}}% of net revenues received.
+
+The Licensee agrees to formally set up this division (*splits*) directly on their digital distribution platform within 7 days of uploading the New Song.
+
+## 3. Mandatory Credit
+In any digital, physical medium or social network, co-production credit must be granted in the following mandatory format:
+> **{{clause_credits}}**
+
+---
+*End of Split Sheet Agreement — BEATSS.*`
     },
     {
         id: "coproduccion",
@@ -331,7 +456,43 @@ Los créditos de la composición resultante se listarán siempre de la siguiente
 > **{{clause_credits}}**
 
 ---
-*Fin del Contrato de Coproducción — BEATSS.*`
+*Fin del Contrato de Coproducción — BEATSS.*`,
+        markdown_en: `# {{producer_aka}}: Co-production and Musical Collaboration Agreement
+## Co-production Agreement for the Work "{{beat_name}}"
+
+---
+
+* **Reference Code:** Invoice # {{ref_code}}
+* **Effective Date:** {{effective_date}}
+* **Place of Celebration:** {{celebration_place}}
+
+This agreement establishes the collaboration and co-production of the musical work titled **"{{beat_name}}"** between:
+
+1. **Principal Producer:** {{producer_name}} (AKA: **{{producer_aka}}**), with ID/Passport No. {{producer_id}}.
+2. **Co-producer / Collaborator:** {{buyer_name}}, with ID/Passport No. {{buyer_id}}.
+
+---
+
+## Collaboration Clauses
+
+### 1. Object of the Co-production
+The Co-producer and the Principal Producer collaborate in finishing the instrumental audio files titled **"{{beat_name}}"**. The parties combine their individual creative elements (ideas, melodies, rhythms, chords, and stems) to create a unified phonographic master recording.
+
+### 2. Fees and Initial Compensation
+In consideration of the work provided by the Co-producer, an initial payment of **\${{license_value}} USD** ({{license_value_letters}} United States Dollars) is agreed.
+
+### 3. Rights to the Musical Composition and Master
+Commercial rights and royalties of the resulting work are distributed as follows:
+- **Principal Producer Share ({{producer_aka}}):** {{clause_producer_share}}% of all author, publishing, and master rights and royalties.
+- **Co-producer Share ({{buyer_name}}):** {{clause_writer_share}}% of all author, publishing, and master rights and royalties.
+
+Both parties register before their respective copyright societies recording their corresponding percentages.
+
+### 4. Co-production Credit
+Credits of the resulting composition will always be listed in the following manner:
+> **{{clause_credits}}**
+
+---
+*End of Co-production Agreement — BEATSS.*`
     }
 ];
-
