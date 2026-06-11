@@ -504,7 +504,7 @@ function parseAuthError(code) {
 }
 
 // Inicialización de la aplicación
-document.addEventListener('DOMContentLoaded', () => {
+const initAuthAndApp = () => {
     // Desactivar y desregistrar todos los Service Workers para evitar problemas de caché
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -606,7 +606,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAuthAndApp);
+} else {
+    initAuthAndApp();
+}
 
 async function initApp(user) {
     window.currentUser = user;
@@ -6119,7 +6125,7 @@ function renderBeatsList() {
 }
 
 // DOMContentLoaded: solo tooltips y subidas (initBeatsDB se mueve a initApp para que ocurra despues de que el usuario este establecido)
-document.addEventListener('DOMContentLoaded', () => {
+const initUIElements = () => {
     initTooltips();
     initFileUploads();
     initClearInputHandlers();
@@ -6127,7 +6133,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-close-progress')?.addEventListener('click', () => {
         document.getElementById('email-progress-modal').style.display = 'none';
     });
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initUIElements);
+} else {
+    initUIElements();
+}
 
 // Inicializar tooltips premium reemplazando el atributo 'title' nativo
 function initTooltips() {
@@ -10893,7 +10905,16 @@ window.openGlobalBeatCheckoutModal = function(beatId) {
 window.setupStoreCheckout = setupStoreCheckout;
 window.setupStoreAudioPlayer = setupStoreAudioPlayer;
 
-document.addEventListener('DOMContentLoaded', () => {
+// Run initialization either immediately or on DOMContentLoaded
+function onDOMReady(fn) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fn);
+    } else {
+        fn();
+    }
+}
+
+onDOMReady(() => {
     // Inicializar listeners inmediatamente para botones estáticos de checkout y reproductor
     if (typeof setupStoreCheckout === 'function') {
         setupStoreCheckout();
