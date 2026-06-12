@@ -35,10 +35,8 @@ service cloud.firestore {
 
     // Regla para solicitudes de pago local y compras de beats
     match /payments/{paymentId} {
-      allow create: if (request.resource.data.type == 'beat_purchase' && 
-                        request.resource.data.userId is string && 
-                        request.resource.data.producerId is string) || 
-                       (request.auth != null && request.resource.data.userId == request.auth.uid);
+      allow create: if request.resource.data.type in ['beat_purchase', 'exclusive_offer'] &&
+                       (request.resource.data.status == 'pending' || (request.auth != null && (request.auth.uid == request.resource.data.producerId || isAdmin())));
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || resource.data.producerId == request.auth.uid || isAdmin());
       allow update: if request.auth != null && (isAdmin() || resource.data.producerId == request.auth.uid);
       allow delete: if false;
@@ -92,10 +90,20 @@ service cloud.firestore {
         );
       }
 
+      // Reglas para subcolección private_config/producer
+      match /private_config/producer {
+        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      }
+
       // Reglas para subcolecciones normales
       match /beats/{beatId} {
         allow read: if true;
         allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+
+        // Enlaces de descarga privados y protegidos
+        match /private/files {
+          allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+        }
       }
 
       match /templates/{templateId} {
@@ -111,9 +119,6 @@ service cloud.firestore {
         
         // Permitir creación pública (leads) con tipos de datos e input sanos
         allow create: if isValidContact();
-        
-        // Impedir que usuarios públicos editen arbitrariamente correos o secuestren contactos
-        allow update: if isValidContact() && request.resource.data.email == resource.data.email;
       }
     }
   }

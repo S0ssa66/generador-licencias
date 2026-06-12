@@ -56,8 +56,8 @@ export default async function handler(req, res) {
         return res.status(401).json({ error: 'No autorizado: token inválido o expirado' });
     }
 
-    // Solo el administrador (sossabeatz1@gmail.com) puede vincular la cuenta central
-    if (adminEmail.toLowerCase() !== 'sossabeatz1@gmail.com') {
+    // Solo el administrador (masterjuego25@gmail.com) puede vincular la cuenta central
+    if (adminEmail.toLowerCase() !== 'masterjuego25@gmail.com') {
         return res.status(403).json({ error: 'Acceso prohibido: solo el administrador de la plataforma puede vincular el Google Drive central.' });
     }
 

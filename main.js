@@ -791,11 +791,53 @@ function initDefaultDate() {
 
 async function loadProducerConfig() {
     const docRef = doc(db, "users", window.currentUser, "config", "producer");
+    const privateDocRef = doc(db, "users", window.currentUser, "private_config", "producer");
     let firestoreLoaded = false;
+    let publicData = null;
+    let privateData = null;
     try {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-            producerConfig = { ...producerConfig, ...docSnap.data() };
+            publicData = docSnap.data();
+        }
+        
+        try {
+            const privateSnap = await getDoc(privateDocRef);
+            if (privateSnap.exists()) {
+                privateData = privateSnap.data();
+            }
+        } catch (e) {
+            console.warn("No se pudo leer la configuración privada (puede que no esté inicializada o falten permisos):", e.message);
+        }
+        
+        if (publicData) {
+            // Migración automática de campos privados si están en el documento público
+            const privateKeys = ['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey', 'paypalClientSecret'];
+            let migrationNeeded = false;
+            const migratedPrivate = { ...(privateData || {}) };
+            const cleanPublic = { ...publicData };
+            
+            privateKeys.forEach(key => {
+                if (key in cleanPublic && cleanPublic[key] !== undefined && cleanPublic[key] !== '') {
+                    migratedPrivate[key] = cleanPublic[key];
+                    delete cleanPublic[key];
+                    migrationNeeded = true;
+                }
+            });
+            
+            if (migrationNeeded) {
+                console.log("🛡️ Migrando credenciales y firma a configuración privada...");
+                try {
+                    await setDoc(privateDocRef, migratedPrivate);
+                    await setDoc(docRef, cleanPublic);
+                    publicData = cleanPublic;
+                    privateData = migratedPrivate;
+                } catch (migrationErr) {
+                    console.error("Fallo en la migración de configuración:", migrationErr);
+                }
+            }
+            
+            producerConfig = { ...producerConfig, ...publicData, ...(privateData || {}) };
             firestoreLoaded = true;
         }
     } catch (err) {
@@ -977,6 +1019,7 @@ async function loadProducerConfig() {
     document.getElementById('cfg-deuna-name').value = producerConfig.deunaName || "";
     document.getElementById('cfg-paypal-email').value = producerConfig.paypalEmail || "";
     document.getElementById('cfg-paypal-client-id').value = producerConfig.paypalClientId || "";
+    document.getElementById('cfg-paypal-client-secret').value = producerConfig.paypalClientSecret || "";
     document.getElementById('cfg-payphone-phone').value = producerConfig.payphonePhone || "";
     document.getElementById('cfg-payphone-client-id').value = producerConfig.payphoneClientId || "";
     document.getElementById('cfg-payphone-appid').value = producerConfig.payphoneAppId || "";
@@ -986,15 +1029,19 @@ async function loadProducerConfig() {
     // Configurar campos de PayPal
     const paypalEmailInput = document.getElementById('cfg-paypal-email');
     const paypalClientIdInput = document.getElementById('cfg-paypal-client-id');
-    if (paypalEmailInput && paypalClientIdInput) {
+    const paypalClientSecretInput = document.getElementById('cfg-paypal-client-secret');
+    if (paypalEmailInput && paypalClientIdInput && paypalClientSecretInput) {
         paypalEmailInput.disabled = !isProOrElite;
         paypalClientIdInput.disabled = !isProOrElite;
+        paypalClientSecretInput.disabled = !isProOrElite;
         if (!isProOrElite) {
             paypalEmailInput.placeholder = '⚠️ Requiere Plan Pro/Elite';
             paypalClientIdInput.placeholder = '⚠️ Requiere Plan Pro/Elite';
+            paypalClientSecretInput.placeholder = '⚠️ Requiere Plan Pro/Elite';
         } else {
             paypalEmailInput.placeholder = 'correo@paypal.com';
             paypalClientIdInput.placeholder = 'Client ID (Opcional)';
+            paypalClientSecretInput.placeholder = 'Client Secret (Opcional)';
         }
     }
 
@@ -1200,6 +1247,7 @@ async function saveProducerConfig() {
     producerConfig.deunaName = document.getElementById('cfg-deuna-name').value.trim();
     producerConfig.paypalEmail = document.getElementById('cfg-paypal-email').value.trim();
     producerConfig.paypalClientId = document.getElementById('cfg-paypal-client-id').value.trim();
+    producerConfig.paypalClientSecret = document.getElementById('cfg-paypal-client-secret').value.trim();
     producerConfig.payphonePhone = document.getElementById('cfg-payphone-phone').value.trim();
     producerConfig.payphoneClientId = document.getElementById('cfg-payphone-client-id').value.trim();
     producerConfig.payphoneAppId = document.getElementById('cfg-payphone-appid').value.trim();
@@ -1212,8 +1260,23 @@ async function saveProducerConfig() {
     
     // Guardar en Firestore
     const docRef = doc(db, "users", window.currentUser, "config", "producer");
+    const privateDocRef = doc(db, "users", window.currentUser, "private_config", "producer");
+    
+    // Separar datos públicos y privados
+    const privateKeys = ['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey', 'paypalClientSecret'];
+    const publicConfig = { ...producerConfig };
+    const privateConfig = {};
+    
+    privateKeys.forEach(key => {
+        if (key in publicConfig) {
+            privateConfig[key] = publicConfig[key] || '';
+            delete publicConfig[key];
+        }
+    });
+
     try {
-        await setDoc(docRef, producerConfig);
+        await setDoc(docRef, publicConfig);
+        await setDoc(privateDocRef, privateConfig);
         safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(producerConfig));
         window.producerConfig = producerConfig;
         document.getElementById('celebration-place').value = producerConfig.place;
@@ -6171,9 +6234,21 @@ async function initBeatsDB() {
         try {
             const colRef = collection(db, "users", window.currentUser, "beats");
             const querySnapshot = await getDocs(colRef);
-            querySnapshot.forEach((docSnap) => {
-                savedList.push(docSnap.data());
-            });
+            for (const docSnap of querySnapshot.docs) {
+                const beatData = docSnap.data();
+                try {
+                    const privateDocRef = doc(db, "users", window.currentUser, "beats", docSnap.id, "private", "files");
+                    const privateSnap = await getDoc(privateDocRef);
+                    if (privateSnap.exists()) {
+                        const privateData = privateSnap.data();
+                        beatData.wav = privateData.wav || "";
+                        beatData.stems = privateData.stems || "";
+                    }
+                } catch (privateErr) {
+                    console.warn(`No se pudieron cargar enlaces privados para el beat ${docSnap.id}:`, privateErr.message);
+                }
+                savedList.push(beatData);
+            }
             firestoreLoaded = true;
         } catch (err) {
             console.error("Error al cargar beats de Firestore:", err);
@@ -6220,8 +6295,7 @@ async function initBeatsDB() {
                     break;
                 }
                 try {
-                    const beatDocRef = doc(db, "users", window.currentUser, "beats", beat.id);
-                    await setDoc(beatDocRef, beat);
+                    await saveBeatToFirestore(beat);
                     count++;
                 } catch (err) {
                     console.error("Error al guardar beat en Firestore:", err);
@@ -6283,6 +6357,24 @@ function closeBeatForm() {
     document.getElementById('beat-form-container').style.display = 'none';
 }
 
+async function saveBeatToFirestore(beat) {
+    const beatId = beat.id;
+    const publicData = { ...beat };
+    const wav = publicData.wav || "";
+    const stems = publicData.stems || "";
+    
+    // Quitar enlaces premium del documento público
+    publicData.wav = "";
+    publicData.stems = "";
+    
+    const beatDocRef = doc(db, "users", window.currentUser, "beats", beatId);
+    await setDoc(beatDocRef, publicData);
+    
+    // Guardar enlaces premium en subcolección privada
+    const privateDocRef = doc(db, "users", window.currentUser, "beats", beatId, "private", "files");
+    await setDoc(privateDocRef, { wav, stems });
+}
+
 // Guardar Beat (con Firestore sync)
 async function saveBeat() {
     const id = document.getElementById('edit-beat-id').value;
@@ -6332,9 +6424,8 @@ async function saveBeat() {
     try {
         safeSetItem(`${window.currentUser}_beats`, JSON.stringify(localBeats));
         
-        // Guardar en Firestore para todos
-        const beatDocRef = doc(db, "users", window.currentUser, "beats", beatId);
-        await setDoc(beatDocRef, beatData);
+        // Guardar en Firestore separado (público/privado)
+        await saveBeatToFirestore(beatData);
         
         showToast(id ? 'Beat actualizado' : 'Nuevo beat guardado');
         closeBeatForm();
@@ -6359,6 +6450,14 @@ async function deleteBeat(id) {
             // Eliminar de Firestore
             const beatDocRef = doc(db, "users", window.currentUser, "beats", id);
             await deleteDoc(beatDocRef);
+            
+            // Eliminar enlaces privados de Firestore
+            try {
+                const privateDocRef = doc(db, "users", window.currentUser, "beats", id, "private", "files");
+                await deleteDoc(privateDocRef);
+            } catch (e) {
+                console.warn("No se pudo eliminar el archivo privado del beat:", e.message);
+            }
             
             renderBeatsList();
             if (document.getElementById('tab-beats-grid')) {
@@ -8931,9 +9030,8 @@ async function saveTabBeat() {
     try {
         safeSetItem(`${window.currentUser}_beats`, JSON.stringify(localBeats));
         
-        // Guardar en Firestore para todos
-        const beatDocRef = doc(db, "users", window.currentUser, "beats", beatId);
-        await setDoc(beatDocRef, beatData);
+        // Guardar en Firestore separado (público/privado)
+        await saveBeatToFirestore(beatData);
         
         showToast(id ? 'Beat actualizado' : 'Nuevo beat guardado');
         closeTabBeatForm();
@@ -10792,7 +10890,72 @@ function renderStorePayPalButton(clientId) {
                 return actions.order.capture().then(async function(details) {
                     console.log('PayPal transaction completed:', details);
                     showToast('Pago aprobado por PayPal. Procesando entrega...');
-                    await submitBeatPurchasePayment('paypal', details.id);
+                    
+                    const buyerName = document.getElementById('store-buyer-name').value.trim();
+                    const buyerEmail = document.getElementById('store-buyer-email').value.trim();
+                    const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
+                    const buyerDni = document.getElementById('store-buyer-dni').value.trim();
+                    const buyerCity = document.getElementById('store-buyer-city').value.trim();
+                    const buyerCountry = document.getElementById('store-buyer-country').value.trim();
+                    
+                    let itemsToProcess = [];
+                    if (checkoutSelectedBeatId) {
+                        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+                        itemsToProcess.push({
+                            beatId: checkoutSelectedBeatId,
+                            beatName: beat ? beat.name : 'Desconocido',
+                            licenseType: checkoutSelectedLicense,
+                            price: window.getCheckoutPrice()
+                        });
+                    } else {
+                        itemsToProcess = window.cart.map(item => ({
+                            beatId: item.beatId,
+                            beatName: item.beatName,
+                            licenseType: item.licenseType,
+                            price: item.price
+                        }));
+                    }
+                    
+                    const payload = {
+                        orderId: details.id,
+                        producerId: window.storeProducerUid,
+                        buyerName,
+                        buyerEmail,
+                        buyerPhone,
+                        buyerDni,
+                        buyerCity,
+                        buyerCountry,
+                        items: itemsToProcess,
+                        discountPercent: window.checkoutDiscountPercent || 0,
+                        couponCode: window.checkoutAppliedCoupon || ''
+                    };
+                    
+                    try {
+                        const response = await fetch('/api/confirm-purchase', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        const result = await response.json();
+                        if (response.ok && result.success) {
+                            showToast('¡Pago verificado y licencias enviadas con éxito!');
+                            
+                            // Vaciar el carrito
+                            window.cart = [];
+                            saveCartToStorage();
+                            window.updateCartUI();
+                            
+                            document.getElementById('beat-checkout-modal').style.display = 'none';
+                        } else {
+                            throw new Error(result.error || 'Error al verificar el pago en el servidor');
+                        }
+                    } catch (e) {
+                        console.error("Fallo al verificar compra:", e);
+                        showToast("Fallo al entregar tus beats. Tu pago fue procesado. Por favor, contacta al productor: " + e.message, true);
+                    }
                 });
             },
             onError: function(err) {
@@ -11284,6 +11447,17 @@ window.approveBeatSale = async function(paymentId) {
         let beatData = null;
         if (beatSnap.exists()) {
             beatData = beatSnap.data();
+            try {
+                const privateDocRef = doc(db, "users", window.currentUser, "beats", payment.beatId, "private", "files");
+                const privateSnap = await getDoc(privateDocRef);
+                if (privateSnap.exists()) {
+                    const privateData = privateSnap.data();
+                    beatData.wav = privateData.wav || "";
+                    beatData.stems = privateData.stems || "";
+                }
+            } catch (privateErr) {
+                console.warn("No se pudieron cargar enlaces privados para la entrega manual:", privateErr.message);
+            }
         } else {
             beatData = localBeats.find(b => b.id === payment.beatId);
         }

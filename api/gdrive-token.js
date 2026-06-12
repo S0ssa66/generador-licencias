@@ -43,11 +43,31 @@ export default async function handler(req, res) {
     
     try {
         initFirebaseAdmin();
-        // Validar token (cualquier usuario registrado y logueado en la plataforma puede obtener el token de subida)
-        await getAuth().verifyIdToken(idToken);
+        const decodedToken = await getAuth().verifyIdToken(idToken);
+        const email = decodedToken.email || '';
+        const uid = decodedToken.uid;
+
+        // Si no es el administrador, validar que tenga un plan activo de pago (Pro/Elite)
+        if (email.toLowerCase() !== 'masterjuego25@gmail.com') {
+            const db = getFirestore();
+            const producerSnap = await db.collection('users').doc(uid).collection('config').doc('producer').get();
+            if (!producerSnap.exists) {
+                return res.status(403).json({ error: 'Acceso prohibido: el productor no cuenta con configuración inicial.' });
+            }
+            const producerData = producerSnap.data();
+            const plan = producerData.plan || 'inicial';
+            
+            // Verificar si el plan Pro/Elite ha expirado
+            const expirationStr = producerData.expirationPro || producerData.planExpirationDate;
+            const isExpired = expirationStr ? (new Date() > new Date(expirationStr)) : false;
+
+            if ((plan !== 'pro' && plan !== 'elite') || isExpired) {
+                return res.status(403).json({ error: 'Acceso prohibido: se requiere una suscripción Pro o Elite activa para usar el Google Drive de la plataforma.' });
+            }
+        }
     } catch (err) {
-        console.error('Error al verificar token en api/gdrive-token:', err);
-        return res.status(401).json({ error: 'No autorizado: token inválido o expirado' });
+        console.error('Error al verificar autorización en api/gdrive-token:', err);
+        return res.status(401).json({ error: 'No autorizado o token de sesión inválido' });
     }
 
     try {
