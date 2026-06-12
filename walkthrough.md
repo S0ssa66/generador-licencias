@@ -42,7 +42,17 @@ Implementamos de forma autónoma el plan de mejoras de diseño y maquetación de
 
 ---
 
+## 6. Auditoría y Despliegue de Reglas de Seguridad en Firestore (Junio 2026)
+Realizamos un análisis exhaustivo y robustecimiento del archivo `firestore.rules` resolviendo vulnerabilidades detectadas:
+* **Autenticación Administrativa Robusta:** Implementamos la verificación de email administrativo validando no solo la dirección sino también que el correo esté completamente verificado (`request.auth.token.email_verified == true`) para evitar email spoofing.
+* **Control de Modificaciones en Contactos Públicos:** Restringimos el acceso de actualización (`update`) en la subcolección pública `/contacts` de forma que los usuarios no autenticados solo puedan realizar actualizaciones si el correo entrante coincide exactamente con el correo previamente registrado, evitando el secuestro de leads.
+* **Mitigación de Abuso de Almacenamiento (DoS):** Agregamos validaciones estrictas de tipo y longitud de caracteres (`isValidContact()`) para mitigar la inyección de cadenas extremadamente largas en campos de texto (ej. correo y nombre < 100 caracteres, teléfono < 30 caracteres).
+* **Validación y Despliegue Exitoso:** Las reglas fueron verificadas localmente usando el validador oficial y desplegadas con éxito a Firebase Firestore en producción.
+
+---
+
 ## Verificación de Producción
 
-Todas las correcciones y mejoras están completamente aplicadas, compiladas y desplegadas en el sitio web de producción:
-* **Enlace de Producción Activo:** [https://generador-licencias.vercel.app/](https://generador-licencias.vercel.app/)
+Todas las correcciones, reglas y mejoras de diseño están completamente aplicadas, compiladas y desplegadas en producción:
+* **Enlace de la Tienda / Landing Page:** [https://generador-licencias.vercel.app/](https://generador-licencias.vercel.app/)
+* **Reglas de Seguridad Firestore:** Desplegadas al 100% en el proyecto Firebase `licencias-musicales`.

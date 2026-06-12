@@ -16,5 +16,6 @@
 
 ## Siguientes Pasos / Futuras Tareas (Ejemplos)
 - [x] Ajustar estilos de los PDFs descargables de las licencias (Fases 1, 2 y 3 completadas)
+- [x] Auditoría y despliegue de reglas de seguridad de Firestore (Auditoría crítica 1/5 resuelta a reglas seguras y desplegadas en producción)
 - [ ] Agregar nuevas secciones a la Landing Page (ej. Testimonios, Preguntas Frecuentes)
 - [ ] Optimizar tiempos de carga o peso del bundle JS
