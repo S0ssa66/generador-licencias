@@ -1,3 +1,73 @@
+# Reporte de Auditoría de Seguridad: Firebase Security Rules (BEATSS)
+
+Este reporte detalla los hallazgos de seguridad encontrados tras auditar el archivo `firestore.rules` del proyecto. Se asigna una calificación de seguridad del **1 al 5** (donde 1 es Crítico y 5 es Seguro) y se proveen recomendaciones de código para corregir cada vulnerabilidad detectada.
+
+---
+
+## Calificación de Seguridad: 1 / 5 (Crítico)
+
+Se ha detectado una vulnerabilidad de severidad **Crítica** relacionada con la modificación no autorizada de contactos de otros usuarios, además de riesgos **Mayores** en la autenticación administrativa y vulnerabilidades de **Denegación de Servicio (DoS)** por falta de límites en las escrituras públicas.
+
+---
+
+## Hallazgos de Seguridad Detectados
+
+### 🚨 1. Modificación Pública No Autorizada en Subcolección de Contactos
+* **Severidad**: `critical`
+* **Descripción**: La regla para `/users/{userId}/contacts/{contactId}` permite `create, update: if true;` públicamente para capturar leads. Al permitir `update` público sin validar la identidad ni la consistencia del documento, un atacante no autenticado podría modificar o sobrescribir el correo electrónico, teléfono o nombre de cualquier contacto de cualquier productor simplemente enviando peticiones directas a Firestore.
+* **Impacto**: Pérdida de integridad de la base de datos de contactos y posibilidad de secuestro de leads.
+* **Recomendación**: Restringir el `update` público únicamente al propietario del documento (el email no puede ser modificado), o permitir actualizaciones públicas solo bajo condiciones muy específicas, y dejar la escritura total al productor dueño de la cuenta.
+
+### ⚠️ 2. Falta de Verificación de Email en Acceso Administrativo (Email Spoofing)
+* **Severidad**: `major`
+* **Descripción**: Todas las reglas de administrador validan el correo de forma hardcodeada: `request.auth.token.email.lower() == 'masterjuego25@gmail.com'`. Sin embargo, **no se valida que el correo haya sido verificado** (`request.auth.token.email_verified == true`). Si un atacante crea una cuenta mediante un proveedor vulnerable o spoofea el email en la cabecera del token de autenticación sin verificarlo, podría obtener permisos completos de administración de Sossa.
+* **Impacto**: Posible bypass administrativo completo y escalación de privilegios.
+* **Recomendación**: Agregar `request.auth.token.email_verified == true` en cada validación del correo administrativo.
+
+### ⚠️ 3. Abuso de Almacenamiento y Falta de Tipo de Datos (Riesgo DoS / Inyección)
+* **Severidad**: `moderate`
+* **Descripción**: Las escrituras públicas en `payments` (`allow create: if request.resource.data.type == 'beat_purchase'`) y `contacts` no tienen límites de longitud de cadena (string length) ni validación de tipos (`is string`, `is int`).
+* **Impacto**: Un atacante podría inyectar objetos gigantescos de megabytes en los campos de texto, agotando la cuota de almacenamiento de Firebase o incrementando las lecturas/costos (Ataque de Denegación de Servicio por Recursos).
+* **Recomendación**: Validar que los campos obligatorios existan, que sean del tipo de datos correcto (`string`, `number`, `timestamp`) y definir límites de longitud máximos (v.g., nombres y correos < 100 caracteres).
+
+---
+
+## JSON de Auditoría (Formato Estándar)
+
+```json
+{
+  "score": 1,
+  "summary": "Vulnerabilidad crítica en la actualización de contactos públicos y falta de validación de email verificado para cuentas de administrador.",
+  "findings": [
+    {
+      "check": "Field-Level vs. Identity-Level Security",
+      "severity": "critical",
+      "issue": "La subcolección 'contacts' permite actualizaciones ('update') sin verificar la propiedad ni restringir la modificación del correo original.",
+      "recommendation": "Permitir update público solo si el email entrante coincide con el existente: `request.resource.data.email == resource.data.email`, o limitar el update únicamente al productor autenticado."
+    },
+    {
+      "check": "Authority Source",
+      "severity": "major",
+      "issue": "El acceso de administrador por email no valida que 'email_verified' sea verdadero.",
+      "recommendation": "Agregar la regla `request.auth.token.email_verified == true` en todos los accesos del correo administrador."
+    },
+    {
+      "check": "Storage Abuse & Type Safety",
+      "severity": "moderate",
+      "issue": "Las colecciones con escritura pública ('payments' y 'contacts') no limitan el tamaño de las cadenas de texto ni validan tipos de campos.",
+      "recommendation": "Implementar validaciones como `request.resource.data.email is string && request.resource.data.email.size() < 100`."
+    }
+  ]
+}
+```
+
+---
+
+## Archivo Propuesto de Reglas Corregidas (`firestore.rules`)
+
+Aquí tienes la propuesta mejorada y robusta para tu archivo `firestore.rules`:
+
+```javascript
 rules_version = '2';
 
 service cloud.firestore {
@@ -15,7 +85,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.email is string && data.email.size() < 100 &&
              data.name is string && data.name.size() < 100 &&
-             (!('phone' in data) || (data.phone is string && data.phone.size() < 30));
+             (!data.keys().contains('phone') || (data.phone is string && data.phone.size() < 30));
     }
 
     // Regla para la contabilidad consolidada de Sossa Admin (Collection Group query)
@@ -118,3 +188,4 @@ service cloud.firestore {
     }
   }
 }
+```
