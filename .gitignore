@@ -12,3 +12,8 @@ cgmonarco_backup_sincronizado.json
 *.key
 firebase-adminsdk*.json
 service-account*.json
+.venv/
+venv/
+__pycache__/
+*.pyc
+

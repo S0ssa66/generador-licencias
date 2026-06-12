@@ -112,7 +112,8 @@ export default async function handler(req, res) {
         const referrerUserRef = db.collection('users').doc(referrerId);
         await referrerUserRef.set({
             plan: 'pro',
-            planActivatedAt: new Date().toISOString()
+            planActivatedAt: new Date().toISOString(),
+            expirationPro: newExpirationString
         }, { merge: true });
 
         console.log(`👥 Referido convertido con éxito. Usuario ${uid} refirió a ${referrerId}. Regalo: 30 días Pro. Nueva exp: ${newExpirationString}`);

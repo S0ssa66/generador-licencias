@@ -23,6 +23,7 @@ import {
     where,
     orderBy,
     limit,
+    startAfter,
     collectionGroup,
     deleteDoc,
     addDoc,
@@ -91,6 +92,7 @@ let producerConfig = {
     gdriveClientId: "216966055009-03rjdnq87uh3h15e3qfglp2pnmos9t5k.apps.googleusercontent.com",
     storageProvider: "gdrive"
 };
+window.producerConfig = producerConfig;
 
 // Historial de licencias
 let licenseHistory = [];
@@ -656,6 +658,12 @@ const initAuthAndApp = () => {
             }
             
             await initApp(user.uid);
+            
+            // Si fue un intento de login manual, redirigir a la vista de inicio (dashboard)
+            if (window.isManualLoginAttempt) {
+                window.isManualLoginAttempt = false;
+                window.showAppView('home');
+            }
         } else {
             console.log("Sin sesión de Firebase. Mostrando landing page.");
             window.currentUser = null;
@@ -683,6 +691,26 @@ if (document.readyState === 'loading') {
 async function initApp(user) {
     window.currentUser = user;
     document.getElementById('app-container').style.display = 'grid';
+
+    // Ocultar y pausar reproductor de tienda pública al entrar al panel de administración
+    const player = document.getElementById('store-audio-player');
+    if (player) player.style.display = 'none';
+    if (currentStoreAudio) {
+        currentStoreAudio.pause();
+        currentStoreAudio = null;
+        currentStorePlayingBeatId = null;
+        
+        // Reset de iconos de botones en la tienda
+        const allPlayButtons = document.querySelectorAll('[id^="btn-play-store-"]');
+        allPlayButtons.forEach(btn => {
+            btn.innerHTML = `<i data-lucide="play" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>`;
+        });
+        const mainPlayBtn = document.getElementById('player-btn-play');
+        if (mainPlayBtn) {
+            mainPlayBtn.innerHTML = `<i data-lucide="play" style="width: 18px; height: 18px; fill: #000; stroke: #000;"></i>`;
+        }
+        if (window.lucide) window.lucide.createIcons();
+    }
 
     checkDocuSignOAuth();
     initDefaultDate();
@@ -904,7 +932,7 @@ async function loadProducerConfig() {
         if (expirationDate < new Date()) {
             const expiredPlan = producerConfig.plan;
             console.log(`El Plan ${expiredPlan} ha expirado. Degradando a Plan Inicial.`);
-            producerConfig.plan = 'free'; // 'free' represents the free tier
+            producerConfig.plan = 'inicial'; // 'inicial' represents the free tier
             // Guardar cambio de plan en segundo plano para no demorar la carga inicial
             const userConfigRef = doc(db, "users", window.currentUser, "config", "producer");
             setDoc(userConfigRef, producerConfig).then(() => {
@@ -949,6 +977,62 @@ async function loadProducerConfig() {
     document.getElementById('cfg-deuna-name').value = producerConfig.deunaName || "";
     document.getElementById('cfg-paypal-email').value = producerConfig.paypalEmail || "";
     document.getElementById('cfg-paypal-client-id').value = producerConfig.paypalClientId || "";
+    document.getElementById('cfg-payphone-phone').value = producerConfig.payphonePhone || "";
+    document.getElementById('cfg-payphone-client-id').value = producerConfig.payphoneClientId || "";
+    document.getElementById('cfg-payphone-appid').value = producerConfig.payphoneAppId || "";
+
+    const isProOrElite = (producerConfig.plan === 'pro' || producerConfig.plan === 'elite' || window.currentUserIsAdmin);
+    
+    // Configurar campos de PayPal
+    const paypalEmailInput = document.getElementById('cfg-paypal-email');
+    const paypalClientIdInput = document.getElementById('cfg-paypal-client-id');
+    if (paypalEmailInput && paypalClientIdInput) {
+        paypalEmailInput.disabled = !isProOrElite;
+        paypalClientIdInput.disabled = !isProOrElite;
+        if (!isProOrElite) {
+            paypalEmailInput.placeholder = '⚠️ Requiere Plan Pro/Elite';
+            paypalClientIdInput.placeholder = '⚠️ Requiere Plan Pro/Elite';
+        } else {
+            paypalEmailInput.placeholder = 'correo@paypal.com';
+            paypalClientIdInput.placeholder = 'Client ID (Opcional)';
+        }
+    }
+
+    // Configurar campos de PayPhone
+    const payphonePhoneInput = document.getElementById('cfg-payphone-phone');
+    const payphoneClientIdInput = document.getElementById('cfg-payphone-client-id');
+    const payphoneAppIdInput = document.getElementById('cfg-payphone-appid');
+    if (payphonePhoneInput && payphoneClientIdInput && payphoneAppIdInput) {
+        payphonePhoneInput.disabled = !isProOrElite;
+        payphoneClientIdInput.disabled = !isProOrElite;
+        payphoneAppIdInput.disabled = !isProOrElite;
+        if (!isProOrElite) {
+            payphonePhoneInput.placeholder = '⚠️ Requiere Plan Pro/Elite';
+            payphoneClientIdInput.placeholder = '⚠️ Requiere Plan Pro/Elite';
+            payphoneAppIdInput.placeholder = '⚠️ Requiere Plan Pro/Elite';
+        } else {
+            payphonePhoneInput.placeholder = 'Ej: 099xxxxxxx';
+            payphoneClientIdInput.placeholder = 'Token / API Key';
+            payphoneAppIdInput.placeholder = 'ID de la Aplicación';
+        }
+    }
+
+    // Configurar campos de DocuSign
+    const dsClientIdInput = document.getElementById('cfg-ds-client-id');
+    const dsAccountIdInput = document.getElementById('cfg-ds-account-id');
+    const dsEnvInput = document.getElementById('cfg-ds-env');
+    if (dsClientIdInput && dsAccountIdInput && dsEnvInput) {
+        dsClientIdInput.disabled = !isProOrElite;
+        dsAccountIdInput.disabled = !isProOrElite;
+        if (dsEnvInput) dsEnvInput.disabled = !isProOrElite;
+        if (!isProOrElite) {
+            dsClientIdInput.placeholder = '⚠️ Requiere Plan Pro/Elite';
+            dsAccountIdInput.placeholder = '⚠️ Requiere Plan Pro/Elite';
+        } else {
+            dsClientIdInput.placeholder = 'Client ID';
+            dsAccountIdInput.placeholder = 'Account ID';
+        }
+    }
 
     if (document.getElementById('cfg-storage-provider')) {
         document.getElementById('cfg-storage-provider').value = producerConfig.storageProvider || "gdrive-central";
@@ -1022,9 +1106,11 @@ async function loadProducerConfig() {
     const logoPlanWarning = document.getElementById('logo-plan-warning');
 
     if (logoPreviewImg && logoPreviewContainer && btnClearLogo && btnUploadLogo && logoPlanWarning) {
-        if (!window.currentUserIsPro) {
+        const isElite = (producerConfig.plan === 'elite' || window.currentUserIsAdmin);
+        if (!isElite) {
             btnUploadLogo.disabled = true;
             logoPlanWarning.style.display = 'block';
+            logoPlanWarning.textContent = '⚠️ Esta opción requiere el plan Elite.';
             logoPreviewContainer.style.display = 'none';
             btnClearLogo.style.display = 'none';
             window.tempLogoBase64 = null;
@@ -1047,6 +1133,7 @@ async function loadProducerConfig() {
 
     // Cargar estado de la vinculación de Google para iniciar sesión
     updateGoogleLoginLinkStatus();
+    window.producerConfig = producerConfig;
 }
 
 // Guardar configuración de productor
@@ -1061,7 +1148,8 @@ async function saveProducerConfig() {
     producerConfig.ipi = document.getElementById('cfg-producer-ipi').value.trim() || "01170943066";
     producerConfig.publisher = document.getElementById('cfg-producer-publisher').value.trim() || "Songtrust";
     producerConfig.signature = window.tempSignatureBase64 || "";
-    if (window.currentUserIsPro) {
+    const isElite = (producerConfig.plan === 'elite' || window.currentUserIsAdmin);
+    if (isElite) {
         producerConfig.logoBase64 = window.tempLogoBase64 || "";
     } else {
         producerConfig.logoBase64 = "";
@@ -1112,6 +1200,9 @@ async function saveProducerConfig() {
     producerConfig.deunaName = document.getElementById('cfg-deuna-name').value.trim();
     producerConfig.paypalEmail = document.getElementById('cfg-paypal-email').value.trim();
     producerConfig.paypalClientId = document.getElementById('cfg-paypal-client-id').value.trim();
+    producerConfig.payphonePhone = document.getElementById('cfg-payphone-phone').value.trim();
+    producerConfig.payphoneClientId = document.getElementById('cfg-payphone-client-id').value.trim();
+    producerConfig.payphoneAppId = document.getElementById('cfg-payphone-appid').value.trim();
 
     // Si cambió el Client ID, limpiar token cacheado de Drive
     if (producerConfig.gdriveClientId !== (JSON.parse(localStorage.getItem(`${window.currentUser}_producer_config`) || '{}').gdriveClientId || '')) {
@@ -1124,6 +1215,7 @@ async function saveProducerConfig() {
     try {
         await setDoc(docRef, producerConfig);
         safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(producerConfig));
+        window.producerConfig = producerConfig;
         document.getElementById('celebration-place').value = producerConfig.place;
         
         closeSettingsModal();
@@ -2034,8 +2126,9 @@ function setupEventListeners() {
 
     if (btnUploadLogoEl && fileLogoInputEl && btnClearLogoEl) {
         btnUploadLogoEl.addEventListener('click', () => {
-            if (!window.currentUserIsPro) {
-                showToast("⚠️ Esta función requiere el plan Pro o Elite.", true);
+            const isElite = (producerConfig.plan === 'elite' || window.currentUserIsAdmin);
+            if (!isElite) {
+                showToast("⚠️ Esta función requiere el plan Elite.", true);
                 return;
             }
             fileLogoInputEl.click();
@@ -3189,7 +3282,7 @@ function compileContract() {
     const t = TRANSLATIONS[currentLang] || {};
     const isMonarco = (producerConfig.aka && producerConfig.aka.toLowerCase().includes('monarco'));
     const isSossa = (window.currentUserIsAdmin || (producerConfig.aka && producerConfig.aka.toLowerCase().includes('sossa')));
-    const hasCustomLogo = window.currentUserIsPro && producerConfig.logoBase64;
+    const hasCustomLogo = (producerConfig.plan === 'elite' || window.currentUserIsAdmin) && producerConfig.logoBase64;
     const logoHtml = hasCustomLogo
             ? `<div style="text-align: center; margin-bottom: 15px;"><img src="${producerConfig.logoBase64}" alt="Logo" class="doc-logo" style="max-height: 80px; width: auto; margin: 0 auto; display: block;"></div>`
             : (isMonarco
@@ -6194,8 +6287,8 @@ async function saveBeat() {
     }
 
     const isNew = !id;
-    if (isNew && !window.currentUserIsPro && localBeats.length >= 5) {
-        openPaymentModal(`Límite alcanzado: El Plan Inicial solo permite subir hasta 5 beats. Mejora al Plan Pro hoy para subir beats ilimitados.`);
+    if (isNew && !window.currentUserIsPro && localBeats.length >= 10) {
+        openPaymentModal(`Límite alcanzado: El Plan Inicial solo permite subir hasta 10 beats. Mejora al Plan Pro hoy para subir beats ilimitados.`);
         return;
     }
 
@@ -6320,7 +6413,7 @@ function renderBeatsList() {
             ? `<span style="font-size: 10px; background: #2a2e39; color: #a0aec0; padding: 2px 6px; border-radius: 4px; margin-left: 8px;"><i data-lucide="link" style="width:10px;height:10px;display:inline-block;margin-right:3px;"></i>${linksCount}</span>` 
             : '';
 
-        const finalArtworkUrl = beat.artwork || (window.getProducerAvatar ? window.getProducerAvatar(window.producerConfig) : (window.producerConfig && window.producerConfig.logoBase64));
+        const finalArtworkUrl = window.getBeatArtwork(beat);
         const artworkImg = finalArtworkUrl
             ? `<img src="${finalArtworkUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`
             : `<i data-lucide="music" style="width: 18px; height: 18px; color: #a0aec0;"></i>`;
@@ -8653,8 +8746,7 @@ function renderBeatsGrid() {
         const isPlaying = currentPlayingBeatId === beat.id;
         const playIcon = isPlaying ? 'pause' : 'play';
 
-        const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(window.producerConfig) : (window.producerConfig && window.producerConfig.logoBase64);
-        const finalArtworkUrl = beat.artwork || producerLogo;
+        const finalArtworkUrl = window.getBeatArtwork(beat);
         const artworkHtml = finalArtworkUrl
             ? `<img src="${finalArtworkUrl}" class="beat-cover-img" alt="${beat.name}">`
             : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #222530; color: #8a91a6; min-height: 180px;"><i data-lucide="music" style="width: 32px; height: 32px;"></i></div>`;
@@ -8979,8 +9071,7 @@ window.renderCartItems = function() {
     
     container.innerHTML = window.cart.map((item, index) => {
         const beat = window.storeBeats.find(b => b.id === item.beatId) || item;
-        const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(beat.producerConfig) : (beat.producerConfig && beat.producerConfig.logoBase64);
-        const artwork = beat.artwork || producerLogo || item.artwork || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
+        const artwork = window.getBeatArtwork(beat) || window.getBeatArtwork(item);
         
         // Generar las opciones de licencia para el select
         const optionsHtml = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
@@ -9047,9 +9138,15 @@ window.initPublicStore = async function(producerAka) {
     
     storeView.style.display = 'block';
     grid.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 60px;">
-            <div class="animate-spin" style="display: inline-block; width: 32px; height: 32px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--accent, #00ccff); border-radius: 50%;"></div>
-            <p style="margin-top: 15px; color: #8a91a6; font-size: 14px;">Cargando catálogo...</p>
+        <div class="premium-loader-container">
+            <div class="equalizer-loader">
+                <span class="eq-bar"></span>
+                <span class="eq-bar"></span>
+                <span class="eq-bar"></span>
+                <span class="eq-bar"></span>
+                <span class="eq-bar"></span>
+            </div>
+            <p class="loader-text">Sincronizando catálogo...</p>
         </div>
     `;
 
@@ -9164,6 +9261,7 @@ window.initPublicStore = async function(producerAka) {
         setupStoreFilters();
         setupStoreAudioPlayer();
         setupStoreCheckout();
+        if (window.lucide) window.lucide.createIcons();
 
     } catch (err) {
         console.error("Error cargando la tienda:", err);
@@ -9189,8 +9287,7 @@ function renderStoreBeats(beats) {
     emptyState.style.display = 'none';
 
     grid.innerHTML = beats.map(beat => {
-        const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(window.storeProducerConfig) : window.storeProducerConfig?.logoBase64;
-        const artworkUrl = beat.artwork || producerLogo || getDefaultBeatArtwork();
+        const artworkUrl = window.getBeatArtwork(beat);
         const bpmText = beat.bpm ? `${beat.bpm} BPM` : 'N/A';
         const keyText = beat.key ? `${beat.key}` : 'N/A';
         
@@ -9240,6 +9337,7 @@ function renderStoreBeats(beats) {
     }).join('');
 
     if (window.lucide) window.lucide.createIcons();
+    if (typeof window.apply3DTiltEffect === 'function') window.apply3DTiltEffect();
 }
 
 window.shareBeat = function(beatId, beatName) {
@@ -9295,6 +9393,13 @@ function setupStoreFilters() {
 
 // Lógica de Reproducción de Audio en Tienda
 window.toggleStorePlay = function(beatId) {
+    // Si el panel de administración está visible, no reproducir audio público
+    const appContainer = document.getElementById('app-container');
+    if (appContainer && appContainer.style.display !== 'none') {
+        console.warn("Intento de reproducir audio de tienda pública estando en el panel de administración.");
+        return;
+    }
+
     const beat = window.storeBeats.find(b => b.id === beatId);
     if (!beat || !beat.mp3) return;
 
@@ -9349,9 +9454,7 @@ window.toggleStorePlay = function(beatId) {
         document.getElementById('player-title').textContent = beat.name;
         document.getElementById('player-time-duration').textContent = '0:30';
         document.getElementById('player-info').textContent = `${beat.bpm ? beat.bpm + ' BPM' : ''} ${beat.key ? '• ' + beat.key : ''} ${beat.genre ? '• ' + beat.genre : ''}`;
-        const pConfig = beat.producerConfig || {};
-        const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(pConfig) : pConfig.logoBase64;
-        document.getElementById('player-artwork').src = beat.artwork || producerLogo || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : 'https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=100&auto=format&fit=crop');
+        document.getElementById('player-artwork').src = window.getBeatArtwork(beat);
         player.style.display = 'block';
 
         currentStoreAudio.addEventListener('timeupdate', updatePlayerProgress);
@@ -9619,6 +9722,27 @@ window.openBeatCheckoutModal = function(beatId) {
             urgencyBanner.style.display = 'flex';
         }
 
+        // Mostrar y poblar previsualización del beat individual
+        const beat = window.storeBeats.find(b => b.id === beatId) || (window.globalBeats && window.globalBeats.find(b => b.id === beatId));
+        const previewContainer = document.getElementById('checkout-single-beat-preview');
+        if (previewContainer && beat) {
+            previewContainer.style.display = 'flex';
+            const imgEl = document.getElementById('checkout-single-beat-img');
+            const nameEl = document.getElementById('checkout-single-beat-name');
+            const metaEl = document.getElementById('checkout-single-beat-meta');
+            
+            if (imgEl) imgEl.src = window.getBeatArtwork(beat);
+            if (nameEl) nameEl.textContent = beat.name;
+            
+            let details = [];
+            if (beat.bpm) details.push(`${beat.bpm} BPM`);
+            if (beat.key) details.push(beat.key);
+            if (beat.genre) details.push(beat.genre);
+            if (metaEl) metaEl.textContent = details.join(' • ') || 'Beat';
+        } else if (previewContainer) {
+            previewContainer.style.display = 'none';
+        }
+
         const container = document.getElementById('license-options-container');
         container.innerHTML = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
             const isActive = key === checkoutSelectedLicense;
@@ -9796,10 +9920,14 @@ window.updateCheckoutStepView = function(step) {
             const guayaquilAcc = window.storeProducerConfig.bankGuayaquilAcc || "";
             const paypalClientId = window.storeProducerConfig.paypalClientId || "";
             const paypalEmail = window.storeProducerConfig.paypalEmail || "";
+            const payphonePhone = window.storeProducerConfig.payphonePhone || "";
+            const payphoneClientId = window.storeProducerConfig.payphoneClientId || "";
+            const payphoneAppId = window.storeProducerConfig.payphoneAppId || "";
 
             let deunaVisible = false;
             let transferVisible = false;
             let paypalVisible = false;
+            let payphoneVisible = false;
 
             if (deunaPhone && deunaTab) {
                 deunaTab.style.display = 'block';
@@ -9876,7 +10004,13 @@ window.updateCheckoutStepView = function(step) {
                 paypalTab.style.display = 'none';
             }
 
-            if (!deunaVisible && !transferVisible && !paypalVisible && checkoutSelectedLicense !== 'exclusive') {
+            const payphoneTab = document.getElementById('btn-pay-payphone');
+            if (payphoneTab) {
+                payphoneTab.style.display = 'block';
+                payphoneVisible = true;
+            }
+
+            if (!deunaVisible && !transferVisible && !paypalVisible && !payphoneVisible && checkoutSelectedLicense !== 'exclusive') {
                 const deunaPanel = document.getElementById('store-pay-deuna');
                 const transferPanel = document.getElementById('store-pay-transfer');
                 const paypalPanel = document.getElementById('store-pay-paypal');
@@ -9901,6 +10035,7 @@ window.updateCheckoutStepView = function(step) {
                     if (deunaVisible) defaultTab = 'deuna';
                     else if (transferVisible) defaultTab = 'transfer';
                     else if (paypalVisible) defaultTab = 'paypal';
+                    else if (payphoneVisible) defaultTab = 'payphone';
                 } else if (currentTab === 'offer' && checkoutSelectedLicense === 'exclusive') {
                     defaultTab = 'offer';
                 } else if (deunaVisible) {
@@ -9909,6 +10044,8 @@ window.updateCheckoutStepView = function(step) {
                     defaultTab = 'transfer';
                 } else if (paypalVisible) {
                     defaultTab = 'paypal';
+                } else if (payphoneVisible) {
+                    defaultTab = 'payphone';
                 } else if (checkoutSelectedLicense === 'exclusive') {
                     defaultTab = 'offer';
                 }
@@ -9942,6 +10079,8 @@ window.switchStorePaymentMethod = function(method) {
     document.getElementById('store-pay-deuna').style.display = method === 'deuna' ? 'block' : 'none';
     document.getElementById('store-pay-transfer').style.display = method === 'transfer' ? 'block' : 'none';
     document.getElementById('store-pay-paypal').style.display = method === 'paypal' ? 'block' : 'none';
+    const payphonePanel = document.getElementById('store-pay-payphone');
+    if (payphonePanel) payphonePanel.style.display = method === 'payphone' ? 'block' : 'none';
     const offerPanel = document.getElementById('store-pay-offer');
     if (offerPanel) offerPanel.style.display = method === 'offer' ? 'block' : 'none';
 
@@ -9961,6 +10100,16 @@ window.switchStorePaymentMethod = function(method) {
             const exclusivePrice = (window.LICENSE_CONFIGS || {}).exclusive ? window.LICENSE_CONFIGS.exclusive.price : 500;
             offerOriginalSpan.textContent = `$${parseFloat(exclusivePrice).toFixed(2)} USD`;
         }
+    } else if (method === 'payphone') {
+        receiptSection.style.display = 'none';
+        nextBtn.style.display = 'none';
+        const payphoneButtonContainer = document.getElementById('payphone-button');
+        if (payphoneButtonContainer) {
+            payphoneButtonContainer.innerHTML = '<div style="color: #8a91a6; font-size: 13px; text-align: center;">Cargando PayPhone...</div>';
+        }
+        loadStorePayphoneSDK(() => {
+            renderStorePayphoneButton();
+        });
     } else if (method === 'paypal') {
         const clientId = window.storeProducerConfig.paypalClientId || "";
         if (clientId) {
@@ -9994,6 +10143,126 @@ window.switchStorePaymentMethod = function(method) {
         nextBtn.textContent = 'Confirmar Compra';
     }
 };
+
+function loadStorePayphoneSDK(callback) {
+    const existingScript = document.getElementById('store-payphone-sdk-script');
+    if (existingScript) {
+        callback();
+        return;
+    }
+    const sdk = document.createElement('script');
+    sdk.id = 'store-payphone-sdk-script';
+    sdk.src = 'https://cdn.payphonetodoesposible.com/box/v1.1/payphone-payment-box.js';
+    sdk.onload = callback;
+    document.head.appendChild(sdk);
+}
+
+function renderStorePayphoneButton() {
+    const container = document.getElementById('payphone-button');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    const price = window.getCheckoutPrice();
+    const priceCents = Math.round(price * 100);
+    
+    const token = window.storeProducerConfig.payphoneClientId || "";
+    const appId = window.storeProducerConfig.payphoneAppId || "";
+    
+    if (!token || !appId) {
+        container.innerHTML = `
+            <div style="background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 20px; text-align: center; box-sizing: border-box; margin-top: 8px;">
+                <div style="font-weight: 700; font-size: 14px; color: #f97316; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span>📲 PayPhone (Ecuador)</span>
+                </div>
+                <p style="color: #8a91a6; font-size: 12px; line-height: 1.5; margin: 0 0 16px 0;">
+                    Esta pasarela permite cobrar con tarjetas y la app PayPhone. Configura tu ClientID y AppID en el panel de administración de tu perfil para recibir pagos reales.
+                </p>
+                <!-- Botón Payphone Preview -->
+                <div onclick="window.showToast('ℹ️ Vista previa de PayPhone. Configura tus credenciales para habilitar cobros reales.')" style="background: linear-gradient(135deg, #ff6b35, #ff9500); color: #ffffff; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2); transition: transform 0.2s ease; width: 100%; max-width: 280px; margin: 0 auto;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    <span>Pagar con</span>
+                    <span style="font-weight: 900; font-size: 17px; letter-spacing: -0.5px;">payphone</span>
+                </div>
+                <div style="font-size: 10px; color: #8a91a6; margin-top: 10px;">
+                    ⚠️ Vista Previa de Integración
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    const clientTxId = 'PAYPHONE-' + Date.now();
+    
+    const buyerName = document.getElementById('store-buyer-name').value.trim();
+    const buyerEmail = document.getElementById('store-buyer-email').value.trim();
+    const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
+    const buyerDni = document.getElementById('store-buyer-dni').value.trim();
+    const buyerCity = document.getElementById('store-buyer-city').value.trim();
+    const buyerCountry = document.getElementById('store-buyer-country').value.trim();
+    
+    if (!buyerName || !buyerEmail) {
+        container.innerHTML = '<div style="color: #f59e0b; font-size: 13px; text-align: center;">Por favor completa tu nombre y correo en el Paso anterior.</div>';
+        return;
+    }
+    
+    let itemsToProcess = [];
+    if (checkoutSelectedBeatId) {
+        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+        if (beat) {
+            itemsToProcess.push({
+                beatId: checkoutSelectedBeatId,
+                beatName: beat.name,
+                licenseType: checkoutSelectedLicense,
+                price: price
+            });
+        }
+    } else {
+        itemsToProcess = window.cart.map(item => ({
+            beatId: item.beatId,
+            beatName: item.beatName,
+            licenseType: item.licenseType,
+            price: item.price
+        }));
+    }
+    
+    const state = {
+        buyerName,
+        buyerEmail,
+        buyerPhone,
+        buyerDni,
+        buyerCity,
+        buyerCountry,
+        items: itemsToProcess,
+        discountPercent: window.checkoutDiscountPercent || 0,
+        couponCode: window.checkoutAppliedCoupon || '',
+        producerId: window.storeProducerUid,
+        producerToken: token
+    };
+    
+    localStorage.setItem('payphone_pending_' + clientTxId, JSON.stringify(state));
+    
+    try {
+        const ppb = new PPaymentButtonBox({
+            token: token,
+            clientTransactionId: clientTxId,
+            amount: priceCents,
+            amountWithoutTax: priceCents,
+            amountWithTax: 0,
+            tax: 0,
+            service: 0,
+            tip: 0,
+            storeId: appId,
+            reference: 'Compra de Beats',
+            email: buyerEmail,
+            documentId: buyerDni || '9999999999',
+            phoneNumber: buyerPhone || '0999999999'
+        });
+        
+        ppb.render('#payphone-button');
+    } catch (err) {
+        console.error('Error initializing PayPhone button:', err);
+        container.innerHTML = '<div style="color: #ef4444; font-size: 13px;">Error al inicializar PayPhone.</div>';
+    }
+}
 
 function getSelectedStorePaymentMethod() {
     const activeTab = document.querySelector('.pay-tab-btn.active');
@@ -10153,8 +10422,10 @@ window.submitFreeDownloadLead = async function() {
 };
 
 function getProducerAvatar(config) {
-    if (!config) return null;
-    if (config.logoBase64) return config.logoBase64;
+    if (!config || Object.keys(config).length === 0) return null;
+    if (config.logoBase64 && config.logoBase64.trim() !== '') {
+        return config.logoBase64.trim().replace(/^["']|["']$/g, '').trim();
+    }
     const name = (config.aka || config.name || '').toLowerCase();
     if (name.includes('sossa')) {
         return '/producer_sossa.png';
@@ -10162,7 +10433,19 @@ function getProducerAvatar(config) {
     if (name.includes('monarco')) {
         return '/producer_monarco.jpg';
     }
-    return null;
+    
+    // Generar avatar SVG con iniciales para otros productores
+    const displayName = config.aka || config.name || 'Productor';
+    const initials = displayName.split(/\s+/).map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'PR';
+    const storeColor = config.brandColor || '#00ccff';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" style="background:transparent;"><circle cx="50" cy="50" r="46" fill="none" stroke="${storeColor}" stroke-width="1.5" opacity="0.3"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="bold" letter-spacing="1">${initials}</text></svg>`;
+    try {
+        const base64 = btoa(unescape(encodeURIComponent(svg)));
+        return `data:image/svg+xml;base64,${base64}`;
+    } catch (e) {
+        console.error("Error generating initials avatar:", e);
+        return null;
+    }
 }
 window.getProducerAvatar = getProducerAvatar;
 
@@ -10231,10 +10514,78 @@ window.showAppView = function(viewName, params = null, pushState = true) {
 
 function getDefaultBeatArtwork() {
     const accentColor = document.documentElement.style.getPropertyValue('--accent') || '#00ccff';
-    const colorHex = accentColor.trim().replace('#', '%23');
-    return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" style="background:%2311121a;"><circle cx="50" cy="50" r="38" fill="none" stroke="${colorHex}" stroke-width="2" stroke-dasharray="4 4" opacity="0.2"/><path d="M42 65V35l26-4v30" fill="none" stroke="${colorHex}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="35" cy="65" r="7" fill="${colorHex}"/><circle cx="61" cy="61" r="7" fill="${colorHex}"/></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" style="background:#11121a;"><circle cx="50" cy="50" r="38" fill="none" stroke="${accentColor}" stroke-width="2" stroke-dasharray="4 4" opacity="0.2"/><path d="M42 65V35l26-4v30" fill="none" stroke="${accentColor}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="35" cy="65" r="7" fill="${accentColor}"/><circle cx="61" cy="61" r="7" fill="${accentColor}"/></svg>`;
+    const base64 = btoa(unescape(encodeURIComponent(svg)));
+    return `data:image/svg+xml;base64,${base64}`;
 }
 window.getDefaultBeatArtwork = getDefaultBeatArtwork;
+
+function getBeatArtwork(beat) {
+    if (!beat) return '';
+    
+    let art = (beat.artwork || '').trim();
+    art = art.replace(/^["']|["']$/g, '').trim();
+    
+    const lowerArt = art.toLowerCase();
+    if (art !== '' && lowerArt !== 'null' && lowerArt !== 'undefined' && lowerArt !== 'none' && !lowerArt.includes('placeholder')) {
+        return art;
+    }
+    
+    let config = null;
+    
+    // Check if the beat has its own producerConfig
+    if (beat.producerConfig && Object.keys(beat.producerConfig).length > 0) {
+        config = beat.producerConfig;
+    }
+    
+    // If not, see if we can match the beat's producer name with window.storeProducerConfig
+    if (!config && window.storeProducerConfig && Object.keys(window.storeProducerConfig).length > 0) {
+        const beatProducer = (beat.producerName || beat.producerAka || '').toLowerCase();
+        const storeProducerAka = (window.storeProducerConfig.aka || '').toLowerCase();
+        const storeProducerName = (window.storeProducerConfig.name || '').toLowerCase();
+        
+        // If the beat's producer matches the current store's producer, we can use the store config
+        if (beatProducer === '' || beatProducer === storeProducerAka || beatProducer === storeProducerName) {
+            config = window.storeProducerConfig;
+        }
+    }
+    
+    // Fallback to other configs if still not set
+    if (!config && window.producerConfig && Object.keys(window.producerConfig).length > 0) {
+        config = window.producerConfig;
+    } else if (!config && typeof producerConfig !== 'undefined' && producerConfig && Object.keys(producerConfig).length > 0) {
+        config = producerConfig;
+    }
+    
+    // If we still have no config, or the config doesn't have the producer name, build a minimal config
+    if (!config) {
+        config = {};
+    }
+    if (!config.aka && !config.name && (beat.producerName || beat.producerAka)) {
+        config = { aka: beat.producerName || beat.producerAka };
+    }
+    
+    let producerLogo = null;
+    if (window.getProducerAvatar) {
+        producerLogo = window.getProducerAvatar(config);
+    } else if (config.logoBase64) {
+        producerLogo = config.logoBase64;
+    }
+    
+    if (producerLogo) {
+        producerLogo = producerLogo.trim().replace(/^["']|["']$/g, '').trim();
+        const lowerLogo = producerLogo.toLowerCase();
+        if (producerLogo !== '' && lowerLogo !== 'null' && lowerLogo !== 'undefined' && lowerLogo !== 'none') {
+            return producerLogo;
+        }
+    }
+    
+    if (window.getDefaultBeatArtwork) {
+        return window.getDefaultBeatArtwork();
+    }
+    return '';
+}
+window.getBeatArtwork = getBeatArtwork;
 
 // Lógica de Checkout de Beats para Clientes
 function setupStoreCheckout() {
@@ -10302,7 +10653,7 @@ function setupStoreCheckout() {
         const price = window.getCheckoutPrice();
         const producerId = window.storeProducerUid;
         const producerName = window.storeProducerConfig.aka || window.storeProducerConfig.name || 'Productor';
-        const artwork = beat.artwork || '';
+        const artwork = window.getBeatArtwork(beat) || '';
 
         // Exclusiva validar precio mínimo
         if (checkoutSelectedLicense === 'exclusive' && (isNaN(price) || price < 250)) {
@@ -10322,7 +10673,7 @@ function setupStoreCheckout() {
         const price = window.getCheckoutPrice();
         const producerId = window.storeProducerUid;
         const producerName = window.storeProducerConfig.aka || window.storeProducerConfig.name || 'Productor';
-        const artwork = beat.artwork || '';
+        const artwork = window.getBeatArtwork(beat) || '';
 
         // Exclusiva validar precio mínimo
         if (checkoutSelectedLicense === 'exclusive' && (isNaN(price) || price < 250)) {
@@ -11124,8 +11475,11 @@ window.globalProducersConfig = {};
 window.globalBeats = [];
 window.filteredGlobalBeats = [];
 
+window.lastGlobalBeatDoc = null;
+const PAGE_SIZE = 12;
+
 window.initGlobalCatalog = async function() {
-    console.log("🌍 Cargando Catálogo Global de BEATSS...");
+    console.log("🌍 Cargando Catálogo Global de BEATSS (Paginado)...");
     window.isGlobalCatalogMode = true;
     window.isPublicStoreMode = false;
 
@@ -11145,53 +11499,35 @@ window.initGlobalCatalog = async function() {
     catalogView.style.display = 'block';
 
     const grid = document.getElementById('global-beats-grid');
-    grid.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 80px;">
-            <div class="animate-spin" style="display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top-color: #00ccff; border-radius: 50%;"></div>
-            <p style="margin-top: 20px; color: #8a91a6; font-size: 15px; font-weight: 600;">Cargando catálogo global...</p>
-        </div>
-    `;
+    
+    // Ocultar Cargar Más por defecto
+    const loadMoreContainer = document.getElementById('global-load-more-container');
+    if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+
+    // Inyectar skeleton loaders
+    renderSkeletons(grid, PAGE_SIZE);
 
     try {
-        // Importante: No importamos db ni getDocs porque ya existen en main.js
         // 1. Obtener todos los perfiles de productores
-        const configsSnap = await getDocs(collectionGroup(db, 'config'));
-        window.globalProducersConfig = {};
-        configsSnap.forEach(doc => {
-            const docPath = doc.ref.path;
-            const uid = docPath.split('/')[1];
-            window.globalProducersConfig[uid] = doc.data();
-        });
+        if (!window.globalProducersConfig || Object.keys(window.globalProducersConfig).length === 0) {
+            const configsSnap = await getDocs(collectionGroup(db, 'config'));
+            window.globalProducersConfig = {};
+            configsSnap.forEach(doc => {
+                const docPath = doc.ref.path;
+                const uid = docPath.split('/')[1];
+                window.globalProducersConfig[uid] = doc.data();
+            });
+        }
 
-        // 2. Obtener todos los beats
-        const beatsSnap = await getDocs(collectionGroup(db, 'beats'));
+        // Resetear paginación
         window.globalBeats = [];
-        beatsSnap.forEach(doc => {
-            const data = doc.data();
-            const docPath = doc.ref.path;
-            const uid = docPath.split('/')[1];
-            
-            // Filtrar solo beats con MP3, listos para preescucha
-            if (data.mp3) {
-                window.globalBeats.push({
-                    id: doc.id,
-                    producerUid: uid,
-                    producerConfig: window.globalProducersConfig[uid] || {},
-                    ...data
-                });
-            }
-        });
+        window.lastGlobalBeatDoc = null;
 
-        // Ordenamiento por defecto: más recientes
-        window.globalBeats.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-        window.filteredGlobalBeats = [...window.globalBeats];
-
-        populateGlobalFilters(window.globalBeats);
-        renderGlobalBeats(window.filteredGlobalBeats);
+        await window.fetchGlobalBeatsPage(false);
         setupGlobalEvents();
 
     } catch (error) {
-        console.error("Error al cargar el Catálogo Global:", error);
+        console.error("Error al inicializar el Catálogo Global:", error);
         grid.innerHTML = `
             <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ef4444;">
                 <i data-lucide="alert-triangle" style="width: 48px; height: 48px;"></i>
@@ -11199,6 +11535,153 @@ window.initGlobalCatalog = async function() {
             </div>
         `;
         if (window.lucide) window.lucide.createIcons();
+    }
+};
+
+function renderSkeletons(container, count = 12) {
+    let html = '';
+    for (let i = 0; i < count; i++) {
+        html += `
+            <div class="skeleton-card">
+                <div class="skeleton-thumbnail"></div>
+                <div class="skeleton-text skeleton-title"></div>
+                <div class="skeleton-text skeleton-subtitle"></div>
+                <div class="skeleton-row">
+                    <div class="skeleton-text" style="width: 60px;"></div>
+                    <div class="skeleton-button"></div>
+                </div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
+}
+
+window.fetchGlobalBeatsPage = async function(isLoadMore = false) {
+    const grid = document.getElementById('global-beats-grid');
+    const loadMoreContainer = document.getElementById('global-load-more-container');
+    
+    if (isLoadMore) {
+        // Append 12 skeletons at the bottom
+        const tempDiv = document.createElement('div');
+        tempDiv.id = 'global-skeletons-temp';
+        tempDiv.style.display = 'contents';
+        renderSkeletons(tempDiv, PAGE_SIZE);
+        grid.appendChild(tempDiv);
+    }
+
+    try {
+        const q = window.lastGlobalBeatDoc 
+            ? query(collectionGroup(db, 'beats'), startAfter(window.lastGlobalBeatDoc), limit(PAGE_SIZE))
+            : query(collectionGroup(db, 'beats'), limit(PAGE_SIZE));
+            
+        const beatsSnap = await getDocs(q);
+        
+        // Remover los skeletons temporales
+        const tempSkeletons = document.getElementById('global-skeletons-temp');
+        if (tempSkeletons) tempSkeletons.remove();
+        
+        if (beatsSnap.empty) {
+            if (!isLoadMore) {
+                grid.innerHTML = '';
+                document.getElementById('global-empty-state').style.display = 'block';
+            }
+            if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+            return;
+        }
+
+        beatsSnap.forEach(doc => {
+            const data = doc.data();
+            const docPath = doc.ref.path;
+            const uid = docPath.split('/')[1];
+            
+            // Filtrar solo beats con MP3, listos para preescucha
+            if (data.mp3) {
+                // Evitar duplicados
+                if (!window.globalBeats.some(b => b.id === doc.id)) {
+                    window.globalBeats.push({
+                        id: doc.id,
+                        producerUid: uid,
+                        producerConfig: window.globalProducersConfig[uid] || {},
+                        ...data
+                    });
+                }
+            }
+        });
+
+        window.lastGlobalBeatDoc = beatsSnap.docs[beatsSnap.docs.length - 1];
+
+        // Ordenamiento por defecto: más recientes
+        window.globalBeats.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+        window.filteredGlobalBeats = [...window.globalBeats];
+
+        populateGlobalFilters(window.globalBeats);
+        
+        // Volver a aplicar filtros activos al renderizar
+        const searchInput = document.getElementById('global-search-input');
+        const genreSelect = document.getElementById('global-genre-select');
+        const priceSelect = document.getElementById('global-price-select');
+        const bpmSelect = document.getElementById('global-bpm-select');
+        const sortSelect = document.getElementById('global-sort-select');
+        
+        if (searchInput && (searchInput.value || (genreSelect && genreSelect.value) || (priceSelect && priceSelect.value) || (bpmSelect && bpmSelect.value))) {
+            const queryVal = searchInput.value.toLowerCase().trim();
+            const genre = genreSelect ? genreSelect.value : '';
+            const priceLevel = priceSelect ? priceSelect.value : '';
+            const bpmLevel = bpmSelect ? bpmSelect.value : '';
+            const sort = sortSelect ? sortSelect.value : 'newest';
+
+            window.filteredGlobalBeats = window.globalBeats.filter(beat => {
+                const prodAka = (beat.producerConfig?.aka || '').toLowerCase();
+                const beatName = (beat.name || '').toLowerCase();
+                const beatGenre = (beat.genre || '').toLowerCase();
+                const matchesSearch = !queryVal || beatName.includes(queryVal) || prodAka.includes(queryVal) || beatGenre.includes(queryVal);
+                const matchesGenre = !genre || beat.genre === genre;
+                
+                let matchesBpm = true;
+                if (bpmLevel && beat.bpm) {
+                    const bpmVal = parseInt(beat.bpm);
+                    if (bpmLevel === '0-90' && bpmVal >= 90) matchesBpm = false;
+                    else if (bpmLevel === '90-130' && (bpmVal < 90 || bpmVal > 130)) matchesBpm = false;
+                    else if (bpmLevel === '130-999' && bpmVal <= 130) matchesBpm = false;
+                } else if (bpmLevel && !beat.bpm) {
+                    matchesBpm = false;
+                }
+
+                let matchesPrice = true;
+                if (priceLevel && beat.price_basic) {
+                    const p = beat.price_basic;
+                    if (priceLevel === '0-20' && p > 20) matchesPrice = false;
+                    else if (priceLevel === '20-50' && (p <= 20 || p > 50)) matchesPrice = false;
+                    else if (priceLevel === '50-100' && (p <= 50 || p > 100)) matchesPrice = false;
+                    else if (priceLevel === '100+' && p <= 100) matchesPrice = false;
+                } else if (priceLevel && !beat.price_basic) {
+                    matchesPrice = false;
+                }
+                return matchesSearch && matchesGenre && matchesBpm && matchesPrice;
+            });
+
+            if (sort === 'price_asc') {
+                window.filteredGlobalBeats.sort((a,b) => (a.price_basic || 9999) - (b.price_basic || 9999));
+            } else if (sort === 'price_desc') {
+                window.filteredGlobalBeats.sort((a,b) => (b.price_basic || 0) - (a.price_basic || 0));
+            } else {
+                window.filteredGlobalBeats.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            }
+        }
+        
+        renderGlobalBeats(window.filteredGlobalBeats);
+
+        // Si la página tiene menos de 12 elementos, ocultar "Cargar más"
+        if (beatsSnap.docs.length < PAGE_SIZE) {
+            if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+        } else {
+            if (loadMoreContainer) loadMoreContainer.style.display = 'block';
+        }
+
+    } catch (error) {
+        console.error("Error al paginar beats:", error);
+        const tempSkeletons = document.getElementById('global-skeletons-temp');
+        if (tempSkeletons) tempSkeletons.remove();
     }
 };
 
@@ -11211,10 +11694,12 @@ function populateGlobalFilters(beats) {
     });
     const genreSelect = document.getElementById('global-genre-select');
     if (genreSelect) {
+        const currentValue = genreSelect.value;
         genreSelect.innerHTML = '<option value="">Cualquier Género</option>';
         Array.from(genres).sort().forEach(g => {
             genreSelect.innerHTML += `<option value="${g}">${g}</option>`;
         });
+        genreSelect.value = currentValue; // Mantener selección
     }
 }
 
@@ -11244,8 +11729,7 @@ function renderGlobalBeats(beats) {
             pColor = '#b28eff';
         }
 
-        const producerLogo = window.getProducerAvatar ? window.getProducerAvatar(config) : config.logoBase64;
-        const artwork = beat.artwork || producerLogo || (window.getDefaultBeatArtwork ? window.getDefaultBeatArtwork() : '');
+        const artwork = window.getBeatArtwork(beat);
         const price = beat.price_basic ? `$${beat.price_basic.toFixed(2)}` : 'Negociable';
         
         const isElite = config.plan === 'elite';
@@ -11284,6 +11768,7 @@ function renderGlobalBeats(beats) {
     }).join('');
     
     if (window.lucide) window.lucide.createIcons();
+    if (typeof window.apply3DTiltEffect === 'function') window.apply3DTiltEffect();
 }
 
 function setupGlobalEvents() {
@@ -11293,6 +11778,7 @@ function setupGlobalEvents() {
     const bpmSelect = document.getElementById('global-bpm-select');
     const sortSelect = document.getElementById('global-sort-select');
     const clearBtn = document.getElementById('global-btn-clear-filters');
+    const loadMoreBtn = document.getElementById('btn-load-more-global');
     
     const applyFilters = () => {
         const query = searchInput.value.toLowerCase().trim();
@@ -11344,13 +11830,29 @@ function setupGlobalEvents() {
         renderGlobalBeats(window.filteredGlobalBeats);
     };
 
-    if(searchInput) searchInput.addEventListener('input', applyFilters);
-    if(genreSelect) genreSelect.addEventListener('change', applyFilters);
-    if(priceSelect) priceSelect.addEventListener('change', applyFilters);
-    if(bpmSelect) bpmSelect.addEventListener('change', applyFilters);
-    if(sortSelect) sortSelect.addEventListener('change', applyFilters);
+    if(searchInput && !searchInput.dataset.listenerAdded) {
+        searchInput.dataset.listenerAdded = 'true';
+        searchInput.addEventListener('input', applyFilters);
+    }
+    if(genreSelect && !genreSelect.dataset.listenerAdded) {
+        genreSelect.dataset.listenerAdded = 'true';
+        genreSelect.addEventListener('change', applyFilters);
+    }
+    if(priceSelect && !priceSelect.dataset.listenerAdded) {
+        priceSelect.dataset.listenerAdded = 'true';
+        priceSelect.addEventListener('change', applyFilters);
+    }
+    if(bpmSelect && !bpmSelect.dataset.listenerAdded) {
+        bpmSelect.dataset.listenerAdded = 'true';
+        bpmSelect.addEventListener('change', applyFilters);
+    }
+    if(sortSelect && !sortSelect.dataset.listenerAdded) {
+        sortSelect.dataset.listenerAdded = 'true';
+        sortSelect.addEventListener('change', applyFilters);
+    }
 
-    if (clearBtn) {
+    if (clearBtn && !clearBtn.dataset.listenerAdded) {
+        clearBtn.dataset.listenerAdded = 'true';
         clearBtn.addEventListener('click', () => {
             searchInput.value = '';
             genreSelect.value = '';
@@ -11358,6 +11860,22 @@ function setupGlobalEvents() {
             bpmSelect.value = '';
             sortSelect.value = 'newest';
             applyFilters();
+        });
+    }
+
+    if (loadMoreBtn && !loadMoreBtn.dataset.listenerAdded) {
+        loadMoreBtn.dataset.listenerAdded = 'true';
+        loadMoreBtn.addEventListener('click', async () => {
+            loadMoreBtn.disabled = true;
+            // Guardar texto original
+            const btnSpan = loadMoreBtn.querySelector('span');
+            const originalText = btnSpan.textContent;
+            btnSpan.textContent = 'Cargando...';
+            
+            await window.fetchGlobalBeatsPage(true);
+            
+            btnSpan.textContent = originalText;
+            loadMoreBtn.disabled = false;
         });
     }
 }
@@ -11448,7 +11966,128 @@ onDOMReady(() => {
     });
 });
 
+async function checkPayphoneRedirectResult() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('id');
+    const clientTxId = urlParams.get('clientTransactionId');
+    
+    if (id && clientTxId) {
+        const pendingKey = 'payphone_pending_' + clientTxId;
+        const pendingStateStr = localStorage.getItem(pendingKey);
+        if (!pendingStateStr) return;
+        
+        let state;
+        try {
+            state = JSON.parse(pendingStateStr);
+        } catch (e) {
+            console.error('Error parsing payphone pending state:', e);
+            return;
+        }
+        
+        // Show loading/processing overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'payphone-processing-overlay';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(10,12,22,0.95); z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:sans-serif; gap:20px;';
+        overlay.innerHTML = `
+            <div style="width: 50px; height: 50px; border: 5px solid rgba(0,204,255,0.1); border-top-color: #00ccff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <div style="font-size: 18px; font-weight: 700;">Verificando pago con PayPhone...</div>
+            <div style="font-size: 13px; color: #8a91a6;">Por favor, no cierres esta ventana</div>
+            <style>
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            </style>
+        `;
+        document.body.appendChild(overlay);
+        
+        try {
+            // Confirm transaction using PayPhone API
+            const response = await fetch('https://pay.payphonetodoesposible.com/api/button/V2/Confirm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'bearer ' + state.producerToken
+                },
+                body: JSON.stringify({
+                    id: parseInt(id, 10),
+                    clientTxId: clientTxId
+                })
+            });
+            
+            const result = await response.json();
+            console.log('PayPhone Confirmation response:', result);
+            
+            if (response.ok && (result.transactionStatus === 'Approved' || result.statusCode === 3 || result.status === 'Approved')) {
+                // Payment is approved! Save transaction records and deliver licenses
+                window.storeProducerUid = state.producerId;
+                
+                const colRef = collection(db, "payments");
+                for (const item of state.items) {
+                    const orderData = {
+                        type: 'beat_purchase',
+                        producerId: state.producerId,
+                        beatId: item.beatId,
+                        beatName: item.beatName,
+                        licenseType: item.licenseType,
+                        price: item.price,
+                        buyerName: state.buyerName,
+                        buyerEmail: state.buyerEmail,
+                        buyerPhone: state.buyerPhone,
+                        buyerDni: state.buyerDni,
+                        buyerCity: state.buyerCity,
+                        buyerCountry: state.buyerCountry,
+                        method: 'payphone',
+                        reference: clientTxId,
+                        receiptUrl: '',
+                        status: 'approved',
+                        discountPercent: state.discountPercent || 0,
+                        couponCode: state.couponCode || '',
+                        originalPrice: item.price,
+                        finalPrice: item.price * (1 - ((state.discountPercent || 0) / 100)),
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    const docRef = await addDoc(colRef, orderData);
+                    await autoDeliverBeatSale(docRef.id, orderData);
+                }
+                
+                // Clear state
+                localStorage.removeItem(pendingKey);
+                window.cart = [];
+                if (typeof saveCartToStorage === 'function') saveCartToStorage();
+                if (typeof window.updateCartUI === 'function') window.updateCartUI();
+                
+                overlay.innerHTML = `
+                    <div style="font-size: 60px; color: #4ade80; text-align: center; margin-bottom: 10px;">✓</div>
+                    <div style="font-size: 20px; font-weight: 700; color: #4ade80; text-align: center; margin-bottom: 8px;">¡Pago aprobado con éxito!</div>
+                    <div style="font-size: 14px; color: #cdd; text-align: center; max-width: 320px; line-height: 1.4; margin-bottom: 20px; padding: 0 20px;">Tus archivos y contratos de licencia han sido enviados automáticamente a tu correo electrónico.</div>
+                    <button onclick="window.closePayphoneOverlay()" style="padding: 12px 28px; background: #00ccff; border: none; border-radius: 8px; color: #000; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 204, 255, 0.3);">Entendido</button>
+                `;
+            } else {
+                throw new Error(result.message || 'La transacción no fue aprobada');
+            }
+        } catch (err) {
+            console.error('Error confirming PayPhone transaction:', err);
+            overlay.innerHTML = `
+                <div style="font-size: 60px; color: #ef4444; text-align: center; margin-bottom: 10px;">✗</div>
+                <div style="font-size: 18px; font-weight: 700; color: #ef4444; text-align: center; margin-bottom: 8px;">Error en la verificación</div>
+                <div style="font-size: 13px; color: #8a91a6; text-align: center; max-width: 280px; line-height: 1.4; margin-bottom: 20px; padding: 0 20px;">${err.message || 'No se pudo verificar el pago con PayPhone. Si el dinero fue debitado, contacta al productor.'}</div>
+                <button onclick="window.closePayphoneOverlay()" style="padding: 12px 28px; background: #3f4454; border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer; font-size: 14px;">Regresar a la tienda</button>
+            `;
+        }
+    }
+}
+
+window.closePayphoneOverlay = function() {
+    const overlay = document.getElementById('payphone-processing-overlay');
+    if (overlay) overlay.remove();
+    // Clean URL query params to avoid infinite loops on manual refresh
+    const url = new URL(window.location.href);
+    url.searchParams.delete('id');
+    url.searchParams.delete('clientTransactionId');
+    window.history.replaceState({}, document.title, url.toString());
+};
+
 function handleInitialRouting() {
+    checkPayphoneRedirectResult();
     const urlParams = new URLSearchParams(window.location.search);
     const producerAka = urlParams.get('p') || urlParams.get('producer');
     if (producerAka) {
@@ -11474,5 +12113,78 @@ window.addEventListener('popstate', (event) => {
 });
 
 setTimeout(handleInitialRouting, 500);
+
+// ==========================================================================
+// MEJORAS DE INTERACCIÓN PREMIUM Y ERGONOMÍA (ASIGNACIONES GLOBALES)
+// ==========================================================================
+
+// 1. Efecto Tilt 3D y brillo dinámico en las tarjetas de beats
+window.apply3DTiltEffect = function() {
+    const cards = document.querySelectorAll('.store-beat-card');
+    cards.forEach(card => {
+        card.style.transformStyle = "preserve-3d";
+        
+        let glare = card.querySelector('.card-glare');
+        if (!glare) {
+            glare = document.createElement('div');
+            glare.className = 'card-glare';
+            card.appendChild(glare);
+        }
+        
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const width = rect.width;
+            const height = rect.height;
+            const xVal = (x / width) - 0.5;
+            const yVal = (y / height) - 0.5;
+            const rotateY = xVal * 16; 
+            const rotateX = -yVal * 16;
+            
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+            glare.style.background = `radial-gradient(circle at ${x}px ${y}px, rgba(255,255,255,0.08) 0%, transparent 60%)`;
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+            glare.style.background = 'transparent';
+        });
+    });
+};
+
+// 2. Controlador de la barra táctil fija inferior en dispositivos móviles
+document.addEventListener('DOMContentLoaded', () => {
+    const mobileBtns = document.querySelectorAll('.mobile-nav-btn');
+    const sidebar = document.querySelector('.sidebar');
+    const mainPanel = document.querySelector('.main-panel');
+    
+    if (mobileBtns.length > 0) {
+        mobileBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                mobileBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const target = btn.dataset.target;
+                if (target === 'form') {
+                    if (sidebar) sidebar.style.setProperty('display', 'block', 'important');
+                    if (mainPanel) mainPanel.style.setProperty('display', 'none', 'important');
+                } else if (target === 'preview') {
+                    if (sidebar) sidebar.style.setProperty('display', 'none', 'important');
+                    if (mainPanel) mainPanel.style.setProperty('display', 'block', 'important');
+                    if (typeof window.switchTab === 'function') {
+                        window.switchTab('tab-preview');
+                    }
+                } else if (target === 'history') {
+                    if (sidebar) sidebar.style.setProperty('display', 'none', 'important');
+                    if (mainPanel) mainPanel.style.setProperty('display', 'block', 'important');
+                    if (typeof window.switchTab === 'function') {
+                        window.switchTab('tab-history');
+                    }
+                }
+            });
+        });
+    }
+});
 
 

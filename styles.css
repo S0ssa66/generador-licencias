@@ -3,6 +3,7 @@
    ========================================================================== */
 
 :root {
+    color-scheme: dark;
     --bg-app: #08080a;
     --bg-sidebar: #0f0f13;
     --bg-card: #16161c;
@@ -38,6 +39,7 @@
 }
 
 body.light-theme {
+    color-scheme: light;
     --bg-app: #f5f5f9;
     --bg-sidebar: #ffffff;
     --bg-card: #ffffff;
@@ -2751,5 +2753,590 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     }
 }
 
+/* ==========================================================================
+   HIGH-END VISUAL DESIGN UPGRADE (Glassmorphism & Sleek Aesthetics)
+   ========================================================================== */
+
+/* Animación de Entrada Suave */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Landing Page Estilizado */
+#landing-page {
+    background: radial-gradient(circle at 50% 0%, #111422 0%, #06070a 100%) !important;
+    position: relative;
+    overflow-x: hidden;
+}
+
+#landing-page header {
+    background: rgba(6, 7, 10, 0.5) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    position: sticky !important;
+    top: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#landing-page section, #landing-page div {
+    animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Tarjetas de Features con Glassmorphism */
+#landing-page section div[style*="background: rgba(255, 255, 255, 0.02)"] {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+#landing-page section div[style*="background: rgba(255, 255, 255, 0.02)"]:hover {
+    transform: translateY(-8px) scale(1.02) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: rgba(0, 102, 255, 0.3) !important;
+    box-shadow: 0 16px 40px rgba(0, 102, 255, 0.1) !important;
+}
+
+/* Catálogo Global (Marketplace) Premium */
+#global-catalog-view {
+    background: radial-gradient(circle at 50% 0%, #0c0f1a 0%, #040508 100%) !important;
+}
+
+#global-catalog-view header {
+    background: rgba(8, 10, 16, 0.6) !important;
+    backdrop-filter: blur(20px) saturate(190%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Buscador y Controles en Catálogo Global y Storefront */
+#global-catalog-view .store-controls,
+#public-store-view .store-controls {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    backdrop-filter: blur(12px) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25) !important;
+    border-radius: 20px !important;
+    padding: 20px !important;
+}
+
+#global-catalog-view input,
+#global-catalog-view select,
+#public-store-view input,
+#public-store-view select {
+    background: rgba(15, 17, 26, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+#global-catalog-view input:focus,
+#global-catalog-view select:focus,
+#public-store-view input:focus,
+#public-store-view select:focus {
+    border-color: var(--accent, #0066ff) !important;
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.15) !important;
+    background: rgba(15, 17, 26, 0.9) !important;
+}
+
+/* Tienda Pública Estilizada */
+#public-store-view {
+    background: radial-gradient(circle at top left, #0e111d 0%, #06070a 100%) !important;
+}
+
+#public-store-view .store-header {
+    background: rgba(255, 255, 255, 0.01) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+}
+
+/* Tarjetas de Beats con Estética Refinada */
+.store-beat-card {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(10px) !important;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    border-radius: 20px !important;
+}
+
+.store-beat-card:hover {
+    transform: translateY(-8px) scale(1.01) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 102, 255, 0.15) !important;
+}
+
+.store-beat-cover {
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important;
+}
+
+/* Botón de reproducción con efecto de pulso / brillo */
+.store-play-btn {
+    background: var(--accent, #00ccff) !important;
+    box-shadow: 0 4px 15px rgba(0, 204, 255, 0.3) !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.store-beat-card:hover .store-play-btn {
+    transform: scale(1.08) !important;
+    box-shadow: 0 8px 25px rgba(0, 204, 255, 0.6), 0 0 0 6px rgba(0, 204, 255, 0.15) !important;
+}
+
+/* Reproductor de Audio Ultra Glassmorphic */
+#store-audio-player {
+    background: rgba(10, 13, 22, 0.75) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(24px) saturate(190%) !important;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5) !important;
+    margin: 16px !important;
+    border-radius: 20px !important;
+    width: calc(100% - 32px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    box-sizing: border-box;
+}
+
+/* Barra de progreso premium */
+#player-progress-container {
+    height: 6px !important;
+    border-radius: 10px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    overflow: hidden;
+    cursor: pointer;
+    transition: height 0.2s ease;
+}
+
+#player-progress-container:hover {
+    height: 8px !important;
+}
+
+#player-progress-bar {
+    background: linear-gradient(90deg, var(--accent, #00ccff) 0%, #0055ee 100%) !important;
+    border-radius: 10px !important;
+}
+
+/* Licencias de Checkout de Beats */
+.license-option-card {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(5px) !important;
+    border-radius: 16px !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.license-option-card:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    transform: translateX(4px) !important;
+}
+
+.license-option-card.active {
+    background: rgba(0, 102, 255, 0.06) !important;
+    border-color: var(--accent, #0066ff) !important;
+    box-shadow: 0 0 25px rgba(0, 102, 255, 0.15) !important;
+}
+
+/* Checkout Step Indicator */
+.checkout-step-indicator.active {
+    background: var(--accent, #0066ff) !important;
+    border-color: var(--accent, #0066ff) !important;
+    box-shadow: 0 0 15px rgba(0, 102, 255, 0.4) !important;
+}
+
+/* Botones en general */
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent, #0066ff) 0%, #0044cc 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(0, 102, 255, 0.25) !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(0, 102, 255, 0.45), 0 0 0 4px rgba(0, 102, 255, 0.15) !important;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(5px) !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Scrollbars Premium */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.05);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+/* Premium Equalizer Loader */
+.premium-loader-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    gap: 20px;
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+.equalizer-loader {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 48px;
+}
+
+.equalizer-loader .eq-bar {
+    width: 6px;
+    height: 10px;
+    background: linear-gradient(to top, var(--accent, #00ccff) 0%, #0055ee 100%) !important;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0, 204, 255, 0.4);
+    animation: eq-pulse 1s ease-in-out infinite;
+    transform-origin: bottom;
+}
+
+/* Retrasos para simular ritmo */
+.equalizer-loader .eq-bar:nth-child(1) { animation-delay: 0.1s; height: 16px; }
+.equalizer-loader .eq-bar:nth-child(2) { animation-delay: 0.3s; height: 32px; }
+.equalizer-loader .eq-bar:nth-child(3) { animation-delay: 0.0s; height: 48px; }
+.equalizer-loader .eq-bar:nth-child(4) { animation-delay: 0.4s; height: 24px; }
+.equalizer-loader .eq-bar:nth-child(5) { animation-delay: 0.2s; height: 38px; }
+
+@keyframes eq-pulse {
+    0%, 100% {
+        transform: scaleY(0.3);
+    }
+    50% {
+        transform: scaleY(1);
+    }
+}
+
+.loader-text {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 700;
+    color: #8a91a6;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #ffffff 40%, rgba(255,255,255,0.6) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: loader-pulse-text 2s ease-in-out infinite;
+}
+
+@keyframes loader-pulse-text {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+/* ==========================================================================
+   MEJORAS DE DISEÑO PREMIUM (GLASSMORPHISM, TILT 3D, NAVEGACIÓN MÓVIL)
+   ========================================================================== */
+
+/* 1. Glassmorphism y Mesh Gradients en el Contenedor Principal */
+.app-container {
+    position: relative;
+    background: #06070a !important;
+    overflow: hidden;
+}
+
+.app-container::before,
+.app-container::after {
+    content: "";
+    position: absolute;
+    width: 450px;
+    height: 450px;
+    border-radius: 50%;
+    filter: blur(140px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.15;
+    transition: background-color 0.8s ease;
+}
+
+.app-container::before {
+    top: -10%;
+    left: -10%;
+    background: radial-gradient(circle, var(--accent, #00ccff) 0%, transparent 80%);
+    animation: floatBlobOne 20s infinite alternate ease-in-out;
+}
+
+.app-container::after {
+    bottom: -10%;
+    right: -10%;
+    background: radial-gradient(circle, #00aacc 0%, transparent 80%);
+    animation: floatBlobTwo 25s infinite alternate ease-in-out;
+}
+
+@keyframes floatBlobOne {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(60px, 40px) scale(1.15); }
+}
+@keyframes floatBlobTwo {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-80px, -30px) scale(0.9); }
+}
+
+.sidebar {
+    background: rgba(15, 15, 19, 0.65) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+    position: relative;
+    z-index: 10;
+}
+
+.sidebar-actions {
+    background: rgba(10, 9, 15, 0.75) !important;
+    backdrop-filter: blur(10px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.input-group input[type="text"],
+.input-group input[type="email"],
+.input-group input[type="number"],
+.input-group input[type="date"],
+.input-group select {
+    background-color: rgba(30, 30, 36, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+.input-group input:focus,
+.input-group select:focus {
+    border-color: var(--accent, #00ccff) !important;
+    box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2) !important;
+    background-color: rgba(30, 30, 36, 0.75) !important;
+}
+
+/* 2. Micro-interacciones 3D en las Tarjetas de Beats */
+.store-beat-card {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+
+.card-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    pointer-events: none;
+    z-index: 5;
+    transition: background 0.15s ease;
+}
+
+/* 3. Estilos de la Barra de Navegación Móvil */
+.mobile-nav-bar {
+    display: none;
+}
+
+@media (max-width: 900px) {
+    .app-container {
+        display: block !important;
+        height: calc(100vh - 60px) !important;
+        overflow-y: hidden !important;
+        padding-bottom: 60px !important;
+    }
+    
+    .sidebar {
+        display: block !important;
+        height: 100% !important;
+        overflow-y: auto !important;
+        border-bottom: none !important;
+    }
+    
+    .main-panel {
+        display: none !important;
+        height: 100% !important;
+        overflow-y: auto !important;
+    }
+    
+    .mobile-nav-bar {
+        display: flex !important;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: rgba(15, 15, 19, 0.85);
+        backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        z-index: 9999;
+        justify-content: space-around;
+        align-items: center;
+        padding: 0 8px;
+    }
+    
+    .mobile-nav-btn {
+        background: none;
+        border: none;
+        color: var(--text-secondary, #8a91a6);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        font-size: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 8px;
+        flex: 1;
+        transition: all 0.2s ease;
+    }
+    
+    .mobile-nav-btn.active {
+        color: var(--accent, #00ccff);
+    }
+    
+    .mobile-nav-btn i {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Correcciones para PayPal en modo oscuro */
+#store-paypal-button-container {
+    color-scheme: dark !important;
+}
+
+/* Skeleton Card Loader (Agente 1) */
+.skeleton-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 380px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+    transform: translateX(-100%);
+    animation: skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes skeleton-shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.skeleton-thumbnail {
+    width: 100%;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+}
+
+.skeleton-text {
+    height: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+}
+
+.skeleton-title {
+    width: 70%;
+    height: 20px;
+}
+
+.skeleton-subtitle {
+    width: 40%;
+}
+
+.skeleton-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+}
+
+.skeleton-button {
+    width: 80px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+}
+
+/* Estilos de Impresión de Recibos (Agente 2) */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    #receipt-modal,
+    #receipt-modal *,
+    #receipt-modal-body,
+    #receipt-modal-body * {
+        visibility: visible !important;
+    }
+    #receipt-modal {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        background: #fff !important;
+        color: #000 !important;
+        backdrop-filter: none !important;
+        display: block !important;
+        box-shadow: none !important;
+        z-index: auto !important;
+    }
+    #receipt-modal-body {
+        background: #fff !important;
+        color: #000 !important;
+        padding: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    .receipt-modal-box {
+        border: none !important;
+        box-shadow: none !important;
+        background: #fff !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    .modal-header {
+        display: none !important;
+    }
+}
 
 

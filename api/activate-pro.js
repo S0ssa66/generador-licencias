@@ -127,6 +127,7 @@ export default async function handler(req, res) {
             plan: planToActivate,
             planActivatedAt: activationDate.toISOString(),
             planExpirationDate: expirationDate.toISOString(),
+            expirationPro: expirationDate.toISOString(),
             planPayPalOrderId: orderId,
             planPayerEmail: email || order.payer?.email_address || '',
         }, { merge: true });
@@ -137,6 +138,7 @@ export default async function handler(req, res) {
             plan: planToActivate,
             planActivatedAt: activationDate.toISOString(),
             planExpirationDate: expirationDate.toISOString(),
+            expirationPro: expirationDate.toISOString(),
         }, { merge: true });
 
         console.log(`✅ Plan ${planToActivate} activado para uid: ${uid}, email: ${email}, order: ${orderId}`);
