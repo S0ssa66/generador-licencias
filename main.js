@@ -3226,7 +3226,7 @@ function compileContract() {
         buyer_country: buyerCountry,
         
         beat_name: beatName,
-        beat_bpm: beatBpm ? beatBpm + ' BPM' : '',
+        beat_bpm: beatBpm ? '(' + beatBpm + ' BPM)' : '',
         beat_key: beatKey,
         license_value: value.toFixed(2),
         license_value_letters: valueLetters,
