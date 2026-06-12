@@ -1,58 +1,31 @@
-# Walkthrough: Ajustes de Fuente e Imagen de Sossa
+# Walkthrough: Rediseño Visual y Ajustes del Catálogo Global (Fase 2)
 
-Hemos completado el refinamiento visual de la cabecera del proyecto con fuentes y posicionamientos optimizados.
+Hemos completado exitosamente las tareas de rediseño visual y corrección estática para el Catálogo Global de la plataforma **BEATSS** (`/?catalogo=1`).
+
+---
 
 ## Cambios Realizados
 
-### 1. Corrección de la Tipografía en la Barra de Navegación y Botones (Times New Roman Bug)
-* **Problema:** Enlaces como "Marketplace", "Dashboard", "Licenses", "Analytics" e "Iniciar Sesión" se renderizaban en una tipografía serif genérica (Times New Roman), dándole a la cabecera un aspecto fuera de lugar de "documento Word". Esto sucedía porque la clase `font-label-caps` estaba mapeada a `JetBrains Mono`, la cual no estaba cargada en el `<head>` y carecía de fallback sans-serif en Tailwind.
-* **Solución:**
-  * Consolidamos los enlaces de Google Fonts en el `<head>` para cargar correctamente las familias: `Inter`, `Outfit`, `Montserrat`, `JetBrains Mono` y `Playfair Display` en una sola llamada de red optimizada.
-  * Modificamos la configuración de Tailwind (`tailwind-config`) para mapear la clase `"label-caps"` directamente a `Montserrat` con fallback `sans-serif` (`["Montserrat", "sans-serif"]`). Esto cambia inmediatamente los enlaces de navegación y el botón de inicio de sesión a la tipografía geométrica premium Montserrat, en línea con el resto de la cabecera.
-  * Añadimos un fallback `monospace` en la clase `"data-mono"`.
+### 1. Reestructuración y Estilo Premium de la Tarjeta del Beat (`main.js`)
+* **Inyección de Variables de Marca:** Agregamos una función parser de colores hexadecimales a RGB (`hexToRgb`) dentro del renderizador para inyectar dinámicamente variables CSS locales (`--accent`, `--accent-glow` y `--accent-glow-hover`) en el contenedor `.store-beat-card`.
+* **Corrección de Overlay de Reproducción:** Reemplazamos la clase estática `.play-overlay` por la clase estándar `.store-play-overlay` definida en la hoja de estilos. Esto activa correctamente los efectos de desenfoque (`backdrop-filter`) y transición suave de opacidad al pasar el ratón.
+* **Solución al Truncamiento de Título:** Separamos el título del beat y el precio en filas independientes. Quitamos el forzado horizontal (`white-space: nowrap`) del título y configuramos una altura mínima uniforme de dos líneas (`min-height: 2.6em` y `-webkit-line-clamp: 2`) para evitar que se corten los nombres de los beats de manera agresiva.
+* **Separación de Bloque de Compra:** Agrupamos el precio básico y el botón con icono de compra ("Adquirir") en la base de la tarjeta con una línea divisoria superior limpia.
+* **Formato de Portada Spotify-Style:** Envolvimos la imagen de la portada con padding interno de `12px` y bordes de `12px`, dándole un aspecto anidado ultra-moderno.
 
-### 2. Ajuste de Posición e Imagen de Sossa
-* **Problema:** En pantallas grandes, la tarjeta del artista destacado quedaba demasiado alta. Además, el encuadre por defecto de `object-cover` cortaba la parte superior de la cabeza de Sossa.
-* **Solución:**
-  * Añadimos la clase `lg:mt-12` a la columna de la tarjeta para desplazarla verticalmente hacia abajo, dándole más equilibrio respecto al texto de la izquierda.
-  * Añadimos la propiedad de ajuste `object-top` en la imagen (`producer_sossa.png`) para centrar el foco en la cabeza/gorra sin recortarla, alineando la imagen de forma perfecta dentro del contenedor.
+### 2. Rediseño del Hero Banner y Barra de Filtros (`index.html`)
+* **Hero Banner Glassmorphic:** Cambiamos el fondo plano por un contenedor glassmorphic translúcido con desenfoque de fondo y luces difusas de neón (`blur-[80px]`) en segundo plano. Aplicamos un degradado de texto premium del púrpura de Sossa al azul neón en el encabezado.
+* **Selector de Filtros Modernizado:** Rediseñamos los selects de filtros (Género, Precio, BPM) utilizando un fondo translúcido (`bg-white/5`), bordes suaves y transiciones al recibir foco (`focus:border-electric-purple/80`).
 
-### 3. Corrección de Líneas Internas Cruzadas en "LICENCIAS DE BEATS" (paint-order)
-* **Problema:** El título destacado "LICENCIAS DE BEATS" (con clase `.outline-text`) presentaba líneas internas cruzadas y trazos superpuestos muy poco estéticos en las letras ("A", "E", "S", etc.). Esto se debe a que la tipografía Montserrat es una fuente variable con contornos internos superpuestos de diseño que se vuelven visibles al aplicar `-webkit-text-stroke`.
-* **Solución:**
-  * Intentamos solucionar esto aplicando la propiedad CSS `paint-order: stroke fill;` en la definición de la clase `.outline-text` en `index.html`.
-  * Esto obliga al navegador a renderizar primero el trazo del contorno (stroke) y luego el relleno oscuro de la letra (fill) por encima, cubriendo y ocultando de forma perfecta cualquier imperfección o línea interna cruzada.
-
-### 4. Unificación de Tipografías en styles.css (Consistencia Global)
-* **Problema:** Había una pequeña inconsistencia visual entre los estilos de Tailwind (que usan `Montserrat` para títulos y `Outfit` para textos generales) y los estilos de CSS clásico en `styles.css` (que usaban variables desalineadas).
-* **Solución:**
-  * Actualizamos las variables `--font-sans` a `'Outfit'` y `--font-title` a `'Montserrat'` en [styles.css](file:///Users/sossa/IA/generador-licencias/styles.css) para lograr una consistencia perfecta del 100% de la tipografía de todo el sitio.
-
----
-
-## 5. Mejoras en la Exportación y Diseño Editorial de Contratos PDF (Junio 2026)
-Implementamos de forma autónoma el plan de mejoras de diseño y maquetación de los contratos descargables para asegurar un acabado editorial impecable y evitar problemas de impresión:
-
-* **Estilos Explícitos en `.contract-doc`:** Inyectamos propiedades explícitas (`font-family: var(--font-sans); font-size: 11.5px; line-height: 1.5; text-align: justify; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;`) para garantizar la persistencia de estilos tras la clonación del DOM por librerías como `html2pdf.js`.
-* **Reglas de Impresión Anti-Huérfanos:** Incorporamos reglas (`page-break-after: avoid !important; break-after: avoid !important;`) a los títulos `h2` y `h3` para prevenir saltos de página inadecuados que separen los títulos de su correspondiente contenido de cláusula.
-* **Capa de Cierre Unificada (`.contract-closure`):** Envolvemos las secciones de firmas y sello digital en una nueva capa con regla `break-inside: avoid !important;` para que permanezcan cohesionadas en una única página y no se fraccionen.
-* **Optimización de Contraste para Impresión Física:** Oscurecemos colores gris claro (`.meta-label`, `.signature-role`, `.doc-header h3`, `.signature-aka`) a `#636366` para mejorar significativamente la legibilidad en copias físicas impresas.
-* **Tablas de Markdown Estructuradas:** Reemplazamos la sección informal de "Información General del Documento" por tablas Markdown de tipo clave-valor homogeneizadas en todas las plantillas (en español e inglés) con variables interpoladas correctamente, incluyendo BPM (`{{beat_bpm}}`) y Tonalidad (`{{beat_key}}`).
-* **Sello Digital Dinámico de Pago:** Modificamos la firma derecha de modo que si no se requiere firma del comprador (`needsBuyerSignature === false`), se renderice un sello punteado premium "✓ Aceptado vía Pago" en lugar de un bloque vacío, mostrando dinámicamente la fecha formateada de la transacción.
-
----
-
-## 6. Auditoría y Despliegue de Reglas de Seguridad en Firestore (Junio 2026)
-Realizamos un análisis exhaustivo y robustecimiento del archivo `firestore.rules` resolviendo vulnerabilidades detectadas:
-* **Autenticación Administrativa Robusta:** Implementamos la verificación de email administrativo validando no solo la dirección sino también que el correo esté completamente verificado (`request.auth.token.email_verified == true`) para evitar email spoofing.
-* **Control de Modificaciones en Contactos Públicos:** Restringimos el acceso de actualización (`update`) en la subcolección pública `/contacts` de forma que los usuarios no autenticados solo puedan realizar actualizaciones si el correo entrante coincide exactamente con el correo previamente registrado, evitando el secuestro de leads.
-* **Mitigación de Abuso de Almacenamiento (DoS):** Agregamos validaciones estrictas de tipo y longitud de caracteres (`isValidContact()`) para mitigar la inyección de cadenas extremadamente largas en campos de texto (ej. correo y nombre < 100 caracteres, teléfono < 30 caracteres).
-* **Validación y Despliegue Exitoso:** Las reglas fueron verificadas localmente usando el validador oficial y desplegadas con éxito a Firebase Firestore en producción.
+### 3. Dinamismo de Brillo con Variables Locales (`styles.css`)
+* **Adaptabilidad de Color en Hover:** Actualizamos las reglas del botón de reproducción `.store-play-btn` y las tarjetas `.store-beat-card` en hover para usar las variables dinámicas de brillo del productor. Esto hace que el halo de luz exterior y los bordes activos adopten orgánicamente el color personalizado de cada artista (Púrpura para Sossa, Rojo para Monarco, Cyan por defecto).
 
 ---
 
 ## Verificación de Producción
 
-Todas las correcciones, reglas y mejoras de diseño están completamente aplicadas, compiladas y desplegadas en producción:
-* **Enlace de la Tienda / Landing Page:** [https://generador-licencias.vercel.app/](https://generador-licencias.vercel.app/)
-* **Reglas de Seguridad Firestore:** Desplegadas al 100% en el proyecto Firebase `licencias-musicales`.
+* **Integridad del Código:** Compilación exitosa sin errores de empaquetado:
+  ```bash
+  npm run build
+  ```
+* **Verificación Visual:** El Catálogo Global ahora muestra las tarjetas alineadas y legibles, con transiciones impecables basadas en la marca de cada productor.

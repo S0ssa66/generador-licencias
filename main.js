@@ -11918,6 +11918,20 @@ function renderGlobalBeats(beats) {
             pColor = '#b28eff';
         }
 
+        const hexToRgb = (hex) => {
+            const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+            const fullHex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(fullHex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 0, g: 204, b: 255 };
+        };
+        const rgb = hexToRgb(pColor);
+        const pColorGlow = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`;
+        const pColorGlowHover = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`;
+
         const artwork = window.getBeatArtwork(beat);
         const price = beat.price_basic ? `$${beat.price_basic.toFixed(2)}` : 'Negociable';
         
@@ -11925,31 +11939,35 @@ function renderGlobalBeats(beats) {
         const eliteBadge = isElite ? `<span style="background: linear-gradient(135deg, #a855f7 0%, #f59e0b 100%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; margin-left: 6px;">👑 Elite</span>` : '';
         
         return `
-            <div class="store-beat-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;">
-                <div style="position: relative; aspect-ratio: 1; background: #1a1e27; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="window.playGlobalBeat('${beat.id}')">
-                    <img src='${artwork}' style="width: 100%; height: 100%; object-fit: cover; object-position: top; opacity: 0.8; transition: opacity 0.2s;">
-                    <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;" class="play-overlay">
-                        <button class="global-play-btn-${beat.id}" style="width: 50px; height: 50px; border-radius: 50%; background: ${pColor}; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-                            <i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>
+            <div class="store-beat-card" style="--accent: ${pColor}; --accent-glow: ${pColorGlow}; --accent-glow-hover: ${pColorGlowHover}; padding: 12px; display: flex; flex-direction: column; height: 100%;">
+                <div class="store-beat-cover" style="position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #151722;" onclick="window.playGlobalBeat('${beat.id}')">
+                    <img src='${artwork}' style="width: 100%; height: 100%; object-fit: cover; object-position: top; transition: transform 0.5s ease;">
+                    <div class="store-play-overlay">
+                        <button class="global-play-btn-${beat.id} store-play-btn" style="width: 48px; height: 48px; border-radius: 50%; background: ${pColor}; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px ${pColorGlow}; transform: scale(0.9); transition: all 0.3s ease;">
+                            <i data-lucide="play" style="width: 20px; height: 20px; fill: #000; stroke: #000;"></i>
                         </button>
                     </div>
                 </div>
-                <div style="padding: 20px; display: flex; flex-direction: column; flex: 1;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-                        <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${beat.name || 'Beat'}</h3>
-                        <span style="font-weight: 800; color: ${pColor}; font-size: 15px;">${price}</span>
+                <div style="padding: 12px 4px 4px 4px; display: flex; flex-direction: column; flex: 1; gap: 8px;">
+                    <h3 style="font-size: 16px; font-weight: 800; color: #fff; margin: 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: 2.6em;" title="${beat.name || 'Beat'}">${beat.name || 'Beat'}</h3>
+                    <div style="color: #8a91a6; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                        <i data-lucide="user" style="width: 12px; height: 12px; color: ${pColor};"></i> 
+                        <span style="color: #e2e8f0; cursor: pointer; text-decoration: underline;" onclick="window.showAppView('store', { producer: '${(config.aka || config.name || '').replace(/'/g, "\\'")}' })">${producerName}</span> ${eliteBadge}
                     </div>
-                    <div style="color: #8a91a6; font-size: 13px; font-weight: 600; margin-bottom: 12px; display:flex; align-items:center; gap:6px;">
-                        <i data-lucide="user" style="width:14px; height:14px; color:${pColor};"></i> 
-                        <span style="color: #fff; cursor: pointer; text-decoration: underline;" onclick="window.showAppView('store', { producer: '${(config.aka || config.name || '').replace(/'/g, "\\'")}' })">${producerName}</span> ${eliteBadge}
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                        <span style="font-size: 10px; font-weight: 600; padding: 3px 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; color: #a0aec0;">${beat.bpm || '--'} BPM</span>
+                        <span style="font-size: 10px; font-weight: 600; padding: 3px 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; color: #a0aec0;">${beat.key || '--'}</span>
+                        <span style="font-size: 10px; font-weight: 600; padding: 3px 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; color: #a0aec0;">${beat.genre || 'Variado'}</span>
                     </div>
-                    <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
-                        <span style="font-size: 11px; font-weight: 600; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: #8a91a6;">${beat.bpm || '--'} BPM</span>
-                        <span style="font-size: 11px; font-weight: 600; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: #8a91a6;">${beat.key || '--'}</span>
-                        <span style="font-size: 11px; font-weight: 600; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: #8a91a6;">${beat.genre || 'Variado'}</span>
-                    </div>
-                    <div style="margin-top: auto;">
-                        <button class="btn btn-primary" onclick="window.openGlobalBeatCheckoutModal('${beat.id}')" style="width: 100%; height: 38px; font-weight: 700; border-radius: 10px; font-size: 13px; margin: 0; background: ${pColor}; color: #000; border: none;">Adquirir Licencia</button>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05);">
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-size: 9px; color: #8a91a6; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Básico</span>
+                            <span style="font-weight: 800; color: ${pColor}; font-size: 15px;">${price}</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="window.openGlobalBeatCheckoutModal('${beat.id}')" style="height: 34px; padding: 0 12px; font-weight: 700; border-radius: 8px; font-size: 12px; margin: 0; background: ${pColor}; color: #000; border: none; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; cursor: pointer;">
+                            <i data-lucide="shopping-cart" style="width: 14px; height: 14px; stroke-width: 2.5;"></i>
+                            Adquirir
+                        </button>
                     </div>
                 </div>
             </div>

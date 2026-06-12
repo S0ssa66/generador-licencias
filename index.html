@@ -3174,43 +3174,46 @@
         <!-- Contenido Principal -->
         <main class="max-w-6xl mx-auto px-6 py-10 flex flex-col gap-8">
             <!-- Hero Banner -->
-            <div class="bg-gradient-to-r from-electric-purple/10 to-neon-blue/5 border border-electric-purple/20 rounded-2xl p-10 text-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-electric-purple/5 via-transparent to-transparent pointer-events-none"></div>
-                <h2 class="font-headline-lg text-[32px] font-black text-on-surface mb-3 tracking-tight">Encuentra el Beat Perfecto</h2>
-                <p class="text-on-surface-variant text-sm max-w-xl mx-auto leading-relaxed">Licencias directas de los mejores productores independientes de la escena. Cero comisiones ocultas, pago directo al creador.</p>
+            <div class="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-md p-10 text-center shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+                <!-- Acentos de brillo de fondo -->
+                <div class="absolute -left-10 -top-10 w-48 h-48 bg-electric-purple/15 rounded-full blur-[80px] pointer-events-none"></div>
+                <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-neon-blue/15 rounded-full blur-[80px] pointer-events-none"></div>
+                
+                <h2 class="font-headline-lg text-[36px] font-black mb-3 tracking-tight bg-gradient-to-r from-[#b28eff] via-[#d0bcff] to-[#00ccff] bg-clip-text text-transparent">Encuentra el Beat Perfecto</h2>
+                <p class="text-on-surface-variant text-sm max-w-xl mx-auto leading-relaxed opacity-90 font-medium">Licencias directas de los mejores productores independientes de la escena. Sin comisiones ocultas, trato y pago directo al creador.</p>
             </div>
 
             <!-- Zona de Filtros -->
-            <div class="flex flex-wrap items-center gap-4 bg-charcoal-deep border border-white/5 p-4 rounded-xl">
-                <span class="text-xs font-semibold text-on-surface-variant flex items-center gap-1.5 uppercase font-label-caps tracking-wider">
-                    <span class="material-symbols-outlined text-[16px]">filter_list</span> Filtros:
+            <div class="flex flex-wrap items-center gap-4 bg-white/[0.02] backdrop-blur-md border border-white/5 p-4 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)]">
+                <span class="text-xs font-semibold text-on-surface-variant flex items-center gap-1.5 uppercase font-label-caps tracking-wider opacity-80">
+                    <span class="material-symbols-outlined text-[16px] text-electric-purple">filter_list</span> Filtros:
                 </span>
                 
-                <select id="global-genre-select" class="bg-surface border border-white/10 rounded-full px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none min-w-[140px] h-9">
-                    <option value="">Cualquier Género</option>
+                <select id="global-genre-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none min-w-[140px] h-9 transition-all">
+                    <option value="" class="bg-charcoal-deep text-white">Cualquier Género</option>
                 </select>
 
-                <select id="global-price-select" class="bg-surface border border-white/10 rounded-full px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none min-w-[140px] h-9">
-                    <option value="">Cualquier Precio</option>
-                    <option value="0-20">Hasta $20</option>
-                    <option value="20-50">$20 - $50</option>
-                    <option value="50-100">$50 - $100</option>
-                    <option value="100+">Más de $100</option>
+                <select id="global-price-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none min-w-[140px] h-9 transition-all">
+                    <option value="" class="bg-charcoal-deep text-white">Cualquier Precio</option>
+                    <option value="0-20" class="bg-charcoal-deep text-white">Hasta $20</option>
+                    <option value="20-50" class="bg-charcoal-deep text-white">$20 - $50</option>
+                    <option value="50-100" class="bg-charcoal-deep text-white">$50 - $100</option>
+                    <option value="100+" class="bg-charcoal-deep text-white">Más de $100</option>
                 </select>
 
-                <select id="global-bpm-select" class="bg-surface border border-white/10 rounded-full px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none min-w-[140px] h-9">
-                    <option value="">Cualquier BPM</option>
-                    <option value="0-90">Lento (&lt; 90)</option>
-                    <option value="90-130">Medio (90 - 130)</option>
-                    <option value="130-999">Rápido (&gt; 130)</option>
+                <select id="global-bpm-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none min-w-[140px] h-9 transition-all">
+                    <option value="" class="bg-charcoal-deep text-white">Cualquier BPM</option>
+                    <option value="0-90" class="bg-charcoal-deep text-white">Lento (&lt; 90)</option>
+                    <option value="90-130" class="bg-charcoal-deep text-white">Medio (90 - 130)</option>
+                    <option value="130-999" class="bg-charcoal-deep text-white">Rápido (&gt; 130)</option>
                 </select>
                 
                 <div class="md:ml-auto flex items-center gap-2">
-                    <span class="text-xs text-on-surface-variant font-medium">Ordenar por:</span>
+                    <span class="text-xs text-on-surface-variant font-medium opacity-80">Ordenar por:</span>
                     <select id="global-sort-select" class="bg-transparent border-none text-neon-blue font-bold text-xs cursor-pointer outline-none py-1">
-                        <option value="newest">Más Recientes</option>
-                        <option value="price_asc">Menor Precio</option>
-                        <option value="price_desc">Mayor Precio</option>
+                        <option value="newest" class="bg-charcoal-deep text-white">Más Recientes</option>
+                        <option value="price_asc" class="bg-charcoal-deep text-white">Menor Precio</option>
+                        <option value="price_desc" class="bg-charcoal-deep text-white">Mayor Precio</option>
                     </select>
                 </div>
             </div>

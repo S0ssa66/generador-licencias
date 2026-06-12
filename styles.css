@@ -2538,8 +2538,8 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 
 .store-beat-card:hover {
     transform: translateY(-6px);
-    box-shadow: 0 15px 30px rgba(0, 204, 255, 0.1);
-    border-color: rgba(0, 204, 255, 0.2);
+    box-shadow: 0 15px 30px var(--accent-glow, rgba(0, 204, 255, 0.1));
+    border-color: var(--accent, rgba(0, 204, 255, 0.2));
 }
 
 .store-beat-cover {
@@ -2883,8 +2883,8 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 
 .store-beat-card:hover {
     transform: translateY(-8px) scale(1.01) !important;
-    border-color: rgba(255, 255, 255, 0.15) !important;
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 102, 255, 0.15) !important;
+    border-color: var(--accent, rgba(255, 255, 255, 0.15)) !important;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 30px var(--accent-glow-hover, rgba(0, 102, 255, 0.15)) !important;
 }
 
 .store-beat-cover {
@@ -2896,13 +2896,13 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 /* Botón de reproducción con efecto de pulso / brillo */
 .store-play-btn {
     background: var(--accent, #00ccff) !important;
-    box-shadow: 0 4px 15px rgba(0, 204, 255, 0.3) !important;
+    box-shadow: 0 4px 15px var(--accent-glow, rgba(0, 204, 255, 0.3)) !important;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .store-beat-card:hover .store-play-btn {
     transform: scale(1.08) !important;
-    box-shadow: 0 8px 25px rgba(0, 204, 255, 0.6), 0 0 0 6px rgba(0, 204, 255, 0.15) !important;
+    box-shadow: 0 8px 25px var(--accent-glow-hover, rgba(0, 204, 255, 0.6)), 0 0 0 6px var(--accent-glow, rgba(0, 204, 255, 0.15)) !important;
 }
 
 /* Reproductor de Audio Ultra Glassmorphic */
