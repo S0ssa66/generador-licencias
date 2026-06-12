@@ -3110,70 +3110,125 @@
     <!-- ======================================================= -->
     <!-- CATÁLOGO GLOBAL DE BEATSS (MARKETPLACE)                 -->
     <!-- ======================================================= -->
-    <div id="global-catalog-view" style="display: none;" class="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,_#0b0e14_0%,_#05070a_100%)] text-on-surface font-body-md">
+    <div id="global-catalog-view" style="display: none;" class="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,_#0b0e14_0%,_#05070a_100%)] text-on-surface font-body-md cyber-grid-bg">
         <!-- Header del Catálogo Global -->
-        <header class="sticky top-0 z-50 bg-surface/80 backdrop-blur-md border-b border-white/5 bg-surface-glass shadow-[0_0_20px_rgba(139,92,246,0.1)] py-5 px-6">
+        <header class="sticky top-0 z-50 bg-[#070913]/90 backdrop-blur-md border-b border-white/5 shadow-[0_0_20px_rgba(139,92,246,0.1)] py-5 px-6">
             <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="flex items-center gap-3 cursor-pointer" id="catalog-logo-home">
-                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6;">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6; filter: drop-shadow(0 0 6px rgba(139,92,246,0.6));">
                         <path d="M12 2v20M17 5v14M7 9v6M22 8v8M2 11v2"></path>
                     </svg>
-                    <span class="font-headline-md text-[22px] font-black tracking-tighter text-on-surface">BEATSS <span class="text-neon-blue font-bold">Marketplace</span></span>
+                    <span class="font-headline-md text-[22px] font-black tracking-tighter text-on-surface cyber-glow-text">BEATSS <span class="text-neon-blue font-bold">Marketplace</span></span>
                 </div>
                 
-                <!-- Buscador principal -->
+                <!-- Buscador principal (Estilo Terminal) -->
                 <div class="flex-1 w-full max-w-lg relative">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
-                    <input type="text" id="global-search-input" placeholder="Buscar beats, productores o géneros..." class="w-full pl-12 pr-6 py-2.5 bg-white/5 border border-white/10 rounded-full text-on-surface placeholder:text-on-surface-variant text-sm focus:border-electric-purple focus:ring-1 focus:ring-electric-purple focus:outline-none transition-all">
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-neon-blue text-[20px] animate-pulse">terminal</span>
+                    <input type="text" id="global-search-input" placeholder="Buscar beats, productores o géneros..." data-i18n-placeholder="catalog_search_placeholder" class="w-full pl-12 pr-6 py-2.5 bg-black/50 border border-white/10 rounded-xl text-on-surface placeholder:text-on-surface-variant text-sm focus:border-neon-blue focus:ring-1 focus:ring-neon-blue focus:outline-none transition-all font-mono">
                 </div>
 
-                <div class="flex gap-3">
-                    <button id="catalog-btn-language" class="border border-white/10 text-on-surface-variant hover:text-white px-4 py-2 rounded-full font-label-caps text-xs font-bold hover:bg-white/5 transition-all outline-none">ES</button>
-                    <button id="catalog-btn-login" data-i18n="catalog_i_am_producer" class="border border-white/10 text-on-surface hover:text-white px-6 py-2 rounded-full text-sm font-semibold hover:bg-white/5 transition-all">Soy Productor</button>
+                <div class="flex gap-4">
+                    <button id="catalog-btn-language" class="border border-neon-blue/30 text-neon-blue hover:text-white hover:border-neon-blue px-4 py-2 rounded-xl font-mono text-xs font-bold bg-neon-blue/5 hover:bg-neon-blue/20 transition-all outline-none">[ ES ]</button>
+                    <button id="catalog-btn-login" data-i18n="catalog_i_am_producer" class="border border-electric-purple/40 text-electric-purple hover:text-white hover:border-electric-purple px-6 py-2 rounded-xl text-sm font-mono font-bold bg-electric-purple/5 hover:bg-electric-purple/20 transition-all shadow-[0_0_15px_rgba(139,92,246,0.1)]">Soy Productor</button>
                 </div>
             </div>
         </header>
 
         <!-- Contenido Principal -->
         <main class="max-w-7xl mx-auto px-6 py-10 flex flex-col gap-8">
-            <!-- Hero Banner -->
-            <div class="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-md p-10 text-center shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
+            <!-- Hero Banner (HUD Cyberpunk) -->
+            <div class="relative overflow-hidden rounded-2xl border border-electric-purple/30 bg-[#070913]/40 backdrop-blur-xl p-10 text-center shadow-[0_0_30px_rgba(139,92,246,0.15)] cyber-corners">
+                <div class="cyber-corners-inner"></div>
                 <!-- Acentos de brillo de fondo -->
-                <div class="absolute -left-10 -top-10 w-48 h-48 bg-electric-purple/15 rounded-full blur-[80px] pointer-events-none"></div>
-                <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-neon-blue/15 rounded-full blur-[80px] pointer-events-none"></div>
+                <div class="absolute -left-10 -top-10 w-48 h-48 bg-electric-purple/20 rounded-full blur-[100px] pointer-events-none"></div>
+                <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-neon-blue/20 rounded-full blur-[100px] pointer-events-none"></div>
                 
-                <h2 class="font-headline-lg text-[36px] font-black mb-3 tracking-tight bg-gradient-to-r from-[#b28eff] via-[#d0bcff] to-[#00ccff] bg-clip-text text-transparent" data-i18n="catalog_find_beat">Encuentra el Beat Perfecto</h2>
+                <!-- Telemetría digital de adorno -->
+                <div class="flex justify-between items-center text-[9px] font-mono text-electric-purple/75 mb-6 border-b border-white/5 pb-3 opacity-80">
+                    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-green-500 rounded-full cyber-pulse-dot"></span> SYSTEM_ONLINE // LATENCY_2MS</span>
+                    <span class="hidden sm:inline">BEATSS_DATALINK_ESTABLISHED v1.0.8</span>
+                    <span>COORDINATES: 2.1189° S, 79.8942° W</span>
+                </div>
+                
+                <div class="text-[10px] font-mono text-neon-blue uppercase tracking-widest bg-neon-blue/10 px-3 py-1 rounded-full border border-neon-blue/20 mb-4 inline-block animate-pulse">
+                    [ MARKETPLACE_HUD_DISPLAY ]
+                </div>
+                
+                <h2 class="font-headline-lg text-[40px] font-black mb-3 tracking-tighter bg-gradient-to-r from-white via-on-surface to-[#00ccff] bg-clip-text text-transparent cyber-glow-text uppercase" data-i18n="catalog_find_beat">Encuentra el Beat Perfecto</h2>
                 <p class="text-on-surface-variant text-sm max-w-xl mx-auto leading-relaxed opacity-90 font-medium" data-i18n="catalog_find_desc">Licencias directas de los mejores productores independientes de la escena. Sin comisiones ocultas, trato y pago directo al creador.</p>
+                
+                <!-- Líneas decorativas vectoriales animadas en el fondo -->
+                <div class="absolute inset-0 pointer-events-none opacity-[0.08] flex justify-center items-center">
+                    <svg width="450" height="450" viewBox="0 0 100 100" fill="none" stroke="#00ccff" stroke-width="0.5">
+                        <circle cx="50" cy="50" r="45" stroke-dasharray="2 2" class="hud-radar-circle" style="animation-duration: 4s;"></circle>
+                        <circle cx="50" cy="50" r="30" stroke-dasharray="6 3" class="hud-radar-circle" style="animation-duration: 2.5s;"></circle>
+                        <circle cx="50" cy="50" r="15" stroke-dasharray="1 1"></circle>
+                        <g class="hud-radar-sweep">
+                            <line x1="50" y1="50" x2="50" y2="5" stroke="#8b5cf6" stroke-width="0.75"></line>
+                            <polygon points="50,50 47,15 50,5 53,15" fill="rgba(139, 92, 246, 0.15)" stroke="none"></polygon>
+                        </g>
+                        <line x1="5" y1="50" x2="95" y2="50" stroke-dasharray="1 3"></line>
+                        <line x1="50" y1="5" x2="50" y2="95" stroke-dasharray="1 3"></line>
+                    </svg>
+                </div>
             </div>
 
-            <!-- Zona de Filtros -->
-            <div class="flex flex-wrap items-center gap-4 bg-white/[0.02] backdrop-blur-md border border-white/5 p-5 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)]">
-                <span class="text-sm font-semibold text-on-surface-variant flex items-center gap-1.5 uppercase font-label-caps tracking-wider opacity-80">
-                    <span class="material-symbols-outlined text-[18px] text-electric-purple">filter_list</span> <span data-i18n="catalog_filters">Filtros:</span>
-                </span>
+            <!-- Zona de Filtros (High-Tech Console) -->
+            <div class="relative flex flex-wrap items-end gap-6 bg-[#070913]/40 backdrop-blur-xl border border-white/5 p-6 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] cyber-corners">
+                <div class="cyber-corners-inner"></div>
                 
-                <select id="global-genre-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
-                    <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_genre">Cualquier Género</option>
-                </select>
-
-                <select id="global-price-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
-                    <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_price">Cualquier Precio</option>
-                    <option value="0-20" class="bg-charcoal-deep text-white" data-i18n="catalog_price_0_20">Hasta $20</option>
-                    <option value="20-50" class="bg-charcoal-deep text-white" data-i18n="catalog_price_20_50">$20 - $50</option>
-                    <option value="50-100" class="bg-charcoal-deep text-white" data-i18n="catalog_price_50_100">$50 - $100</option>
-                    <option value="100+" class="bg-charcoal-deep text-white" data-i18n="catalog_price_100_plus">Más de $100</option>
-                </select>
-
-                <select id="global-bpm-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
-                    <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_bpm">Cualquier BPM</option>
-                    <option value="0-90" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_slow">Lento (&lt; 90)</option>
-                    <option value="90-130" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_medium">Medio (90 - 130)</option>
-                    <option value="130-999" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_fast">Rápido (&gt; 130)</option>
-                </select>
+                <!-- Título Consola -->
+                <div class="w-full flex items-center justify-between border-b border-white/5 pb-3 mb-1">
+                    <span class="text-xs font-mono text-neon-blue flex items-center gap-2 uppercase tracking-widest">
+                        <span class="material-symbols-outlined text-[16px] text-neon-blue animate-pulse">settings_input_component</span>
+                        <span>[CONTROL_CONSOLE_TELEMETRY]</span>
+                    </span>
+                    <span class="text-[9px] font-mono text-on-surface-variant opacity-60">SELECTORS: ACTIVE</span>
+                </div>
                 
-                <div class="md:ml-auto flex items-center gap-2">
-                    <span class="text-sm text-on-surface-variant font-medium opacity-80" data-i18n="catalog_sort_by">Ordenar por:</span>
-                    <select id="global-sort-select" class="bg-transparent border-none text-neon-blue font-bold text-sm cursor-pointer outline-none py-1">
+                <!-- Filtro Género -->
+                <div class="flex flex-col gap-1.5 min-w-[150px] flex-1 sm:w-auto">
+                    <span class="text-[9px] font-mono text-neon-blue/80 tracking-widest uppercase flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-neon-blue rounded-full"></span> [GENRE_SELECTOR]
+                    </span>
+                    <select id="global-genre-select" class="cyber-select bg-black/40 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none h-11 transition-all">
+                        <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_genre">Cualquier Género</option>
+                    </select>
+                </div>
+
+                <!-- Filtro Precio -->
+                <div class="flex flex-col gap-1.5 min-w-[150px] flex-1 sm:w-auto">
+                    <span class="text-[9px] font-mono text-neon-blue/80 tracking-widest uppercase flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-neon-blue rounded-full"></span> [MAX_VALUE]
+                    </span>
+                    <select id="global-price-select" class="cyber-select bg-black/40 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none h-11 transition-all">
+                        <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_price">Cualquier Precio</option>
+                        <option value="0-20" class="bg-charcoal-deep text-white" data-i18n="catalog_price_0_20">Hasta $20</option>
+                        <option value="20-50" class="bg-charcoal-deep text-white" data-i18n="catalog_price_20_50">$20 - $50</option>
+                        <option value="50-100" class="bg-charcoal-deep text-white" data-i18n="catalog_price_50_100">$50 - $100</option>
+                        <option value="100+" class="bg-charcoal-deep text-white" data-i18n="catalog_price_100_plus">Más de $100</option>
+                    </select>
+                </div>
+
+                <!-- Filtro BPM -->
+                <div class="flex flex-col gap-1.5 min-w-[150px] flex-1 sm:w-auto">
+                    <span class="text-[9px] font-mono text-neon-blue/80 tracking-widest uppercase flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-neon-blue rounded-full"></span> [TEMPO_SPEED]
+                    </span>
+                    <select id="global-bpm-select" class="cyber-select bg-black/40 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none h-11 transition-all">
+                        <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_bpm">Cualquier BPM</option>
+                        <option value="0-90" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_slow">Lento (&lt; 90)</option>
+                        <option value="90-130" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_medium">Medio (90 - 130)</option>
+                        <option value="130-999" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_fast">Rápido (&gt; 130)</option>
+                    </select>
+                </div>
+                
+                <!-- Ordenación -->
+                <div class="md:ml-auto flex flex-col gap-1.5 min-w-[150px] w-full sm:w-auto">
+                    <span class="text-[9px] font-mono text-neon-blue/80 tracking-widest uppercase flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 bg-neon-blue rounded-full"></span> [SORT_CRITERIA]
+                    </span>
+                    <select id="global-sort-select" class="cyber-select bg-black/40 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none h-11 transition-all">
                         <option value="newest" class="bg-charcoal-deep text-white" data-i18n="catalog_sort_newest">Más Recientes</option>
                         <option value="price_asc" class="bg-charcoal-deep text-white" data-i18n="catalog_sort_lowest">Menor Precio</option>
                         <option value="price_desc" class="bg-charcoal-deep text-white" data-i18n="catalog_sort_highest">Mayor Precio</option>
