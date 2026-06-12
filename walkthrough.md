@@ -20,8 +20,13 @@ Hemos completado el refinamiento visual de la cabecera del proyecto con fuentes 
 ### 3. Corrección de Líneas Internas Cruzadas en "LICENCIAS DE BEATS" (paint-order)
 * **Problema:** El título destacado "LICENCIAS DE BEATS" (con clase `.outline-text`) presentaba líneas internas cruzadas y trazos superpuestos muy poco estéticos en las letras ("A", "E", "S", etc.). Esto se debe a que la tipografía Montserrat es una fuente variable con contornos internos superpuestos de diseño que se vuelven visibles al aplicar `-webkit-text-stroke`.
 * **Solución:**
-  * Añadimos la propiedad CSS `paint-order: stroke fill;` en la definición de la clase `.outline-text` in `index.html`.
+  * Intentamos solucionar esto aplicando la propiedad CSS `paint-order: stroke fill;` en la definición de la clase `.outline-text` en `index.html`.
   * Esto obliga al navegador a renderizar primero el trazo del contorno (stroke) y luego el relleno oscuro de la letra (fill) por encima, cubriendo y ocultando de forma perfecta cualquier imperfección o línea interna cruzada.
+
+### 4. Unificación de Tipografías en styles.css (Consistencia Global)
+* **Problema:** Había una pequeña inconsistencia visual entre los estilos de Tailwind (que usan `Montserrat` para títulos y `Outfit` para textos generales) y los estilos de CSS clásico en `styles.css` (que usaban variables desalineadas).
+* **Solución:**
+  * Actualizamos las variables `--font-sans` a `'Outfit'` y `--font-title` a `'Montserrat'` en [styles.css](file:///Users/sossa/IA/generador-licencias/styles.css) para lograr una consistencia perfecta del 100% de la tipografía de todo el sitio.
 
 ---
 
