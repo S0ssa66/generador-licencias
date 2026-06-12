@@ -94,12 +94,6 @@
                         "secondary-fixed": "#bbe9ff",
                         "on-primary-fixed-variant": "#5516be"
                     },
-                    borderRadius: {
-                        "DEFAULT": "0.125rem",
-                        "lg": "0.25rem",
-                        "xl": "0.5rem",
-                        "full": "0.75rem"
-                    },
                     spacing: {
                         "base": "8px",
                         "container-max": "1440px",
@@ -131,23 +125,83 @@
             }
         }
     </script>
+    <style>
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(1); opacity: 0.15; }
+            50% { transform: scale(1.15); opacity: 0.35; }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-pulse-glow {
+            animation: pulse-glow 10s ease-in-out infinite;
+        }
+        .animate-float {
+            animation: float 7s ease-in-out infinite;
+        }
+        .glass-panel {
+            background: rgba(18, 20, 28, 0.45);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-panel-hover {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-panel-hover:hover {
+            background: rgba(18, 20, 28, 0.65);
+            border-color: rgba(139, 92, 246, 0.45);
+            box-shadow: 0 30px 50px -15px rgba(139, 92, 246, 0.3), 0 0 25px -5px rgba(0, 204, 255, 0.2);
+            transform: translateY(-6px);
+        }
+        .bg-grid-glow {
+            background-size: 50px 50px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+        }
+        
+        /* Premium custom scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(8, 8, 10, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.25);
+            border-radius: 99px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 92, 246, 0.5);
+        }
+    </style>
 </head>
 <body>
     <!-- BEATSS Landing Page de Presentación -->
-    <div id="landing-page" class="text-on-surface antialiased flex flex-col min-h-screen relative overflow-x-hidden" style="display: none; height: 100vh; overflow-y: auto; background-color: #0b0e14;">
+    <div id="landing-page" class="text-on-surface antialiased flex flex-col min-h-screen relative overflow-x-hidden bg-grid-glow bg-surface-container-lowest" style="display: none; height: 100vh; overflow-y: auto;">
+        <!-- Ambient Background Glows -->
+        <div class="absolute top-[-10%] left-[-20%] w-[600px] h-[600px] rounded-full bg-electric-purple/10 blur-[150px] pointer-events-none animate-pulse-glow"></div>
+        <div class="absolute bottom-[10%] right-[-20%] w-[800px] h-[800px] rounded-full bg-neon-blue/10 blur-[180px] pointer-events-none animate-pulse-glow" style="animation-delay: -4s;"></div>
+
         <!-- TopNavBar (Shared Component) -->
-        <header class="fixed w-full bg-surface/80 backdrop-blur-md border-b border-white/5 bg-surface-glass shadow-[0_0_20px_rgba(139,92,246,0.1)] top-0 z-50">
-            <div class="flex justify-between items-center h-20 px-margin-mobile md:px-margin-desktop w-full max-w-container-max mx-auto">
+        <header class="fixed top-4 left-1/2 -translate-x-1/2 w-[90%] max-w-6xl bg-surface/60 backdrop-blur-xl border border-white/10 rounded-full px-6 py-4 z-50 shadow-[0_15px_35px_rgba(0,0,0,0.6),0_0_30px_rgba(139,92,246,0.15)] transition-all duration-300">
+            <div class="flex justify-between items-center w-full">
                 <!-- Brand Logo -->
-                <div class="flex items-center gap-4 cursor-pointer" onclick="window.location.reload()">
-                    <span class="text-headline-md font-headline-md font-extrabold tracking-tighter text-on-surface">BEATSS</span>
+                <div class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-electric-purple to-neon-blue flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.4)]">
+                        <span class="material-symbols-outlined text-white text-[20px]">headphones</span>
+                    </div>
+                    <span class="text-2xl font-black tracking-tighter text-white font-headline-md">BEATSS</span>
                 </div>
                 <!-- Trailing Actions -->
-                <div class="flex items-center gap-4">
-                    <button id="landing-btn-nav-catalog" class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors hover:bg-white/5 px-4 py-2 rounded-lg flex items-center gap-2 border border-white/5">
-                        <span class="material-symbols-outlined text-[16px]">headphones</span> Explorar Catálogo
+                <div class="flex items-center gap-3">
+                    <button id="landing-btn-nav-catalog" class="font-label-caps text-xs text-on-surface-variant hover:text-white transition-all hover:bg-white/5 px-4 py-2.5 rounded-full flex items-center gap-2 border border-white/10">
+                        <span class="material-symbols-outlined text-[16px] text-neon-blue">headphones</span> Explorar Catálogo
                     </button>
-                    <button id="landing-btn-login" class="border border-outline-variant text-on-surface-variant hover:text-on-surface px-4 py-2 rounded-lg font-label-caps text-label-caps hover:bg-white/5 transition-all">
+                    <button id="landing-btn-login" class="bg-white hover:bg-white/90 text-surface-container-lowest font-black px-6 py-2.5 rounded-full font-label-caps text-xs shadow-[0_4px_12px_rgba(255,255,255,0.15)] transition-all hover:-translate-y-0.5">
                         Iniciar Sesión
                     </button>
                 </div>
@@ -155,116 +209,168 @@
         </header>
 
         <!-- Main Content -->
-        <main class="flex-grow pt-20">
+        <main class="flex-grow pt-28">
             <!-- Hero Section -->
-            <section class="relative px-margin-mobile md:px-margin-desktop py-24 overflow-hidden flex flex-col items-center justify-center min-h-[85vh]">
-                <!-- Decorative Background Element -->
-                <div class="absolute inset-0 z-0 opacity-20 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-electric-purple/30 via-surface-container-lowest to-surface-container-lowest pointer-events-none"></div>
-                <div class="relative z-10 max-w-4xl mx-auto text-center">
-                    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-glass border border-white/5 mb-8">
-                        <span class="w-2 h-2 rounded-full bg-neon-blue animate-pulse"></span>
-                        <span class="font-label-caps text-label-caps text-neon-blue">Plataforma para Productores de Élite</span>
+            <section class="relative px-margin-mobile md:px-margin-desktop py-20 overflow-hidden flex flex-col items-center justify-center min-h-[90vh]">
+                <div class="relative z-10 max-w-5xl mx-auto text-center">
+                    <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 animate-float shadow-[0_0_15px_rgba(0,204,255,0.1)]">
+                        <span class="w-2.5 h-2.5 rounded-full bg-neon-blue animate-pulse shadow-[0_0_10px_#00CCFF]"></span>
+                        <span class="font-label-caps text-xs text-neon-blue uppercase tracking-widest font-semibold">Plataforma para Productores de Élite</span>
                     </div>
-                    <h1 class="font-display-lg text-headline-lg-mobile md:text-display-lg text-on-surface mb-6 tracking-tight">
+                    <h1 class="font-display-lg text-4xl md:text-6xl text-white mb-6 tracking-tighter leading-tight font-black">
                         Crea y firma tus <br class="hidden md:block"/>
-                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-electric-purple to-neon-blue">Licencias de Beats</span> en segundos.
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-electric-purple via-fuchsia-500 to-neon-blue">Licencias de Beats</span> en segundos.
                     </h1>
-                    <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mb-10">
+                    <p class="font-body-lg text-lg text-on-surface-variant max-w-2xl mx-auto mb-12 leading-relaxed">
                         Agiliza tus ventas de beats. BEATSS te permite generar contratos PDF profesionales de forma automática, gestionar tus clientes, enviar firmas digitales y automatizar las entregas.
                     </p>
-                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <button id="landing-btn-start" class="w-full sm:w-auto px-8 py-4 bg-electric-purple text-white rounded-lg font-label-caps text-label-caps shadow-[0_0_20px_rgba(139,92,246,0.2)] hover:shadow-[0_0_30px_rgba(139,92,246,0.4)] transition-all hover:-translate-y-1">
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
+                        <button id="landing-btn-start" class="w-full sm:w-auto px-10 py-4.5 bg-gradient-to-r from-electric-purple to-fuchsia-600 text-white rounded-full font-label-caps font-bold text-sm shadow-[0_0_30px_rgba(139,92,246,0.3)] hover:shadow-[0_0_40px_rgba(139,92,246,0.5)] transition-all duration-300 hover:-translate-y-1">
                             Empezar Gratis
                         </button>
-                        <button id="landing-btn-catalog" class="w-full sm:w-auto px-8 py-4 bg-transparent border border-neon-blue text-neon-blue rounded-lg font-label-caps text-label-caps hover:bg-neon-blue/10 transition-all">
+                        <button id="landing-btn-catalog" class="w-full sm:w-auto px-10 py-4.5 bg-transparent border border-white/20 text-white rounded-full font-label-caps font-bold text-sm hover:bg-white/5 hover:border-white/40 transition-all duration-300">
                             Explorar Catálogo
                         </button>
                     </div>
                 </div>
 
+                <!-- Interactive Player Card in Hero -->
+                <div class="relative z-10 w-full max-w-4xl mx-auto rounded-3xl border border-white/10 bg-black/40 backdrop-blur-md p-6 md:p-8 shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(139,92,246,0.15)] overflow-hidden mb-16 animate-float" style="animation-delay: -3s;">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-electric-purple/5 to-transparent pointer-events-none"></div>
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-6 pb-6 border-b border-white/5">
+                        <div class="flex items-center gap-4 self-start md:self-center">
+                            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-electric-purple to-neon-blue flex items-center justify-center text-white shadow-[0_8px_20px_rgba(139,92,246,0.4)]">
+                                <span class="material-symbols-outlined text-[28px] animate-pulse">music_note</span>
+                            </div>
+                            <div class="text-left">
+                                <h4 class="text-white text-lg font-bold m-0 font-headline-md tracking-tight">Stargaze (Lil Baby Type Beat)</h4>
+                                <p class="text-xs text-neon-blue m-0 uppercase font-semibold font-label-caps tracking-widest mt-0.5">Licencia Exclusiva Activa</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm text-on-surface-variant font-data-mono bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">138 BPM</span>
+                            <span class="text-sm text-on-surface-variant font-data-mono bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">C# Minor</span>
+                        </div>
+                    </div>
+                    <!-- Audio Waveform Mock -->
+                    <div class="py-8">
+                        <div class="h-16 flex items-end gap-1.5 justify-between">
+                            <div class="flex-1 bg-white/10 h-6 rounded-full transition-all"></div>
+                            <div class="flex-1 bg-white/10 h-8 rounded-full transition-all"></div>
+                            <div class="flex-1 bg-white/10 h-10 rounded-full transition-all"></div>
+                            <div class="flex-1 bg-white/10 h-7 rounded-full transition-all"></div>
+                            <div class="flex-1 bg-electric-purple h-12 rounded-full shadow-[0_0_15px_rgba(139,92,246,0.6)]"></div>
+                            <div class="flex-1 bg-electric-purple h-14 rounded-full shadow-[0_0_15px_rgba(139,92,246,0.6)]"></div>
+                            <div class="flex-1 bg-electric-purple h-16 rounded-full shadow-[0_0_15px_rgba(139,92,246,0.6)]"></div>
+                            <div class="flex-1 bg-neon-blue h-12 rounded-full shadow-[0_0_15px_rgba(0,204,255,0.6)]"></div>
+                            <div class="flex-1 bg-neon-blue h-10 rounded-full shadow-[0_0_15px_rgba(0,204,255,0.6)]"></div>
+                            <div class="flex-1 bg-neon-blue h-14 rounded-full shadow-[0_0_15px_rgba(0,204,255,0.6)]"></div>
+                            <div class="flex-1 bg-neon-blue h-8 rounded-full shadow-[0_0_15px_rgba(0,204,255,0.6)]"></div>
+                            <div class="flex-1 bg-white/20 h-12 rounded-full"></div>
+                            <div class="flex-1 bg-white/20 h-10 rounded-full"></div>
+                            <div class="flex-1 bg-white/20 h-14 rounded-full"></div>
+                            <div class="flex-1 bg-white/20 h-16 rounded-full"></div>
+                            <div class="flex-1 bg-white/20 h-12 rounded-full"></div>
+                            <div class="flex-1 bg-white/10 h-8 rounded-full"></div>
+                            <div class="flex-1 bg-white/10 h-6 rounded-full"></div>
+                            <div class="flex-1 bg-white/10 h-4 rounded-full"></div>
+                            <div class="flex-1 bg-white/10 h-6 rounded-full"></div>
+                        </div>
+                    </div>
+                    <!-- Player status bar -->
+                    <div class="flex justify-between items-center text-xs text-on-surface-variant font-data-mono">
+                        <span>0:45 / 3:12</span>
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-success-green"></span> Firma de Productor Verificada</span>
+                            <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-neon-blue"></span> PDF Generado</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Features Bento Grid -->
-                <div class="relative z-10 max-w-container-max mx-auto mt-24 grid grid-cols-1 md:grid-cols-3 gap-gutter px-margin-mobile md:px-margin-desktop">
-                    <div class="bg-charcoal-deep border border-white/5 rounded-xl p-8 hover:border-electric-purple/30 transition-colors group text-left">
-                        <div class="w-12 h-12 rounded-lg bg-surface-glass flex items-center justify-center mb-6 text-electric-purple group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">description</span>
+                <div class="relative z-10 max-w-container-max mx-auto mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 px-margin-mobile md:px-margin-desktop">
+                    <div class="glass-panel glass-panel-hover rounded-3xl p-8 group text-left">
+                        <div class="w-14 h-14 rounded-2xl bg-electric-purple/10 flex items-center justify-center mb-6 text-electric-purple group-hover:bg-electric-purple/20 transition-all shadow-[0_0_15px_rgba(139,92,246,0.1)]">
+                            <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">description</span>
                         </div>
-                        <h3 class="font-headline-md text-headline-md text-on-surface mb-3">Contratos al Instante</h3>
-                        <p class="font-body-md text-body-md text-on-surface-variant">Generación automática de contratos estructurados legalmente con tus datos y los del comprador.</p>
+                        <h3 class="font-headline-md text-xl font-bold text-white mb-3 tracking-tight">Contratos al Instante</h3>
+                        <p class="font-body-md text-sm text-on-surface-variant leading-relaxed">Generación automática de contratos estructurados legalmente con tus datos y los del comprador.</p>
                     </div>
-                    <div class="bg-charcoal-deep border border-white/5 rounded-xl p-8 hover:border-neon-blue/30 transition-colors group text-left">
-                        <div class="w-12 h-12 rounded-lg bg-surface-glass flex items-center justify-center mb-6 text-neon-blue group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">draw</span>
+                    <div class="glass-panel glass-panel-hover rounded-3xl p-8 group text-left">
+                        <div class="w-14 h-14 rounded-2xl bg-neon-blue/10 flex items-center justify-center mb-6 text-neon-blue group-hover:bg-neon-blue/20 transition-all shadow-[0_0_15px_rgba(0,204,255,0.1)]">
+                            <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">draw</span>
                         </div>
-                        <h3 class="font-headline-md text-headline-md text-on-surface mb-3">Firma Digital</h3>
-                        <p class="font-body-md text-body-md text-on-surface-variant">Soporte para envíos y firmas digitales a través de DocuSign para formalizar tus ventas exclusivas.</p>
+                        <h3 class="font-headline-md text-xl font-bold text-white mb-3 tracking-tight">Firma Digital</h3>
+                        <p class="font-body-md text-sm text-on-surface-variant leading-relaxed">Soporte para envíos y firmas digitales a través de DocuSign para formalizar tus ventas exclusivas.</p>
                     </div>
-                    <div class="bg-charcoal-deep border border-white/5 rounded-xl p-8 hover:border-elite-gold/30 transition-colors group text-left">
-                        <div class="w-12 h-12 rounded-lg bg-surface-glass flex items-center justify-center mb-6 text-elite-gold group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+                    <div class="glass-panel glass-panel-hover rounded-3xl p-8 group text-left">
+                        <div class="w-14 h-14 rounded-2xl bg-elite-gold/10 flex items-center justify-center mb-6 text-elite-gold group-hover:bg-elite-gold/20 transition-all shadow-[0_0_15px_rgba(250,204,21,0.1)]">
+                            <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
                         </div>
-                        <h3 class="font-headline-md text-headline-md text-on-surface mb-3">Entrega Automatizada</h3>
-                        <p class="font-body-md text-body-md text-on-surface-variant">Envía el contrato y los links de descarga directamente al correo del comprador sin esfuerzo.</p>
+                        <h3 class="font-headline-md text-xl font-bold text-white mb-3 tracking-tight">Entrega Automatizada</h3>
+                        <p class="font-body-md text-sm text-on-surface-variant leading-relaxed">Envía el contrato y los links de descarga directamente al correo del comprador sin esfuerzo.</p>
                     </div>
                 </div>
             </section>
 
             <!-- Featured Producers Section -->
-            <section class="px-margin-mobile md:px-margin-desktop py-24 bg-surface-container-low border-t border-white/5">
-                <div class="max-w-container-max mx-auto">
+            <section class="px-margin-mobile md:px-margin-desktop py-24 bg-surface-container-low/50 border-t border-white/5 relative">
+                <div class="absolute inset-0 bg-grid-glow opacity-30 pointer-events-none"></div>
+                <div class="max-w-container-max mx-auto relative z-10">
                     <div class="text-center mb-16">
-                        <h2 class="font-headline-lg text-headline-lg text-on-surface mb-4">Productores Destacados</h2>
-                        <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl mx-auto">Únete a la comunidad de beatmakers de élite que ya están automatizando sus ventas y formalizando sus licencias con BEATSS.</p>
+                        <h2 class="font-headline-lg text-3xl md:text-4xl text-white font-bold mb-4">Productores Destacados</h2>
+                        <p class="font-body-md text-sm text-on-surface-variant max-w-2xl mx-auto leading-relaxed">Únete a la comunidad de beatmakers de élite que ya están automatizando sus ventas y formalizando sus licencias con BEATSS.</p>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter text-left">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
                         <!-- Producer Card 1 -->
-                        <div class="bg-charcoal-deep rounded-xl overflow-hidden border border-white/5 relative group">
+                        <div class="glass-panel rounded-3xl overflow-hidden group transition-all duration-500 hover:border-electric-purple/40">
                             <div class="h-80 w-full relative overflow-hidden">
-                                <img alt="Sossa" class="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-500 group-hover:scale-105" src="producer_sossa.png"/>
-                                <div class="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-transparent to-transparent"></div>
+                                <img alt="Sossa" class="w-full h-full object-cover opacity-50 group-hover:opacity-75 transition-opacity duration-500 group-hover:scale-105" src="producer_sossa.png"/>
+                                <div class="absolute inset-0 bg-gradient-to-t from-surface-container-low via-transparent to-transparent"></div>
                                 <!-- Elite Badge -->
-                                <div class="absolute top-4 right-4 bg-surface-glass backdrop-blur-md border border-elite-gold/30 px-3 py-1 rounded-full flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-elite-gold text-[16px]" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
-                                    <span class="font-label-caps text-label-caps text-elite-gold">Elite</span>
+                                <div class="absolute top-4 right-4 bg-black/60 backdrop-blur-md border border-elite-gold/30 px-4 py-1.5 rounded-full flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-elite-gold text-[16px] animate-pulse" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+                                    <span class="font-label-caps text-[10px] text-elite-gold font-bold uppercase tracking-wider">Elite</span>
                                 </div>
                             </div>
-                            <div class="p-8 relative -mt-12 bg-charcoal-deep/90 backdrop-blur-xl border-t border-white/10 mx-4 rounded-t-xl">
+                            <div class="p-8 relative -mt-12 bg-surface-container-low/95 backdrop-blur-xl border-t border-white/10 mx-4 rounded-3xl shadow-lg">
                                 <div class="flex justify-between items-end mb-4">
                                     <div>
-                                        <h3 class="font-headline-md text-headline-md text-on-surface">Sossa</h3>
-                                        <p class="font-label-caps text-label-caps text-neon-blue mt-1">Admin & Founder</p>
+                                        <h3 class="font-headline-md text-2xl font-bold text-white tracking-tight">Sossa</h3>
+                                        <p class="font-label-caps text-xs text-neon-blue font-bold tracking-widest mt-1">Admin & Founder</p>
                                     </div>
                                 </div>
-                                <p class="font-body-md text-body-md text-on-surface-variant mb-6">Productor multi-género enfocado en ritmos urbanos y trap latino. Creador y administrador principal de BEATSS.</p>
+                                <p class="font-body-md text-sm text-on-surface-variant mb-6 leading-relaxed">Productor multi-género enfocado en ritmos urbanos y trap latino. Creador y administrador principal de BEATSS.</p>
                                 <div class="flex flex-wrap gap-2">
-                                    <span class="px-3 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-label-caps">Dancehall</span>
-                                    <span class="px-3 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-label-caps">Trap</span>
-                                    <span class="px-3 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-label-caps">HipHop</span>
+                                    <span class="px-3.5 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-[10px] font-bold">Dancehall</span>
+                                    <span class="px-3.5 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-[10px] font-bold">Trap</span>
+                                    <span class="px-3.5 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-[10px] font-bold">HipHop</span>
                                 </div>
                             </div>
                         </div>
                         <!-- Producer Card 2 -->
-                        <div class="bg-charcoal-deep rounded-xl overflow-hidden border border-white/5 relative group">
+                        <div class="glass-panel rounded-3xl overflow-hidden group transition-all duration-500 hover:border-electric-purple/40">
                             <div class="h-80 w-full relative overflow-hidden">
-                                <img alt="CG Monarco" class="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity duration-500 group-hover:scale-105" src="producer_monarco.jpg"/>
-                                <div class="absolute inset-0 bg-gradient-to-t from-charcoal-deep via-transparent to-transparent"></div>
+                                <img alt="CG Monarco" class="w-full h-full object-cover opacity-50 group-hover:opacity-75 transition-opacity duration-500 group-hover:scale-105" src="producer_monarco.jpg"/>
+                                <div class="absolute inset-0 bg-gradient-to-t from-surface-container-low via-transparent to-transparent"></div>
                                 <!-- Elite Badge -->
-                                <div class="absolute top-4 right-4 bg-surface-glass backdrop-blur-md border border-elite-gold/30 px-3 py-1 rounded-full flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-elite-gold text-[16px]" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
-                                    <span class="font-label-caps text-label-caps text-elite-gold">Elite</span>
+                                <div class="absolute top-4 right-4 bg-black/60 backdrop-blur-md border border-elite-gold/30 px-4 py-1.5 rounded-full flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-elite-gold text-[16px] animate-pulse" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+                                    <span class="font-label-caps text-[10px] text-elite-gold font-bold uppercase tracking-wider">Elite</span>
                                 </div>
                             </div>
-                            <div class="p-8 relative -mt-12 bg-charcoal-deep/90 backdrop-blur-xl border-t border-white/10 mx-4 rounded-t-xl">
+                            <div class="p-8 relative -mt-12 bg-surface-container-low/95 backdrop-blur-xl border-t border-white/10 mx-4 rounded-3xl shadow-lg">
                                 <div class="flex justify-between items-end mb-4">
                                     <div>
-                                        <h3 class="font-headline-md text-headline-md text-on-surface">CG Monarco</h3>
-                                        <p class="font-label-caps text-label-caps text-electric-purple mt-1">Productor de Élite</p>
+                                        <h3 class="font-headline-md text-2xl font-bold text-white tracking-tight">CG Monarco</h3>
+                                        <p class="font-label-caps text-xs text-electric-purple font-bold tracking-widest mt-1">Productor de Élite</p>
                                     </div>
                                 </div>
-                                <p class="font-body-md text-body-md text-on-surface-variant mb-6">Productor musical destacado en la escena independiente. Pionero en el uso de contratos digitales automatizados.</p>
+                                <p class="font-body-md text-sm text-on-surface-variant mb-6 leading-relaxed">Productor musical destacado en la escena independiente. Pionero en el uso de contratos digitales automatizados.</p>
                                 <div class="flex flex-wrap gap-2">
-                                    <span class="px-3 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-label-caps">Reggaeton</span>
-                                    <span class="px-3 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-label-caps">Trap</span>
-                                    <span class="px-3 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-label-caps">HipHop</span>
+                                    <span class="px-3.5 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-[10px] font-bold">Reggaeton</span>
+                                    <span class="px-3.5 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-[10px] font-bold">Trap</span>
+                                    <span class="px-3.5 py-1 rounded-full bg-neon-blue/10 text-neon-blue font-label-caps text-[10px] font-bold">HipHop</span>
                                 </div>
                             </div>
                         </div>
@@ -273,55 +379,56 @@
             </section>
 
             <!-- Plans & Pricing Section -->
-            <section class="px-margin-mobile md:px-margin-desktop py-24 bg-surface-container-lowest border-t border-white/5">
-                <div class="max-w-container-max mx-auto">
+            <section class="px-margin-mobile md:px-margin-desktop py-24 bg-surface-container-lowest border-t border-white/5 relative">
+                <div class="absolute inset-0 bg-grid-glow opacity-10 pointer-events-none"></div>
+                <div class="max-w-container-max mx-auto relative z-10">
                     <div class="text-center mb-16">
-                        <h2 class="font-headline-lg text-headline-lg text-on-surface mb-4">Planes para Productores</h2>
-                        <p class="font-body-md text-body-md text-on-surface-variant max-w-2xl mx-auto">Selecciona el plan que se adapte al volumen de tu producción y empieza a formalizar tu negocio hoy mismo.</p>
+                        <h2 class="font-headline-lg text-3xl md:text-4xl text-white font-bold mb-4">Planes para Productores</h2>
+                        <p class="font-body-md text-sm text-on-surface-variant max-w-2xl mx-auto leading-relaxed">Selecciona el plan que se adapte al volumen de tu producción y empieza a formalizar tu negocio hoy mismo.</p>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter max-w-4xl mx-auto text-left">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
                         <!-- Plan Pro -->
-                        <div class="bg-charcoal-deep border border-white/5 rounded-xl p-8 flex flex-col justify-between hover:border-electric-purple/30 transition-colors group relative">
+                        <div class="glass-panel rounded-3xl p-8 flex flex-col justify-between hover:border-electric-purple/40 transition-all duration-300 group relative">
                             <div>
-                                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Plan Pro</h3>
-                                <p class="font-body-md text-body-md text-on-surface-variant mb-6">Perfecto para productores en crecimiento.</p>
+                                <h3 class="font-headline-md text-2xl font-bold text-white mb-2 tracking-tight">Plan Pro</h3>
+                                <p class="font-body-md text-sm text-on-surface-variant mb-6 leading-relaxed">Perfecto para productores en crecimiento.</p>
                                 <div class="flex items-baseline mb-8">
-                                    <span class="font-display-lg text-display-lg text-on-surface font-extrabold">$10.00</span>
-                                    <span class="text-on-surface-variant font-label-caps text-label-caps ml-2">/ pago único</span>
+                                    <span class="font-display-lg text-4xl md:text-5xl text-white font-black tracking-tight">$10.00</span>
+                                    <span class="text-on-surface-variant font-label-caps text-[10px] font-bold uppercase tracking-wider ml-2">/ pago único</span>
                                 </div>
-                                <ul class="space-y-4 mb-8 text-on-surface-variant font-body-md text-body-md">
-                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple">check</span> Licencias y Contratos Ilimitados</li>
-                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple">check</span> Envío automático por Correo</li>
-                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple">check</span> Firma Digital Básica</li>
-                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple">check</span> Firma del Productor integrada</li>
+                                <ul class="space-y-4 mb-8 text-on-surface-variant font-body-md text-sm leading-relaxed">
+                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-[20px]">check</span> Licencias y Contratos Ilimitados</li>
+                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-[20px]">check</span> Envío automático por Correo</li>
+                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-[20px]">check</span> Firma Digital Básica</li>
+                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-[20px]">check</span> Firma del Productor integrada</li>
                                 </ul>
                             </div>
-                            <button type="button" onclick="openPaymentModal(); setTimeout(()=>switchPaymentPlan('pro'),100);" class="w-full py-4 bg-electric-purple hover:bg-inverse-primary text-white rounded-lg font-label-caps text-label-caps shadow-[0_0_15px_rgba(139,92,246,0.2)] hover:shadow-[0_0_25px_rgba(139,92,246,0.4)] transition-all font-bold text-center">
+                            <button type="button" onclick="openPaymentModal(); setTimeout(()=>switchPaymentPlan('pro'),100);" class="w-full py-4 bg-gradient-to-r from-electric-purple to-fuchsia-600 text-white rounded-full font-label-caps font-bold text-xs hover:shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all duration-300 hover:-translate-y-0.5 text-center">
                                 Obtener Plan Pro
                             </button>
                         </div>
                         
                         <!-- Plan Elite -->
-                        <div class="bg-charcoal-deep border border-elite-gold/30 rounded-xl p-8 flex flex-col justify-between hover:border-elite-gold/50 transition-colors group relative shadow-[0_0_30px_rgba(250,204,21,0.05)]">
-                            <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-elite-gold text-surface-container-lowest font-label-caps text-[10px] px-4 py-1.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1 shadow-md">
-                                <span class="material-symbols-outlined text-[14px]">workspace_premium</span> Recomendado
+                        <div class="glass-panel border-2 border-elite-gold/50 rounded-3xl p-8 flex flex-col justify-between hover:border-elite-gold/80 transition-all duration-300 group relative shadow-[0_0_35px_rgba(250,204,21,0.08)]">
+                            <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-elite-gold text-surface-container-lowest font-label-caps text-[9px] px-4 py-1.5 rounded-full font-bold uppercase tracking-widest flex items-center gap-1 shadow-lg border border-elite-gold">
+                                <span class="material-symbols-outlined text-[13px] animate-bounce">workspace_premium</span> Recomendado
                             </div>
                             <div>
-                                <h3 class="font-headline-md text-headline-md text-elite-gold mb-2">Plan Elite</h3>
-                                <p class="font-body-md text-body-md text-on-surface-variant mb-6">Para productores profesionales de alto impacto.</p>
+                                <h3 class="font-headline-md text-2xl font-bold text-elite-gold mb-2 tracking-tight">Plan Elite</h3>
+                                <p class="font-body-md text-sm text-on-surface-variant mb-6 leading-relaxed">Para productores profesionales de alto impacto.</p>
                                 <div class="flex items-baseline mb-8">
-                                    <span class="font-display-lg text-display-lg text-elite-gold font-extrabold">$30.00</span>
-                                    <span class="text-on-surface-variant font-label-caps text-label-caps ml-2">/ pago único</span>
+                                    <span class="font-display-lg text-4xl md:text-5xl text-elite-gold font-black tracking-tight">$30.00</span>
+                                    <span class="text-on-surface-variant font-label-caps text-[10px] font-bold uppercase tracking-wider ml-2">/ pago único</span>
                                 </div>
-                                <ul class="space-y-4 mb-8 text-on-surface-variant font-body-md text-body-md">
-                                    <li class="flex items-center gap-3 text-elite-gold"><span class="material-symbols-outlined">check</span> Todo lo del Plan Pro</li>
-                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold">check</span> Marca de Agua BEATSS Eliminada</li>
-                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold">check</span> Subida de Logo Propio en Licencias</li>
-                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold">check</span> Campos personalizados en contratos</li>
-                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold">check</span> Soporte Prioritario 24/7</li>
+                                <ul class="space-y-4 mb-8 text-on-surface-variant font-body-md text-sm leading-relaxed">
+                                    <li class="flex items-center gap-3 text-elite-gold font-semibold"><span class="material-symbols-outlined text-[20px]">check</span> Todo lo del Plan Pro</li>
+                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-[20px]">check</span> Marca de Agua BEATSS Eliminada</li>
+                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-[20px]">check</span> Subida de Logo Propio en Licencias</li>
+                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-[20px]">check</span> Campos personalizados en contratos</li>
+                                    <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-[20px]">check</span> Soporte Prioritario 24/7</li>
                                 </ul>
                             </div>
-                            <button type="button" onclick="openPaymentModal(); setTimeout(()=>switchPaymentPlan('elite'),100);" class="w-full py-4 bg-gradient-to-r from-elite-gold to-[#f97316] text-surface-container-lowest rounded-lg font-label-caps text-label-caps shadow-[0_0_20px_rgba(250,204,21,0.2)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] transition-all font-bold text-center">
+                            <button type="button" onclick="openPaymentModal(); setTimeout(()=>switchPaymentPlan('elite'),100);" class="w-full py-4 bg-gradient-to-r from-elite-gold to-orange-500 text-surface-container-lowest rounded-full font-label-caps font-bold text-xs hover:shadow-[0_0_20px_rgba(250,204,21,0.5)] transition-all duration-300 hover:-translate-y-0.5 text-center">
                                 Obtener Plan Elite
                             </button>
                         </div>
@@ -331,23 +438,23 @@
         </main>
 
         <!-- Footer (Shared Component) -->
-        <footer class="bg-surface-container-lowest full-width py-12 border-t border-white/5">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-desktop max-w-container-max mx-auto text-left">
+        <footer class="bg-surface-container-lowest full-width py-16 border-t border-white/5 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 px-margin-desktop max-w-container-max mx-auto text-left">
                 <div class="col-span-1 md:col-span-2">
-                    <span class="text-headline-md font-headline-md font-bold text-on-surface mb-4 block">BEATSS</span>
-                    <p class="font-body-md text-body-md text-on-surface-variant mb-6">La plataforma de contratos y automatización diseñada exclusivamente para productores musicales de élite.</p>
-                    <p class="font-data-mono text-data-mono text-on-surface-variant/50">© 2026 BEATSS Automation. All rights reserved.</p>
+                    <span class="text-2xl font-black text-white mb-4 block tracking-tighter">BEATSS</span>
+                    <p class="font-body-md text-sm text-on-surface-variant mb-6 leading-relaxed">La plataforma de contratos y automatización diseñada exclusivamente para productores musicales de élite.</p>
+                    <p class="font-data-mono text-[10px] text-on-surface-variant/40">© 2026 BEATSS Automation. All rights reserved.</p>
                 </div>
                 <div class="col-span-1 flex flex-col gap-3">
-                    <span class="font-label-caps text-label-caps text-on-surface mb-2">Legal</span>
-                    <a class="font-body-md text-body-md text-on-surface-variant hover:text-neon-blue hover:underline transition-all" href="#">Terms of Service</a>
-                    <a class="font-body-md text-body-md text-on-surface-variant hover:text-neon-blue hover:underline transition-all" href="#">Privacy Policy</a>
-                    <a class="font-body-md text-body-md text-on-surface-variant hover:text-neon-blue hover:underline transition-all" href="#">License Agreement</a>
+                    <span class="font-label-caps text-xs text-white font-bold uppercase tracking-widest mb-2">Legal</span>
+                    <a class="font-body-md text-sm text-on-surface-variant hover:text-neon-blue hover:underline transition-all" href="#">Terms of Service</a>
+                    <a class="font-body-md text-sm text-on-surface-variant hover:text-neon-blue hover:underline transition-all" href="#">Privacy Policy</a>
+                    <a class="font-body-md text-sm text-on-surface-variant hover:text-neon-blue hover:underline transition-all" href="#">License Agreement</a>
                 </div>
                 <div class="col-span-1 flex flex-col gap-3">
-                    <span class="font-label-caps text-label-caps text-on-surface mb-2">Soporte</span>
-                    <a class="font-body-md text-body-md text-on-surface-variant hover:text-neon-blue hover:underline transition-all" href="#">Contact Support</a>
-                    <button class="mt-6 flex items-center gap-2 font-label-caps text-label-caps text-electric-purple hover:text-neon-blue transition-colors group w-fit" onclick="document.getElementById('landing-page').scrollTo({top: 0, behavior: 'smooth'})">
+                    <span class="font-label-caps text-xs text-white font-bold uppercase tracking-widest mb-2">Soporte</span>
+                    <a class="font-body-md text-sm text-on-surface-variant hover:text-neon-blue hover:underline transition-all" href="#">Contact Support</a>
+                    <button class="mt-6 flex items-center gap-2 font-label-caps text-xs text-electric-purple hover:text-neon-blue font-bold transition-colors group w-fit" onclick="document.getElementById('landing-page').scrollTo({top: 0, behavior: 'smooth'})">
                         Volver Arriba
                         <span class="material-symbols-outlined group-hover:-translate-y-1 transition-transform">arrow_upward</span>
                     </button>
