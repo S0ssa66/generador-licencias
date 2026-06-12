@@ -915,6 +915,17 @@ const initAuthAndApp = () => {
             window.currentUserIsAdmin = false;
         }
 
+        // Actualizar botón de login del catálogo según el estado de sesión
+        const catalogLoginBtn = document.getElementById('catalog-btn-login');
+        if (catalogLoginBtn) {
+            catalogLoginBtn.setAttribute('data-i18n', user ? 'catalog_go_to_panel' : 'catalog_i_am_producer');
+            const trans = (typeof UI_TRANSLATIONS !== 'undefined' && UI_TRANSLATIONS[currentLang]) ? UI_TRANSLATIONS[currentLang] : null;
+            if (trans) {
+                const key = user ? 'catalog_go_to_panel' : 'catalog_i_am_producer';
+                catalogLoginBtn.textContent = trans[key] || (user ? 'Ir al Panel' : 'Soy Productor');
+            }
+        }
+
         // Si estamos en la tienda pública o catálogo, y NO es un intento manual de login del admin, omitimos el flujo normal
         if ((window.isPublicStoreMode || window.isGlobalCatalogMode) && !window.isManualLoginAttempt) {
             console.log("🛒 Tienda pública o catálogo activo. Omitiendo flujo normal de control de sesión.");
@@ -10099,6 +10110,7 @@ function updatePlayerProgress() {
 function setPlayButtonState(beatId, isPlaying) {
     const playBtn = document.getElementById('player-btn-play');
     const cardBtn = document.getElementById(`btn-play-store-${beatId}`);
+    const globalCardBtn = document.getElementById(`btn-play-global-${beatId}`);
     
     const iconHtml = isPlaying 
         ? '<i data-lucide="pause" style="width: 18px; height: 18px; fill: #000; stroke: #000;"></i>'
@@ -10112,15 +10124,27 @@ function setPlayButtonState(beatId, isPlaying) {
             : '<i data-lucide="play" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>';
     }
 
+    if (globalCardBtn) {
+        globalCardBtn.innerHTML = isPlaying
+            ? '<i data-lucide="pause" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>'
+            : '<i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>';
+    }
+
     // Resetear las demás tarjetas
-    window.storeBeats.forEach(b => {
-        if (b.id !== beatId) {
-            const otherBtn = document.getElementById(`btn-play-store-${b.id}`);
-            if (otherBtn) {
-                otherBtn.innerHTML = '<i data-lucide="play" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>';
+    if (window.storeBeats) {
+        window.storeBeats.forEach(b => {
+            if (b.id !== beatId) {
+                const otherBtn = document.getElementById(`btn-play-store-${b.id}`);
+                if (otherBtn) {
+                    otherBtn.innerHTML = '<i data-lucide="play" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>';
+                }
+                const otherGlobalBtn = document.getElementById(`btn-play-global-${b.id}`);
+                if (otherGlobalBtn) {
+                    otherGlobalBtn.innerHTML = '<i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>';
+                }
             }
-        }
-    });
+        });
+    }
 
     if (window.lucide) window.lucide.createIcons();
 }
@@ -12261,14 +12285,14 @@ function renderGlobalBeats(beats) {
         const price = beat.price_basic ? `$${beat.price_basic.toFixed(2)}` : 'Negociable';
         
         const isElite = config.plan === 'elite';
-        const eliteBadge = isElite ? `<span style="background: linear-gradient(135deg, #a855f7 0%, #f59e0b 100%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; margin-left: 6px;">👑 Elite</span>` : '';
+        const eliteBadge = isElite ? `<span style="background: linear-gradient(135deg, #a855f7 0%, #f59e0b 100%); color: white; padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 800; text-transform: uppercase; margin-left: 6px;">👑 Elite</span>` : '';
         
         return `
             <div class="store-beat-card" style="--accent: ${pColor}; --accent-glow: ${pColorGlow}; --accent-glow-hover: ${pColorGlowHover}; padding: 18px; display: flex; flex-direction: column; height: 100%;">
                 <div class="store-beat-cover" style="position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #151722;" onclick="window.playGlobalBeat('${beat.id}')">
                     <img src='${artwork}' style="width: 100%; height: 100%; object-fit: cover; object-position: top; transition: transform 0.5s ease;">
                     <div class="store-play-overlay">
-                        <button class="global-play-btn-${beat.id} store-play-btn" style="width: 56px; height: 56px; border-radius: 50%; background: ${pColor}; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px ${pColorGlow}; transform: scale(0.9); transition: all 0.3s ease;">
+                        <button id="btn-play-global-${beat.id}" class="store-play-btn" style="width: 56px; height: 56px; border-radius: 50%; background: ${pColor}; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px ${pColorGlow}; transform: scale(0.9); transition: all 0.3s ease;">
                             <i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>
                         </button>
                     </div>
@@ -12494,7 +12518,11 @@ onDOMReady(() => {
     });
 
     if(loginBtn) loginBtn.addEventListener('click', () => {
-        document.getElementById('login-modal').style.display = 'flex';
+        if (window.currentUser) {
+            window.showAppView('home');
+        } else {
+            document.getElementById('login-modal').style.display = 'flex';
+        }
     });
 });
 

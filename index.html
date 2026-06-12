@@ -3190,15 +3190,15 @@
             <div id="global-load-more-container" class="text-center mt-6" style="display: none;">
                 <button id="btn-load-more-global" class="bg-white/5 border border-white/10 hover:border-electric-purple text-on-surface hover:text-electric-purple px-6 py-3 rounded-xl font-label-caps text-label-caps flex items-center gap-1.5 mx-auto transition-all shadow-md">
                     <span class="material-symbols-outlined text-[16px]">expand_more</span>
-                    <span>Cargar más beats</span>
+                    <span data-i18n="catalog_load_more">Cargar más beats</span>
                 </button>
             </div>
             
-            <div id="global-empty-state" class="hidden text-center py-20 px-6 bg-charcoal-deep/30 rounded-2xl border border-dashed border-white/5" style="display: none;">
+            <div id="global-empty-state" class="text-center py-20 px-6 bg-charcoal-deep/30 rounded-2xl border border-dashed border-white/5" style="display: none;">
                 <i data-lucide="music-4" class="w-12 h-12 mx-auto mb-4 opacity-40 text-on-surface-variant"></i>
-                <h3 class="text-on-surface font-bold text-lg mb-2">No se encontraron beats</h3>
-                <p class="text-on-surface-variant text-sm mb-4">Intenta ajustando los filtros de búsqueda.</p>
-                <button id="global-btn-clear-filters" class="border border-white/10 text-on-surface hover:bg-white/5 px-6 py-2 rounded-lg text-xs font-semibold">Limpiar Filtros</button>
+                <h3 class="text-on-surface font-bold text-lg mb-2" data-i18n="catalog_no_beats">No se encontraron beats</h3>
+                <p class="text-on-surface-variant text-sm mb-4" data-i18n="catalog_adjust_filters">Intenta ajustando los filtros de búsqueda.</p>
+                <button id="global-btn-clear-filters" data-i18n="catalog_clear_filters" class="border border-white/10 text-on-surface hover:bg-white/5 px-6 py-2 rounded-lg text-xs font-semibold">Limpiar Filtros</button>
             </div>
         </main>
     </div>
@@ -3215,11 +3215,11 @@
 
         <!-- Header de la Tienda -->
         <header class="store-header relative py-16 px-6 text-center border-b border-white/5 overflow-hidden bg-surface-glass backdrop-blur-md">
-            <div class="store-header-mesh absolute top-[-100px] left-1/2 -translate-x-1/2 w-[600px] height-[300px] bg-[radial-gradient(circle,_rgba(139,92,246,0.15)_0%,_transparent_70%)] pointer-events-none"></div>
+            <div class="store-header-mesh absolute top-[-100px] left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[radial-gradient(circle,_rgba(139,92,246,0.15)_0%,_transparent_70%)] pointer-events-none"></div>
             
             <div class="store-brand relative z-10 max-w-2xl mx-auto flex flex-col items-center gap-4">
                 <div class="store-logo-wrapper w-24 h-24 rounded-full bg-gradient-to-tr from-electric-purple to-neon-blue flex items-center justify-center p-0.5 shadow-[0_10px_30px_rgba(139,92,246,0.3)] border border-white/10 overflow-hidden">
-                    <img id="store-logo-img" src="" class="w-full h-full rounded-full object-cover object-top hidden" alt="Logo">
+                    <img id="store-logo-img" src="" class="w-full h-full rounded-full object-cover object-top" style="display: none;" alt="Logo">
                     <div id="store-logo-icon" class="text-white flex items-center justify-center">
                         <i data-lucide="music" class="w-10 h-10"></i>
                     </div>
@@ -3258,9 +3258,9 @@
                 <!-- Tarjetas de beats generadas dinámicamente -->
             </div>
             
-            <div id="store-empty-state" class="hidden text-center py-20 px-6 bg-charcoal-deep/30 rounded-2xl border border-dashed border-white/5" style="display: none;">
+            <div id="store-empty-state" class="text-center py-20 px-6 bg-charcoal-deep/30 rounded-2xl border border-dashed border-white/5" style="display: none;">
                 <i data-lucide="music-2" class="w-12 h-12 mx-auto mb-4 opacity-40 text-on-surface-variant"></i>
-                <p class="text-on-surface-variant text-sm m-0">No se encontraron beats en este catálogo.</p>
+                <p class="text-on-surface-variant text-sm m-0" data-i18n="store_empty_desc">No se encontraron beats en este catálogo.</p>
             </div>
         </main>
     </div>
