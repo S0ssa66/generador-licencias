@@ -15,6 +15,6 @@
 - `[x]` Confirmar cambios a Git y desplegar en Vercel producción
 
 ## Siguientes Pasos / Futuras Tareas (Ejemplos)
-- `[ ]` Agregar nuevas secciones a la Landing Page (ej. Testimonios, Preguntas Frecuentes)
-- `[ ]` Optimizar tiempos de carga o peso del bundle JS
-- `[ ]` Ajustar estilos de los PDFs descargables de las licencias
+- [x] Ajustar estilos de los PDFs descargables de las licencias (Fases 1, 2 y 3 completadas)
+- [ ] Agregar nuevas secciones a la Landing Page (ej. Testimonios, Preguntas Frecuentes)
+- [ ] Optimizar tiempos de carga o peso del bundle JS

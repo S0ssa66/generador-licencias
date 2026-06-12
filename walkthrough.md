@@ -30,7 +30,19 @@ Hemos completado el refinamiento visual de la cabecera del proyecto con fuentes 
 
 ---
 
+## 5. Mejoras en la Exportación y Diseño Editorial de Contratos PDF (Junio 2026)
+Implementamos de forma autónoma el plan de mejoras de diseño y maquetación de los contratos descargables para asegurar un acabado editorial impecable y evitar problemas de impresión:
+
+* **Estilos Explícitos en `.contract-doc`:** Inyectamos propiedades explícitas (`font-family: var(--font-sans); font-size: 11.5px; line-height: 1.5; text-align: justify; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;`) para garantizar la persistencia de estilos tras la clonación del DOM por librerías como `html2pdf.js`.
+* **Reglas de Impresión Anti-Huérfanos:** Incorporamos reglas (`page-break-after: avoid !important; break-after: avoid !important;`) a los títulos `h2` y `h3` para prevenir saltos de página inadecuados que separen los títulos de su correspondiente contenido de cláusula.
+* **Capa de Cierre Unificada (`.contract-closure`):** Envolvemos las secciones de firmas y sello digital en una nueva capa con regla `break-inside: avoid !important;` para que permanezcan cohesionadas en una única página y no se fraccionen.
+* **Optimización de Contraste para Impresión Física:** Oscurecemos colores gris claro (`.meta-label`, `.signature-role`, `.doc-header h3`, `.signature-aka`) a `#636366` para mejorar significativamente la legibilidad en copias físicas impresas.
+* **Tablas de Markdown Estructuradas:** Reemplazamos la sección informal de "Información General del Documento" por tablas Markdown de tipo clave-valor homogeneizadas en todas las plantillas (en español e inglés) con variables interpoladas correctamente, incluyendo BPM (`{{beat_bpm}}`) y Tonalidad (`{{beat_key}}`).
+* **Sello Digital Dinámico de Pago:** Modificamos la firma derecha de modo que si no se requiere firma del comprador (`needsBuyerSignature === false`), se renderice un sello punteado premium "✓ Aceptado vía Pago" en lugar de un bloque vacío, mostrando dinámicamente la fecha formateada de la transacción.
+
+---
+
 ## Verificación de Producción
 
-Todas las correcciones están completamente aplicadas y en vivo en el sitio web de producción:
+Todas las correcciones y mejoras están completamente aplicadas, compiladas y desplegadas en el sitio web de producción:
 * **Enlace de Producción Activo:** [https://generador-licencias.vercel.app/](https://generador-licencias.vercel.app/)

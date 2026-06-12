@@ -3350,7 +3350,20 @@ function compileContract() {
             <div class="signature-aka">${signatureIdR}</div>
             <div class="signature-aka">${t.buyerSignatureDocusign || 'Firma vía DocuSign'}</div>
         </div>
-    ` : '';
+    ` : `
+        <div class="signature-block">
+            <div class="signature-img-wrap" style="align-items: center; justify-content: center; display: flex;">
+                <div style="border: 2px dashed var(--contract-accent, #007aff); padding: 6px 12px; border-radius: 6px; font-weight: bold; color: var(--contract-accent, #007aff); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; background-color: rgba(0, 122, 255, 0.03);">
+                    ${currentLang === 'en' ? '✓ Accepted via Payment' : '✓ Aceptado vía Pago'}
+                </div>
+            </div>
+            <div class="signature-line"></div>
+            <div class="signature-role">${signatureRoleR}</div>
+            <div class="signature-name">${signatureNameR}</div>
+            <div class="signature-aka">${signatureIdR}</div>
+            <div class="signature-aka">${currentLang === 'en' ? 'Transaction Date:' : 'Fecha de Transacción:'} ${dateFormatted}</div>
+        </div>
+    `;
 
     let html = `
         <div class="contract-doc">
@@ -3368,18 +3381,20 @@ function compileContract() {
                 ${bodyHtml}
             </div>
 
-            <div class="signature-section" style="margin-top: 30px;">
-                ${signatureLeftHtml}
-                ${signatureRightHtml}
-            </div>
-            
-            <div class="digital-seal-container" style="margin-top: 25px;">
-                <div class="digital-seal">
-                    <div class="seal-icon">✓</div>
-                    <div class="seal-text">
-                        <strong>${t.sealVerified || 'DOCUMENTO INTEGRAL VERIFICADO'}</strong><br>
-                        ${t.sealRef || 'Ref:'} ${refCode}<br>
-                        ${t.sealStatus || 'Estado: Firmado y Vigente'}
+            <div class="contract-closure">
+                <div class="signature-section" style="margin-top: 30px;">
+                    ${signatureLeftHtml}
+                    ${signatureRightHtml}
+                </div>
+                
+                <div class="digital-seal-container" style="margin-top: 25px;">
+                    <div class="digital-seal">
+                        <div class="seal-icon">✓</div>
+                        <div class="seal-text">
+                            <strong>${t.sealVerified || 'DOCUMENTO INTEGRAL VERIFICADO'}</strong><br>
+                            ${t.sealRef || 'Ref:'} ${refCode}<br>
+                            ${t.sealStatus || 'Estado: Firmado y Vigente'}
+                        </div>
                     </div>
                 </div>
             </div>

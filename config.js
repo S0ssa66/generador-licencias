@@ -168,10 +168,15 @@ export const DEFAULT_TEMPLATES = [
 ---
 
 ### Información General del Documento
-* **Código de Referencia:** Invoice # {{ref_code}}
-* **Fecha de Entrada en Vigor:** {{effective_date}}
-* **Lugar de Celebración:** {{celebration_place}}
-* **Método de Pago:** {{payment_method}}
+
+| Concepto | Detalle |
+| :--- | :--- |
+| **Licencia Otorgada** | Licencia {{license_type}} ({{license_exclusivity}}) |
+| **Obra Musical (Beat)** | "{{beat_name}}" ({{beat_bpm}} / Tonalidad: {{beat_key}}) |
+| **Código de Referencia** | Invoice # {{ref_code}} |
+| **Fecha de Entrada en Vigor** | {{effective_date}} |
+| **Lugar de Celebración** | {{celebration_place}} |
+| **Método de Pago** | {{payment_method}} |
 
 ---
 
@@ -253,10 +258,15 @@ Como medida de seguridad e integridad contractual, este documento incorpora el l
 ---
 
 ### General Document Information
-* **Reference Code:** Invoice # {{ref_code}}
-* **Effective Date:** {{effective_date}}
-* **Place of Celebration:** {{celebration_place}}
-* **Payment Method:** {{payment_method}}
+
+| Concept | Detail |
+| :--- | :--- |
+| **License Granted** | {{license_type}} License ({{license_exclusivity}}) |
+| **Musical Work (Beat)** | "{{beat_name}}" ({{beat_bpm}} / Key: {{beat_key}}) |
+| **Reference Code** | Invoice # {{ref_code}} |
+| **Effective Date** | {{effective_date}} |
+| **Place of Celebration** | {{celebration_place}} |
+| **Payment Method** | {{payment_method}} |
 
 ---
 
@@ -341,9 +351,18 @@ As a measure of security and contractual integrity, this document incorporates t
 
 ---
 
-* **Código de Referencia:** Invoice # {{ref_code}}
-* **Fecha de Celebración:** {{effective_date}}
-* **Lugar de Celebración:** {{celebration_place}}
+### Información General del Documento
+
+| Concepto | Detalle |
+| :--- | :--- |
+| **Licencia Otorgada** | Split Sheet (Distribución de Regalías) |
+| **Obra Musical (Beat)** | "{{beat_name}}" ({{beat_bpm}} / Tonalidad: {{beat_key}}) |
+| **Código de Referencia** | Invoice # {{ref_code}} |
+| **Fecha de Entrada en Vigor** | {{effective_date}} |
+| **Lugar de Celebración** | {{celebration_place}} |
+| **Método de Pago** | {{payment_method}} |
+
+---
 
 Este documento (en adelante, el "Acuerdo de Splits") confirma los porcentajes de participación acordados de buena fe y autoría compartida sobre la obra musical titulada tentativamente como la "Nueva Canción", la cual incorpora el archivo de audio instrumental creado por el Productor titulado **"{{beat_name}}"**.
 
@@ -381,9 +400,18 @@ En cualquier medio digital, físico o red social, se otorgará el crédito de co
 
 ---
 
-* **Reference Code:** Invoice # {{ref_code}}
-* **Effective Date:** {{effective_date}}
-* **Place of Celebration:** {{celebration_place}}
+### General Document Information
+
+| Concept | Detail |
+| :--- | :--- |
+| **License Granted** | Split Sheet (Royalty Distribution) |
+| **Musical Work (Beat)** | "{{beat_name}}" ({{beat_bpm}} / Key: {{beat_key}}) |
+| **Reference Code** | Invoice # {{ref_code}} |
+| **Effective Date** | {{effective_date}} |
+| **Place of Celebration** | {{celebration_place}} |
+| **Payment Method** | {{payment_method}} |
+
+---
 
 This document (hereinafter, the "Split Agreement") confirms the participation percentages agreed in good faith and shared authorship over the musical work tentatively titled "New Song", which incorporates the instrumental audio file created by the Producer titled **"{{beat_name}}"**.
 
@@ -425,9 +453,18 @@ In any digital, physical medium or social network, co-production credit must be 
 
 ---
 
-* **Código de Referencia:** Invoice # {{ref_code}}
-* **Fecha de Celebración:** {{effective_date}}
-* **Lugar de Celebración:** {{celebration_place}}
+### Información General del Documento
+
+| Concepto | Detalle |
+| :--- | :--- |
+| **Licencia Otorgada** | Acuerdo de Coproducción y Colaboración Musical |
+| **Obra Musical (Beat)** | "{{beat_name}}" ({{beat_bpm}} / Tonalidad: {{beat_key}}) |
+| **Código de Referencia** | Invoice # {{ref_code}} |
+| **Fecha de Entrada en Vigor** | {{effective_date}} |
+| **Lugar de Celebración** | {{celebration_place}} |
+| **Método de Pago** | {{payment_method}} |
+
+---
 
 Este contrato establece la colaboración y coproducción de la obra musical titulada **"{{beat_name}}"** entre:
 
@@ -462,9 +499,18 @@ Los créditos de la composición resultante se listarán siempre de la siguiente
 
 ---
 
-* **Reference Code:** Invoice # {{ref_code}}
-* **Effective Date:** {{effective_date}}
-* **Place of Celebration:** {{celebration_place}}
+### General Document Information
+
+| Concept | Detail |
+| :--- | :--- |
+| **License Granted** | Co-production and Musical Collaboration Agreement |
+| **Musical Work (Beat)** | "{{beat_name}}" ({{beat_bpm}} / Key: {{beat_key}}) |
+| **Reference Code** | Invoice # {{ref_code}} |
+| **Effective Date** | {{effective_date}} |
+| **Place of Celebration** | {{celebration_place}} |
+| **Payment Method** | {{payment_method}} |
+
+---
 
 This agreement establishes the collaboration and co-production of the musical work titled **"{{beat_name}}"** between:
 
