@@ -1,5 +1,5 @@
 import { LICENSE_CONFIGS, SEED_LICENSES, DEFAULT_TEMPLATES } from './config.js';
-import { TRANSLATIONS } from './i18n.js';
+import { TRANSLATIONS, UI_TRANSLATIONS } from './i18n.js';
 import { 
     auth, 
     db, 
@@ -37,6 +37,286 @@ import {
 // Estado global de la aplicación
 let currentLang = 'es';
 let salesChartInstance = null;
+
+const REAL_FEED_ITEMS = [
+    {
+        buyer: "Marlon Velez",
+        type: "purchase",
+        detail: "Choque",
+        licenseType: "basic",
+        value: "+$33.60",
+        icon: "description",
+        colorClass: "bg-electric-purple/10 text-electric-purple border-electric-purple/20"
+    },
+    {
+        buyer: "Wilmer Reyes",
+        type: "signature",
+        detail: "Contrato firmado electrónicamente",
+        value: "1m ago",
+        icon: "edit_note",
+        colorClass: "bg-neon-blue/10 text-neon-blue border-neon-blue/20"
+    },
+    {
+        buyer: "LucDuck Aguilera",
+        type: "purchase",
+        detail: "Hot",
+        licenseType: "premium",
+        value: "+$67.20",
+        icon: "description",
+        colorClass: "bg-electric-purple/10 text-electric-purple border-electric-purple/20"
+    },
+    {
+        buyer: "Hernán Jair Nogales",
+        type: "delivery",
+        detail: "WAV + Stems enviados",
+        value: "3m ago",
+        icon: "send",
+        colorClass: "bg-elite-gold/10 text-elite-gold border-elite-gold/20"
+    },
+    {
+        buyer: "Cristian Valderrama",
+        type: "purchase",
+        detail: "Type Beat Jombriel",
+        licenseType: "basic",
+        value: "+$33.60",
+        icon: "description",
+        colorClass: "bg-electric-purple/10 text-electric-purple border-electric-purple/20"
+    },
+    {
+        buyer: "Mel Morales",
+        type: "signature",
+        detail: "Contrato firmado electrónicamente",
+        value: "8m ago",
+        icon: "edit_note",
+        colorClass: "bg-neon-blue/10 text-neon-blue border-neon-blue/20"
+    },
+    {
+        buyer: "ALEX OSORIO",
+        type: "purchase",
+        detail: "Fire",
+        licenseType: "basic",
+        value: "+$33.60",
+        icon: "description",
+        colorClass: "bg-electric-purple/10 text-electric-purple border-electric-purple/20"
+    },
+    {
+        buyer: "Luis Tenorio Olaya",
+        type: "purchase",
+        detail: "Tussi",
+        licenseType: "premium",
+        value: "+$67.20",
+        icon: "description",
+        colorClass: "bg-electric-purple/10 text-electric-purple border-electric-purple/20"
+    },
+    {
+        buyer: "Mvsul Beats",
+        type: "purchase",
+        detail: "Fire",
+        licenseType: "basic",
+        value: "+$16.80",
+        icon: "description",
+        colorClass: "bg-electric-purple/10 text-electric-purple border-electric-purple/20"
+    },
+    {
+        buyer: "Bruno Rodriguez",
+        type: "signature",
+        detail: "Contrato firmado electrónicamente",
+        value: "15m ago",
+        icon: "edit_note",
+        colorClass: "bg-neon-blue/10 text-neon-blue border-neon-blue/20"
+    },
+    {
+        buyer: "Kevin Calderon",
+        type: "purchase",
+        detail: "Thoing",
+        licenseType: "basic",
+        value: "+$33.60",
+        icon: "description",
+        colorClass: "bg-electric-purple/10 text-electric-purple border-electric-purple/20"
+    }
+];
+
+function getInitials(name) {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function initializeFeedTimestamps() {
+    let savedTimestamps = localStorage.getItem('beatss_feed_timestamps');
+    const now = Date.now();
+    
+    if (!savedTimestamps) {
+        // Desfases iniciales para compradores estáticos
+        const offsets = {
+            "Wilmer Reyes": 1,
+            "Hernán Jair Nogales": 3,
+            "Mel Morales": 8,
+            "Bruno Rodriguez": 15
+        };
+        
+        const timestamps = {};
+        for (const [name, minOffset] of Object.entries(offsets)) {
+            timestamps[name] = now - minOffset * 60 * 1000;
+        }
+        
+        localStorage.setItem('beatss_feed_timestamps', JSON.stringify(timestamps));
+        savedTimestamps = JSON.stringify(timestamps);
+    }
+    
+    return JSON.parse(savedTimestamps);
+}
+
+function renderLiveLicensesFeed() {
+    const feedContainer = document.getElementById('live-licenses-feed');
+    if (!feedContainer) return;
+
+    // Duplicar elementos para que el bucle de scroll sea infinito y fluido
+    const doubledItems = [...REAL_FEED_ITEMS, ...REAL_FEED_ITEMS];
+    const feedTimestamps = initializeFeedTimestamps();
+    
+    feedContainer.innerHTML = doubledItems.map(item => {
+        let actionText = "";
+        let descText = "";
+
+        if (item.type === 'purchase') {
+            const licName = item.licenseType === 'basic' 
+                ? (currentLang === 'es' ? 'Licencia Básica' : 'Basic License')
+                : (currentLang === 'es' ? 'Licencia Premium' : 'Premium License');
+            actionText = currentLang === 'es' 
+                ? `Adquirió ${licName}` 
+                : `Purchased ${licName}`;
+            descText = `Beat: "${item.detail}"`;
+        } else if (item.type === 'signature') {
+            actionText = currentLang === 'es' 
+                ? 'Firmó Contrato Digital' 
+                : 'Signed Digital Contract';
+            descText = currentLang === 'es' 
+                ? 'Validado vía DocuSign' 
+                : 'Verified via DocuSign';
+        } else if (item.type === 'delivery') {
+            actionText = currentLang === 'es' 
+                ? 'Entrega VIP: WAV + Stems' 
+                : 'VIP Delivery: WAV + Stems';
+            descText = currentLang === 'es' 
+                ? 'Archivos de audio entregados' 
+                : 'Audio files delivered';
+        }
+
+        const isGreenValue = item.type === 'purchase';
+        let valueDisplay = item.value;
+
+        if (!isGreenValue) {
+            const itemTimestamp = feedTimestamps[item.buyer];
+            if (itemTimestamp) {
+                const diffMs = Date.now() - itemTimestamp;
+                const diffMin = Math.floor(diffMs / (60 * 1000));
+                
+                if (diffMin < 1) {
+                    valueDisplay = currentLang === 'es' ? 'Hace un momento' : 'Just now';
+                } else if (diffMin < 60) {
+                    valueDisplay = currentLang === 'es' ? `${diffMin}m atrás` : `${diffMin}m ago`;
+                } else {
+                    const diffHours = Math.floor(diffMin / 60);
+                    valueDisplay = currentLang === 'es' ? `${diffHours}h atrás` : `${diffHours}h ago`;
+                }
+            } else {
+                valueDisplay = currentLang === 'es' ? item.value.replace('ago', 'atrás') : item.value;
+            }
+        }
+
+        return `
+            <div class="relative z-10 p-5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.04] hover:border-white/[0.08] rounded-xl flex items-center gap-5 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer group">
+                <div class="relative flex-shrink-0">
+                    <div class="w-14 h-14 rounded-full live-avatar-bubble border border-white/10 flex items-center justify-center font-bold text-base text-white shadow-inner" style="background-color: #181e2a !important;">
+                        ${getInitials(item.buyer)}
+                    </div>
+                    <span class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center border border-[#0b0e14] ${item.colorClass} shadow-md z-20" style="z-index: 20;">
+                        <span class="material-symbols-outlined text-xs">${item.icon}</span>
+                    </span>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-lg font-bold text-on-surface truncate">${item.buyer}</p>
+                    <p class="text-base text-on-surface-variant truncate">${actionText} • <span class="opacity-70">${descText}</span></p>
+                </div>
+                <span class="ml-auto flex-shrink-0 font-data-mono ${isGreenValue ? 'text-lg text-success-green font-bold drop-shadow-[0_0_12px_rgba(16,185,129,0.55)]' : 'text-sm text-on-surface-variant'}">
+                    ${valueDisplay}
+                </span>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateUILanguage() {
+    if (!UI_TRANSLATIONS) return;
+    const trans = UI_TRANSLATIONS[currentLang];
+    if (!trans) return;
+
+    // 1. Traducir elementos con data-i18n
+    const elements = document.querySelectorAll('[data-i18n]');
+    elements.forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        const translation = trans[key];
+        if (translation !== undefined) {
+            if (translation.includes('<') && translation.includes('>')) {
+                el.innerHTML = translation;
+            } else {
+                el.textContent = translation;
+            }
+        }
+    });
+
+    // 2. Traducir placeholders
+    const placeholders = document.querySelectorAll('[data-i18n-placeholder]');
+    placeholders.forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        const translation = trans[key];
+        if (translation !== undefined) {
+            el.setAttribute('placeholder', translation);
+        }
+    });
+
+    // 3. Traducir títulos y tooltips
+    const titles = document.querySelectorAll('[data-i18n-title]');
+    titles.forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        const translation = trans[key];
+        if (translation !== undefined) {
+            el.setAttribute('title', translation);
+            if (el.hasAttribute('data-tooltip')) {
+                el.setAttribute('data-tooltip', translation);
+            }
+        }
+    });
+
+    // 4. Actualizar textos de conmutación de idioma
+    const langLabel = currentLang.toUpperCase();
+    ['landing-btn-language', 'catalog-btn-language', 'lang-icon'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = langLabel;
+        }
+    });
+
+    // 5. Refrescar vistas y datos que dependen del idioma
+    if (typeof renderGlobalBeats === 'function' && window.filteredGlobalBeats) {
+        renderGlobalBeats(window.filteredGlobalBeats);
+    }
+    if (typeof renderStoreBeats === 'function' && window.storeBeats) {
+        renderStoreBeats(window.storeBeats);
+    }
+    if (typeof updateHistoryTable === 'function') {
+        updateHistoryTable();
+    }
+    if (typeof generatePreview === 'function') {
+        generatePreview();
+    }
+    if (typeof renderLiveLicensesFeed === 'function') {
+        renderLiveLicensesFeed();
+    }
+}
+window.updateUILanguage = updateUILanguage;
 
 // Convertir enlaces de Google Drive a enlaces a través de nuestro proxy de audio (para evitar restricciones de CORS y CORP de Google)
 function getGDriveDirectLink(url) {
@@ -547,6 +827,10 @@ function parseAuthError(code) {
 
 // Inicialización de la aplicación
 const initAuthAndApp = () => {
+    // Inicializar idioma del local storage o español por defecto
+    currentLang = localStorage.getItem('beatss_language') || 'es';
+    updateUILanguage();
+
     // Detectar si venimos de un intento de inicio de sesión manual
     if (sessionStorage.getItem('beatss_manual_login') === 'true') {
         window.isManualLoginAttempt = true;
@@ -2078,14 +2362,19 @@ function setupEventListeners() {
     document.getElementById('clause-content-id').addEventListener('change', generatePreview);
 
     // Botones Header (Idioma y Tema)
-    const btnLang = document.getElementById('btn-language');
-    if (btnLang) {
-        btnLang.addEventListener('click', () => {
-            currentLang = currentLang === 'es' ? 'en' : 'es';
-            document.getElementById('lang-icon').textContent = currentLang.toUpperCase();
-            generatePreview();
-        });
-    }
+    const registerLanguageToggle = (id) => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                currentLang = currentLang === 'es' ? 'en' : 'es';
+                localStorage.setItem('beatss_language', currentLang);
+                updateUILanguage();
+            });
+        }
+    };
+    registerLanguageToggle('btn-language');
+    registerLanguageToggle('landing-btn-language');
+    registerLanguageToggle('catalog-btn-language');
 
     const btnTheme = document.getElementById('btn-theme-toggle');
     if (btnTheme) {
@@ -3686,8 +3975,10 @@ function updateHistoryTable() {
 
     if (licenseHistory.length === 0) {
         emptyEl.style.display = 'flex';
-        emptyEl.querySelector('h3').textContent = 'No hay licencias registradas';
-        emptyEl.querySelector('p').textContent = 'Las licencias que guardes aparecerán en esta lista para descargarlas o copiarlas rápidamente.';
+        emptyEl.querySelector('h3').textContent = currentLang === 'es' ? 'No hay licencias registradas' : 'No licenses registered';
+        emptyEl.querySelector('p').textContent = currentLang === 'es'
+            ? 'Las licencias que guardes aparecerán en esta lista para descargarlas o copiarlas rápidamente.'
+            : 'Saved licenses will appear in this list for quick download or copying.';
         document.querySelector('.history-table').style.display = 'none';
         if (statsContainer) statsContainer.style.display = 'none';
         return;
@@ -3717,7 +4008,13 @@ function updateHistoryTable() {
         const monthlyAvgEl = document.getElementById('stat-monthly-avg');
         const monthlyMonthsEl = document.getElementById('stat-monthly-months');
         if (monthlyAvgEl) monthlyAvgEl.textContent = `$${monthlyAvg.toFixed(2)}`;
-        if (monthlyMonthsEl) monthlyMonthsEl.textContent = activeMonths === 1 ? '1 mes activo' : `${activeMonths} meses activos`;
+        if (monthlyMonthsEl) {
+            if (currentLang === 'es') {
+                monthlyMonthsEl.textContent = activeMonths === 1 ? '1 mes activo' : `${activeMonths} meses activos`;
+            } else {
+                monthlyMonthsEl.textContent = activeMonths === 1 ? '1 active month' : `${activeMonths} active months`;
+            }
+        }
 
         // ── Renderizar Gráfico de Ventas (Chart.js) ──────────────────────
         const chartContainer = document.getElementById('history-chart-container');
@@ -3733,12 +4030,13 @@ function updateHistoryTable() {
             const labels = sortedMonths.map(m => {
                 const [year, month] = m.split('-');
                 const date = new Date(year, parseInt(month) - 1);
-                return date.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+                return date.toLocaleDateString(currentLang === 'es' ? 'es-ES' : 'en-US', { month: 'short', year: 'numeric' });
             });
 
             if (salesChartInstance) {
                 salesChartInstance.data.labels = labels;
                 salesChartInstance.data.datasets[0].data = dataValues;
+                salesChartInstance.data.datasets[0].label = currentLang === 'es' ? 'Ingresos Mensuales ($)' : 'Monthly Revenue ($)';
                 salesChartInstance.update();
             } else {
                 salesChartInstance = new Chart(ctx, {
@@ -3746,7 +4044,7 @@ function updateHistoryTable() {
                     data: {
                         labels: labels,
                         datasets: [{
-                            label: 'Ingresos Mensuales ($)',
+                            label: currentLang === 'es' ? 'Ingresos Mensuales ($)' : 'Monthly Revenue ($)',
                             data: dataValues,
                             borderColor: '#00e676',
                             backgroundColor: 'rgba(0, 230, 118, 0.2)',
@@ -3782,13 +4080,20 @@ function updateHistoryTable() {
     licenseHistory.forEach(lic => {
         const tr = document.createElement('tr');
 
-        const typeLabels = {
+        const typeLabels = currentLang === 'es' ? {
             basic: 'Básica',
             premium: 'Premium',
             premium_plus: 'Prem. Plus',
             unlimited_flp: 'Ilim. + FLP',
             unlimited: 'Ilimitada',
             exclusive: 'Exclusiva'
+        } : {
+            basic: 'Basic',
+            premium: 'Premium',
+            premium_plus: 'Prem. Plus',
+            unlimited_flp: 'Unlim. + FLP',
+            unlimited: 'Unlimited',
+            exclusive: 'Exclusive'
         };
         const typeKey = lic.type || 'basic';
         const licenseValue = Number(lic.value) || 0;
@@ -3800,27 +4105,32 @@ function updateHistoryTable() {
         const beat    = lic.beatName || '';
         const buyer   = lic.buyerName || '';
 
-        const tdRef   = document.createElement('td'); tdRef.dataset.label = 'Referencia';
+        const tdRef   = document.createElement('td'); tdRef.dataset.label = currentLang === 'es' ? 'Referencia' : 'Reference';
         const spanRef = document.createElement('span'); spanRef.className = 'ref-code-cell'; spanRef.title = refCode; spanRef.textContent = refCode;
         tdRef.appendChild(spanRef);
 
-        const tdDate = document.createElement('td'); tdDate.dataset.label = 'Fecha'; tdDate.textContent = date;
-        const tdBeat = document.createElement('td'); tdBeat.dataset.label = 'Beat';
+        const tdDate = document.createElement('td'); tdDate.dataset.label = currentLang === 'es' ? 'Fecha' : 'Date'; tdDate.textContent = date;
+        const tdBeat = document.createElement('td'); tdBeat.dataset.label = currentLang === 'es' ? 'Beat' : 'Beat';
         const strongBeat = document.createElement('strong'); strongBeat.textContent = beat; tdBeat.appendChild(strongBeat);
-        const tdBuyer = document.createElement('td'); tdBuyer.dataset.label = 'Comprador'; tdBuyer.textContent = buyer;
+        const tdBuyer = document.createElement('td'); tdBuyer.dataset.label = currentLang === 'es' ? 'Comprador' : 'Buyer'; tdBuyer.textContent = buyer;
 
-        const tdType  = document.createElement('td'); tdType.dataset.label = 'Tipo';
+        const tdType  = document.createElement('td'); tdType.dataset.label = currentLang === 'es' ? 'Tipo' : 'Type';
         const spanType = document.createElement('span'); spanType.className = `type-badge ${typeKey}`; spanType.textContent = typeLabels[typeKey] || typeKey;
         tdType.appendChild(spanType);
 
-        const tdValue = document.createElement('td'); tdValue.dataset.label = 'Valor'; tdValue.textContent = `$${licenseValue.toFixed(2)}`;
+        const tdValue = document.createElement('td'); tdValue.dataset.label = currentLang === 'es' ? 'Valor' : 'Value'; tdValue.textContent = `$${licenseValue.toFixed(2)}`;
 
         const tdActions = document.createElement('td'); tdActions.className = 'actions-cell';
         const safeRef = refCode.replace(/"/g, '&quot;');
+        
+        const titleLoad = currentLang === 'es' ? 'Cargar en el editor' : 'Load into editor';
+        const titlePdf = currentLang === 'es' ? 'Descargar PDF' : 'Download PDF';
+        const titleDelete = currentLang === 'es' ? 'Eliminar' : 'Delete';
+
         tdActions.innerHTML = `
-            <button class="btn-icon-only btn-row-load" data-ref="${safeRef}" title="Cargar en el editor"><i data-lucide="edit-3"></i></button>
-            <button class="btn-icon-only btn-row-pdf" data-ref="${safeRef}" title="Descargar PDF"><i data-lucide="file-text"></i></button>
-            <button class="btn-icon-only btn-row-delete text-danger tooltip-left" data-ref="${safeRef}" title="Eliminar"><i data-lucide="trash-2"></i></button>
+            <button class="btn-icon-only btn-row-load" data-ref="${safeRef}" title="${titleLoad}"><i data-lucide="edit-3"></i></button>
+            <button class="btn-icon-only btn-row-pdf" data-ref="${safeRef}" title="${titlePdf}"><i data-lucide="file-text"></i></button>
+            <button class="btn-icon-only btn-row-delete text-danger tooltip-left" data-ref="${safeRef}" title="${titleDelete}"><i data-lucide="trash-2"></i></button>
         `;
 
         tr.appendChild(tdRef); tr.appendChild(tdDate); tr.appendChild(tdBeat);
@@ -3844,7 +4154,10 @@ function setupHistoryRowEvents() {
                 loadLicenseIntoEditor(lic);
                 // Cambiar a la pestaña de previsualización
                 document.querySelector('.tab-btn[data-tab="tab-preview"]').click();
-                showToast(`Licencia ${lic.refCode} cargada en el editor`);
+                const msg = currentLang === 'es'
+                    ? `Licencia ${lic.refCode} cargada en el editor`
+                    : `License ${lic.refCode} loaded into editor`;
+                showToast(msg);
             }
         });
     });
@@ -3866,10 +4179,16 @@ function setupHistoryRowEvents() {
     document.querySelectorAll('.btn-row-delete').forEach(btn => {
         btn.addEventListener('click', async () => {
             const ref = btn.dataset.ref;
-            if (confirm(`¿Estás seguro de eliminar la licencia con referencia ${ref}?`)) {
+            const confirmMsg = currentLang === 'es' 
+                ? `¿Estás seguro de eliminar la licencia con referencia ${ref}?` 
+                : `Are you sure you want to delete the license with reference ${ref}?`;
+            if (confirm(confirmMsg)) {
                 licenseHistory = licenseHistory.filter(l => l.refCode !== ref);
                 saveHistory();
-                showToast('Licencia eliminada del historial');
+                const msg = currentLang === 'es'
+                    ? 'Licencia eliminada del historial'
+                    : 'License deleted from history';
+                showToast(msg);
 
                 // Eliminar de Firestore
                 if (ref) {
@@ -9417,33 +9736,39 @@ function renderStoreBeats(beats) {
         const genreBadge = beat.genre ? `<span class="store-genre-badge">${beat.genre}</span>` : '';
         const moodBadge = beat.moods ? `<span class="store-mood-badge">${beat.moods}</span>` : '';
         const badgesHtml = (genreBadge || moodBadge)
-            ? `<div style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">${genreBadge}${moodBadge}</div>`
+            ? `<div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">${genreBadge}${moodBadge}</div>`
             : '';
         
+        const buyLicenseText = currentLang === 'es' ? 'Adquirir Licencia' : 'Acquire License';
+        const priceValue = beat.price_basic ? `$${beat.price_basic.toFixed(2)}` : (currentLang === 'es' ? 'Negociable' : 'Negotiable');
+        
         return `
-            <div class="store-beat-card" data-id="${beat.id}" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box;">
+            <div class="store-beat-card" data-id="${beat.id}" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box; padding: 18px;">
                 <div>
-                    <div class="store-beat-cover" style="position: relative;">
-                        <img src="${artworkUrl}" alt="${beat.name}" style="width:100%; height:100%; object-fit:cover; object-position:top; border-radius:12px;">
+                    <div class="store-beat-cover" style="position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #151722;">
+                        <img src="${artworkUrl}" alt="${beat.name}" style="width:100%; height:100%; object-fit:cover; object-position:top; border-radius:14px; transition: transform 0.5s ease;">
                         <div class="store-play-overlay" onclick="window.toggleStorePlay('${beat.id}')">
-                            <button class="store-play-btn" id="btn-play-store-${beat.id}">
-                                <i data-lucide="play" style="width: 22px; height: 22px; fill: #000; stroke: #000;"></i>
+                            <button class="store-play-btn" id="btn-play-store-${beat.id}" style="width: 56px; height: 56px; border-radius: 50%; background: var(--accent, #00ccff); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px var(--accent-glow, rgba(0, 204, 255, 0.3)); transform: scale(0.9); transition: all 0.3s ease;">
+                                <i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>
                             </button>
                         </div>
                         <button onclick="window.shareBeat('${beat.id}', '${beat.name.replace(/'/g, "\\'")}')" style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'" title="Compartir">
                             <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
                         </button>
                     </div>
-                    <div class="store-beat-title" style="margin-top: 10px; font-size: 15px; font-weight: 700; color: #fff;">${beat.name}</div>
-                    <div class="store-beat-meta" style="margin-top: 4px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 12px; color: #8a91a6;">${bpmText} • ${keyText}</span>
-                        <span style="color: var(--accent, #00ccff); font-weight: 800; background: rgba(var(--accent-rgb, 0, 204, 255), 0.08); padding: 3px 10px; border-radius: 8px; font-size: 13px;">$${(LICENSE_CONFIGS.basic.price || 30.00).toFixed(2)}</span>
+                    <h3 style="font-size: 19px; font-weight: 800; color: #fff; margin: 16px 0 0 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: 2.5em;" title="${beat.name}">${beat.name}</h3>
+                    <div class="store-beat-meta" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 14px; color: #8a91a6; font-weight: 600;">${bpmText} • ${keyText}</span>
+                        <span style="color: var(--accent, #00ccff); font-weight: 800; background: rgba(var(--accent-rgb, 0, 204, 255), 0.08); padding: 4px 12px; border-radius: 8px; font-size: 15px;">${priceValue}</span>
                     </div>
                     ${badgesHtml}
                     ${tagsHtml}
                 </div>
-                <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;">
-                    <button class="btn btn-primary" onclick="window.openBeatCheckoutModal('${beat.id}')" style="width: 100%; height: 38px; font-weight: 700; border-radius: 10px; font-size: 13px; margin: 0;">Adquirir Licencia</button>
+                <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;">
+                    <button class="btn btn-primary" onclick="window.openBeatCheckoutModal('${beat.id}')" style="width: 100%; height: 44px; font-weight: 700; border-radius: 12px; font-size: 14px; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                        <i data-lucide="shopping-cart" style="width: 16px; height: 16px; stroke-width: 2.5;"></i>
+                        <span>${buyLicenseText}</span>
+                    </button>
                 </div>
             </div>
         `;
@@ -11939,33 +12264,33 @@ function renderGlobalBeats(beats) {
         const eliteBadge = isElite ? `<span style="background: linear-gradient(135deg, #a855f7 0%, #f59e0b 100%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; margin-left: 6px;">👑 Elite</span>` : '';
         
         return `
-            <div class="store-beat-card" style="--accent: ${pColor}; --accent-glow: ${pColorGlow}; --accent-glow-hover: ${pColorGlowHover}; padding: 12px; display: flex; flex-direction: column; height: 100%;">
-                <div class="store-beat-cover" style="position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #151722;" onclick="window.playGlobalBeat('${beat.id}')">
+            <div class="store-beat-card" style="--accent: ${pColor}; --accent-glow: ${pColorGlow}; --accent-glow-hover: ${pColorGlowHover}; padding: 18px; display: flex; flex-direction: column; height: 100%;">
+                <div class="store-beat-cover" style="position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #151722;" onclick="window.playGlobalBeat('${beat.id}')">
                     <img src='${artwork}' style="width: 100%; height: 100%; object-fit: cover; object-position: top; transition: transform 0.5s ease;">
                     <div class="store-play-overlay">
-                        <button class="global-play-btn-${beat.id} store-play-btn" style="width: 48px; height: 48px; border-radius: 50%; background: ${pColor}; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px ${pColorGlow}; transform: scale(0.9); transition: all 0.3s ease;">
-                            <i data-lucide="play" style="width: 20px; height: 20px; fill: #000; stroke: #000;"></i>
+                        <button class="global-play-btn-${beat.id} store-play-btn" style="width: 56px; height: 56px; border-radius: 50%; background: ${pColor}; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px ${pColorGlow}; transform: scale(0.9); transition: all 0.3s ease;">
+                            <i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>
                         </button>
                     </div>
                 </div>
-                <div style="padding: 12px 4px 4px 4px; display: flex; flex-direction: column; flex: 1; gap: 8px;">
-                    <h3 style="font-size: 16px; font-weight: 800; color: #fff; margin: 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: 2.6em;" title="${beat.name || 'Beat'}">${beat.name || 'Beat'}</h3>
-                    <div style="color: #8a91a6; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                        <i data-lucide="user" style="width: 12px; height: 12px; color: ${pColor};"></i> 
+                <div style="padding: 16px 4px 4px 4px; display: flex; flex-direction: column; flex: 1; gap: 12px;">
+                    <h3 style="font-size: 19px; font-weight: 800; color: #fff; margin: 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: 2.5em;" title="${beat.name || 'Beat'}">${beat.name || 'Beat'}</h3>
+                    <div style="color: #8a91a6; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="user" style="width: 14px; height: 14px; color: ${pColor};"></i> 
                         <span style="color: #e2e8f0; cursor: pointer; text-decoration: underline;" onclick="window.showAppView('store', { producer: '${(config.aka || config.name || '').replace(/'/g, "\\'")}' })">${producerName}</span> ${eliteBadge}
                     </div>
-                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
-                        <span style="font-size: 10px; font-weight: 600; padding: 3px 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; color: #a0aec0;">${beat.bpm || '--'} BPM</span>
-                        <span style="font-size: 10px; font-weight: 600; padding: 3px 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; color: #a0aec0;">${beat.key || '--'}</span>
-                        <span style="font-size: 10px; font-weight: 600; padding: 3px 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 6px; color: #a0aec0;">${beat.genre || 'Variado'}</span>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;">
+                        <span style="font-size: 11.5px; font-weight: 600; padding: 4.5px 9px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: #a0aec0;">${beat.bpm || '--'} BPM</span>
+                        <span style="font-size: 11.5px; font-weight: 600; padding: 4.5px 9px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: #a0aec0;">${beat.key || '--'}</span>
+                        <span style="font-size: 11.5px; font-weight: 600; padding: 4.5px 9px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; color: #a0aec0;">${beat.genre || 'Variado'}</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.05);">
                         <div style="display: flex; flex-direction: column;">
-                            <span style="font-size: 9px; color: #8a91a6; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Básico</span>
-                            <span style="font-weight: 800; color: ${pColor}; font-size: 15px;">${price}</span>
+                            <span style="font-size: 10.5px; color: #8a91a6; text-transform: uppercase; font-weight: 700; letter-spacing: 0.8px;">Básico</span>
+                            <span style="font-weight: 800; color: ${pColor}; font-size: 18px;">${price}</span>
                         </div>
-                        <button class="btn btn-primary" onclick="window.openGlobalBeatCheckoutModal('${beat.id}')" style="height: 34px; padding: 0 12px; font-weight: 700; border-radius: 8px; font-size: 12px; margin: 0; background: ${pColor}; color: #000; border: none; display: flex; align-items: center; gap: 6px; transition: transform 0.2s; cursor: pointer;">
-                            <i data-lucide="shopping-cart" style="width: 14px; height: 14px; stroke-width: 2.5;"></i>
+                        <button class="btn btn-primary" onclick="window.openGlobalBeatCheckoutModal('${beat.id}')" style="height: 40px; padding: 0 16px; font-weight: 700; border-radius: 10px; font-size: 13.5px; margin: 0; background: ${pColor}; color: #000; border: none; display: flex; align-items: center; gap: 8px; transition: transform 0.2s; cursor: pointer;">
+                            <i data-lucide="shopping-cart" style="width: 16px; height: 16px; stroke-width: 2.5;"></i>
                             Adquirir
                         </button>
                     </div>

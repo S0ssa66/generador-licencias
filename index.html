@@ -182,7 +182,10 @@
             100% { transform: translateY(-50%); }
         }
         .animate-scroll-v {
-            animation: scroll-v 20s linear infinite;
+            animation: scroll-v 25s linear infinite;
+        }
+        .animate-scroll-v:hover {
+            animation-play-state: paused;
         }
         .no-scrollbar::-webkit-scrollbar {
             display: none;
@@ -207,6 +210,11 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(139, 92, 246, 0.5);
         }
+        .live-avatar-bubble {
+            background-color: #181e2a !important;
+            position: relative;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -218,21 +226,24 @@
                 <div class="flex items-center gap-12">
                     <a class="text-headline-md font-headline-md font-extrabold tracking-tighter text-on-surface cursor-pointer" onclick="window.location.reload()">BEATSS</a>
                     <div class="hidden md:flex items-center gap-8">
-                        <a id="landing-btn-nav-catalog" class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" href="#">Marketplace</a>
-                        <a class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" href="#" onclick="document.getElementById('landing-btn-login').click()">Dashboard</a>
-                        <a class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" href="#" onclick="document.getElementById('landing-btn-login').click()">Licenses</a>
-                        <a class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" href="#" onclick="document.getElementById('landing-btn-login').click()">Analytics</a>
+                        <a id="landing-btn-nav-catalog" data-i18n="nav_marketplace" class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" href="#">Marketplace</a>
+                        <a data-i18n="nav_dashboard" class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" href="#" onclick="document.getElementById('landing-btn-login').click()">Dashboard</a>
+                        <a data-i18n="nav_licenses" class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" href="#" onclick="document.getElementById('landing-btn-login').click()">Licenses</a>
+                        <a data-i18n="nav_analytics" class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" href="#" onclick="document.getElementById('landing-btn-login').click()">Analytics</a>
                     </div>
                 </div>
                 <div class="flex items-center gap-6">
                     <div class="hidden lg:flex items-center gap-4 px-4 py-2 bg-white/5 rounded-full border border-white/5">
                         <span class="material-symbols-outlined text-outline">search</span>
-                        <input class="bg-transparent border-none focus:ring-0 text-sm w-48 text-on-surface" placeholder="Search elite beats..." type="text"/>
+                        <input class="bg-transparent border-none focus:ring-0 text-sm w-48 text-on-surface" placeholder="Search elite beats..." data-i18n-placeholder="nav_search_placeholder" type="text"/>
                     </div>
-                    <button id="landing-btn-start" class="hidden md:flex px-6 py-2 bg-electric-purple text-on-primary font-bold rounded-lg transition-transform active:scale-95 duration-100">
+                    <button id="landing-btn-language" class="border border-white/10 text-on-surface-variant hover:text-white px-3 py-2 rounded-lg font-label-caps text-[11px] font-bold hover:bg-white/5 transition-all outline-none">
+                        ES
+                    </button>
+                    <button id="landing-btn-start" data-i18n="nav_create_license" class="hidden md:flex px-6 py-2 bg-electric-purple text-on-primary font-bold rounded-lg transition-transform active:scale-95 duration-100">
                         Create License
                     </button>
-                    <button id="landing-btn-login" class="border border-white/10 text-on-surface-variant hover:text-white px-4 py-2 rounded-lg font-label-caps text-label-caps hover:bg-white/5 transition-all text-xs font-bold">
+                    <button id="landing-btn-login" data-i18n="nav_login" class="border border-white/10 text-on-surface-variant hover:text-white px-4 py-2 rounded-lg font-label-caps text-label-caps hover:bg-white/5 transition-all text-xs font-bold">
                         Iniciar Sesión
                     </button>
                     <div class="flex items-center gap-4">
@@ -249,33 +260,33 @@
                     <div class="lg:col-span-7 space-y-8 py-12">
                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-purple/10 border border-electric-purple/20">
                             <span class="w-2 h-2 rounded-full bg-electric-purple animate-pulse"></span>
-                            <span class="font-label-caps text-[10px] uppercase tracking-widest text-electric-purple">Plataforma para Productores de Elite</span>
+                            <span data-i18n="badge_elite_producers" class="font-label-caps text-[10px] uppercase tracking-widest text-electric-purple">Plataforma para Productores de Elite</span>
                         </div>
                         <h1 class="font-display-lg text-display-lg md:text-[80px] leading-tight text-white font-black">
-                            CREA Y FIRMA TUS <br/>
-                            <span class="outline-text">LICENCIAS DE BEATS</span> <br/>
-                            EN SEGUNDOS.
+                            <span data-i18n="hero_title_1">CREA Y FIRMA TUS</span> <br/>
+                            <span data-i18n="hero_title_2" class="outline-text">LICENCIAS DE BEATS</span> <br/>
+                            <span data-i18n="hero_title_3">EN SEGUNDOS.</span>
                         </h1>
-                        <p class="max-w-xl text-on-surface-variant font-body-lg">
+                        <p data-i18n="hero_subtitle" class="max-w-xl text-on-surface-variant font-body-lg">
                             Agiliza tus ventas de beats. BEATSS te permite generar contratos PDF profesionales de forma automática, gestionar tus clientes, enviar firmas digitales y automatizar las entregas.
                         </p>
                         <div class="flex flex-wrap gap-6">
-                            <button onclick="document.getElementById('landing-btn-start').click()" class="px-10 py-4 bg-electric-purple text-on-primary font-black rounded-lg shadow-[0_0_30px_rgba(139,92,246,0.4)] hover:shadow-[0_0_50px_rgba(139,92,246,0.6)] transition-all">
+                            <button onclick="document.getElementById('landing-btn-start').click()" data-i18n="btn_start_free" class="px-10 py-4 bg-electric-purple text-on-primary font-black rounded-lg shadow-[0_0_30px_rgba(139,92,246,0.4)] hover:shadow-[0_0_50px_rgba(139,92,246,0.6)] transition-all">
                                 EMPEZAR GRATIS
                             </button>
-                            <button id="landing-btn-catalog" class="px-10 py-4 border-2 border-white/10 hover:border-neon-blue/50 text-on-surface font-bold rounded-lg transition-all">
+                            <button id="landing-btn-catalog" data-i18n="btn_explore_catalog" class="px-10 py-4 border-2 border-white/10 hover:border-neon-blue/50 text-on-surface font-bold rounded-lg transition-all">
                                 EXPLORAR CATÁLOGO
                             </button>
                         </div>
                     </div>
                     <div class="lg:col-span-5 relative hidden lg:block lg:mt-12">
                         <div class="relative w-full aspect-[0.76] rounded-2xl overflow-hidden glass-card p-2 group">
-                            <img alt="Sossa in high-end studio" class="w-full h-full object-cover object-top rounded-xl filter grayscale group-hover:grayscale-0 transition-all duration-700" src="producer_sossa.png"/>
+                            <img alt="Sossa in high-end studio" class="w-full h-full object-cover rounded-xl filter grayscale group-hover:grayscale-0 transition-all duration-700" src="producer_sossa.png" style="object-position: center 5%;"/>
                             <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60"></div>
                             <div class="absolute bottom-8 left-8 right-8 p-6 glass-card rounded-xl border-l-4 border-electric-purple translate-y-4 group-hover:translate-y-0 transition-transform">
-                                <p class="font-label-caps text-electric-purple text-xs mb-2">FEATURED ARTIST</p>
+                                <p data-i18n="featured_artist" class="font-label-caps text-electric-purple text-xs mb-2">FEATURED ARTIST</p>
                                 <h3 class="font-headline-md text-on-surface">Sossa</h3>
-                                <p class="text-on-surface-variant text-sm">Productor de Elite • +1M Streams</p>
+                                <p data-i18n="featured_desc" class="text-on-surface-variant text-sm">Productor de Elite • +1M Streams</p>
                             </div>
                         </div>
                         <!-- Floating Tech Elements -->
@@ -291,85 +302,47 @@
             <!-- Live Feed & Feature Bento -->
             <section class="py-24 px-margin-mobile md:px-margin-desktop bg-surface-container-lowest">
                 <div class="max-w-container-max mx-auto">
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
                         <!-- Live Feed -->
-                        <div class="lg:col-span-1 glass-card rounded-2xl p-8 flex flex-col h-[500px]">
+                        <div class="lg:col-span-5 glass-card rounded-2xl p-8 flex flex-col h-[500px]">
                             <div class="flex items-center justify-between mb-8">
-                                <h3 class="font-headline-md">Live Licenses</h3>
+                                <h3 class="font-headline-md" data-i18n="live_licenses_title">Live Licenses</h3>
                                 <span class="flex h-3 w-3 relative">
                                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-green opacity-75"></span>
                                     <span class="relative inline-flex rounded-full h-3 w-3 bg-success-green"></span>
                                 </span>
                             </div>
-                            <div class="flex-1 overflow-hidden relative">
-                                <div class="animate-scroll-v space-y-4">
-                                    <!-- Feed Items -->
-                                    <div class="p-4 bg-white/5 rounded-xl border border-white/5 flex items-center gap-4">
-                                        <div class="w-10 h-10 rounded-full bg-electric-purple/20 flex items-center justify-center">
-                                            <span class="material-symbols-outlined text-electric-purple">description</span>
-                                        </div>
-                                        <div>
-                                            <p class="font-bold text-sm text-on-surface">Licencia Exclusiva</p>
-                                            <p class="text-xs text-on-surface-variant">Beat: "Midnight Rain" • @Jocero</p>
-                                        </div>
-                                        <span class="ml-auto font-data-mono text-xs text-success-green">+$499</span>
-                                    </div>
-                                    <div class="p-4 bg-white/5 rounded-xl border border-white/5 flex items-center gap-4">
-                                        <div class="w-10 h-10 rounded-full bg-neon-blue/20 flex items-center justify-center">
-                                            <span class="material-symbols-outlined text-neon-blue">signature</span>
-                                        </div>
-                                        <div>
-                                            <p class="font-bold text-sm text-on-surface">Firma Digital</p>
-                                            <p class="text-xs text-on-surface-variant">Cliente: @DrillKing_22</p>
-                                        </div>
-                                        <span class="ml-auto font-data-mono text-xs text-on-surface-variant">2m ago</span>
-                                    </div>
-                                    <div class="p-4 bg-white/5 rounded-xl border border-white/5 flex items-center gap-4">
-                                        <div class="w-10 h-10 rounded-full bg-elite-gold/20 flex items-center justify-center">
-                                            <span class="material-symbols-outlined text-elite-gold">send</span>
-                                        </div>
-                                        <div>
-                                            <p class="font-bold text-sm text-on-surface">Entrega VIP</p>
-                                            <p class="text-xs text-on-surface-variant">WAV + Stems enviados</p>
-                                        </div>
-                                        <span class="ml-auto font-data-mono text-xs text-success-green">+$120</span>
-                                    </div>
-                                    <!-- Duplicates for infinite scroll feel -->
-                                    <div class="p-4 bg-white/5 rounded-xl border border-white/5 flex items-center gap-4">
-                                        <div class="w-10 h-10 rounded-full bg-electric-purple/20 flex items-center justify-center">
-                                            <span class="material-symbols-outlined text-electric-purple">description</span>
-                                        </div>
-                                        <div>
-                                            <p class="font-bold text-sm text-on-surface">Licencia Pro</p>
-                                            <p class="text-xs text-on-surface-variant">Beat: "Deep Lows" • @Sossa</p>
-                                        </div>
-                                        <span class="ml-auto font-data-mono text-xs text-success-green">+$80</span>
-                                    </div>
+                            <div class="flex-1 overflow-hidden relative" style="z-index: 10;">
+                                <div class="relative animate-scroll-v space-y-4" id="live-licenses-feed" style="z-index: 20;">
+                                    <!-- Contenido generado dinámicamente con nombres de compradores reales en JS -->
                                 </div>
-                                <div class="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-surface-container-lowest to-transparent"></div>
+                                
+                                <!-- Gradientes de desvanecimiento superior e inferior -->
+                                <div class="absolute top-0 left-0 w-full h-12 bg-gradient-to-b from-[#0b0e14] to-transparent pointer-events-none" style="z-index: 30;"></div>
+                                <div class="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-t from-[#0b0e14] to-transparent pointer-events-none" style="z-index: 30;"></div>
                             </div>
                         </div>
                         <!-- Main Features -->
-                        <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-gutter">
+                        <div class="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-gutter">
                             <div class="glass-card rounded-2xl p-8 hover:bg-white/5 transition-colors group">
                                 <span class="material-symbols-outlined text-electric-purple text-4xl mb-6">description</span>
-                                <h4 class="font-headline-md mb-4">Contratos al Instante</h4>
-                                <p class="text-on-surface-variant leading-relaxed">Generación automática de contratos legalmente estructurados con tus datos y los del comprador. Sin complicaciones legales.</p>
+                                <h4 class="font-headline-md mb-4" data-i18n="bento_feat1_title">Contratos al Instante</h4>
+                                <p class="text-on-surface-variant leading-relaxed" data-i18n="bento_feat1_desc">Generación automática de contratos legalmente estructurados con tus datos y los del comprador. Sin complicaciones legales.</p>
                             </div>
                             <div class="glass-card rounded-2xl p-8 border-l-4 border-neon-blue group">
                                 <span class="material-symbols-outlined text-neon-blue text-4xl mb-6">draw</span>
-                                <h4 class="font-headline-md mb-4">Firma Digital Integrada</h4>
-                                <p class="text-on-surface-variant leading-relaxed">Soporte nativo para firmas digitales seguras. Validez legal internacional para todos tus acuerdos comerciales.</p>
+                                <h4 class="font-headline-md mb-4" data-i18n="bento_feat2_title">Firma Digital Integrada</h4>
+                                <p class="text-on-surface-variant leading-relaxed" data-i18n="bento_feat2_desc">Soporte nativo para firmas digitales seguras. Validez legal internacional para todos tus acuerdos comerciales.</p>
                             </div>
                             <div class="glass-card rounded-2xl p-8 hover:bg-white/5 transition-colors">
                                 <span class="material-symbols-outlined text-success-green text-4xl mb-6">mark_email_read</span>
-                                <h4 class="font-headline-md mb-4">Entrega Automatizada</h4>
-                                <p class="text-on-surface-variant leading-relaxed">Envío inmediato de archivos (MP3/WAV/Stems) tras la confirmación del pago y la firma. 24/7 sin mover un dedo.</p>
+                                <h4 class="font-headline-md mb-4" data-i18n="bento_feat3_title">Entrega Automatizada</h4>
+                                <p class="text-on-surface-variant leading-relaxed" data-i18n="bento_feat3_desc">Envío inmediato de archivos (MP3/WAV/Stems) tras la confirmación del pago y la firma. 24/7 sin mover un dedo.</p>
                             </div>
                             <div class="glass-card rounded-2xl p-8 bg-electric-purple/5 border border-electric-purple/20">
                                 <span class="material-symbols-outlined text-electric-purple text-4xl mb-6">monitoring</span>
-                                <h4 class="font-headline-md mb-4">Analíticas de Venta</h4>
-                                <p class="text-on-surface-variant leading-relaxed">Panel detallado de ingresos, beats más vendidos y comportamiento de clientes para escalar tu negocio.</p>
+                                <h4 class="font-headline-md mb-4" data-i18n="bento_feat4_title">Analíticas de Venta</h4>
+                                <p class="text-on-surface-variant leading-relaxed" data-i18n="bento_feat4_desc">Panel detallado de ingresos, beats más vendidos y comportamiento de clientes para escalar tu negocio.</p>
                             </div>
                         </div>
                     </div>
@@ -379,25 +352,25 @@
             <section class="py-24 px-margin-mobile md:px-margin-desktop bg-background overflow-hidden">
                 <div class="max-w-container-max mx-auto">
                     <div class="text-center mb-16">
-                        <h2 class="font-display-lg text-display-lg mb-4 text-white font-black">CÓMO FUNCIONA</h2>
-                        <p class="text-on-surface-variant font-body-lg max-w-2xl mx-auto">Nuestra tecnología invisible se encarga del trabajo sucio para que tú te centres en el sonido.</p>
+                        <h2 class="font-display-lg text-display-lg mb-4 text-white font-black" data-i18n="how_it_works_title">CÓMO FUNCIONA</h2>
+                        <p class="text-on-surface-variant font-body-lg max-w-2xl mx-auto" data-i18n="how_it_works_subtitle">Nuestra tecnología invisible se encarga del trabajo sucio para que tú te centres en el sonido.</p>
                     </div>
                     <div class="flex flex-col space-y-4">
                         <!-- Step 1 -->
                         <details class="group bg-charcoal-deep rounded-2xl border border-white/5 transition-all duration-300 open:border-electric-purple/30 open:shadow-[0_0_30px_rgba(139,92,246,0.1)]">
                             <summary class="flex items-center justify-between p-8 cursor-pointer list-none">
                                 <div class="flex items-center gap-8">
-                                    <span class="font-display-lg text-electric-purple/30 group-open:text-electric-purple transition-colors">01</span>
-                                    <h3 class="font-headline-md text-on-surface group-open:text-primary">SUBE TU BEAT</h3>
+                                    <span class="font-display-lg text-electric-purple/30 group-open:text-electric-purple transition-colors" data-i18n="step1_num">01</span>
+                                    <h3 class="font-headline-md text-on-surface group-open:text-primary" data-i18n="step1_title">SUBE TU BEAT</h3>
                                 </div>
                                 <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
                             </summary>
                             <div class="p-8 pt-0 flex flex-col md:flex-row gap-12 items-center">
                                 <div class="flex-1 space-y-4">
-                                    <p class="text-body-lg text-on-surface-variant">Sube tus archivos de audio de alta calidad. Nuestro sistema procesa automáticamente los metadatos y prepara la vista previa para el marketplace.</p>
+                                    <p class="text-body-lg text-on-surface-variant" data-i18n="step1_desc">Sube tus archivos de audio de alta calidad. Nuestro sistema procesa automáticamente los metadatos y prepara la vista previa para el marketplace.</p>
                                     <ul class="space-y-2">
-                                        <li class="flex items-center gap-3 text-sm text-on-surface-variant"><span class="material-symbols-outlined text-success-green text-lg">check_circle</span> Soporte para WAV, MP3 y Stems</li>
-                                        <li class="flex items-center gap-3 text-sm text-on-surface-variant"><span class="material-symbols-outlined text-success-green text-lg">check_circle</span> Procesamiento rápido en la nube</li>
+                                        <li class="flex items-center gap-3 text-sm text-on-surface-variant"><span class="material-symbols-outlined text-success-green text-lg">check_circle</span> <span data-i18n="step1_bullet1">Soporte para WAV, MP3 y Stems</span></li>
+                                        <li class="flex items-center gap-3 text-sm text-on-surface-variant"><span class="material-symbols-outlined text-success-green text-lg">check_circle</span> <span data-i18n="step1_bullet2">Procesamiento rápido en la nube</span></li>
                                     </ul>
                                 </div>
                                 <div class="w-full md:w-1/3 aspect-video glass-card rounded-xl overflow-hidden relative">
@@ -412,17 +385,17 @@
                         <details class="group bg-charcoal-deep rounded-2xl border border-white/5 transition-all duration-300 open:border-electric-purple/30 open:shadow-[0_0_30px_rgba(139,92,246,0.1)]">
                             <summary class="flex items-center justify-between p-8 cursor-pointer list-none">
                                 <div class="flex items-center gap-8">
-                                    <span class="font-display-lg text-electric-purple/30 group-open:text-electric-purple transition-colors">02</span>
-                                    <h3 class="font-headline-md text-on-surface group-open:text-primary">DEFINE TÉRMINOS</h3>
+                                    <span class="font-display-lg text-electric-purple/30 group-open:text-electric-purple transition-colors" data-i18n="step2_num">02</span>
+                                    <h3 class="font-headline-md text-on-surface group-open:text-primary" data-i18n="step2_title">DEFINE TÉRMINOS</h3>
                                 </div>
                                 <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
                             </summary>
                             <div class="p-8 pt-0 flex flex-col md:flex-row gap-12 items-center">
                                 <div class="flex-1 space-y-4">
-                                    <p class="text-body-lg text-on-surface-variant">Establece tus precios para licencias Básicas, Premium y Exclusivas. Personaliza las cláusulas legales en un solo clic.</p>
+                                    <p class="text-body-lg text-on-surface-variant" data-i18n="step2_desc">Establece tus precios para licencias Básicas, Premium y Exclusivas. Personaliza las cláusulas legales en un solo clic.</p>
                                     <ul class="space-y-2">
-                                        <li class="flex items-center gap-3 text-sm text-on-surface-variant"><span class="material-symbols-outlined text-success-green text-lg">check_circle</span> Templates legales validados</li>
-                                        <li class="flex items-center gap-3 text-sm text-on-surface-variant"><span class="material-symbols-outlined text-success-green text-lg">check_circle</span> Split de regalías automático</li>
+                                        <li class="flex items-center gap-3 text-sm text-on-surface-variant"><span class="material-symbols-outlined text-success-green text-lg">check_circle</span> <span data-i18n="step2_bullet1">Templates legales validados</span></li>
+                                        <li class="flex items-center gap-3 text-sm text-on-surface-variant"><span class="material-symbols-outlined text-success-green text-lg">check_circle</span> <span data-i18n="step2_bullet2">Split de regalías automático</span></li>
                                     </ul>
                                 </div>
                                 <div class="w-full md:w-1/3 aspect-video glass-card rounded-xl p-4">
@@ -441,14 +414,14 @@
                         <details class="group bg-charcoal-deep rounded-2xl border border-white/5 transition-all duration-300 open:border-electric-purple/30 open:shadow-[0_0_30px_rgba(139,92,246,0.1)]">
                             <summary class="flex items-center justify-between p-8 cursor-pointer list-none">
                                 <div class="flex items-center gap-8">
-                                    <span class="font-display-lg text-electric-purple/30 group-open:text-electric-purple transition-colors">03</span>
-                                    <h3 class="font-headline-md text-on-surface group-open:text-primary">ENVÍO AUTOMÁTICO</h3>
+                                    <span class="font-display-lg text-electric-purple/30 group-open:text-electric-purple transition-colors" data-i18n="step3_num">03</span>
+                                    <h3 class="font-headline-md text-on-surface group-open:text-primary" data-i18n="step3_title">ENVÍO AUTOMÁTICO</h3>
                                 </div>
                                 <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
                             </summary>
                             <div class="p-8 pt-0 flex flex-col md:flex-row gap-12 items-center">
                                 <div class="flex-1 space-y-4">
-                                    <p class="text-body-lg text-on-surface-variant">Relájate mientras BEATSS gestiona el cobro, la firma del contrato y la entrega de archivos. Recibe notificaciones de venta en tiempo real.</p>
+                                    <p class="text-body-lg text-on-surface-variant" data-i18n="step3_desc">Relájate mientras BEATSS gestiona el cobro, la firma del contrato y la entrega de archivos. Recibe notificaciones de venta en tiempo real.</p>
                                 </div>
                                 <div class="w-full md:w-1/3 aspect-video flex items-center justify-center gap-4">
                                     <div class="w-16 h-16 rounded-full bg-neon-blue/20 flex items-center justify-center animate-pulse">
@@ -469,10 +442,10 @@
                 <div class="max-w-container-max mx-auto">
                     <div class="flex items-end justify-between mb-12">
                         <div>
-                            <h2 class="font-display-lg text-display-lg text-white font-black">TOP PRODUCERS</h2>
-                            <p class="text-on-surface-variant font-body-lg mt-2">La elite que ya confía en BEATSS Automation.</p>
+                            <h2 class="font-display-lg text-display-lg text-white font-black" data-i18n="top_producers_title">TOP PRODUCERS</h2>
+                            <p class="text-on-surface-variant font-body-lg mt-2" data-i18n="top_producers_desc">La elite que ya confía en BEATSS Automation.</p>
                         </div>
-                        <div class="flex gap-4">
+                        <div class="flex gap-4 lg:hidden">
                             <button class="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center hover:border-electric-purple transition-colors">
                                 <span class="material-symbols-outlined">arrow_back</span>
                             </button>
@@ -481,39 +454,28 @@
                             </button>
                         </div>
                     </div>
-                    <div class="flex gap-gutter overflow-x-auto pb-8 snap-x no-scrollbar">
+                    <div class="flex justify-start lg:justify-center gap-gutter overflow-x-auto pb-8 snap-x no-scrollbar">
                         <!-- Producer Card 1 -->
-                        <div class="min-w-[300px] md:min-w-[400px] snap-center group">
+                        <div class="w-[300px] md:w-[400px] flex-shrink-0 snap-center group">
                             <div class="relative aspect-square rounded-2xl overflow-hidden mb-6">
-                                <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale" src="producer_sossa.png"/>
+                                <img class="w-full h-full object-cover group-hover:scale-110 group-hover:grayscale-0 transition-all duration-700 grayscale" src="producer_sossa.png" style="object-position: center 8%;"/>
                                 <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
                                 <div class="absolute top-4 right-4 px-3 py-1 bg-elite-gold text-on-tertiary-fixed font-label-caps text-[10px] rounded-full font-bold">ELITE TIER</div>
                             </div>
                             <h4 class="font-headline-md text-white font-bold">Sossa</h4>
                             <p class="text-on-surface-variant text-sm mb-4">Géneros: Trap, R&B, Drill</p>
-                            <button onclick="document.getElementById('landing-btn-nav-catalog').click()" class="w-full py-3 bg-white/5 hover:bg-electric-purple hover:text-on-primary border border-white/10 transition-all font-bold rounded-lg">VER CATÁLOGO</button>
+                            <button onclick="document.getElementById('landing-btn-nav-catalog').click()" data-i18n="btn_view_catalog" class="w-full py-3 bg-white/5 hover:bg-electric-purple hover:text-on-primary border border-white/10 transition-all font-bold rounded-lg">VER CATÁLOGO</button>
                         </div>
                         <!-- Producer Card 2 -->
-                        <div class="min-w-[300px] md:min-w-[400px] snap-center group">
+                        <div class="w-[300px] md:w-[400px] flex-shrink-0 snap-center group">
                             <div class="relative aspect-square rounded-2xl overflow-hidden mb-6">
-                                <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale" src="producer_monarco.jpg"/>
+                                <img class="w-full h-full object-cover group-hover:scale-110 group-hover:grayscale-0 transition-all duration-700 grayscale" src="producer_monarco.jpg"/>
                                 <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
                                 <div class="absolute top-4 right-4 px-3 py-1 bg-neon-blue text-on-secondary-container font-label-caps text-[10px] rounded-full font-bold">PLATINUM</div>
                             </div>
                             <h4 class="font-headline-md text-white font-bold">CG Monarco</h4>
                             <p class="text-on-surface-variant text-sm mb-4">Géneros: Reggaeton, Trap, HipHop</p>
-                            <button onclick="document.getElementById('landing-btn-nav-catalog').click()" class="w-full py-3 bg-white/5 hover:bg-electric-purple hover:text-on-primary border border-white/10 transition-all font-bold rounded-lg">VER CATÁLOGO</button>
-                        </div>
-                        <!-- Producer Card 3 -->
-                        <div class="min-w-[300px] md:min-w-[400px] snap-center group">
-                            <div class="relative aspect-square rounded-2xl overflow-hidden mb-6">
-                                <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbQv6eE8_t9T3osRjQfSBSV39r-j0-yTkoK3FX0i66U_tApddM88yV-TJ2iK8VbGrvDJ8dQJQJAaUUiCCZrMnEd9iR4ocdy4RQDx4-gYFbInR5Ds_XtwIhjpzSyUjOTdRXLR4h4mcjgQ5l0MDJt97_d5n6LX_udNTvcjv55w5ep2Fmm7UjKghnGgWDxRNTrFcD4lFNMMOCY8wSeWL3DAXtLaezuVQqJmmQamgb48q3RjVaVml41XdMzTV60HB3LhBrTV5NeJxmn2g"/>
-                                <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
-                                <div class="absolute top-4 right-4 px-3 py-1 bg-electric-purple text-on-primary font-label-caps text-[10px] rounded-full font-bold">VERIFIED</div>
-                            </div>
-                            <h4 class="font-headline-md text-white font-bold">R'zo</h4>
-                            <p class="text-on-surface-variant text-sm mb-4">Géneros: Hip Hop, Old School</p>
-                            <button onclick="document.getElementById('landing-btn-nav-catalog').click()" class="w-full py-3 bg-white/5 hover:bg-electric-purple hover:text-on-primary border border-white/10 transition-all font-bold rounded-lg">VER CATÁLOGO</button>
+                            <button onclick="document.getElementById('landing-btn-nav-catalog').click()" data-i18n="btn_view_catalog" class="w-full py-3 bg-white/5 hover:bg-electric-purple hover:text-on-primary border border-white/10 transition-all font-bold rounded-lg">VER CATÁLOGO</button>
                         </div>
                     </div>
                 </div>
@@ -521,52 +483,52 @@
             <!-- Simple Pricing Plans -->
             <section class="py-24 px-margin-mobile md:px-margin-desktop bg-background">
                 <div class="max-w-container-max mx-auto text-center">
-                    <h2 class="font-display-lg text-display-lg mb-16 text-white font-black">PLANES PARA CADA NIVEL</h2>
+                    <h2 class="font-display-lg text-display-lg mb-16 text-white font-black" data-i18n="pricing_title">PLANES PARA CADA NIVEL</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
                         <!-- Basic -->
                         <div class="glass-card rounded-2xl p-10 flex flex-col text-left group hover:border-white/20 transition-all">
-                            <h3 class="font-headline-md mb-2 text-white font-bold">Plan Inicial</h3>
+                            <h3 class="font-headline-md mb-2 text-white font-bold" data-i18n="price_starter">Plan Inicial</h3>
                             <div class="flex items-baseline gap-2 mb-8 text-white">
                                 <span class="text-4xl font-black">$0</span>
-                                <span class="text-on-surface-variant">/ siempre</span>
+                                <span class="text-on-surface-variant">/ <span data-i18n="price_free">siempre</span></span>
                             </div>
                             <ul class="space-y-4 mb-12 flex-1">
-                                <li class="flex items-center gap-3 text-on-surface-variant"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> 5 Contratos al mes</li>
-                                <li class="flex items-center gap-3 text-on-surface-variant"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> Marketplace básico</li>
-                                <li class="flex items-center gap-3 text-on-surface-variant"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> Firma digital básica</li>
+                                <li class="flex items-center gap-3 text-on-surface-variant"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span data-i18n="price_starter_b1">5 Contratos al mes</span></li>
+                                <li class="flex items-center gap-3 text-on-surface-variant"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span data-i18n="price_starter_b2">Marketplace básico</span></li>
+                                <li class="flex items-center gap-3 text-on-surface-variant"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span data-i18n="price_starter_b3">Firma digital básica</span></li>
                             </ul>
-                            <button onclick="document.getElementById('landing-btn-start').click()" class="w-full py-4 border border-white/10 rounded-lg font-bold group-hover:bg-white/10 transition-all text-white">EMPEZAR GRATIS</button>
+                            <button onclick="document.getElementById('landing-btn-start').click()" data-i18n="btn_start_free" class="w-full py-4 border border-white/10 rounded-lg font-bold group-hover:bg-white/10 transition-all text-white">EMPEZAR GRATIS</button>
                         </div>
                         <!-- Pro -->
                         <div class="glass-card rounded-2xl p-10 flex flex-col text-left border-electric-purple/40 relative overflow-hidden shadow-[0_0_50px_rgba(139,92,246,0.15)] transform md:-translate-y-4 bg-charcoal-deep">
-                            <div class="absolute top-0 right-0 px-4 py-1 bg-electric-purple text-on-primary font-label-caps text-[10px] font-bold">MÁS POPULAR</div>
-                            <h3 class="font-headline-md mb-2 text-white font-bold">Plan Pro</h3>
+                            <div class="absolute top-0 right-0 px-4 py-1 bg-electric-purple text-on-primary font-label-caps text-[10px] font-bold" data-i18n="badge_popular">MÁS POPULAR</div>
+                            <h3 class="font-headline-md mb-2 text-white font-bold" data-i18n="price_pro">Plan Pro</h3>
                             <div class="flex items-baseline gap-2 mb-8 text-white">
                                 <span class="text-4xl font-black">$10.00</span>
-                                <span class="text-on-surface-variant">/ pago único</span>
+                                <span class="text-on-surface-variant">/ <span data-i18n="price_one_time">pago único</span></span>
                             </div>
                             <ul class="space-y-4 mb-12 flex-1 text-on-surface-variant">
-                                <li class="flex items-center gap-3 text-white"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> Contratos ilimitados</li>
-                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> Marketplace Premium</li>
-                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> Split de regalías 0% com.</li>
-                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> Soporte prioritario 24/7</li>
+                                <li class="flex items-center gap-3 text-white"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span data-i18n="price_pro_b1">Contratos ilimitados</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span data-i18n="price_pro_b2">Marketplace Premium</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span data-i18n="price_pro_b3">Split de regalías 0% com.</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span data-i18n="price_pro_b4">Soporte prioritario 24/7</span></li>
                             </ul>
-                            <button onclick="openPaymentModal(); setTimeout(()=>switchPaymentPlan('pro'),100);" class="w-full py-4 bg-electric-purple text-on-primary rounded-lg font-black shadow-[0_0_20px_rgba(139,92,246,0.3)]">PLAN PRO</button>
+                            <button onclick="openPaymentModal(); setTimeout(()=>switchPaymentPlan('pro'),100);" data-i18n="btn_obtain_pro" class="w-full py-4 bg-electric-purple text-on-primary rounded-lg font-black shadow-[0_0_20px_rgba(139,92,246,0.3)]">PLAN PRO</button>
                         </div>
                         <!-- Elite -->
                         <div class="glass-card rounded-2xl p-10 flex flex-col text-left group hover:border-elite-gold/30 transition-all">
-                            <h3 class="font-headline-md mb-2 text-elite-gold font-bold">Plan Elite</h3>
+                            <h3 class="font-headline-md mb-2 text-elite-gold font-bold" data-i18n="price_elite">Plan Elite</h3>
                             <div class="flex items-baseline gap-2 mb-8 text-elite-gold">
                                 <span class="text-4xl font-black">$30.00</span>
-                                <span class="text-on-surface-variant">/ pago único</span>
+                                <span class="text-on-surface-variant">/ <span data-i18n="price_one_time">pago único</span></span>
                             </div>
                             <ul class="space-y-4 mb-12 flex-1 text-on-surface-variant">
-                                <li class="flex items-center gap-3 text-white"><span class="material-symbols-outlined text-elite-gold text-sm">check</span> Todo en el Plan Pro</li>
-                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-sm">check</span> Personalización total legal</li>
-                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-sm">check</span> Integración CRM avanzada</li>
-                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-sm">check</span> Dashboard de Analytics Pro</li>
+                                <li class="flex items-center gap-3 text-white"><span class="material-symbols-outlined text-elite-gold text-sm">check</span> <span data-i18n="price_elite_b1">Todo en el Plan Pro</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-sm">check</span> <span data-i18n="price_elite_b2">Personalización total legal</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-sm">check</span> <span data-i18n="price_elite_b3">Integración CRM avanzada</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-sm">check</span> <span data-i18n="price_elite_b4">Dashboard de Analytics Pro</span></li>
                             </ul>
-                            <button onclick="openPaymentModal(); setTimeout(()=>switchPaymentPlan('elite'),100);" class="w-full py-4 bg-transparent border border-elite-gold text-elite-gold rounded-lg font-bold hover:bg-elite-gold hover:text-on-tertiary-fixed transition-all">OBTENER ELITE</button>
+                            <button onclick="openPaymentModal(); setTimeout(()=>switchPaymentPlan('elite'),100);" data-i18n="btn_obtain_elite" class="w-full py-4 bg-transparent border border-elite-gold text-elite-gold rounded-lg font-bold hover:bg-elite-gold hover:text-on-tertiary-fixed transition-all">OBTENER ELITE</button>
                         </div>
                     </div>
                 </div>
@@ -577,7 +539,7 @@
             <div class="max-w-container-max mx-auto grid grid-cols-1 md:grid-cols-4 gap-gutter">
                 <div class="col-span-1 md:col-span-1">
                     <h2 class="font-headline-md font-bold text-on-surface mb-6">BEATSS</h2>
-                    <p class="text-on-surface-variant text-sm max-w-xs mb-8">
+                    <p class="text-on-surface-variant text-sm max-w-xs mb-8" data-i18n="footer_desc">
                         Elevando el estándar de la industria musical a través de la automatización inteligente y la integridad legal.
                     </p>
                     <div class="flex gap-4">
@@ -587,35 +549,35 @@
                     </div>
                 </div>
                 <div class="space-y-6">
-                    <h4 class="font-label-caps text-label-caps text-white">Platform</h4>
+                    <h4 class="font-label-caps text-label-caps text-white" data-i18n="footer_platform">Platform</h4>
                     <ul class="space-y-4 text-sm text-on-surface-variant">
-                        <li><a id="landing-btn-nav-catalog-2" class="hover:text-neon-blue transition-colors cursor-pointer" onclick="document.getElementById('landing-btn-nav-catalog').click()">Marketplace</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" onclick="document.getElementById('landing-btn-login').click()">Analytics</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" onclick="document.getElementById('landing-btn-login').click()">Digital Signatures</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" onclick="document.getElementById('landing-btn-login').click()">Integrations</a></li>
+                        <li><a id="landing-btn-nav-catalog-2" class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="nav_marketplace" onclick="document.getElementById('landing-btn-nav-catalog').click()">Marketplace</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="nav_analytics" onclick="document.getElementById('landing-btn-login').click()">Analytics</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="live_digital_sig" onclick="document.getElementById('landing-btn-login').click()">Digital Signatures</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="live_vip_delivery" onclick="document.getElementById('landing-btn-login').click()">VIP Deliveries</a></li>
                     </ul>
                 </div>
                 <div class="space-y-6">
-                    <h4 class="font-label-caps text-label-caps text-white">Legal</h4>
+                    <h4 class="font-label-caps text-label-caps text-white" data-i18n="footer_legal">Legal</h4>
                     <ul class="space-y-4 text-sm text-on-surface-variant">
-                        <li><a class="hover:text-neon-blue transition-colors" href="#">Terms of Service</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" href="#">Privacy Policy</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" href="#">License Agreement</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" href="#">Copyright Guide</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_terms" href="#">Terms of Service</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_privacy" href="#">Privacy Policy</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_license_agreement" href="#">License Agreement</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_copyright_guide" href="#">Copyright Guide</a></li>
                     </ul>
                 </div>
                 <div class="space-y-6">
-                    <h4 class="font-label-caps text-label-caps text-white">Support</h4>
+                    <h4 class="font-label-caps text-label-caps text-white" data-i18n="footer_support">Support</h4>
                     <ul class="space-y-4 text-sm text-on-surface-variant">
-                        <li><a class="hover:text-neon-blue transition-colors" href="#">Help Center</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" href="#">Contact Support</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" href="#">API Docs</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" href="#">System Status</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_help_center" href="#">Help Center</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_contact" href="#">Contact Support</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_api" href="#">API Docs</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_status" href="#">System Status</a></li>
                     </ul>
                 </div>
             </div>
             <div class="max-w-container-max mx-auto mt-24 pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-                <p class="font-body-md text-on-surface-variant text-sm">© 2026 BEATSS Automation. All rights reserved.</p>
+                <p class="font-body-md text-on-surface-variant text-sm" data-i18n="footer_all_rights">© 2026 BEATSS Automation. All rights reserved.</p>
                 <div class="flex gap-8">
                     <span class="text-xs font-data-mono text-on-surface-variant/50">VERSION 2.4.0-ELITE</span>
                     <span class="text-xs font-data-mono text-on-surface-variant/50">LATENCY: 14MS</span>
@@ -1148,63 +1110,63 @@
             <div class="flex items-center space-x-1 border-b border-white/5 pb-2 pt-3 px-4 bg-surface-container/30">
                 <div class="flex items-center space-x-1.5 text-electric-purple font-label-caps text-[10px] cursor-pointer border-b-2 border-electric-purple pb-1.5" id="nav-step-1" onclick="window.nextStep(1)">
                     <span class="step-badge w-5 h-5 rounded-full bg-electric-purple/20 flex items-center justify-center border border-electric-purple text-[10px] font-bold">1</span>
-                    <span>Tipo</span>
+                    <span data-i18n="step_nav_type">Tipo</span>
                 </div>
                 <div class="h-[1px] flex-1 bg-white/10 mb-2"></div>
                 <div class="flex items-center space-x-1.5 text-on-surface-variant font-label-caps text-[10px] cursor-pointer border-b-2 border-transparent pb-1.5" id="nav-step-2" onclick="window.nextStep(2)">
                     <span class="step-badge w-5 h-5 rounded-full bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">2</span>
-                    <span>Datos</span>
+                    <span data-i18n="step_nav_data">Datos</span>
                 </div>
                 <div class="h-[1px] flex-1 bg-white/10 mb-2"></div>
                 <div class="flex items-center space-x-1.5 text-on-surface-variant font-label-caps text-[10px] cursor-pointer border-b-2 border-transparent pb-1.5" id="nav-step-3" onclick="window.nextStep(3)">
                     <span class="step-badge w-5 h-5 rounded-full bg-surface-container-highest flex items-center justify-center text-[10px] font-bold">3</span>
-                    <span>Entrega</span>
+                    <span data-i18n="step_nav_delivery">Entrega</span>
                 </div>
             </div>
 
             <div class="sidebar-scroll flex-1 overflow-y-auto">
                 <!-- Step 1: Tipo de Licencia -->
                 <div id="step-1" class="form-section p-4 space-y-4">
-                    <label class="section-label font-label-caps text-label-caps text-on-surface-variant block mb-2">Selecciona el Tipo de Licencia</label>
+                    <label class="section-label font-label-caps text-label-caps text-on-surface-variant block mb-2" data-i18n="sidebar_select_license_type">Selecciona el Tipo de Licencia</label>
                     <div class="grid grid-cols-1 gap-2.5">
                         <button type="button" class="license-btn active w-full bg-charcoal-deep border border-white/5 p-4 rounded-xl text-left hover:border-electric-purple hover:bg-surface-glass transition-all duration-200" data-type="basic">
-                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block">Básica</span>
-                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1">MP3 • 40k Streams</span>
+                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block" data-i18n="license_basic_name">Básica</span>
+                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1" data-i18n="license_basic_desc">MP3 • 40k Streams</span>
                         </button>
                         <button type="button" class="license-btn w-full bg-charcoal-deep border border-white/5 p-4 rounded-xl text-left hover:border-electric-purple hover:bg-surface-glass transition-all duration-200" data-type="premium">
-                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block">Premium</span>
-                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1">MP3+WAV • 100k Streams</span>
+                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block" data-i18n="license_premium_name">Premium</span>
+                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1" data-i18n="license_premium_desc">MP3+WAV • 100k Streams</span>
                         </button>
                         <button type="button" class="license-btn w-full bg-charcoal-deep border border-white/5 p-4 rounded-xl text-left hover:border-electric-purple hover:bg-surface-glass transition-all duration-200" data-type="premium_plus">
-                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block">Premium Plus</span>
-                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1">WAV+Stems • Ilimitado</span>
+                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block" data-i18n="license_premium_plus_name">Premium Plus</span>
+                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1" data-i18n="license_premium_plus_desc">WAV+Stems • Ilimitado</span>
                         </button>
                         <button type="button" class="license-btn w-full bg-charcoal-deep border border-white/5 p-4 rounded-xl text-left hover:border-electric-purple hover:bg-surface-glass transition-all duration-200" data-type="unlimited_flp">
-                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block">Ilimitada + FLP</span>
-                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1">Stems+FLP • Ilimitado</span>
+                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block" data-i18n="license_unlimited_flp_name">Ilimitada + FLP</span>
+                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1" data-i18n="license_unlimited_flp_desc">Stems+FLP • Ilimitado</span>
                         </button>
                         <button type="button" class="license-btn w-full bg-charcoal-deep border border-white/5 p-4 rounded-xl text-left hover:border-electric-purple hover:bg-surface-glass transition-all duration-200" data-type="exclusive">
-                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block">Exclusiva</span>
-                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1">WAV+Stems • Propiedad</span>
+                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block" data-i18n="license_exclusive_name">Exclusiva</span>
+                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1" data-i18n="license_exclusive_desc">WAV+Stems • Propiedad</span>
                         </button>
                     </div>
                     
                     <div class="flex justify-end pt-3">
                         <button type="button" class="bg-electric-purple hover:bg-inverse-primary text-white font-label-caps text-label-caps px-5 py-3 rounded-lg transition-colors flex items-center gap-1.5 shadow-[0_0_15px_rgba(139,92,246,0.3)]" onclick="window.nextStep(2)">
-                            Continuar <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                            <span data-i18n="btn_continue">Continuar</span> <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                         </button>
                     </div>
                 </div>
 
                 <!-- Step 2: Datos de la Licencia -->
                 <div id="step-2" class="hidden form-section p-4 space-y-4">
-                    <label class="section-label font-label-caps text-label-caps text-on-surface-variant block border-b border-white/5 pb-2 mb-4">Datos del Contrato</label>
+                    <label class="section-label font-label-caps text-label-caps text-on-surface-variant block border-b border-white/5 pb-2 mb-4" data-i18n="sidebar_contract_data">Datos del Contrato</label>
                     
                     <div class="input-group">
-                        <label for="beat-name" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="disc" class="w-4 h-4"></i> Nombre del Beat</label>
+                        <label for="beat-name" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="disc" class="w-4 h-4"></i> <span data-i18n="sidebar_beat_name">Nombre del Beat</span></label>
                         <div class="flex gap-2 w-full">
-                            <input type="text" id="beat-name" placeholder="Escribe el nombre del beat..." class="flex-1 min-w-0 bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
-                            <button type="button" class="btn btn-secondary border border-white/5 hover:bg-white/5 text-on-surface rounded-lg px-3 flex items-center justify-center" id="btn-beats-modal" title="Base de Datos de Beats">
+                            <input type="text" id="beat-name" placeholder="Escribe el nombre del beat..." data-i18n-placeholder="sidebar_beat_placeholder" class="flex-1 min-w-0 bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                            <button type="button" class="btn btn-secondary border border-white/5 hover:bg-white/5 text-on-surface rounded-lg px-3 flex items-center justify-center" id="btn-beats-modal" title="Base de Datos de Beats" data-i18n-title="sidebar_select_beat_tooltip">
                                 <i data-lucide="library" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -1212,80 +1174,80 @@
 
                     <div class="grid grid-cols-2 gap-3">
                         <div class="input-group">
-                            <label for="beat-bpm" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-1 mb-1"><i data-lucide="activity" class="w-3.5 h-3.5"></i> BPM</label>
-                            <input type="number" id="beat-bpm" placeholder="Ej. 140" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none font-data-mono text-[13px]">
+                            <label for="beat-bpm" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-1 mb-1"><i data-lucide="activity" class="w-3.5 h-3.5"></i> <span data-i18n="sidebar_bpm">BPM</span></label>
+                            <input type="number" id="beat-bpm" placeholder="Ej. 140" data-i18n-placeholder="sidebar_bpm_placeholder" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none font-data-mono text-[13px]">
                         </div>
                         <div class="input-group">
-                            <label for="beat-key" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-1 mb-1"><i data-lucide="music" class="w-3.5 h-3.5"></i> Escala (Key)</label>
-                            <input type="text" id="beat-key" placeholder="Ej. Gm" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[13px]">
+                            <label for="beat-key" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-1 mb-1"><i data-lucide="music" class="w-3.5 h-3.5"></i> <span data-i18n="sidebar_key">Escala (Key)</span></label>
+                            <input type="text" id="beat-key" placeholder="Ej. Gm" data-i18n-placeholder="sidebar_key_placeholder" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[13px]">
                         </div>
                     </div>
 
                     <div class="input-group">
-                        <label for="buyer-name" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="user" class="w-4 h-4"></i> Nombre de quien compra</label>
+                        <label for="buyer-name" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="user" class="w-4 h-4"></i> <span data-i18n="sidebar_buyer_name">Nombre de quien compra</span></label>
                         <div class="flex gap-2 w-full">
-                            <input type="text" id="buyer-name" placeholder="Nombre completo del comprador" class="flex-1 min-w-0 bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
-                            <button type="button" class="btn btn-secondary border border-white/5 hover:bg-white/5 text-on-surface rounded-lg px-3 flex items-center justify-center" id="btn-contacts-modal" title="Directorio de Contactos">
+                            <input type="text" id="buyer-name" placeholder="Nombre completo del comprador" data-i18n-placeholder="sidebar_buyer_placeholder" class="flex-1 min-w-0 bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                            <button type="button" class="btn btn-secondary border border-white/5 hover:bg-white/5 text-on-surface rounded-lg px-3 flex items-center justify-center" id="btn-contacts-modal" title="Directorio de Contactos" data-i18n-title="sidebar_select_contact_tooltip">
                                 <i data-lucide="users" class="w-4 h-4"></i>
                             </button>
                         </div>
                     </div>
 
                     <div class="input-group">
-                        <label for="buyer-id" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="fingerprint" class="w-4 h-4"></i> Cédula / DNI / RUC</label>
-                        <input type="text" id="buyer-id" placeholder="Documento de identidad del comprador" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                        <label for="buyer-id" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="fingerprint" class="w-4 h-4"></i> <span data-i18n="sidebar_buyer_id">Cédula / DNI / RUC</span></label>
+                        <input type="text" id="buyer-id" placeholder="Documento de identidad del comprador" data-i18n-placeholder="sidebar_buyer_id_placeholder" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div class="input-group">
-                            <label for="buyer-email" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="mail" class="w-4 h-4"></i> Correo</label>
-                            <input type="email" id="buyer-email" placeholder="correo@ejemplo.com" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                            <label for="buyer-email" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="mail" class="w-4 h-4"></i> <span data-i18n="sidebar_email">Correo</span></label>
+                            <input type="email" id="buyer-email" placeholder="correo@ejemplo.com" data-i18n-placeholder="sidebar_email_placeholder" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
                         </div>
                         <div class="input-group">
-                            <label for="buyer-phone" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="phone" class="w-4 h-4"></i> Teléfono / WhatsApp</label>
-                            <input type="text" id="buyer-phone" placeholder="Ej. +593..." class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                            <label for="buyer-phone" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="phone" class="w-4 h-4"></i> <span data-i18n="sidebar_phone">Teléfono / WhatsApp</span></label>
+                            <input type="text" id="buyer-phone" placeholder="Ej. +593..." data-i18n-placeholder="sidebar_phone_placeholder" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
                         </div>
                     </div>
 
                     <div class="input-group">
-                        <label for="license-value" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="dollar-sign" class="w-4 h-4"></i> Valor ($ USD)</label>
-                        <input type="number" id="license-value" min="0" step="0.01" value="30.00" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none font-data-mono">
+                        <label for="license-value" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="dollar-sign" class="w-4 h-4"></i> <span data-i18n="sidebar_price">Valor ($ USD)</span></label>
+                        <input type="number" id="license-value" min="0" step="0.01" value="30.00" data-i18n-placeholder="sidebar_price_placeholder" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none font-data-mono">
                     </div>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div class="input-group">
-                            <label for="buyer-city" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="map-pin" class="w-4 h-4"></i> Ciudad</label>
-                            <input type="text" id="buyer-city" placeholder="Ej. Santo Domingo" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                            <label for="buyer-city" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="map-pin" class="w-4 h-4"></i> <span data-i18n="sidebar_city">Ciudad</span></label>
+                            <input type="text" id="buyer-city" placeholder="Ej. Santo Domingo" data-i18n-placeholder="sidebar_city_placeholder" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
                         </div>
                         <div class="input-group">
-                            <label for="buyer-country" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="globe" class="w-4 h-4"></i> País</label>
-                            <input type="text" id="buyer-country" value="Ecuador" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                            <label for="buyer-country" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="globe" class="w-4 h-4"></i> <span data-i18n="sidebar_country">País</span></label>
+                            <input type="text" id="buyer-country" value="Ecuador" data-i18n-placeholder="sidebar_country_placeholder" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
                         </div>
                     </div>
 
                     <div class="flex justify-between pt-4 border-t border-white/5">
-                        <button type="button" class="border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-white/5 font-label-caps text-label-caps px-4 py-2 rounded-lg transition-colors" onclick="window.nextStep(1)">
+                        <button type="button" class="border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-white/5 font-label-caps text-label-caps px-4 py-2 rounded-lg transition-colors" onclick="window.nextStep(1)" data-i18n="btn_back">
                             Atrás
                         </button>
                         <button type="button" class="bg-electric-purple hover:bg-inverse-primary text-white font-label-caps text-label-caps px-5 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-[0_0_15px_rgba(139,92,246,0.3)]" onclick="window.nextStep(3)">
-                            Continuar <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                            <span data-i18n="btn_continue">Continuar</span> <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                         </button>
                     </div>
                 </div>
 
                 <!-- Step 3: Entrega y Emisión -->
                 <div id="step-3" class="hidden form-section p-4 space-y-4">
-                    <label class="section-label font-label-caps text-label-caps text-on-surface-variant block border-b border-white/5 pb-2 mb-4">Entrega y Firma</label>
+                    <label class="section-label font-label-caps text-label-caps text-on-surface-variant block border-b border-white/5 pb-2 mb-4" data-i18n="sidebar_delivery_signature">Entrega y Firma</label>
                     
                     <!-- Enlaces de Audio para Entrega -->
                     <div class="space-y-3 p-3 bg-surface-container border border-white/5 rounded-xl">
-                        <span class="font-label-caps text-[10px] text-neon-blue block tracking-wider uppercase mb-1">Enlaces de Entrega (Para el Correo)</span>
+                        <span class="font-label-caps text-[10px] text-neon-blue block tracking-wider uppercase mb-1" data-i18n="sidebar_delivery_links">Enlaces de Entrega (Para el Correo)</span>
                         
                         <div class="input-group">
-                            <label for="audio-link-mp3" class="font-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="link" class="w-3.5 h-3.5"></i> Archivo MP3</label>
+                            <label for="audio-link-mp3" class="font-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="link" class="w-3.5 h-3.5"></i> <span data-i18n="sidebar_audio_mp3">Archivo MP3</span></label>
                             <div class="flex gap-2">
                                 <div class="relative flex-1 flex items-center">
-                                    <input type="text" id="audio-link-mp3" placeholder="Enlace o sube archivo..." class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px] pr-8">
+                                    <input type="text" id="audio-link-mp3" placeholder="Enlace o sube archivo..." data-i18n-placeholder="sidebar_link_placeholder" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px] pr-8">
                                     <button type="button" class="btn-clear-input absolute right-2 text-on-surface-variant hover:text-white" data-target="audio-link-mp3" title="Borrar" style="display: none;">
                                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                                     </button>
@@ -1297,10 +1259,10 @@
                         </div>
 
                         <div class="input-group">
-                            <label for="audio-link-wav" class="font-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="link" class="w-3.5 h-3.5"></i> Archivo WAV</label>
+                            <label for="audio-link-wav" class="font-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="link" class="w-3.5 h-3.5"></i> <span data-i18n="sidebar_audio_wav">Archivo WAV</span></label>
                             <div class="flex gap-2">
                                 <div class="relative flex-1 flex items-center">
-                                    <input type="text" id="audio-link-wav" placeholder="Enlace o sube archivo..." class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px] pr-8">
+                                    <input type="text" id="audio-link-wav" placeholder="Enlace o sube archivo..." data-i18n-placeholder="sidebar_link_placeholder" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px] pr-8">
                                     <button type="button" class="btn-clear-input absolute right-2 text-on-surface-variant hover:text-white" data-target="audio-link-wav" title="Borrar" style="display: none;">
                                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                                     </button>
@@ -1312,10 +1274,10 @@
                         </div>
 
                         <div class="input-group">
-                            <label for="audio-link-stems" class="font-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="link" class="w-3.5 h-3.5"></i> Stems / Tracks ZIP</label>
+                            <label for="audio-link-stems" class="font-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="link" class="w-3.5 h-3.5"></i> <span data-i18n="sidebar_audio_stems">Stems / Tracks ZIP</span></label>
                             <div class="flex gap-2">
                                 <div class="relative flex-1 flex items-center">
-                                    <input type="text" id="audio-link-stems" placeholder="Enlace o sube archivo..." class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px] pr-8">
+                                    <input type="text" id="audio-link-stems" placeholder="Enlace o sube archivo..." data-i18n-placeholder="sidebar_link_placeholder" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px] pr-8">
                                     <button type="button" class="btn-clear-input absolute right-2 text-on-surface-variant hover:text-white" data-target="audio-link-stems" title="Borrar" style="display: none;">
                                         <i data-lucide="x" class="w-3.5 h-3.5"></i>
                                     </button>
@@ -1330,28 +1292,28 @@
                     <!-- Detalles de Emisión -->
                     <div class="space-y-3">
                         <div class="input-group">
-                            <label for="ref-code" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="hash" class="w-4 h-4"></i> Factura / Invoice #</label>
-                            <input type="text" id="ref-code" placeholder="Generado automáticamente" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                            <label for="ref-code" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="hash" class="w-4 h-4"></i> <span data-i18n="sidebar_invoice">Factura / Invoice #</span></label>
+                            <input type="text" id="ref-code" placeholder="Generado automáticamente" data-i18n-placeholder="sidebar_generated_auto" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
                         </div>
 
                         <div class="input-group">
-                            <label for="payment-method" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="credit-card" class="w-4 h-4"></i> Método de Pago</label>
+                            <label for="payment-method" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="credit-card" class="w-4 h-4"></i> <span data-i18n="sidebar_payment_method">Método de Pago</span></label>
                             <select id="payment-method" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
-                                <option value="PayPal">PayPal</option>
-                                <option value="Transferencia Bancaria" selected>Transferencia Bancaria</option>
-                                <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
-                                <option value="Western Union">Western Union</option>
-                                <option value="Otro">Otro</option>
+                                <option value="PayPal" data-i18n="payment_paypal">PayPal</option>
+                                <option value="Transferencia Bancaria" selected data-i18n="payment_bank">Transferencia Bancaria</option>
+                                <option value="Tarjeta de Crédito" data-i18n="payment_credit">Tarjeta de Crédito</option>
+                                <option value="Western Union" data-i18n="payment_wu">Western Union</option>
+                                <option value="Otro" data-i18n="payment_other">Otro</option>
                             </select>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
                             <div class="input-group">
-                                <label for="effective-date" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-1 mb-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Fecha Vigor</label>
+                                <label for="effective-date" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-1 mb-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> <span data-i18n="sidebar_effective_date_short">Fecha Vigor</span></label>
                                 <input type="date" id="effective-date" class="w-full bg-surface-container border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
                             </div>
                             <div class="input-group">
-                                <label for="celebration-place" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-1 mb-1"><i data-lucide="map" class="w-3.5 h-3.5"></i> Lugar Firma</label>
+                                <label for="celebration-place" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-1 mb-1"><i data-lucide="map" class="w-3.5 h-3.5"></i> <span data-i18n="sidebar_celebration_place_short">Lugar Firma</span></label>
                                 <input type="text" id="celebration-place" value="Quito, Ecuador" class="w-full bg-surface-container border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
                             </div>
                         </div>
@@ -1360,67 +1322,67 @@
                     <!-- Editar Cláusulas (Avanzado) -->
                     <details class="advanced-details border border-white/5 rounded-xl bg-charcoal-deep/30 overflow-hidden">
                         <summary class="advanced-summary cursor-pointer p-3 font-label-caps text-[11px] text-on-surface-variant hover:text-white flex justify-between items-center select-none bg-surface-container/30">
-                            <span class="flex items-center gap-2"><i data-lucide="settings-2" class="w-4 h-4"></i> Cláusulas del Contrato</span>
+                            <span class="flex items-center gap-2"><i data-lucide="settings-2" class="w-4 h-4"></i> <span data-i18n="sidebar_contract_clauses">Cláusulas del Contrato</span></span>
                             <i data-lucide="chevron-down" class="chevron w-4 h-4 transition-transform duration-200"></i>
                         </summary>
                         <div class="advanced-content p-3 space-y-3 border-t border-white/5 bg-charcoal-deep/50">
                             <div class="input-group">
-                                <label for="clause-formats" class="text-[11px] text-on-surface-variant block mb-1">Formatos de Entrega</label>
-                                <input type="text" id="clause-formats" placeholder="Ej. MP3 y WAV" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
+                                <label for="clause-formats" class="text-[11px] text-on-surface-variant block mb-1" data-i18n="sidebar_formats">Formatos de Entrega</label>
+                                <input type="text" id="clause-formats" placeholder="Ej. MP3 y WAV" data-i18n-placeholder="sidebar_formats_placeholder" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
                             </div>
                             
                             <div class="grid grid-cols-2 gap-3">
                                 <div class="input-group">
-                                    <label for="clause-streams" class="text-[11px] text-on-surface-variant block mb-1">Límite Streams</label>
-                                    <input type="text" id="clause-streams" placeholder="Ej. 100,000" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
+                                    <label for="clause-streams" class="text-[11px] text-on-surface-variant block mb-1" data-i18n="sidebar_streams">Límite Streams</label>
+                                    <input type="text" id="clause-streams" placeholder="Ej. 100,000" data-i18n-placeholder="sidebar_streams_placeholder" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
                                 </div>
                                 <div class="input-group">
-                                    <label for="clause-physical" class="text-[11px] text-on-surface-variant block mb-1">Copias Físicas</label>
-                                    <input type="text" id="clause-physical" placeholder="Ej. 3,000" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="input-group">
-                                    <label for="clause-videos" class="text-[11px] text-on-surface-variant block mb-1">Videos Sinc.</label>
-                                    <input type="text" id="clause-videos" placeholder="Ej. 2 videos" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
-                                </div>
-                                <div class="input-group">
-                                    <label for="clause-video-duration" class="text-[11px] text-on-surface-variant block mb-1">Duración Max</label>
-                                    <input type="text" id="clause-video-duration" placeholder="Ej. 5 min" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
+                                    <label for="clause-physical" class="text-[11px] text-on-surface-variant block mb-1" data-i18n="sidebar_physical">Copias Físicas</label>
+                                    <input type="text" id="clause-physical" placeholder="Ej. 3,000" data-i18n-placeholder="sidebar_physical_placeholder" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-2 gap-3">
                                 <div class="input-group">
-                                    <label for="clause-years" class="text-[11px] text-on-surface-variant block mb-1">Años Vigencia</label>
-                                    <input type="text" id="clause-years" placeholder="Ej. 10 años" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
+                                    <label for="clause-videos" class="text-[11px] text-on-surface-variant block mb-1" data-i18n="sidebar_videos">Videos Sinc.</label>
+                                    <input type="text" id="clause-videos" placeholder="Ej. 2 videos" data-i18n-placeholder="sidebar_videos_placeholder" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
                                 </div>
                                 <div class="input-group">
-                                    <label for="clause-termination-fee" class="text-[11px] text-on-surface-variant block mb-1">Multa Rescisión</label>
-                                    <input type="text" id="clause-termination-fee" placeholder="Ej. 200%" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
+                                    <label for="clause-video-duration" class="text-[11px] text-on-surface-variant block mb-1" data-i18n="sidebar_video_duration">Duración Max</label>
+                                    <input type="text" id="clause-video-duration" placeholder="Ej. 5 min" data-i18n-placeholder="sidebar_video_duration_placeholder" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-2 gap-3">
                                 <div class="input-group">
-                                    <label for="clause-writer-share" class="text-[11px] text-on-surface-variant block mb-1">Escritor (Comp %)</label>
+                                    <label for="clause-years" class="text-[11px] text-on-surface-variant block mb-1" data-i18n="sidebar_years">Años Vigencia</label>
+                                    <input type="text" id="clause-years" placeholder="Ej. 10 años" data-i18n-placeholder="sidebar_years_placeholder" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
+                                </div>
+                                <div class="input-group">
+                                    <label for="clause-termination-fee" class="text-[11px] text-on-surface-variant block mb-1" data-i18n="sidebar_termination_fee">Multa Rescisión</label>
+                                    <input type="text" id="clause-termination-fee" placeholder="Ej. 200%" data-i18n-placeholder="sidebar_termination_fee_placeholder" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="input-group">
+                                    <label for="clause-writer-share" class="text-[11px] text-on-surface-variant block mb-1" data-i18n="sidebar_writer_share">Escritor (Comp %)</label>
                                     <input type="number" id="clause-writer-share" min="0" max="100" value="50" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
                                 </div>
                                 <div class="input-group">
-                                    <label for="clause-producer-share" class="text-[11px] text-on-surface-variant block mb-1">Escritor (Prod %)</label>
+                                    <label for="clause-producer-share" class="text-[11px] text-on-surface-variant block mb-1" data-i18n="sidebar_producer_share">Escritor (Prod %)</label>
                                     <input type="number" id="clause-producer-share" min="0" max="100" value="50" class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
                                 </div>
                             </div>
 
                             <div class="input-group">
-                                <label for="clause-credits" class="text-[11px] text-on-surface-variant block mb-1">Créditos Obligatorios</label>
+                                <label for="clause-credits" class="text-[11px] text-on-surface-variant block mb-1" data-i18n="sidebar_credits">Créditos Obligatorios</label>
                                 <input type="text" id="clause-credits" value='&quot;Producido por sossa&quot; o &quot;Prod. por sossa&quot;' class="w-full bg-surface border border-white/5 rounded-lg p-2 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none text-[12px]">
                             </div>
 
                             <div class="input-group checkbox-group flex items-center gap-2 cursor-pointer pt-1">
                                 <input type="checkbox" id="clause-content-id" checked class="rounded bg-surface border-white/5 text-electric-purple focus:ring-electric-purple">
-                                <label for="clause-content-id" class="text-[11px] text-on-surface-variant select-none cursor-pointer">Prohibir Content ID / Dist. Digital</label>
+                                <label for="clause-content-id" class="text-[11px] text-on-surface-variant select-none cursor-pointer" data-i18n="sidebar_prohibit_content_id">Prohibir Content ID / Dist. Digital</label>
                             </div>
                         </div>
                     </details>
@@ -1428,18 +1390,18 @@
                     <!-- Campos Personalizados -->
                     <details class="sidebar-section border border-white/5 rounded-xl bg-charcoal-deep/30 overflow-hidden">
                         <summary class="section-title cursor-pointer p-3 font-label-caps text-[11px] text-on-surface-variant hover:text-white flex justify-between items-center select-none bg-surface-container/30">
-                            <span class="flex items-center gap-2"><i data-lucide="plus-square" class="w-4 h-4"></i> Campos Personalizados</span>
+                            <span class="flex items-center gap-2"><i data-lucide="plus-square" class="w-4 h-4"></i> <span data-i18n="sidebar_custom_fields">Campos Personalizados</span></span>
                             <i data-lucide="chevron-down" class="chevron w-4 h-4 transition-transform duration-200"></i>
                         </summary>
                         <div class="section-content p-3 space-y-3 border-t border-white/5 bg-charcoal-deep/50">
-                            <div class="text-[11px] text-on-surface-variant leading-relaxed">
+                            <div class="text-[11px] text-on-surface-variant leading-relaxed" data-i18n="sidebar_custom_fields_desc">
                                 Añade variables personalizadas para usarlas en tus plantillas como <code>{{nombre_de_variable}}</code>.
                             </div>
                             <div id="custom-fields-container" class="space-y-2">
                                 <!-- Los campos añadidos se renderizan aquí -->
                             </div>
                             <button class="w-full border border-dashed border-white/10 hover:border-electric-purple text-on-surface hover:text-electric-purple py-2 rounded-lg text-[12px] flex items-center justify-center gap-1 font-semibold bg-surface-container/20" type="button" id="btn-add-custom-field">
-                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Añadir Campo
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> <span data-i18n="sidebar_add_field">Añadir Campo</span>
                             </button>
                         </div>
                     </details>
@@ -1447,28 +1409,28 @@
                     <!-- Programa de Referidos -->
                     <details class="sidebar-section border border-white/5 rounded-xl bg-charcoal-deep/30 overflow-hidden">
                         <summary class="section-title cursor-pointer p-3 font-label-caps text-[11px] text-on-surface-variant hover:text-white flex justify-between items-center select-none bg-surface-container/30">
-                            <span class="flex items-center gap-2"><i data-lucide="share-2" class="w-4 h-4"></i> Programa de Referidos</span>
+                            <span class="flex items-center gap-2"><i data-lucide="share-2" class="w-4 h-4"></i> <span data-i18n="sidebar_referral_program">Programa de Referidos</span></span>
                             <i data-lucide="chevron-down" class="chevron w-4 h-4 transition-transform duration-200"></i>
                         </summary>
                         <div class="section-content p-3 space-y-3 border-t border-white/5 bg-charcoal-deep/50">
-                            <div class="text-[11px] text-on-surface-variant leading-relaxed">
+                            <div class="text-[11px] text-on-surface-variant leading-relaxed" data-i18n="sidebar_referral_desc">
                                 Comparte tu enlace de referido con otros productores. Si se registran y adquieren un plan, ¡ambos obtienen beneficios!
                             </div>
                             <div class="space-y-1">
-                                <label class="text-[10px] font-bold text-on-surface-variant uppercase">Tu Enlace de Referido</label>
+                                <label class="text-[10px] font-bold text-on-surface-variant uppercase" data-i18n="sidebar_referral_link">Tu Enlace de Referido</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="referral-link-input" readonly value="Cargando enlace..." class="flex-1 bg-surface border border-white/5 rounded-lg p-2 text-on-surface text-[11px] outline-none">
                                     <button type="button" id="btn-copy-referral" class="bg-neon-blue/15 border border-neon-blue/30 text-neon-blue px-2.5 rounded-lg flex items-center justify-center font-semibold text-[11px] hover:bg-neon-blue/25">⧉</button>
                                 </div>
                             </div>
                             <div id="referrals-count-box" class="text-[11px] text-success-green font-semibold" style="display: none;">
-                                👥 Has recomendado a: <span id="referrals-count-val">0</span> productores
+                                <span data-i18n="sidebar_referral_count_prefix">👥 Has recomendado a: </span><span id="referrals-count-val">0</span><span data-i18n="sidebar_referral_count_suffix"> productores</span>
                             </div>
                         </div>
                     </details>
 
                     <div class="flex justify-between pt-4 border-t border-white/5">
-                        <button type="button" class="border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-white/5 font-label-caps text-label-caps px-4 py-2 rounded-lg transition-colors" onclick="window.nextStep(2)">
+                        <button type="button" class="border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-white/5 font-label-caps text-label-caps px-4 py-2 rounded-lg transition-colors" onclick="window.nextStep(2)" data-i18n="btn_back">
                             Atrás
                         </button>
                     </div>
@@ -1478,28 +1440,28 @@
             <!-- Acciones Principales -->
             <div class="sidebar-actions p-4 border-t border-white/5 bg-charcoal-deep/80 backdrop-blur-md">
                 <button class="w-full bg-electric-purple text-white py-3 rounded-lg font-label-caps text-label-caps flex items-center justify-center gap-2 hover:bg-inverse-primary shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:shadow-[0_0_20px_rgba(139,92,246,0.5)] transition-all" id="btn-download-pdf">
-                    <i data-lucide="file-text"></i> Descargar PDF
+                    <i data-lucide="file-text"></i> <span data-i18n="sidebar_btn_download_pdf">Descargar PDF</span>
                 </button>
-                <button class="w-full border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/5 py-3 rounded-lg font-label-caps text-label-caps flex items-center justify-center gap-2 transition-all mt-2" id="btn-send-email" title="Enviar licencia y enlaces de descarga por correo">
-                    <i data-lucide="mail"></i> Enviar por Correo
+                <button class="w-full border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/5 py-3 rounded-lg font-label-caps text-label-caps flex items-center justify-center gap-2 transition-all mt-2" id="btn-send-email" title="Enviar licencia y enlaces de descarga por correo" data-i18n-title="sidebar_email_tooltip">
+                    <i data-lucide="mail"></i> <span data-i18n="sidebar_btn_send_email">Enviar por Correo</span>
                 </button>
-                <button class="w-full border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/5 py-3 rounded-lg font-label-caps text-label-caps flex items-center justify-center gap-2 transition-all mt-2" id="btn-docusign" title="Enviar contrato a firmar por DocuSign" style="display:none;">
-                    <i data-lucide="pen-tool"></i> Firmar DocuSign
+                <button class="w-full border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/5 py-3 rounded-lg font-label-caps text-label-caps flex items-center justify-center gap-2 transition-all mt-2" id="btn-docusign" title="Enviar contrato a firmar por DocuSign" style="display:none;" data-i18n-title="sidebar_docusign_tooltip">
+                    <i data-lucide="pen-tool"></i> <span data-i18n="sidebar_btn_docusign">Firmar DocuSign</span>
                 </button>
-                <button class="w-full bg-success-green text-surface-container-lowest py-3 rounded-lg font-label-caps text-label-caps flex items-center justify-center gap-2 hover:bg-success-green/90 transition-all mt-2 shadow-[0_0_15px_rgba(16,185,129,0.3)]" id="btn-send-signed-delivery" title="Verificar firma y enviar entrega completa (PDF firmado + links de audio)" style="display:none;">
-                    <i data-lucide="send"></i> Enviar Entrega con PDF Firmado
+                <button class="w-full bg-success-green text-surface-container-lowest py-3 rounded-lg font-label-caps text-label-caps flex items-center justify-center gap-2 hover:bg-success-green/90 transition-all mt-2 shadow-[0_0_15px_rgba(16,185,129,0.3)]" id="btn-send-signed-delivery" title="Verificar firma y enviar entrega completa (PDF firmado + links de audio)" style="display:none;" data-i18n-title="sidebar_delivery_tooltip">
+                    <i data-lucide="send"></i> <span data-i18n="sidebar_btn_send_signed_delivery">Enviar Entrega con PDF Firmado</span>
                 </button>
 
                 <div class="action-row flex gap-2 mt-2">
-                    <button class="flex-1 border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/5 py-2 rounded-lg font-label-caps text-[11px] flex items-center justify-center gap-1.5 transition-all" id="btn-copy-md" title="Copiar en formato Markdown">
-                        <i data-lucide="clipboard"></i> Copiar MD
+                    <button class="flex-1 border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/5 py-2 rounded-lg font-label-caps text-[11px] flex items-center justify-center gap-1.5 transition-all" id="btn-copy-md" title="Copiar en formato Markdown" data-i18n-title="sidebar_copy_md_tooltip">
+                        <i data-lucide="clipboard"></i> <span data-i18n="sidebar_btn_copy_md">Copiar MD</span>
                     </button>
-                    <button class="flex-1 border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/5 py-2 rounded-lg font-label-caps text-[11px] flex items-center justify-center gap-1.5 transition-all" id="btn-save" title="Guardar esta licencia en el historial">
-                        <i data-lucide="save"></i> Guardar
+                    <button class="flex-1 border border-white/10 text-on-surface-variant hover:text-on-surface hover:bg-white/5 py-2 rounded-lg font-label-caps text-[11px] flex items-center justify-center gap-1.5 transition-all" id="btn-save" title="Guardar esta licencia en el historial" data-i18n-title="sidebar_save_tooltip">
+                        <i data-lucide="save"></i> <span data-i18n="sidebar_btn_save">Guardar</span>
                     </button>
                 </div>
-                <button class="w-full border border-error-red/20 text-error-red hover:bg-error-red/10 py-2 rounded-lg font-label-caps text-[11px] flex items-center justify-center gap-1.5 transition-all mt-2.5" id="btn-clear-fields" title="Limpiar todos los campos del formulario">
-                    <i data-lucide="trash-2"></i> Limpiar Campos
+                <button class="w-full border border-error-red/20 text-error-red hover:bg-error-red/10 py-2 rounded-lg font-label-caps text-[11px] flex items-center justify-center gap-1.5 transition-all mt-2.5" id="btn-clear-fields" title="Limpiar todos los campos del formulario" data-i18n-title="sidebar_clear_tooltip">
+                    <i data-lucide="trash-2"></i> <span data-i18n="sidebar_btn_clear_fields">Limpiar Campos</span>
                 </button>
             </div>
         </aside>
@@ -1509,22 +1471,22 @@
             <header class="main-header">
                 <div class="tabs">
                     <button class="tab-btn active" data-tab="tab-preview">
-                        <i data-lucide="eye"></i> Previsualización de Contrato
+                        <i data-lucide="eye"></i> <span data-i18n="tab_preview">Previsualización de Contrato</span>
                     </button>
                     <button class="tab-btn" data-tab="tab-history">
-                        <i data-lucide="history"></i> Historial de Licencias <span class="badge" id="history-count">0</span>
+                        <i data-lucide="history"></i> <span data-i18n="tab_history">Historial de Licencias</span> <span class="badge" id="history-count">0</span>
                     </button>
                     <button class="tab-btn" data-tab="tab-beats" id="tab-beats-btn">
-                        <i data-lucide="music"></i> Catálogo de Beats
+                        <i data-lucide="music"></i> <span data-i18n="tab_beats">Catálogo de Beats</span>
                     </button>
                     <button class="tab-btn" data-tab="tab-dashboard" id="tab-dashboard-btn">
-                        <i data-lucide="bar-chart-3"></i> Dashboard de Ventas
+                        <i data-lucide="bar-chart-3"></i> <span data-i18n="tab_dashboard">Dashboard de Ventas</span>
                     </button>
                     <button class="tab-btn" data-tab="tab-sales" id="tab-sales-btn">
-                        <i data-lucide="shopping-cart"></i> Pedidos de Beats <span class="badge" id="sales-pending-count" style="display: none; background: #ef4444; color: white;">0</span>
+                        <i data-lucide="shopping-cart"></i> <span data-i18n="tab_sales">Pedidos de Beats</span> <span class="badge" id="sales-pending-count" style="display: none; background: #ef4444; color: white;">0</span>
                     </button>
                     <button class="tab-btn" data-tab="tab-admin" id="tab-admin-btn" style="display: none;">
-                        <i data-lucide="trending-up"></i> Contabilidad General
+                        <i data-lucide="trending-up"></i> <span data-i18n="tab_admin">Contabilidad General</span>
                     </button>
                 </div>
             </header>
@@ -1641,13 +1603,13 @@
                     <table class="history-table">
                         <thead>
                             <tr>
-                                <th>Referencia</th>
-                                <th>Fecha</th>
-                                <th>Beat</th>
-                                <th>Comprador</th>
-                                <th>Tipo</th>
-                                <th>Valor</th>
-                                <th class="text-right">Acciones</th>
+                                <th data-i18n="history_th_ref">Referencia</th>
+                                <th data-i18n="history_th_date">Fecha</th>
+                                <th data-i18n="history_th_beat">Beat</th>
+                                <th data-i18n="history_th_buyer">Comprador</th>
+                                <th data-i18n="history_th_type">Tipo</th>
+                                <th data-i18n="history_th_value">Valor</th>
+                                <th class="text-right" data-i18n="history_th_actions">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="history-table-body">
@@ -1857,7 +1819,7 @@
 
             <!-- Tab Content: Dashboard de Ventas -->
             <!-- Tab Content: Dashboard de Ventas -->
-            <div class="tab-content" id="tab-dashboard" style="display: none;">
+            <div class="tab-content" id="tab-dashboard">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-white/5">
                     <div>
                         <h2 class="font-headline-lg text-[20px] font-bold text-on-surface flex items-center gap-2 m-0">
@@ -3151,7 +3113,7 @@
     <div id="global-catalog-view" style="display: none;" class="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,_#0b0e14_0%,_#05070a_100%)] text-on-surface font-body-md">
         <!-- Header del Catálogo Global -->
         <header class="sticky top-0 z-50 bg-surface/80 backdrop-blur-md border-b border-white/5 bg-surface-glass shadow-[0_0_20px_rgba(139,92,246,0.1)] py-5 px-6">
-            <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="flex items-center gap-3 cursor-pointer" id="catalog-logo-home">
                     <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6;">
                         <path d="M12 2v20M17 5v14M7 9v6M22 8v8M2 11v2"></path>
@@ -3166,60 +3128,61 @@
                 </div>
 
                 <div class="flex gap-3">
-                    <button id="catalog-btn-login" class="border border-white/10 text-on-surface hover:text-white px-6 py-2 rounded-full text-xs font-semibold hover:bg-white/5 transition-all">Soy Productor</button>
+                    <button id="catalog-btn-language" class="border border-white/10 text-on-surface-variant hover:text-white px-4 py-2 rounded-full font-label-caps text-xs font-bold hover:bg-white/5 transition-all outline-none">ES</button>
+                    <button id="catalog-btn-login" data-i18n="catalog_i_am_producer" class="border border-white/10 text-on-surface hover:text-white px-6 py-2 rounded-full text-sm font-semibold hover:bg-white/5 transition-all">Soy Productor</button>
                 </div>
             </div>
         </header>
 
         <!-- Contenido Principal -->
-        <main class="max-w-6xl mx-auto px-6 py-10 flex flex-col gap-8">
+        <main class="max-w-7xl mx-auto px-6 py-10 flex flex-col gap-8">
             <!-- Hero Banner -->
             <div class="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-md p-10 text-center shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
                 <!-- Acentos de brillo de fondo -->
                 <div class="absolute -left-10 -top-10 w-48 h-48 bg-electric-purple/15 rounded-full blur-[80px] pointer-events-none"></div>
                 <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-neon-blue/15 rounded-full blur-[80px] pointer-events-none"></div>
                 
-                <h2 class="font-headline-lg text-[36px] font-black mb-3 tracking-tight bg-gradient-to-r from-[#b28eff] via-[#d0bcff] to-[#00ccff] bg-clip-text text-transparent">Encuentra el Beat Perfecto</h2>
-                <p class="text-on-surface-variant text-sm max-w-xl mx-auto leading-relaxed opacity-90 font-medium">Licencias directas de los mejores productores independientes de la escena. Sin comisiones ocultas, trato y pago directo al creador.</p>
+                <h2 class="font-headline-lg text-[36px] font-black mb-3 tracking-tight bg-gradient-to-r from-[#b28eff] via-[#d0bcff] to-[#00ccff] bg-clip-text text-transparent" data-i18n="catalog_find_beat">Encuentra el Beat Perfecto</h2>
+                <p class="text-on-surface-variant text-sm max-w-xl mx-auto leading-relaxed opacity-90 font-medium" data-i18n="catalog_find_desc">Licencias directas de los mejores productores independientes de la escena. Sin comisiones ocultas, trato y pago directo al creador.</p>
             </div>
 
             <!-- Zona de Filtros -->
-            <div class="flex flex-wrap items-center gap-4 bg-white/[0.02] backdrop-blur-md border border-white/5 p-4 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)]">
-                <span class="text-xs font-semibold text-on-surface-variant flex items-center gap-1.5 uppercase font-label-caps tracking-wider opacity-80">
-                    <span class="material-symbols-outlined text-[16px] text-electric-purple">filter_list</span> Filtros:
+            <div class="flex flex-wrap items-center gap-4 bg-white/[0.02] backdrop-blur-md border border-white/5 p-5 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)]">
+                <span class="text-sm font-semibold text-on-surface-variant flex items-center gap-1.5 uppercase font-label-caps tracking-wider opacity-80">
+                    <span class="material-symbols-outlined text-[18px] text-electric-purple">filter_list</span> <span data-i18n="catalog_filters">Filtros:</span>
                 </span>
                 
-                <select id="global-genre-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none min-w-[140px] h-9 transition-all">
-                    <option value="" class="bg-charcoal-deep text-white">Cualquier Género</option>
+                <select id="global-genre-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
+                    <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_genre">Cualquier Género</option>
                 </select>
 
-                <select id="global-price-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none min-w-[140px] h-9 transition-all">
-                    <option value="" class="bg-charcoal-deep text-white">Cualquier Precio</option>
-                    <option value="0-20" class="bg-charcoal-deep text-white">Hasta $20</option>
-                    <option value="20-50" class="bg-charcoal-deep text-white">$20 - $50</option>
-                    <option value="50-100" class="bg-charcoal-deep text-white">$50 - $100</option>
-                    <option value="100+" class="bg-charcoal-deep text-white">Más de $100</option>
+                <select id="global-price-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
+                    <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_price">Cualquier Precio</option>
+                    <option value="0-20" class="bg-charcoal-deep text-white" data-i18n="catalog_price_0_20">Hasta $20</option>
+                    <option value="20-50" class="bg-charcoal-deep text-white" data-i18n="catalog_price_20_50">$20 - $50</option>
+                    <option value="50-100" class="bg-charcoal-deep text-white" data-i18n="catalog_price_50_100">$50 - $100</option>
+                    <option value="100+" class="bg-charcoal-deep text-white" data-i18n="catalog_price_100_plus">Más de $100</option>
                 </select>
 
-                <select id="global-bpm-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none min-w-[140px] h-9 transition-all">
-                    <option value="" class="bg-charcoal-deep text-white">Cualquier BPM</option>
-                    <option value="0-90" class="bg-charcoal-deep text-white">Lento (&lt; 90)</option>
-                    <option value="90-130" class="bg-charcoal-deep text-white">Medio (90 - 130)</option>
-                    <option value="130-999" class="bg-charcoal-deep text-white">Rápido (&gt; 130)</option>
+                <select id="global-bpm-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
+                    <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_bpm">Cualquier BPM</option>
+                    <option value="0-90" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_slow">Lento (&lt; 90)</option>
+                    <option value="90-130" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_medium">Medio (90 - 130)</option>
+                    <option value="130-999" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_fast">Rápido (&gt; 130)</option>
                 </select>
                 
                 <div class="md:ml-auto flex items-center gap-2">
-                    <span class="text-xs text-on-surface-variant font-medium opacity-80">Ordenar por:</span>
-                    <select id="global-sort-select" class="bg-transparent border-none text-neon-blue font-bold text-xs cursor-pointer outline-none py-1">
-                        <option value="newest" class="bg-charcoal-deep text-white">Más Recientes</option>
-                        <option value="price_asc" class="bg-charcoal-deep text-white">Menor Precio</option>
-                        <option value="price_desc" class="bg-charcoal-deep text-white">Mayor Precio</option>
+                    <span class="text-sm text-on-surface-variant font-medium opacity-80" data-i18n="catalog_sort_by">Ordenar por:</span>
+                    <select id="global-sort-select" class="bg-transparent border-none text-neon-blue font-bold text-sm cursor-pointer outline-none py-1">
+                        <option value="newest" class="bg-charcoal-deep text-white" data-i18n="catalog_sort_newest">Más Recientes</option>
+                        <option value="price_asc" class="bg-charcoal-deep text-white" data-i18n="catalog_sort_lowest">Menor Precio</option>
+                        <option value="price_desc" class="bg-charcoal-deep text-white" data-i18n="catalog_sort_highest">Mayor Precio</option>
                     </select>
                 </div>
             </div>
 
             <!-- Grid de Beats -->
-            <div id="global-beats-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div id="global-beats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 <!-- Skeleton / Loading state se inyecta via JS -->
             </div>
             
@@ -3247,7 +3210,7 @@
         <!-- Botón Volver al Catálogo / Inicio -->
         <button onclick="window.showAppView('home')" class="store-back-btn fixed top-5 left-5 z-50 flex items-center justify-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-white text-xs font-semibold hover:bg-white/10 transition-all backdrop-blur-md shadow-lg outline-none">
             <span class="material-symbols-outlined text-[16px]">arrow_back</span>
-            <span>Volver</span>
+            <span data-i18n="catalog_back">Volver</span>
         </button>
 
         <!-- Header de la Tienda -->
@@ -3263,7 +3226,7 @@
                 </div>
                 <div>
                     <h1 id="store-producer-name" class="font-headline-lg text-[36px] font-black tracking-tighter m-0 bg-gradient-to-r from-white via-on-surface to-on-surface-variant bg-clip-text text-transparent">Sossa</h1>
-                    <p id="store-producer-aka-sub" class="text-xs text-neon-blue font-bold font-label-caps tracking-widest uppercase mt-1">Catálogo Oficial de Beats</p>
+                    <p id="store-producer-aka-sub" class="text-xs text-neon-blue font-bold font-label-caps tracking-widest uppercase mt-1" data-i18n="store_official_catalog">Catálogo Oficial de Beats</p>
                 </div>
                 <div class="store-socials flex gap-4 mt-2">
                     <a id="store-email-link" href="#" class="text-on-surface-variant hover:text-white transition-colors" title="Email"><i data-lucide="mail" class="w-5 h-5"></i></a>
@@ -3273,25 +3236,25 @@
         </header>
 
         <!-- Filtros y Grid de Beats -->
-        <main class="store-container max-w-6xl mx-auto px-6 py-10">
+        <main class="store-container max-w-7xl mx-auto px-6 py-10">
             <!-- Buscador y Filtros -->
-            <div class="store-controls flex flex-wrap items-center gap-4 bg-charcoal-deep border border-white/5 p-4 rounded-xl mb-8">
+            <div class="store-controls flex flex-wrap items-center gap-4 bg-white/[0.02] backdrop-blur-md border border-white/5 p-5 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] mb-8">
                 <div class="flex-1 min-w-[280px] relative">
                     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
-                    <input type="text" id="store-search-input" placeholder="Buscar instrumentales..." class="w-full pl-12 pr-4 py-2.5 bg-surface border border-white/10 rounded-lg text-on-surface placeholder:text-on-surface-variant text-sm focus:border-electric-purple focus:ring-1 focus:ring-electric-purple focus:outline-none transition-all">
+                    <input type="text" id="store-search-input" placeholder="Buscar instrumentales..." data-i18n-placeholder="store_search_placeholder" class="w-full pl-12 pr-6 py-2.5 bg-white/5 border border-white/10 rounded-full text-on-surface placeholder:text-on-surface-variant text-sm focus:border-electric-purple focus:ring-1 focus:ring-electric-purple focus:outline-none transition-all">
                 </div>
                 <div class="flex gap-3">
-                    <select id="store-genre-select" class="bg-surface border border-white/10 rounded-lg px-4 py-2.5 text-white text-xs font-semibold cursor-pointer outline-none min-w-[140px] h-10">
-                        <option value="">Todos los géneros</option>
+                    <select id="store-genre-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
+                        <option value="" class="bg-charcoal-deep text-white" data-i18n="beats_all_genres">Todos los géneros</option>
                     </select>
-                    <select id="store-key-select" class="bg-surface border border-white/10 rounded-lg px-4 py-2.5 text-white text-xs font-semibold cursor-pointer outline-none min-w-[120px] h-10">
-                        <option value="">Todas las escalas</option>
+                    <select id="store-key-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
+                        <option value="" class="bg-charcoal-deep text-white" data-i18n="beats_all_keys">Todas las escalas</option>
                     </select>
                 </div>
             </div>
 
             <!-- Catálogo de Beats -->
-            <div id="store-beats-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div id="store-beats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 <!-- Tarjetas de beats generadas dinámicamente -->
             </div>
             
@@ -3347,11 +3310,12 @@
         </div>
 
     <!-- Modal: Checkout de Beat -->
+    <!-- Modal: Checkout de Beat -->
     <div class="modal-backdrop" id="beat-checkout-modal" style="display: none; z-index: 99999; background: rgba(11, 14, 20, 0.8); backdrop-filter: blur(8px); overflow-y: auto; align-items: flex-start; padding: 40px 0 20px 0;">
         <div class="modal" style="max-width: 600px; width: 95%; background: #0c0e14; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; margin: auto;">
             <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 20px 24px; box-sizing: border-box;">
                 <h2 style="font-size: 20px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0;">
-                    <i data-lucide="shopping-bag" style="color: var(--accent, #00ccff);"></i> Adquirir Beat
+                    <i data-lucide="shopping-bag" style="color: var(--accent, #00ccff);"></i> <span data-i18n="checkout_title">Adquirir Beat</span>
                 </h2>
                 <button class="icon-btn" id="btn-close-checkout-modal"><i data-lucide="x"></i></button>
             </div>
@@ -3384,62 +3348,62 @@
                             </div>
                         </div>
 
-                        <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;">1. Selecciona el Tipo de Licencia:</h3>
+                        <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;" data-i18n="checkout_step1_title">1. Selecciona el Tipo de Licencia:</h3>
                         <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;" id="license-options-container">
                             <!-- Cargado dinámicamente -->
                         </div>
                         <div style="display: flex; gap: 12px; margin-top: 20px;">
-                            <button type="button" class="btn btn-secondary" id="btn-checkout-add-to-cart" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Agregar al Carrito</button>
-                            <button type="button" class="btn btn-primary" id="btn-checkout-buy-now" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Comprar Ahora</button>
+                            <button type="button" class="btn btn-secondary" id="btn-checkout-add-to-cart" data-i18n="checkout_btn_add_to_cart" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Agregar al Carrito</button>
+                            <button type="button" class="btn btn-primary" id="btn-checkout-buy-now" data-i18n="checkout_btn_buy_now" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Comprar Ahora</button>
                         </div>
                     </div>
                     <!-- Vista de múltiples beats en el carrito -->
                     <div id="checkout-multi-beat-view" style="display: none;">
-                        <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;">1. Tu Carrito de Compras:</h3>
+                        <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;" data-i18n="checkout_cart_title">1. Tu Carrito de Compras:</h3>
                         <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; box-sizing: border-box;" id="cart-items-container">
                             <!-- Items del carrito cargados dinámicamente -->
                         </div>
                         <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 16px; border-radius: 12px; box-sizing: border-box; margin-bottom: 16px;">
-                            <span style="font-size: 14px; font-weight: 600; color: #8a91a6;">Total del Carrito:</span>
+                            <span style="font-size: 14px; font-weight: 600; color: #8a91a6;" data-i18n="checkout_cart_total">Total del Carrito:</span>
                             <span id="cart-total-price-display" style="font-size: 18px; font-weight: 800; color: var(--accent, #00ccff);">$0.00 USD</span>
                         </div>
                         <div style="display: flex; gap: 12px; margin-top: 20px;">
-                            <button type="button" class="btn btn-secondary" id="btn-checkout-keep-shopping" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Seguir Comprando</button>
-                            <button type="button" class="btn btn-primary" id="btn-checkout-proceed-billing" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Continuar</button>
+                            <button type="button" class="btn btn-secondary" id="btn-checkout-keep-shopping" data-i18n="checkout_btn_keep_shopping" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Seguir Comprando</button>
+                            <button type="button" class="btn btn-primary" id="btn-checkout-proceed-billing" data-i18n="btn_continue" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Continuar</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- PASO 2: Datos del Comprador -->
                 <div class="checkout-step-panel" id="checkout-panel-2" style="display: none;">
-                    <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;">2. Datos para el Contrato y Entrega:</h3>
+                    <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;" data-i18n="checkout_step2_title">2. Datos para el Contrato y Entrega:</h3>
                     <form id="checkout-billing-form" style="display: flex; flex-direction: column; gap: 14px; box-sizing: border-box;">
                         <div class="input-group">
-                            <label for="store-buyer-name" style="font-size: 12px; font-weight: 600; color: #8a91a6;">Nombre Artístico / Real Completo *</label>
-                            <input type="text" id="store-buyer-name" required placeholder="Nombre para firmar la licencia" style="width: 100%; box-sizing: border-box;">
+                            <label for="store-buyer-name" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="store_buyer_name_label">Nombre Artístico / Real Completo *</label>
+                            <input type="text" id="store-buyer-name" required placeholder="Nombre para firmar la licencia" data-i18n-placeholder="store_buyer_name_placeholder" style="width: 100%; box-sizing: border-box;">
                         </div>
                         <div class="input-group">
-                            <label for="store-buyer-email" style="font-size: 12px; font-weight: 600; color: #8a91a6;">Correo Electrónico * (Para recibir la licencia)</label>
-                            <input type="email" id="store-buyer-email" required placeholder="tu-correo@ejemplo.com" style="width: 100%; box-sizing: border-box;">
+                            <label for="store-buyer-email" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="store_buyer_email_label">Correo Electrónico * (Para recibir la licencia)</label>
+                            <input type="email" id="store-buyer-email" required placeholder="tu-correo@ejemplo.com" data-i18n-placeholder="sidebar_email_placeholder" style="width: 100%; box-sizing: border-box;">
                         </div>
                         <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
                             <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-phone" style="font-size: 12px; font-weight: 600; color: #8a91a6;">WhatsApp</label>
-                                <input type="text" id="store-buyer-phone" placeholder="Ej: +5939xxxxxxxx" style="width: 100%; box-sizing: border-box;">
+                                <label for="store-buyer-phone" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="sidebar_phone">WhatsApp</label>
+                                <input type="text" id="store-buyer-phone" placeholder="Ej: +5939xxxxxxxx" data-i18n-placeholder="store_buyer_phone_placeholder" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-dni" style="font-size: 12px; font-weight: 600; color: #8a91a6;">Identificación / DNI</label>
-                                <input type="text" id="store-buyer-dni" placeholder="Cédula/RUC" style="width: 100%; box-sizing: border-box;">
+                                <label for="store-buyer-dni" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="sidebar_buyer_id">Identificación / DNI</label>
+                                <input type="text" id="store-buyer-dni" placeholder="Cédula/RUC" data-i18n-placeholder="store_buyer_id_placeholder" style="width: 100%; box-sizing: border-box;">
                             </div>
                         </div>
                         <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
                             <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-city" style="font-size: 12px; font-weight: 600; color: #8a91a6;">Ciudad</label>
-                                <input type="text" id="store-buyer-city" placeholder="Ej: Quito" style="width: 100%; box-sizing: border-box;">
+                                <label for="store-buyer-city" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="sidebar_city">Ciudad</label>
+                                <input type="text" id="store-buyer-city" placeholder="Ej: Quito" data-i18n-placeholder="store_buyer_city_placeholder" style="width: 100%; box-sizing: border-box;">
                             </div>
                             <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-country" style="font-size: 12px; font-weight: 600; color: #8a91a6;">País</label>
-                                <input type="text" id="store-buyer-country" value="Ecuador" style="width: 100%; box-sizing: border-box;">
+                                <label for="store-buyer-country" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="sidebar_country">País</label>
+                                <input type="text" id="store-buyer-country" value="Ecuador" data-i18n-placeholder="sidebar_country_placeholder" style="width: 100%; box-sizing: border-box;">
                             </div>
                         </div>
                     </form>
@@ -3447,41 +3411,41 @@
 
                 <!-- PASO 3: Método de Pago -->
                 <div class="checkout-step-panel" id="checkout-panel-3" style="display: none;">
-                    <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 12px;">3. Selecciona tu Método de Pago:</h3>
+                    <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 12px;" data-i18n="checkout_step3_title">3. Selecciona tu Método de Pago:</h3>
                     
                     <!-- Coupon Input -->
                     <div id="checkout-coupon-section" style="margin-bottom: 16px; background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; box-sizing: border-box;">
-                        <label for="checkout-coupon-code" style="font-size: 11px; font-weight: 600; color: var(--accent, #00ccff); text-transform: uppercase; margin-bottom: 6px; display: block;">🏷️ Código de Descuento</label>
+                        <label for="checkout-coupon-code" style="font-size: 11px; font-weight: 600; color: var(--accent, #00ccff); text-transform: uppercase; margin-bottom: 6px; display: block;" data-i18n="checkout_coupon_label">🏷️ Código de Descuento</label>
                         <div style="display: flex; gap: 8px;">
-                            <input type="text" id="checkout-coupon-code" placeholder="Escribe aquí tu cupón" style="flex: 1; height: 36px; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0 12px; color: #fff; font-size: 13px; font-weight: 700; text-transform: uppercase; outline: none; box-sizing: border-box;">
-                            <button type="button" class="btn btn-secondary" id="btn-apply-coupon" onclick="window.applyCheckoutCoupon()" style="height: 36px; padding: 0 16px; font-size: 12px; font-weight: 700; border-radius: 8px;">Aplicar</button>
+                            <input type="text" id="checkout-coupon-code" placeholder="Escribe aquí tu cupón" data-i18n-placeholder="checkout_coupon_placeholder" style="flex: 1; height: 36px; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0 12px; color: #fff; font-size: 13px; font-weight: 700; text-transform: uppercase; outline: none; box-sizing: border-box;">
+                            <button type="button" class="btn btn-secondary" id="btn-apply-coupon" onclick="window.applyCheckoutCoupon()" data-i18n="checkout_coupon_btn_apply" style="height: 36px; padding: 0 16px; font-size: 12px; font-weight: 700; border-radius: 8px;">Aplicar</button>
                         </div>
                         <div id="checkout-coupon-msg" style="font-size: 11px; margin-top: 6px; display: none; font-weight: 600;"></div>
                     </div>
                     
                     <div class="pay-method-tabs" style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 16px; box-sizing: border-box; flex-wrap: wrap;">
                         <button type="button" class="pay-tab-btn active" id="btn-pay-deuna" onclick="window.switchStorePaymentMethod('deuna')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 700; color: var(--accent, #00ccff); border-bottom: 2px solid var(--accent, #00ccff); cursor: pointer; outline: none;">Deuna!</button>
-                        <button type="button" class="pay-tab-btn" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">Transferencia</button>
+                        <button type="button" class="pay-tab-btn" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')" data-i18n="checkout_pay_transfer" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">Transferencia</button>
                         <button type="button" class="pay-tab-btn" id="btn-pay-paypal" onclick="window.switchStorePaymentMethod('paypal')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">PayPal</button>
                         <button type="button" class="pay-tab-btn" id="btn-pay-payphone" onclick="window.switchStorePaymentMethod('payphone')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none; white-space: nowrap;">PayPhone</button>
-                        <button type="button" class="pay-tab-btn" id="btn-pay-offer" onclick="window.switchStorePaymentMethod('offer')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #f59e0b; border-bottom: 2px solid transparent; cursor: pointer; outline: none; white-space: nowrap;">🏷️ Oferta</button>
+                        <button type="button" class="pay-tab-btn" id="btn-pay-offer" onclick="window.switchStorePaymentMethod('offer')" data-i18n="checkout_pay_offer" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #f59e0b; border-bottom: 2px solid transparent; cursor: pointer; outline: none; white-space: nowrap;">🏷️ Oferta</button>
                     </div>
 
                     <!-- Panel Deuna -->
                     <div class="store-payment-panel" id="store-pay-deuna">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 12px; margin-top: 0;">Sigue los pasos para completar tu pago con <strong style="color: #fff;">Deuna!</strong>:</p>
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 12px; margin-top: 0;" data-i18n="deuna_steps_title">Sigue los pasos para completar tu pago con <strong style="color: #fff;">Deuna!</strong>:</p>
                         <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
                             <div style="display: flex; align-items: flex-start; gap: 10px;">
                                 <span style="background: var(--accent, #00ccff); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; margin-top: 1px;">1</span>
-                                <span style="font-size: 13px; color: #cdd;">Copia el número de celular y envía el pago desde tu app <strong style="color: #fff;">Deuna!</strong></span>
+                                <span style="font-size: 13px; color: #cdd;" data-i18n="deuna_step_1">Copia el número de celular y envía el pago desde tu app <strong style="color: #fff;">Deuna!</strong></span>
                             </div>
                             <div style="display: flex; align-items: flex-start; gap: 10px;">
                                 <span style="background: var(--accent, #00ccff); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; margin-top: 1px;">2</span>
-                                <span style="font-size: 13px; color: #cdd;">Toma una captura del comprobante y súbelo abajo</span>
+                                <span style="font-size: 13px; color: #cdd;" data-i18n="deuna_step_2">Toma una captura del comprobante y súbelo abajo</span>
                             </div>
                             <div style="display: flex; align-items: flex-start; gap: 10px;">
                                 <span style="background: var(--accent, #00ccff); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; margin-top: 1px;">3</span>
-                                <span style="font-size: 13px; color: #cdd;">Confirma tu compra — el productor aprobará y recibirás los archivos por correo</span>
+                                <span style="font-size: 13px; color: #cdd;" data-i18n="deuna_step_3">Confirma tu compra — el productor aprobará y recibirás los archivos por correo</span>
                             </div>
                         </div>
                         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 16px; text-align: center; box-sizing: border-box;">
@@ -3495,7 +3459,7 @@
 
                     <!-- Panel Transferencia -->
                     <div class="store-payment-panel" id="store-pay-transfer" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 12px; margin-top: 0;">Transfiere a cualquiera de las siguientes cuentas directas del productor:</p>
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 12px; margin-top: 0;" data-i18n="checkout_transfer_desc">Transfiere a cualquiera de las siguientes cuentas directas del productor:</p>
                         
                         <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; box-sizing: border-box;">
                             <!-- Banco Pichincha -->
@@ -3520,7 +3484,7 @@
 
                     <!-- Panel PayPal -->
                     <div class="store-payment-panel" id="store-pay-paypal" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;">Paga de manera instantánea y segura con tu cuenta PayPal o tarjeta de crédito:</p>
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;" data-i18n="checkout_paypal_desc">Paga de manera instantánea y segura con tu cuenta PayPal o tarjeta de crédito:</p>
                         
                         <div id="store-paypal-button-container" style="min-height: 150px; text-align: center; width: 100%; box-sizing: border-box; background: #ffffff; padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 12px;">
                             <!-- Botón de PayPal cargado dinámicamente -->
@@ -3529,7 +3493,7 @@
 
                     <!-- Panel PayPhone -->
                     <div class="store-payment-panel" id="store-pay-payphone" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;">Paga al instante de forma segura usando tu cuenta <strong style="color: #fff;">PayPhone</strong> o tu tarjeta de crédito/débito favorita:</p>
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;" data-i18n="checkout_payphone_desc">Paga al instante de forma segura usando tu cuenta <strong style="color: #fff;">PayPhone</strong> o tu tarjeta de crédito/débito favorita:</p>
                         
                         <div style="display: flex; justify-content: center; width: 100%; box-sizing: border-box;">
                             <div id="payphone-button" style="width: 100%; max-width: 300px; min-height: 50px; display: flex; justify-content: center; align-items: center;"></div>
@@ -3538,15 +3502,15 @@
 
                     <!-- Panel Hacer Oferta (Licencia Exclusiva) -->
                     <div class="store-payment-panel" id="store-pay-offer" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;">Propón un precio de oferta al productor para adquirir los derechos exclusivos de esta instrumental:</p>
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;" data-i18n="checkout_offer_desc">Propón un precio de oferta al productor para adquirir los derechos exclusivos de esta instrumental:</p>
                         <div style="display: flex; flex-direction: column; gap: 14px; box-sizing: border-box;">
                             <div class="input-group">
-                                <label for="offer-price-input" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;">Tu Propuesta Económica ($ USD) *</label>
+                                <label for="offer-price-input" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;" data-i18n="checkout_offer_label">Tu Propuesta Económica ($ USD) *</label>
                                 <input type="number" id="offer-price-input" min="250" step="5" placeholder="Ej: 400" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; font-weight: 700; font-size: 16px; outline: none;">
-                                <span style="font-size: 11px; color: #8a91a6; margin-top: 6px; display: block;">Monto mínimo de negociación: <strong style="color: var(--accent, #00ccff); font-weight: 700;">$250.00 USD</strong></span>
+                                <span style="font-size: 11px; color: #8a91a6; margin-top: 6px; display: block;"><span data-i18n="checkout_offer_min_label">Monto mínimo de negociación:</span> <strong style="color: var(--accent, #00ccff); font-weight: 700;">$250.00 USD</strong></span>
                             </div>
                             <div class="input-group">
-                                <label for="offer-message-input" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;">Mensaje para el Productor</label>
+                                <label for="offer-message-input" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;" data-i18n="checkout_offer_msg_label">Mensaje para el Productor</label>
                                 <textarea id="offer-message-input" placeholder="Ej: Hola, me interesa mucho este beat. Mi presupuesto máximo actual es de $400..." rows="3" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; font-family: inherit; font-size: 13px; resize: none; outline: none;"></textarea>
                             </div>
                         </div>
@@ -3554,15 +3518,15 @@
 
                     <!-- Subida de Comprobante -->
                     <div id="store-receipt-upload-section" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px; box-sizing: border-box;">
-                        <label style="font-size: 12px; font-weight: 600; color: #8a91a6; display: block; margin-bottom: 8px;">📸 Sube tu Comprobante de Pago *</label>
+                        <label style="font-size: 12px; font-weight: 600; color: #8a91a6; display: block; margin-bottom: 8px;" data-i18n="checkout_upload_receipt_label">📸 Sube tu Comprobante de Pago *</label>
                         <div style="display: flex; gap: 12px; align-items: center; box-sizing: border-box;">
                             <input type="file" id="store-receipt-file" accept="image/*" style="display: none;">
                             <button type="button" class="btn btn-secondary" id="btn-store-upload-receipt" style="flex: 1; height: 38px; font-size: 12px; justify-content: center; gap: 6px; box-sizing: border-box; background: rgba(0, 204, 255, 0.08); border-color: rgba(0, 204, 255, 0.3); color: var(--accent, #00ccff);">
-                                <i data-lucide="upload" style="width: 15px; height: 15px;"></i> Subir Comprobante
+                                <i data-lucide="upload" style="width: 15px; height: 15px;"></i> <span data-i18n="checkout_upload_receipt_btn">Subir Comprobante</span>
                             </button>
-                            <span id="store-receipt-file-name" style="font-size: 11px; color: #8a91a6; flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">Ningún archivo seleccionado</span>
+                            <span id="store-receipt-file-name" style="font-size: 11px; color: #8a91a6; flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" data-i18n="checkout_no_file_selected">Ningún archivo seleccionado</span>
                         </div>
-                        <p style="font-size: 11px; color: #8a91a6; margin-top: 8px; margin-bottom: 0; line-height: 1.4;">⚠️ El productor revisará tu comprobante y te enviará los archivos por correo en las próximas horas.</p>
+                        <p style="font-size: 11px; color: #8a91a6; margin-top: 8px; margin-bottom: 0; line-height: 1.4;" data-i18n="checkout_receipt_warning">⚠️ El productor revisará tu comprobante y te enviará los archivos por correo en las próximas horas.</p>
                     </div>
 
                 </div>
@@ -3570,9 +3534,9 @@
             </div>
 
             <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display: flex; justify-content: space-between; box-sizing: border-box;">
-                <button class="btn btn-secondary" id="btn-checkout-prev" style="display: none; height: 38px; padding: 0 16px; font-size: 13px;">Atrás</button>
-                <button class="btn btn-secondary" id="btn-checkout-cancel" style="height: 38px; padding: 0 16px; font-size: 13px;">Cancelar</button>
-                <button class="btn btn-primary" id="btn-checkout-next" style="height: 38px; padding: 0 24px; font-size: 13px; font-weight: 700;">Continuar</button>
+                <button class="btn btn-secondary" id="btn-checkout-prev" style="display: none; height: 38px; padding: 0 16px; font-size: 13px;" data-i18n="btn_back">Atrás</button>
+                <button class="btn btn-secondary" id="btn-checkout-cancel" style="height: 38px; padding: 0 16px; font-size: 13px;" data-i18n="btn_cancel">Cancelar</button>
+                <button class="btn btn-primary" id="btn-checkout-next" style="height: 38px; padding: 0 24px; font-size: 13px; font-weight: 700;" data-i18n="btn_continue">Continuar</button>
             </div>
         </div>
     </div>
@@ -3582,41 +3546,44 @@
         <div class="modal" style="max-width: 450px; width: 90%; background: #0c0e14; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden;">
             <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 20px 24px; box-sizing: border-box;">
                 <h2 style="font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0;">
-                    <i data-lucide="download" style="color: var(--accent, #00ccff);"></i> Descargar Beat Gratis
+                    <i data-lucide="download" style="color: var(--accent, #00ccff);"></i> <span data-i18n="free_modal_title">Descargar Beat Gratis</span>
                 </h2>
                 <button class="icon-btn" id="btn-close-free-modal" onclick="document.getElementById('free-download-modal').style.display='none';"><i data-lucide="x"></i></button>
             </div>
             <div class="modal-body" style="padding: 24px; box-sizing: border-box; text-align: left;">
-                <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-top: 0; margin-bottom: 16px;">
+                <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-top: 0; margin-bottom: 16px;" data-i18n="free_modal_desc">
                     Ingresa tus datos para registrarte en el boletín del productor y descargar la versión de preescucha (MP3 con marca de agua) totalmente gratis.
                 </p>
                 <form id="free-download-form" onsubmit="event.preventDefault(); window.submitFreeDownloadLead();" style="display: flex; flex-direction: column; gap: 14px;">
                     <input type="hidden" id="free-download-beat-id">
                     <div class="input-group">
-                        <label for="free-buyer-name" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;">Nombre Artístico *</label>
-                        <input type="text" id="free-buyer-name" required placeholder="Tu nombre artístico o real" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; outline: none; font-size: 13px;">
+                        <label for="free-buyer-name" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;" data-i18n="free_field_name">Nombre Artístico *</label>
+                        <input type="text" id="free-buyer-name" required placeholder="Tu nombre artístico o real" data-i18n-placeholder="free_field_name_placeholder" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; outline: none; font-size: 13px;">
                     </div>
                     <div class="input-group">
-                        <label for="free-buyer-email" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;">Correo Electrónico *</label>
-                        <input type="email" id="free-buyer-email" required placeholder="tu-correo@ejemplo.com" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; outline: none; font-size: 13px;">
+                        <label for="free-buyer-email" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;" data-i18n="free_field_email">Correo Electrónico *</label>
+                        <input type="email" id="free-buyer-email" required placeholder="tu-correo@ejemplo.com" data-i18n-placeholder="sidebar_email_placeholder" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; outline: none; font-size: 13px;">
                     </div>
                     <div class="input-group">
-                        <label for="free-buyer-phone" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;">WhatsApp (Opcional)</label>
-                        <input type="text" id="free-buyer-phone" placeholder="Ej: +5939xxxxxxxx" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; outline: none; font-size: 13px;">
+                        <label for="free-buyer-phone" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;" data-i18n="free_field_whatsapp">WhatsApp (Opcional)</label>
+                        <input type="text" id="free-buyer-phone" placeholder="Ej: +5939xxxxxxxx" data-i18n-placeholder="store_buyer_phone_placeholder" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; outline: none; font-size: 13px;">
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; height: 42px; font-weight: 700; margin-top: 10px; border-radius: 10px; font-size: 13px;">Comenzar Descarga</button>
+                    <button type="submit" class="btn btn-primary" data-i18n="free_btn_submit" style="width: 100%; height: 42px; font-weight: 700; margin-top: 10px; border-radius: 10px; font-size: 13px;">Comenzar Descarga</button>
                 </form>
             </div>
+        </div>
+    </div>
+
     <!-- Modal de Recibo / Factura Imprimible (Agente 1 & 2) -->
     <div class="modal-backdrop" id="receipt-modal" style="display: none; z-index: 99999; background: rgba(11, 14, 20, 0.85); backdrop-filter: blur(10px); align-items: center; justify-content: center; overflow-y: auto;">
         <div class="modal receipt-modal-box" style="max-width: 700px; width: 95%; background: #0c0e14; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; margin: 30px auto;">
             <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
                 <h2 style="font-size: 16px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0;">
-                    <i data-lucide="receipt" style="color: var(--accent, #00ccff); width: 18px; height: 18px;"></i> Detalle del Recibo de Venta
+                    <i data-lucide="receipt" style="color: var(--accent, #00ccff); width: 18px; height: 18px;"></i> <span data-i18n="receipt_modal_title">Detalle del Recibo de Venta</span>
                 </h2>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <button class="btn btn-secondary" onclick="window.printReceipt();" style="padding: 6px 12px; height: 32px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer;">
-                        <i data-lucide="printer" style="width: 14px; height: 14px;"></i> Imprimir / PDF
+                        <i data-lucide="printer" style="width: 14px; height: 14px;"></i> <span data-i18n="receipt_btn_print">Imprimir / PDF</span>
                     </button>
                     <button class="icon-btn" onclick="document.getElementById('receipt-modal').style.display='none';" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: #fff; cursor: pointer;"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
                 </div>
@@ -3640,15 +3607,15 @@
     <div class="mobile-nav-bar" style="display: none;">
         <button class="mobile-nav-btn active" data-target="form">
             <i data-lucide="edit-3"></i>
-            <span>Formulario</span>
+            <span data-i18n="mobile_nav_form">Formulario</span>
         </button>
         <button class="mobile-nav-btn" data-target="preview">
             <i data-lucide="eye"></i>
-            <span>Contrato</span>
+            <span data-i18n="mobile_nav_contract">Contrato</span>
         </button>
         <button class="mobile-nav-btn" data-target="history">
             <i data-lucide="history"></i>
-            <span>Historial</span>
+            <span data-i18n="mobile_nav_history">Historial</span>
         </button>
     </div>
 </body>
