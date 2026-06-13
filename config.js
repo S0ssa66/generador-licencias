@@ -168,15 +168,10 @@ export const DEFAULT_TEMPLATES = [
 ---
 
 ### Información General del Documento
-
-| Concepto | Detalle |
-| :--- | :--- |
-| **Licencia Otorgada** | Licencia {{license_type}} ({{license_exclusivity}}) |
-| **Obra Musical (Beat)** | "{{beat_name}}" {{beat_bpm}} |
-| **Código de Referencia** | Invoice # {{ref_code}} |
-| **Fecha de Entrada en Vigor** | {{effective_date}} |
-| **Lugar de Celebración** | {{celebration_place}} |
-| **Método de Pago** | {{payment_method}} |
+* **Código de Referencia:** Invoice # {{ref_code}}
+* **Fecha de Entrada en Vigor:** {{effective_date}}
+* **Lugar de Celebración:** {{celebration_place}}
+* **Método de Pago:** {{payment_method}}
 
 ---
 
@@ -258,15 +253,10 @@ Como medida de seguridad e integridad contractual, este documento incorpora el l
 ---
 
 ### General Document Information
-
-| Concept | Detail |
-| :--- | :--- |
-| **License Granted** | {{license_type}} License ({{license_exclusivity}}) |
-| **Musical Work (Beat)** | "{{beat_name}}" {{beat_bpm}} |
-| **Reference Code** | Invoice # {{ref_code}} |
-| **Effective Date** | {{effective_date}} |
-| **Place of Celebration** | {{celebration_place}} |
-| **Payment Method** | {{payment_method}} |
+* **Reference Code:** Invoice # {{ref_code}}
+* **Effective Date:** {{effective_date}}
+* **Place of Celebration:** {{celebration_place}}
+* **Payment Method:** {{payment_method}}
 
 ---
 
@@ -352,15 +342,9 @@ As a measure of security and contractual integrity, this document incorporates t
 ---
 
 ### Información General del Documento
-
-| Concepto | Detalle |
-| :--- | :--- |
-| **Licencia Otorgada** | Split Sheet (Distribución de Regalías) |
-| **Obra Musical (Beat)** | "{{beat_name}}" {{beat_bpm}} |
-| **Código de Referencia** | Invoice # {{ref_code}} |
-| **Fecha de Entrada en Vigor** | {{effective_date}} |
-| **Lugar de Celebración** | {{celebration_place}} |
-| **Método de Pago** | {{payment_method}} |
+* **Código de Referencia:** Invoice # {{ref_code}}
+* **Fecha de Celebración:** {{effective_date}}
+* **Lugar de Celebración:** {{celebration_place}}
 
 ---
 
@@ -403,15 +387,9 @@ En cualquier medio digital, físico o red social, se otorgará el crédito de co
 ---
 
 ### General Document Information
-
-| Concept | Detail |
-| :--- | :--- |
-| **License Granted** | Split Sheet (Royalty Distribution) |
-| **Musical Work (Beat)** | "{{beat_name}}" {{beat_bpm}} |
-| **Reference Code** | Invoice # {{ref_code}} |
-| **Effective Date** | {{effective_date}} |
-| **Place of Celebration** | {{celebration_place}} |
-| **Payment Method** | {{payment_method}} |
+* **Reference Code:** Invoice # {{ref_code}}
+* **Effective Date:** {{effective_date}}
+* **Place of Celebration:** {{celebration_place}}
 
 ---
 
@@ -458,15 +436,9 @@ In any digital, physical medium or social network, co-production credit must be 
 ---
 
 ### Información General del Documento
-
-| Concepto | Detalle |
-| :--- | :--- |
-| **Licencia Otorgada** | Acuerdo de Coproducción y Colaboración Musical |
-| **Obra Musical (Beat)** | "{{beat_name}}" {{beat_bpm}} |
-| **Código de Referencia** | Invoice # {{ref_code}} |
-| **Fecha de Entrada en Vigor** | {{effective_date}} |
-| **Lugar de Celebración** | {{celebration_place}} |
-| **Método de Pago** | {{payment_method}} |
+* **Código de Referencia:** Invoice # {{ref_code}}
+* **Fecha de Celebración:** {{effective_date}}
+* **Lugar de Celebración:** {{celebration_place}}
 
 ---
 
@@ -507,15 +479,9 @@ Los créditos de la composición resultante se listarán siempre de la siguiente
 ---
 
 ### General Document Information
-
-| Concept | Detail |
-| :--- | :--- |
-| **License Granted** | Co-production and Musical Collaboration Agreement |
-| **Musical Work (Beat)** | "{{beat_name}}" {{beat_bpm}} |
-| **Reference Code** | Invoice # {{ref_code}} |
-| **Effective Date** | {{effective_date}} |
-| **Place of Celebration** | {{celebration_place}} |
-| **Payment Method** | {{payment_method}} |
+* **Reference Code:** Invoice # {{ref_code}}
+* **Effective Date:** {{effective_date}}
+* **Place of Celebration:** {{celebration_place}}
 
 ---
 
