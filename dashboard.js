@@ -1908,14 +1908,7 @@ window.rejectPaymentAdmin = async function(paymentId) {
     }
 };
 
-// Bind module functions to global window object for inline onclick attributes
-window.selectBeat = selectBeat;
-window.openBeatForm = openBeatForm;
-window.deleteBeat = deleteBeat;
-window.closeSettingsModal = closeSettingsModal;
-window.openTabBeatForm = openTabBeatForm;
-window.selectBeatForContract = selectBeatForContract;
-window.togglePlayBeat = togglePlayBeat;
+
 
 // Cargar datos del programa de referidos del usuario
 async function loadReferralData() {

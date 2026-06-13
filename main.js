@@ -2942,6 +2942,71 @@ window.addCustomFieldRow = addCustomFieldRow;
 window.initDefaultDate = initDefaultDate;
 window.safeGetItem = safeGetItem;
 
+window.showAppView = function(viewName, params = null, pushState = true) {
+    console.log("🚦 Cambiando a vista:", viewName, "con parámetros:", params);
+    
+    // 1. Ocultar todos los contenedores principales
+    const landing = document.getElementById('landing-page');
+    if (landing) landing.style.display = 'none';
+    
+    const appContainer = document.getElementById('app-container');
+    if (appContainer) appContainer.style.display = 'none';
+    
+    const globalCatalog = document.getElementById('global-catalog-view');
+    if (globalCatalog) globalCatalog.style.display = 'none';
+    
+    const publicStore = document.getElementById('public-store-view');
+    if (publicStore) publicStore.style.display = 'none';
+    
+    const loginModal = document.getElementById('login-modal');
+    if (loginModal) loginModal.style.display = 'none';
+
+    // 2. Mostrar y configurar el contenedor de la vista solicitada
+    if (viewName === 'home') {
+        if (window.currentUser) {
+            if (appContainer) appContainer.style.display = 'grid';
+        } else {
+            if (landing) landing.style.display = 'block';
+        }
+        if (pushState) {
+            history.pushState({ view: 'home' }, '', window.location.pathname);
+        }
+        // Ocultar reproductor si se vuelve a home
+        const player = document.getElementById('store-audio-player');
+        if (player) player.style.display = 'none';
+    } 
+    else if (viewName === 'catalog') {
+        window.isGlobalCatalogMode = true;
+        window.isPublicStoreMode = false;
+        
+        if (globalCatalog) globalCatalog.style.display = 'block';
+        
+        if (pushState) {
+            history.pushState({ view: 'catalog' }, '', '?catalogo=1');
+        }
+        
+        if (typeof window.initGlobalCatalog === 'function') {
+            window.initGlobalCatalog();
+        }
+    } 
+    else if (viewName === 'store') {
+        window.isGlobalCatalogMode = false;
+        window.isPublicStoreMode = true;
+        
+        if (publicStore) publicStore.style.display = 'block';
+        
+        const producerAka = params?.producer;
+        if (producerAka) {
+            if (pushState) {
+                history.pushState({ view: 'store', producer: producerAka }, '', '?p=' + encodeURIComponent(producerAka));
+            }
+            if (window.initPublicStore) {
+                window.initPublicStore(producerAka);
+            }
+        }
+    }
+};
+
 // Escuchar el evento de recarga del dashboard de ventas en el panel
 document.getElementById('btn-sales-refresh')?.addEventListener('click', loadSalesData);
 
