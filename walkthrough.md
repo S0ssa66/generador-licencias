@@ -39,13 +39,17 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
   * Chart.js, EmailJS, html2pdf.js, PDF.js y JSZip.
 * **Simplificación del Build**: Se eliminaron los archivos de configuración local redundantes (`tailwind.config.js`, `postcss.config.js`) y se removieron dichos paquetes de las dependencias locales, permitiendo que la compilación de Vite en Vercel genere un bundle CSS ligero y limpio sin interferencias.
 
+### 6. 📄 Restablecimiento del Diseño del Contrato Original (Reversión de Cambios Editoriales)
+* **Reversión de Tablas de Metadatos**: Se retiraron las tablas estructuradas de Markdown en la sección "Información General del Documento" de todas las plantillas en [config.js](file:///Users/sossa/IA/generador-licencias/config.js), volviendo al formato limpio de lista con viñetas originales.
+* **Reversión del Sello de Pago en Firmas**: Se removió el bloque de sello de pago con bordes discontinuos en el lateral derecho de las firmas en [editor.js](file:///Users/sossa/IA/generador-licencias/editor.js) cuando no se requiere la firma del comprador, restaurando la alineación y el espacio limpio original.
+
 ---
 
 ## Verificación
 
 1. **Compilación Continua:**
-   Ejecutamos con éxito `npm run build`, generando el bundle final en `dist/assets/index-BRuoY6E9.js` y `index-Bv9UNAer.css` de 58 kB.
+   Ejecutamos con éxito `npm run build`, generando el bundle final en `dist/assets/index-d92qi980.js` y `index-Bv9UNAer.css` de 58 kB.
 2. **Prueba de Carga en Entorno de Validación (Node.js/JSDOM):**
    Ejecutamos `node scratch/test_bundle.js` para asegurar que el bundle se carga sin ReferenceErrors y que el ruteo de inicio de `showAppView` se ejecuta correctamente.
 3. **Despliegue Completo en Vercel:**
-   Los cambios de producción se han desplegado de manera exitosa en [Production URL](https://generador-licencias.vercel.app). El diseño y la estética originales cyberpunk-futuristas de la landing page y el marketplace están totalmente restaurados.
+   Los cambios de producción se han desplegado de manera exitosa en [Production URL](https://generador-licencias.vercel.app). El diseño de la previsualización del contrato y las firmas originales se encuentran totalmente restablecidos.iginales cyberpunk-futuristas de la landing page y el marketplace están totalmente restaurados.
