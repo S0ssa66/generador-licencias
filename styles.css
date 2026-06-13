@@ -3532,3 +3532,149 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 .input-group textarea:user-valid {
     border-color: rgba(34, 197, 94, 0.4) !important;
 }
+
+/* ======================================================= */
+/* ESTILOS PARA EL CATALOGO DE BEATS (ADMIN TAB)           */
+/* ======================================================= */
+
+.tab-beat-card {
+    background: rgba(30, 30, 36, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+}
+
+.tab-beat-card:hover {
+    background: rgba(40, 40, 48, 0.65) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    transform: translateY(-4px) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+.tab-beat-artwork-container {
+    position: relative !important;
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+}
+
+.tab-beat-artwork {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    transition: transform 0.4s ease !important;
+}
+
+.tab-beat-card:hover .tab-beat-artwork {
+    transform: scale(1.04) !important;
+}
+
+.tab-beat-artwork-placeholder {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.06) 100%) !important;
+    color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.tab-beat-play-btn {
+    position: absolute !important;
+    bottom: 8px !important;
+    left: 8px !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    background: var(--accent, #00ccff) !important;
+    border: none !important;
+    color: #000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    box-shadow: 0 4px 12px rgba(0, 204, 255, 0.35) !important;
+    opacity: 0 !important;
+    transform: translateY(10px) !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 2 !important;
+}
+
+.tab-beat-artwork-container:hover .tab-beat-play-btn,
+.tab-beat-play-btn.active,
+.tab-beat-play-btn.playing {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+}
+
+.tab-beat-info {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    padding-top: 4px !important;
+}
+
+.tab-beat-title {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    cursor: pointer !important;
+    transition: color 0.2s ease !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.tab-beat-title:hover {
+    color: var(--accent, #00ccff) !important;
+}
+
+.tab-beat-meta {
+    font-size: 11px !important;
+    color: var(--text-secondary, #8a91a6) !important;
+    display: flex !important;
+    gap: 6px !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+}
+
+.tab-beat-tags-container {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    margin-top: 4px !important;
+    height: 18px !important;
+    overflow: hidden !important;
+}
+
+.tab-beat-tag {
+    font-size: 9px !important;
+    font-weight: 600 !important;
+    color: var(--accent, #00ccff) !important;
+    background: rgba(0, 204, 255, 0.06) !important;
+    padding: 1px 6px !important;
+    border-radius: 4px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+}
+
+.tab-beat-actions {
+    display: flex !important;
+    gap: 6px !important;
+    margin-top: auto !important;
+    width: 100% !important;
+}
+
+.tab-beat-actions button {
+    margin: 0 !important;
+}
+

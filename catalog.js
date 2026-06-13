@@ -999,11 +999,12 @@ export function renderBeatsGrid() {
 
         const isPlaying = window.currentPlayingBeatId === beat.id && window.currentPlayingAudio && !window.currentPlayingAudio.paused;
         const playIcon = isPlaying ? 'pause' : 'play';
+        const playingClass = isPlaying ? 'playing active' : '';
 
         card.innerHTML = `
             <div class="tab-beat-artwork-container">
                 ${artworkHtml}
-                <button class="tab-beat-play-btn" onclick="window.togglePlayBeat('${beat.id}', '${beat.mp3 || ''}')">
+                <button class="tab-beat-play-btn ${playingClass}" onclick="window.togglePlayBeat('${beat.id}', '${beat.mp3 || ''}')">
                     <i data-lucide="${playIcon}"></i>
                 </button>
             </div>
