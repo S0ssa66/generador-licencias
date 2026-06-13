@@ -32,13 +32,20 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
 * **Soporte de Carga Directa a Google Drive:** Para evitar problemas de cuota/espacio en Firebase y a solicitud explícita del usuario, se reactivó la subida opcional de archivos directamente a Google Drive cuando se use `gdrive` o `gdrive-central` como proveedor de almacenamiento.
 * **Limpieza de Errores en Tiempo de Carga (ReferenceError):** Se eliminaron declaraciones redundantes y erróneas en `dashboard.js` de funciones locales no definidas, previniendo fallos críticos de script al cargarse la página.
 
+### 5. 🎨 Restauración Completa del Diseño Original (Tailwind CDN y Librerías)
+* **Retorno a la Configuración de Estilos JIT:** Se revirtió el intento de compilar localmente con Tailwind v4 mediante PostCSS, ya que rompía las clases heredadas de Tailwind v3 y los estilos dinámicos del frontend.
+* **Restablecimiento de CDNs en `index.html`**: Se reincorporó la carga de las librerías originales:
+  * Tailwind CSS v3 (con plugins de forms y container queries) y su objeto inline `tailwind.config`.
+  * Chart.js, EmailJS, html2pdf.js, PDF.js y JSZip.
+* **Simplificación del Build**: Se eliminaron los archivos de configuración local redundantes (`tailwind.config.js`, `postcss.config.js`) y se removieron dichos paquetes de las dependencias locales, permitiendo que la compilación de Vite en Vercel genere un bundle CSS ligero y limpio sin interferencias.
+
 ---
 
 ## Verificación
 
 1. **Compilación Continua:**
-   Ejecutamos con éxito `npm run build`, compilando todos los módulos y generando el bundle final en `dist/assets/index-LZa2A7mv.js` sin errores de compilador.
+   Ejecutamos con éxito `npm run build`, generando el bundle final en `dist/assets/index-BRuoY6E9.js` y `index-Bv9UNAer.css` de 58 kB.
 2. **Prueba de Carga en Entorno de Validación (Node.js/JSDOM):**
    Ejecutamos `node scratch/test_bundle.js` para asegurar que el bundle se carga sin ReferenceErrors y que el ruteo de inicio de `showAppView` se ejecuta correctamente.
 3. **Despliegue Completo en Vercel:**
-   Los cambios de producción se han desplegado de manera exitosa en [Production URL](https://generador-licencias.vercel.app). El flujo de inicio carga la landing page correctamente en español.
+   Los cambios de producción se han desplegado de manera exitosa en [Production URL](https://generador-licencias.vercel.app). El diseño y la estética originales cyberpunk-futuristas de la landing page y el marketplace están totalmente restaurados.
