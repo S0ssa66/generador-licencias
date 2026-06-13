@@ -27,11 +27,18 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
 * **Clase de Utilidad:** Creamos la clase `.font-data-mono` para mapear los inputs numéricos, datos de BPM y hashes en HTML de forma homogénea.
 * **Actualización en Tablas e Historiales:** Cambiamos la tipografía de las celdas de códigos de referencia en la tabla de facturación (`.ref-code-cell`) y previsualizaciones de código preformateado (`.paper pre`) para usar la nueva variable `--font-mono`.
 
+### 4. 🛠️ Solución a la Pantalla en Negro y Restauración de Subida a Google Drive
+* **Corrección de Referencias de Vista (`window.showAppView`):** Restauramos la definición de la función `showAppView` en `main.js` que se había perdido durante la refactorización modular. Su ausencia detenía la ejecución en el inicio de ruteo, dejando los contenedores principales ocultos por defecto.
+* **Soporte de Carga Directa a Google Drive:** Para evitar problemas de cuota/espacio en Firebase y a solicitud explícita del usuario, se reactivó la subida opcional de archivos directamente a Google Drive cuando se use `gdrive` o `gdrive-central` como proveedor de almacenamiento.
+* **Limpieza de Errores en Tiempo de Carga (ReferenceError):** Se eliminaron declaraciones redundantes y erróneas en `dashboard.js` de funciones locales no definidas, previniendo fallos críticos de script al cargarse la página.
+
 ---
 
 ## Verificación
 
 1. **Compilación Continua:**
-   Ejecutamos con éxito `npm run build`, transformando los 33 submódulos de JS y generando el bundle final en `dist/` sin ningún tipo de error de importación o sintaxis.
-2. **Eliminación de Fugas:**
-   Comprobamos que las peticiones al endpoint `/api/gdrive-token` ya no entregan llaves y devuelven el error de seguridad esperado.
+   Ejecutamos con éxito `npm run build`, compilando todos los módulos y generando el bundle final en `dist/assets/index-LZa2A7mv.js` sin errores de compilador.
+2. **Prueba de Carga en Entorno de Validación (Node.js/JSDOM):**
+   Ejecutamos `node scratch/test_bundle.js` para asegurar que el bundle se carga sin ReferenceErrors y que el ruteo de inicio de `showAppView` se ejecuta correctamente.
+3. **Despliegue Completo en Vercel:**
+   Los cambios de producción se han desplegado de manera exitosa en [Production URL](https://generador-licencias.vercel.app). El flujo de inicio carga la landing page correctamente en español.
