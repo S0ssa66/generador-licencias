@@ -878,11 +878,23 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 }
 
 /* Modo exportación PDF a blanco y negro */
+.printing-pdf,
+.printing-pdf .contract-doc,
 .contract-doc.printing-pdf {
     background-color: #ffffff !important;
     color: #2c2c2e !important;
     border-top: 6px solid var(--contract-accent) !important;
 }
+.printing-pdf h1,
+.printing-pdf h2,
+.printing-pdf h3,
+.printing-pdf h4,
+.printing-pdf strong,
+.printing-pdf .contract-doc h1,
+.printing-pdf .contract-doc h2,
+.printing-pdf .contract-doc h3,
+.printing-pdf .contract-doc h4,
+.printing-pdf .contract-doc strong,
 .contract-doc.printing-pdf h1,
 .contract-doc.printing-pdf h2,
 .contract-doc.printing-pdf h3,
@@ -890,20 +902,30 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 .contract-doc.printing-pdf strong {
     color: #111112 !important;
 }
+.printing-pdf p,
+.printing-pdf li,
+.printing-pdf .contract-doc p,
+.printing-pdf .contract-doc li,
 .contract-doc.printing-pdf p,
 .contract-doc.printing-pdf li {
     color: #2c2c2e !important;
 }
+.printing-pdf blockquote,
+.printing-pdf .contract-doc blockquote,
 .contract-doc.printing-pdf blockquote {
     background-color: var(--contract-quote-bg) !important;
     color: #2c2c2e !important;
     border-left: 4px solid var(--contract-accent) !important;
 }
+.printing-pdf pre,
+.printing-pdf .contract-doc pre,
 .contract-doc.printing-pdf pre {
     background-color: #f8f9fa !important;
     color: #2c2c2e !important;
     border: 1px solid var(--contract-badge-border) !important;
 }
+.printing-pdf hr,
+.printing-pdf .contract-doc hr,
 .contract-doc.printing-pdf hr {
     border-top: 1px solid var(--contract-badge-border) !important;
 }
