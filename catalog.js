@@ -1,4 +1,5 @@
 import { 
+    auth,
     db,
     collection,
     getDocs,
@@ -54,6 +55,7 @@ export async function initBeatsDB() {
         document.getElementById('tab-filter-genre')?.addEventListener('change', renderBeatsGrid);
         document.getElementById('tab-filter-key')?.addEventListener('change', renderBeatsGrid);
         
+        initFileUploads();
         window._beatsDBEventsConfigured = true;
     }
 
@@ -65,6 +67,7 @@ export async function initBeatsDB() {
             const querySnapshot = await getDocs(colRef);
             for (const docSnap of querySnapshot.docs) {
                 const beatData = docSnap.data();
+                beatData.id = docSnap.id;
                 try {
                     const privateDocRef = doc(db, "users", window.currentUser, "beats", docSnap.id, "private", "files");
                     const privateSnap = await getDoc(privateDocRef);
@@ -424,13 +427,15 @@ export function initFileUploads() {
 
         try {
             const config = window.producerConfig || {};
-            if (config.storageProvider === 'alternative') {
+            const storageProvider = config.storageProvider || 'gdrive-central';
+
+            if (storageProvider === 'alternative') {
                 throw new Error("Preferencia de almacenamiento establecida a servidores alternativos.");
             }
 
             // Si el proveedor preferido es Firebase Storage (firebase),
             // subimos de forma nativa a Firebase Storage para evitar exponer tokens al cliente.
-            if (config.storageProvider === 'firebase') {
+            if (storageProvider === 'firebase') {
                 activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Firebase...`;
                 if (window.lucide) window.lucide.createIcons();
                 
@@ -443,6 +448,7 @@ export function initFileUploads() {
                         (snapshot) => {
                             const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
                             activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
+                            if (window.lucide) window.lucide.createIcons();
                         }, 
                         (error) => reject(error), 
                         async () => {
@@ -483,16 +489,45 @@ export function initFileUploads() {
                 return;
             }
             
-            let token;
-            if (config.storageProvider === 'gdrive-central') {
+            let downloadURL;
+            if (storageProvider === 'gdrive-central') {
                 activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Central...`;
                 if (window.lucide) window.lucide.createIcons();
-                if (typeof window.getCentralGdriveToken === 'function') {
-                    token = await window.getCentralGdriveToken();
-                } else {
-                    throw new Error("Servicio de Google Drive Central no disponible.");
+
+                const idToken = await auth.currentUser.getIdToken();
+                const sessionRes = await fetch('/api/gdrive-upload-session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        fileName: file.name,
+                        subFolder: 'Beats',
+                        contentType: file.type,
+                        producerAka: config.aka || config.name
+                    })
+                });
+                
+                if (!sessionRes.ok) {
+                    const sessionErr = await sessionRes.json();
+                    throw new Error(sessionErr.error || 'No se pudo iniciar la sesión de subida en Google Drive Central.');
                 }
+                
+                const sessionData = await sessionRes.json();
+                const uploadUrl = sessionData.uploadUrl;
+                
+                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... 0%`;
+                if (window.lucide) window.lucide.createIcons();
+
+                const resJson = await uploadFileToResumableSessionWithProgress(file, uploadUrl, (progress) => {
+                    activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
+                    if (window.lucide) window.lucide.createIcons();
+                });
+                
+                downloadURL = `${window.location.origin}/api/proxy-audio?id=${resJson.id}`;
             } else {
+                let token;
                 activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Drive...`;
                 if (window.lucide) window.lucide.createIcons();
                 if (typeof window.getGdriveToken === 'function') {
@@ -500,22 +535,22 @@ export function initFileUploads() {
                 } else {
                     throw new Error("Google Drive Token Helper personal no disponible.");
                 }
+                
+                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo a Drive...`;
+                
+                const folderName = `${config.aka || config.name || 'BEATSS'} Licencias`;
+                if (typeof window.getOrCreateDriveFolder !== 'function') {
+                    throw new Error("Google Drive Folder Helper no disponible.");
+                }
+                const rootId = await window.getOrCreateDriveFolder(token, folderName);
+                const beatsFolderId = await window.getOrCreateDriveFolder(token, 'Beats', rootId);
+     
+                downloadURL = await uploadFileToDriveWithProgress(file, token, beatsFolderId, (progress) => {
+                    activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
+                    if (window.lucide) window.lucide.createIcons();
+                });
             }
-            
-            activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo a Drive...`;
-            
-            const folderName = `${config.aka || config.name || 'BEATSS'} Licencias`;
-            
-            if (typeof window.getOrCreateDriveFolder !== 'function') {
-                throw new Error("Google Drive Folder Helper no disponible.");
-            }
-            const rootId = await window.getOrCreateDriveFolder(token, folderName);
-            const beatsFolderId = await window.getOrCreateDriveFolder(token, 'Beats', rootId);
- 
-            const downloadURL = await uploadFileToDriveWithProgress(file, token, beatsFolderId, (progress) => {
-                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
-            });
- 
+
             const targetInput = document.getElementById(activeUploadTarget);
             if (targetInput) {
                 targetInput.value = downloadURL;
@@ -645,6 +680,39 @@ export function updateClearButtonsVisibility() {
     });
 }
 
+export async function uploadFileToResumableSessionWithProgress(file, uploadUrl, onProgress) {
+    return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+
+        xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                if (onProgress) onProgress(percent);
+            }
+        });
+
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState === 4) {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const resJson = JSON.parse(xhr.responseText);
+                        resolve(resJson);
+                    } catch (err) {
+                        reject(new Error("Error parseando respuesta de Google Drive: " + err.message));
+                    }
+                } else {
+                    reject(new Error(`Error de subida a Google Drive (HTTP ${xhr.status}): ${xhr.responseText}`));
+                }
+            }
+        };
+
+        xhr.send(file);
+    });
+}
+window.uploadFileToResumableSessionWithProgress = uploadFileToResumableSessionWithProgress;
+
 export async function uploadFileToDriveWithProgress(file, token, folderId, onProgress) {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -725,6 +793,54 @@ export async function uploadFileToDriveWithProgress(file, token, folderId, onPro
 }
 
 export async function uploadAudioToAlternativeCloud(file) {
+    // 1. Intentar con PixelDrain (Directo y con CORS)
+    try {
+        console.log('Subiendo audio a PixelDrain...');
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+
+        const response = await fetch('https://pixeldrain.com/api/file', {
+            method: 'POST',
+            body: formData,
+            credentials: 'omit'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                console.log('Subido audio a PixelDrain con éxito ID:', data.id);
+                return `https://pixeldrain.com/api/file/${data.id}`;
+            }
+        }
+    } catch (e) {
+        console.error('Error al subir audio a PixelDrain:', e);
+    }
+
+    // 2. Intentar con tmpfiles.org (Directo y con CORS)
+    try {
+        console.log('Subiendo audio a tmpfiles.org...');
+        const formData = new FormData();
+        formData.append('file', file, file.name);
+
+        const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.status === 'success') {
+                const viewerUrl = data.data.url;
+                const downloadUrl = viewerUrl.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
+                console.log('Subido audio a tmpfiles.org con éxito:', downloadUrl);
+                return downloadUrl;
+            }
+        }
+    } catch (e) {
+        console.error('Error al subir audio a tmpfiles.org:', e);
+    }
+
+    // 3. Intentar con GoFile (Página de descarga)
     try {
         console.log('Subiendo audio a GoFile...');
         const serverResponse = await fetch('https://api.gofile.io/getServer');
@@ -755,28 +871,7 @@ export async function uploadAudioToAlternativeCloud(file) {
         console.error('Error al subir audio a GoFile:', e);
     }
 
-    try {
-        console.log('Subiendo audio a PixelDrain...');
-        const formData = new FormData();
-        formData.append('file', file, file.name);
-
-        const response = await fetch('https://pixeldrain.com/api/file', {
-            method: 'POST',
-            body: formData,
-            credentials: 'omit'
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-                console.log('Subido audio a PixelDrain con éxito ID:', data.id);
-                return `https://pixeldrain.com/api/file/${data.id}`;
-            }
-        }
-    } catch (e) {
-        console.error('Error al subir audio a PixelDrain:', e);
-    }
-
+    // 4. Intentar con file.io (Un solo uso)
     try {
         console.log('Subiendo audio a file.io...');
         const formData = new FormData();
@@ -796,29 +891,6 @@ export async function uploadAudioToAlternativeCloud(file) {
         }
     } catch (e) {
         console.error('Error al subir audio a file.io:', e);
-    }
-
-    try {
-        console.log('Subiendo audio a tmpfiles.org...');
-        const formData = new FormData();
-        formData.append('file', file, file.name);
-
-        const response = await fetch('https://tmpfiles.org/api/v1/upload', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.status === 'success') {
-                const viewerUrl = data.data.url;
-                const downloadUrl = viewerUrl.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
-                console.log('Subido audio a tmpfiles.org con éxito:', downloadUrl);
-                return downloadUrl;
-            }
-        }
-    } catch (e) {
-        console.error('Error al subir audio a tmpfiles.org:', e);
     }
 
     throw new Error('No se pudo subir el archivo de audio a ningún servidor de almacenamiento alternativo.');
@@ -887,6 +959,18 @@ export function renderBeatsGrid() {
     if (countLabel) countLabel.textContent = filtered.length;
     
     document.getElementById('tab-stats-total').textContent = window.localBeats.length;
+
+    const mp3Count = window.localBeats.filter(b => b.mp3 && b.mp3.trim() !== '').length;
+    const wavCount = window.localBeats.filter(b => b.wav && b.wav.trim() !== '').length;
+    const stemsCount = window.localBeats.filter(b => b.stems && b.stems.trim() !== '').length;
+
+    const mp3El = document.getElementById('tab-stats-mp3');
+    const wavEl = document.getElementById('tab-stats-wav');
+    const stemsEl = document.getElementById('tab-stats-stems');
+
+    if (mp3El) mp3El.textContent = mp3Count;
+    if (wavEl) wavEl.textContent = wavCount;
+    if (stemsEl) stemsEl.textContent = stemsCount;
 
     if (filtered.length === 0) {
         gridContainer.innerHTML = '';

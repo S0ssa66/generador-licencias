@@ -1933,27 +1933,7 @@ async function linkGoogleAccountForLogin() {
 
 // Obtener token de acceso para la cuenta central de Google Drive de Sossa
 async function getCentralGdriveToken() {
-    const cachedToken = sessionStorage.getItem('gdrive_central_access_token');
-    const expiry = parseInt(sessionStorage.getItem('gdrive_central_token_expiry') || '0', 10);
-    if (cachedToken && Date.now() < expiry - 60000) return cachedToken;
-
-    try {
-        const idToken = await auth.currentUser.getIdToken();
-        const res = await fetch('/api/gdrive-token', {
-            headers: { 'Authorization': `Bearer ${idToken}` }
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-            sessionStorage.setItem('gdrive_central_access_token', data.accessToken);
-            sessionStorage.setItem('gdrive_central_token_expiry', String(Date.now() + data.expiresIn * 1000));
-            return data.accessToken;
-        } else {
-            throw new Error(data.error || 'Error al obtener token central');
-        }
-    } catch (e) {
-        console.error('Error en getCentralGdriveToken:', e);
-        throw new Error('No se pudo autenticar con el Google Drive de la plataforma: ' + e.message);
-    }
+    throw new Error("getCentralGdriveToken está deshabilitado por motivos de seguridad.");
 }
 window.getCentralGdriveToken = getCentralGdriveToken;
 
@@ -2120,7 +2100,54 @@ async function uploadPDFToCloud(base64DataUri, filename) {
         }
     }
     
-    // 1. Intentar con GoFile (Recomendado, sin límites de descarga)
+    // 1. Intentar con PixelDrain (Limpio, sin cookies ni credenciales locales para evitar 401)
+    try {
+        console.log('Subiendo a PixelDrain...');
+        const formData = new FormData();
+        formData.append('file', blob, filename);
+
+        const response = await fetch('https://pixeldrain.com/api/file', {
+            method: 'POST',
+            body: formData,
+            credentials: 'omit'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                console.log('Subido a PixelDrain con éxito ID:', data.id);
+                return `https://pixeldrain.com/api/file/${data.id}`;
+            }
+        }
+    } catch (e) {
+        console.error('Error al subir a PixelDrain:', e);
+    }
+
+    // 2. Intentar con tmpfiles.org (Directo y con CORS)
+    try {
+        console.log('Subiendo a tmpfiles.org...');
+        const formData = new FormData();
+        formData.append('file', blob, filename);
+
+        const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.status === 'success') {
+                const viewerUrl = data.data.url;
+                const downloadUrl = viewerUrl.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
+                console.log('Subido a tmpfiles.org con éxito:', downloadUrl);
+                return downloadUrl;
+            }
+        }
+    } catch (e) {
+        console.error('Error al subir a tmpfiles.org:', e);
+    }
+
+    // 3. Intentar con GoFile (Recomendado, sin límites de descarga)
     try {
         console.log('Subiendo a GoFile...');
         const serverResponse = await fetch('https://api.gofile.io/getServer');
@@ -2151,30 +2178,7 @@ async function uploadPDFToCloud(base64DataUri, filename) {
         console.error('Error al subir a GoFile:', e);
     }
 
-    // 2. Intentar con PixelDrain (Limpio, sin cookies ni credenciales locales para evitar 401)
-    try {
-        console.log('Subiendo a PixelDrain...');
-        const formData = new FormData();
-        formData.append('file', blob, filename);
-
-        const response = await fetch('https://pixeldrain.com/api/file', {
-            method: 'POST',
-            body: formData,
-            credentials: 'omit'
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-                console.log('Subido a PixelDrain con éxito ID:', data.id);
-                return `https://pixeldrain.com/api/file/${data.id}`;
-            }
-        }
-    } catch (e) {
-        console.error('Error al subir a PixelDrain:', e);
-    }
-
-    // 3. Intentar con file.io (1 sola descarga, pero muy fiable)
+    // 4. Intentar con file.io (1 sola descarga, pero muy fiable)
     try {
         console.log('Subiendo a file.io...');
         const formData = new FormData();
@@ -2194,30 +2198,6 @@ async function uploadPDFToCloud(base64DataUri, filename) {
         }
     } catch (e) {
         console.error('Error al subir a file.io:', e);
-    }
-
-    // 4. Intentar con tmpfiles.org
-    try {
-        console.log('Subiendo a tmpfiles.org...');
-        const formData = new FormData();
-        formData.append('file', blob, filename);
-
-        const response = await fetch('https://tmpfiles.org/api/v1/upload', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.status === 'success') {
-                const viewerUrl = data.data.url;
-                const downloadUrl = viewerUrl.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
-                console.log('Subido a tmpfiles.org con éxito:', downloadUrl);
-                return downloadUrl;
-            }
-        }
-    } catch (e) {
-        console.error('Error al subir a tmpfiles.org:', e);
     }
 
     throw new Error('No se pudo subir el PDF del contrato a ningún servidor de almacenamiento temporal.');

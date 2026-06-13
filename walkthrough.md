@@ -43,6 +43,10 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
 * **Reversión de Tablas de Metadatos**: Se retiraron las tablas estructuradas de Markdown en la sección "Información General del Documento" de todas las plantillas en [config.js](file:///Users/sossa/IA/generador-licencias/config.js), volviendo al formato limpio de lista con viñetas originales.
 * **Reversión del Sello de Pago en Firmas**: Se removió el bloque de sello de pago con bordes discontinuos en el lateral derecho de las firmas en [editor.js](file:///Users/sossa/IA/generador-licencias/editor.js) cuando no se requiere la firma del comprador, restaurando la alineación y el espacio limpio original.
 
+### 7. 📊 Corrección de Estadísticas del Catálogo de Beats
+* **Cálculo y Renderizado Dinámico:** Se implementó la lógica en [catalog.js](file:///Users/sossa/IA/generador-licencias/catalog.js) dentro de `renderBeatsGrid` para calcular los contadores dinámicos `Total Beats`, `Con MP3`, `Con WAV` y `Con Stems` basándose en el arreglo global de beats del usuario (`window.localBeats`).
+* **Visualización de Métricas:** Ahora la interfaz de administración del catálogo muestra correctamente los contadores de archivos subidos en lugar de mostrar siempre `0` para MP3, WAV y Stems.
+
 ---
 
 ## Verificación

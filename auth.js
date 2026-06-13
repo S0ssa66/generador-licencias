@@ -190,20 +190,28 @@ export function initAuthAndApp() {
         sessionStorage.removeItem('beatss_manual_login');
     }
 
-    // Desactivar y desregistrar todos los Service Workers para evitar problemas de caché
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then((registrations) => {
-            for (let registration of registrations) {
-                registration.unregister().then(() => {
+    // Desactivar y desregistrar todos los Service Workers para evitar problemas de caché (solo una vez)
+    if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_cleaned')) {
+        const swPromise = navigator.serviceWorker.getRegistrations().then((registrations) => {
+            const promises = registrations.map(registration => {
+                return registration.unregister().then(() => {
                     console.log('🗑️ Service Worker desregistrado.');
                 });
-            }
-        });
-        if (window.caches) {
-            caches.keys().then((keys) => {
-                keys.forEach(key => caches.delete(key));
             });
-        }
+            return Promise.all(promises);
+        });
+
+        const cachePromise = window.caches ? caches.keys().then((keys) => {
+            return Promise.all(keys.map(key => caches.delete(key))).then(() => {
+                console.log('🗑️ Caches de Service Worker limpiados.');
+            });
+        }) : Promise.resolve();
+
+        Promise.all([swPromise, cachePromise]).then(() => {
+            localStorage.setItem('beatss_sw_cleaned', 'true');
+        }).catch(err => {
+            console.error('Error durante la limpieza del Service Worker:', err);
+        });
     }
 
     // Capturar código de referido si viene en la URL
@@ -258,6 +266,11 @@ export function initAuthAndApp() {
 
     // Escuchar el estado de autenticación de Firebase
     onAuthStateChanged(auth, async (user) => {
+        if (window.isLoggingOut) {
+            console.log("onAuthStateChanged: Omitiendo actualización del DOM por cierre de sesión activo.");
+            return;
+        }
+
         if (user) {
             window.currentUser = user.uid;
             window.currentUserIsAdmin = (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com');

@@ -430,7 +430,7 @@ let producerConfig = {
     emailjsTemplateId: "",
     emailjsPublicKey: "",
     gdriveClientId: "216966055009-03rjdnq87uh3h15e3qfglp2pnmos9t5k.apps.googleusercontent.com",
-    storageProvider: "firebase"
+    storageProvider: "gdrive-central"
 };
 window.producerConfig = producerConfig;
 
@@ -933,7 +933,7 @@ async function loadProducerConfig() {
                     emailjsPublicKey: "",
                     emailjsPublicKey: "",
                     gdriveClientId: "",
-                    storageProvider: "firebase"
+                    storageProvider: "gdrive-central"
                 };
             } else if (currentEmail.toLowerCase() === 'masterjuego25@gmail.com') {
                 producerConfig = {
@@ -955,7 +955,7 @@ async function loadProducerConfig() {
                     emailjsTemplateId: "",
                     emailjsPublicKey: "",
                     gdriveClientId: "216966055009-03rjdnq87uh3h15e3qfglp2pnmos9t5k.apps.googleusercontent.com",
-                    storageProvider: "firebase"
+                    storageProvider: "gdrive-central"
                 };
             } else {
                 // Nuevo productor (7-Day Pro Trial)
@@ -980,7 +980,7 @@ async function loadProducerConfig() {
                     emailjsTemplateId: "",
                     emailjsPublicKey: "",
                     gdriveClientId: "",
-                    storageProvider: "firebase",
+                    storageProvider: "gdrive-central",
                     plan: 'pro',
                     expirationPro: sevenDaysLater.toISOString(),
                     trialStartedAt: now.toISOString()
@@ -1136,7 +1136,7 @@ async function loadProducerConfig() {
     }
 
     if (document.getElementById('cfg-storage-provider')) {
-        document.getElementById('cfg-storage-provider').value = producerConfig.storageProvider || "firebase";
+        document.getElementById('cfg-storage-provider').value = producerConfig.storageProvider || "gdrive-central";
     }
     if (document.getElementById('cfg-contract-color')) {
         document.getElementById('cfg-contract-color').value = producerConfig.contractColor || "default";
@@ -2466,6 +2466,10 @@ function setupEventListeners() {
                 window._salesUnsubscribe();
                 window._salesUnsubscribe = null;
             }
+            
+            // Indicar que estamos cerrando sesión para omitir actualizaciones del DOM
+            window.isLoggingOut = true;
+            
             signOut(auth).then(() => {
                 localStorage.removeItem('active_user');
                 console.log("Sesión de Firebase cerrada con éxito.");

@@ -3,8 +3,41 @@
 
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import crypto from 'crypto';
 
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://generador-licencias.vercel.app';
+const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY || process.env.FIREBASE_PRIVATE_KEY || 'default_fallback_secret';
+
+function getSignedProxyUrl(rawUrl, host) {
+    if (!rawUrl) return '';
+    let fileId = '';
+    
+    try {
+        if (rawUrl.includes('id=')) {
+            const urlObj = new URL(rawUrl, 'https://localhost');
+            fileId = urlObj.searchParams.get('id');
+        } else if (rawUrl.includes('drive.google.com')) {
+            const parts = rawUrl.split('/d/');
+            if (parts.length > 1) {
+                fileId = parts[1].split('/')[0];
+            }
+        } else {
+            fileId = rawUrl;
+        }
+    } catch (e) {
+        fileId = rawUrl;
+    }
+    
+    if (!fileId) return rawUrl;
+    
+    const expires = Math.floor(Date.now() / 1000) + 86400 * 7; // 7 días
+    const dataToSign = `${fileId}:${expires}`;
+    const signature = crypto.createHmac('sha256', SIGNING_SECRET).update(dataToSign).digest('hex');
+    
+    const baseUrl = host ? `https://${host}` : ALLOWED_ORIGIN;
+    return `${baseUrl}/api/proxy-audio?id=${fileId}&expires=${expires}&signature=${signature}`;
+}
+
 
 // Inicializar Firebase Admin (solo una vez)
 function initFirebaseAdmin() {
@@ -188,8 +221,11 @@ export default async function handler(req, res) {
 
             // Generar enlaces de descarga para este item
             const mp3 = beatData.mp3 || "";
-            const wav = wavLink || beatData.wav || "";
-            const stems = stemsLink || beatData.stems || "";
+            const rawWav = wavLink || beatData.wav || "";
+            const rawStems = stemsLink || beatData.stems || "";
+            
+            const wav = getSignedProxyUrl(rawWav, req.headers.host);
+            const stems = getSignedProxyUrl(rawStems, req.headers.host);
 
             let linksHtml = `<h4>Instrumental: ${item.beatName} (${typeLabels[item.licenseType] || item.licenseType})</h4><ul>`;
             if (mp3) linksHtml += `<li><strong>MP3 (320kbps):</strong> <a href="${mp3}">Descargar MP3</a></li>`;
@@ -202,7 +238,7 @@ export default async function handler(req, res) {
             if (stems && item.licenseType !== 'basic' && item.licenseType !== 'premium') {
                 linksHtml += `<li><strong>Stems (Pistas Separadas):</strong> <a href="${stems}">Descargar Pistas</a></li>`;
             }
-            linksHtml += `</ul>`;
+            linksHtml += `</ul>`;`;
 
             deliveredItems.push({
                 beatName: item.beatName,
