@@ -2623,7 +2623,7 @@ function renderSalesTable() {
 
         return `
             ${offerMessageRow}
-            <tr style="${isOffer ? 'border-left: 3px solid #f59e0b;' : (isNew ? 'border-left: 3px solid #ef4444;' : '')}">
+            <tr onclick="if(!event.target.closest('button') && !event.target.closest('a')) window.openSaleDetailsModal('${pay.id}')" style="cursor: pointer; ${isOffer ? 'border-left: 3px solid #f59e0b;' : (isNew ? 'border-left: 3px solid #ef4444;' : '')}">
                 <td data-label="Fecha / ID">
                     <div style="font-weight: 600;">${dateStr}${newBadge}</div>
                     <div style="font-size: 10px; color: #8a91a6;">ID: ${pay.reference}</div>
@@ -2673,6 +2673,124 @@ function renderSalesStats() {
     document.getElementById('sales-stat-approved').textContent = approved;
     document.getElementById('sales-stat-revenue').textContent = `$${revenue.toFixed(2)}`;
 }
+
+window.openSaleDetailsModal = async function(paymentId) {
+    console.log("👁️ Abriendo modal de detalles de venta para:", paymentId);
+    
+    // Obtener elementos del modal
+    const modal = document.getElementById('admin-sale-details-modal');
+    const beatArtwork = document.getElementById('admin-sale-beat-artwork');
+    const beatArtworkIcon = document.getElementById('admin-sale-beat-artwork-icon');
+    const beatNameEl = document.getElementById('admin-sale-beat-name');
+    const beatMetaEl = document.getElementById('admin-sale-beat-meta');
+    const orderRefEl = document.getElementById('admin-sale-order-ref');
+    
+    const buyerNameEl = document.getElementById('admin-sale-buyer-name');
+    const buyerEmailEl = document.getElementById('admin-sale-buyer-email');
+    const buyerPhoneEl = document.getElementById('admin-sale-buyer-phone');
+    const buyerDniEl = document.getElementById('admin-sale-buyer-dni');
+    const buyerLocEl = document.getElementById('admin-sale-buyer-loc');
+    const timestampEl = document.getElementById('admin-sale-timestamp');
+    
+    const historyList = document.getElementById('admin-sale-history-list');
+
+    // Inicializar estado de carga
+    beatArtwork.style.display = 'none';
+    beatArtworkIcon.style.display = 'block';
+    beatNameEl.textContent = 'Cargando...';
+    beatMetaEl.textContent = '';
+    orderRefEl.textContent = '';
+    
+    buyerNameEl.textContent = '...';
+    buyerEmailEl.textContent = '...';
+    buyerPhoneEl.textContent = '...';
+    buyerDniEl.textContent = '...';
+    buyerLocEl.textContent = '...';
+    timestampEl.textContent = '...';
+    
+    historyList.innerHTML = '<div class="text-on-surface-variant/40 italic">⏳ Cargando historial de descargas...</div>';
+
+    modal.style.display = 'flex';
+    if (window.safeCreateIcons) window.safeCreateIcons();
+
+    try {
+        const response = await fetch(`/api/get-order-downloads?id=${paymentId}`);
+        if (!response.ok) {
+            throw new Error("No se pudo obtener el historial de descargas.");
+        }
+        const data = await response.json();
+        
+        const payment = data.payment;
+        const beat = data.beat;
+        const downloads = data.downloads;
+
+        // Poblar beat details
+        if (beat.artwork) {
+            beatArtwork.src = beat.artwork;
+            beatArtwork.style.display = 'block';
+            beatArtworkIcon.style.display = 'none';
+        } else {
+            beatArtwork.style.display = 'none';
+            beatArtworkIcon.style.display = 'block';
+        }
+        beatNameEl.textContent = beat.name;
+        
+        const priceFormatted = parseFloat(payment.finalPrice !== undefined ? payment.finalPrice : payment.price).toFixed(2);
+        const licenseLabels = {
+            basic: 'Licencia Básica',
+            premium: 'Licencia Premium',
+            premium_plus: 'Licencia Premium Plus',
+            unlimited_flp: 'Licencia Ilimitada + FLP',
+            unlimited: 'Licencia Ilimitada',
+            exclusive: 'Licencia Exclusiva'
+        };
+        const licenseLabel = licenseLabels[payment.licenseType] || payment.licenseType;
+        beatMetaEl.textContent = `Pista • ${licenseLabel} • $${priceFormatted}`;
+        orderRefEl.textContent = `Ref: ${payment.reference} | ID: ${payment.id}`;
+
+        // Poblar buyer details
+        buyerNameEl.textContent = payment.buyerName || 'N/A';
+        buyerEmailEl.textContent = payment.buyerEmail || 'N/A';
+        buyerPhoneEl.textContent = payment.buyerPhone || '-';
+        buyerDniEl.textContent = payment.buyerDni || payment.buyerId || '-';
+        
+        const city = payment.buyerCity || '';
+        const country = payment.buyerCountry || '';
+        buyerLocEl.textContent = (city && country) ? `${city}, ${country}` : (city || country || '-');
+        
+        timestampEl.textContent = payment.timestamp ? new Date(payment.timestamp).toLocaleString() : 'N/A';
+
+        // Render downloads history
+        if (!downloads || downloads.length === 0) {
+            historyList.innerHTML = '<div class="text-on-surface-variant/40 italic">Ninguna descarga registrada aún.</div>';
+        } else {
+            historyList.innerHTML = downloads.map(log => {
+                const timestampFormatted = log.timestamp ? log.timestamp.split('.')[0] + 'Z' : 'N/A';
+                const fileTypeLabel = {
+                    mp3: 'MP3',
+                    wav: 'WAV',
+                    stems: 'Stems',
+                    license: 'Licencia PDF'
+                }[log.fileType] || log.fileType;
+                
+                return `<div class="flex justify-between items-center py-1 border-b border-white/[0.02]">
+                    <span>${timestampFormatted} [${log.ip}]</span>
+                    <span class="text-neon-blue font-semibold uppercase text-[9px] bg-neon-blue/10 px-2 py-0.5 rounded border border-neon-blue/20">${fileTypeLabel}</span>
+                </div>`;
+            }).join('');
+        }
+
+        if (window.safeCreateIcons) window.safeCreateIcons();
+
+    } catch (err) {
+        console.error("Error al cargar detalles de auditoría de descargas:", err);
+        beatNameEl.textContent = 'Error';
+        beatMetaEl.textContent = 'No se pudo recuperar la información de descargas.';
+        historyList.innerHTML = '<div class="text-red-500 italic">Error al cargar historial.</div>';
+    }
+};
+
+window.openSaleDetailsModal = openSaleDetailsModal;
 
 window.approveBeatSale = async function(paymentId) {
     const payment = window.storePayments.find(p => p.id === paymentId);

@@ -3054,6 +3054,9 @@ window.showAppView = function(viewName, params = null, pushState = true) {
     const publicStore = document.getElementById('public-store-view');
     if (publicStore) publicStore.style.display = 'none';
     
+    const buyerDownload = document.getElementById('buyer-download-view');
+    if (buyerDownload) buyerDownload.style.display = 'none';
+    
     const loginModal = document.getElementById('login-modal');
     if (loginModal) loginModal.style.display = 'none';
 
@@ -3101,6 +3104,22 @@ window.showAppView = function(viewName, params = null, pushState = true) {
             }
         }
     }
+    else if (viewName === 'download') {
+        window.isGlobalCatalogMode = false;
+        window.isPublicStoreMode = false;
+        
+        if (buyerDownload) buyerDownload.style.display = 'block';
+        
+        const paymentId = params?.paymentId;
+        if (paymentId) {
+            if (pushState) {
+                history.pushState({ view: 'download', paymentId: paymentId }, '', '?download=' + encodeURIComponent(paymentId));
+            }
+            if (typeof window.loadBuyerDownloadPage === 'function') {
+                window.loadBuyerDownloadPage(paymentId);
+            }
+        }
+    }
 };
 
 // Escuchar el evento de recarga del dashboard de ventas en el panel
@@ -3109,8 +3128,11 @@ document.getElementById('btn-sales-refresh')?.addEventListener('click', loadSale
 function handleInitialRouting() {
     checkPayphoneRedirectResult();
     const urlParams = new URLSearchParams(window.location.search);
+    const downloadId = urlParams.get('download') || urlParams.get('order');
     const producerAka = urlParams.get('p') || urlParams.get('producer');
-    if (producerAka) {
+    if (downloadId) {
+        window.showAppView('download', { paymentId: downloadId }, false);
+    } else if (producerAka) {
         window.showAppView('store', { producer: producerAka }, false);
     } else if (urlParams.has('catalogo') || window.location.hash === '#catalogo') {
         window.showAppView('catalog', null, false);
@@ -3122,8 +3144,11 @@ function handleInitialRouting() {
 // Escuchar popstate para navegación del navegador (Atrás/Adelante)
 window.addEventListener('popstate', (event) => {
     const urlParams = new URLSearchParams(window.location.search);
+    const downloadId = urlParams.get('download') || urlParams.get('order');
     const producerAka = urlParams.get('p') || urlParams.get('producer');
-    if (producerAka) {
+    if (downloadId) {
+        window.showAppView('download', { paymentId: downloadId }, false);
+    } else if (producerAka) {
         window.showAppView('store', { producer: producerAka }, false);
     } else if (urlParams.has('catalogo')) {
         window.showAppView('catalog', null, false);

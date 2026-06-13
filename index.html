@@ -3249,6 +3249,78 @@
     </div>
 
     <!-- ======================================================= -->
+    <!-- PORTAL DE DESCARGAS DEL COMPRADOR                       -->
+    <!-- ======================================================= -->
+    <div id="buyer-download-view" style="display: none;" class="min-h-screen bg-[radial-gradient(circle_at_top,_#0b0e14_0%,_#05070a_100%)] text-on-surface font-body-md py-12 px-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- Header de Marca -->
+            <div class="flex flex-col items-center mb-8 gap-4">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-electric-purple to-neon-blue flex items-center justify-center p-0.5 shadow-lg border border-white/10 overflow-hidden">
+                    <img id="buyer-download-logo" src="" class="w-full h-full rounded-full object-cover" style="display: none;">
+                    <div id="buyer-download-logo-icon" class="text-white"><i data-lucide="music" class="w-8 h-8"></i></div>
+                </div>
+                <h1 id="buyer-download-producer-name" class="text-xl font-bold tracking-tighter bg-gradient-to-r from-white to-on-surface-variant bg-clip-text text-transparent">Productor</h1>
+            </div>
+
+            <!-- Card de Descargas -->
+            <div class="bg-white/[0.02] border border-white/5 p-8 rounded-2xl shadow-2xl backdrop-blur-md relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-[300px] h-[300px] bg-[radial-gradient(circle,_rgba(0,204,255,0.05)_0%,_transparent_70%)] pointer-events-none"></div>
+                
+                <!-- Estado / Mensaje de Pago Pendiente -->
+                <div id="buyer-download-pending-banner" class="mb-6 p-4 rounded-xl border border-dashed border-amber-500/20 bg-amber-500/5 text-amber-400 text-sm" style="display: none;">
+                    <div class="flex items-center gap-2 font-bold mb-1">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500"></i>
+                        <span>Verificación de Pago Pendiente</span>
+                    </div>
+                    Tu pago por transferencia o comprobante está siendo verificado. Los archivos estarán disponibles para descarga en cuanto el productor apruebe la transacción.
+                </div>
+
+                <div class="flex flex-wrap md:flex-nowrap gap-6 items-center justify-between border-b border-white/5 pb-8 mb-8">
+                    <!-- Detalle del Beat -->
+                    <div class="flex gap-4 items-center">
+                        <div class="w-20 h-20 rounded-xl bg-white/5 border border-white/10 shadow-lg overflow-hidden flex items-center justify-center">
+                            <img id="buyer-download-artwork" src="" class="w-full h-full object-cover" style="display: none;">
+                            <div id="buyer-download-artwork-icon" class="text-on-surface-variant"><i data-lucide="music" class="w-8 h-8"></i></div>
+                        </div>
+                        <div>
+                            <h2 id="buyer-download-beat-name" class="text-xl font-bold text-white mb-1">Beat</h2>
+                            <p id="buyer-download-beat-meta" class="text-sm text-on-surface-variant">Licencia • Plan • Precio</p>
+                            <p id="buyer-download-order-ref" class="text-xs text-on-surface-variant/60 font-mono mt-1">Ref: </p>
+                        </div>
+                    </div>
+
+                    <!-- Botones de Descarga -->
+                    <div class="flex flex-col gap-3 min-w-[240px] w-full md:w-auto" id="buyer-download-buttons-container">
+                        <!-- Botones renderizados dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- Historial de Descargas -->
+                <div>
+                    <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                        <i data-lucide="history" class="w-5 h-5 text-neon-blue"></i>
+                        <span>Historial de descargas</span>
+                    </h3>
+                    <div id="buyer-download-history-list" class="space-y-2 font-mono text-[11px] text-on-surface-variant bg-black/20 p-4 rounded-xl max-h-[250px] overflow-y-auto border border-white/5">
+                        <div class="text-on-surface-variant/40 italic">Ninguna descarga registrada aún.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-6">
+                <button onclick="window.showAppView('home')" class="text-xs text-on-surface-variant hover:text-white transition-all flex items-center justify-center gap-1 mx-auto bg-white/5 px-4 py-2 rounded-full border border-white/10">
+                    <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Volver a la Tienda
+                </button>
+            </div>
+        </div>
+
+        <!-- Contenedor Invisible para Compilación y Exportación PDF -->
+        <div id="buyer-contract-compilation-container" style="display: none; position: absolute; left: -9999px;">
+            <div id="buyer-rendered-contract-content" class="contract-doc"></div>
+        </div>
+    </div>
+
+    <!-- ======================================================= -->
     <!-- TIENDA PÚBLICA DE BEATS (STOREFRONT INDIVIDUAL)         -->
     <!-- ======================================================= -->
     <div id="public-store-view" style="display: none;" class="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,_#0b0e14_0%,_#05070a_100%)] text-on-surface font-body-md">
@@ -3635,6 +3707,60 @@
             </div>
             <div class="modal-body receipt-printable-area" id="receipt-modal-body" style="padding: 32px; box-sizing: border-box; text-align: left; background: #0c0e14; color: #e2e8f0; font-family: system-ui, sans-serif; overflow-y: auto; max-height: 70vh;">
                 <!-- Rellenado dinámicamente por JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Detalles de Venta y Auditoría de Descargas (Sossa Admin) -->
+    <div class="modal-backdrop" id="admin-sale-details-modal" style="display: none; z-index: 99999; background: rgba(11, 14, 20, 0.85); backdrop-filter: blur(10px);">
+        <div class="modal" style="max-width: 650px; width: 95%; background: #0c0e14; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; max-height: 90vh;">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 20px 24px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
+                <h2 style="font-size: 18px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <i data-lucide="activity" style="color: var(--accent, #00ccff);"></i> <span>Detalle de la Venta y Descargas</span>
+                </h2>
+                <button class="icon-btn" onclick="document.getElementById('admin-sale-details-modal').style.display='none';" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: #fff; cursor: pointer;"><i data-lucide="x"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 24px; box-sizing: border-box; overflow-y: auto; text-align: left;">
+                
+                <!-- Beat Detail Block -->
+                <div class="flex gap-4 items-center mb-6 border-b border-white/5 pb-6">
+                    <div class="w-16 h-16 rounded-xl bg-white/5 border border-white/10 shadow-lg overflow-hidden flex items-center justify-center">
+                        <img id="admin-sale-beat-artwork" src="" class="w-full h-full object-cover" style="display: none;">
+                        <div id="admin-sale-beat-artwork-icon" class="text-on-surface-variant"><i data-lucide="music" class="w-6 h-6"></i></div>
+                    </div>
+                    <div>
+                        <h3 id="admin-sale-beat-name" class="text-base font-bold text-white mb-0.5">Beat Name</h3>
+                        <p id="admin-sale-beat-meta" class="text-xs text-on-surface-variant">Licencia • Plan • Precio</p>
+                        <p id="admin-sale-order-ref" class="text-[10px] text-on-surface-variant/60 font-mono mt-1">Ref: </p>
+                    </div>
+                </div>
+
+                <!-- Buyer / Client Block -->
+                <div class="mb-6 bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                    <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2">Datos del Comprador</h4>
+                    <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
+                        <div><span class="text-on-surface-variant">Nombre:</span> <strong id="admin-sale-buyer-name" class="text-white"></strong></div>
+                        <div><span class="text-on-surface-variant">Email:</span> <strong id="admin-sale-buyer-email" class="text-white"></strong></div>
+                        <div><span class="text-on-surface-variant">WhatsApp:</span> <strong id="admin-sale-buyer-phone" class="text-white">-</strong></div>
+                        <div><span class="text-on-surface-variant">DNI/ID:</span> <strong id="admin-sale-buyer-dni" class="text-white">-</strong></div>
+                        <div><span class="text-on-surface-variant">Ubicación:</span> <strong id="admin-sale-buyer-loc" class="text-white">-</strong></div>
+                        <div><span class="text-on-surface-variant">Fecha Compra:</span> <strong id="admin-sale-timestamp" class="text-white"></strong></div>
+                    </div>
+                </div>
+
+                <!-- Historial de Descargas -->
+                <div>
+                    <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <i data-lucide="history" class="w-4 h-4 text-neon-blue"></i> Historial de descargas
+                    </h4>
+                    <div id="admin-sale-history-list" class="space-y-2 font-mono text-[11px] text-on-surface-variant bg-black/20 p-4 rounded-xl border border-white/5 max-h-[200px] overflow-y-auto">
+                        <div class="text-on-surface-variant/40 italic">Ninguna descarga registrada aún.</div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display: flex; justify-content: flex-end; box-sizing: border-box;">
+                <button class="btn btn-secondary" onclick="document.getElementById('admin-sale-details-modal').style.display='none';" style="height: 38px; padding: 0 24px; font-size: 13px;">Cerrar</button>
             </div>
         </div>
     </div>

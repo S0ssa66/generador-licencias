@@ -2954,3 +2954,222 @@ window.resetProgressStep = resetProgressStep;
 window.updateProgressStep = updateProgressStep;
 window.showProgressSuccess = showProgressSuccess;
 window.showProgressError = showProgressError;
+
+export function compileContractData(orderData, producerConfig, templateId = 'licencia_uso', lang = 'es') {
+    const type = orderData.licenseType || 'basic';
+    const isExclusive = type === 'exclusive';
+    const defaultConfig = LICENSE_CONFIGS[type] || LICENSE_CONFIGS.basic;
+
+    const beatName = orderData.beatName || "[Nombre del Beat]";
+    const beatBpm = orderData.beatBpm || "";
+    const beatKey = orderData.beatKey || "";
+    const buyerName = orderData.buyerName || "[Nombre del Comprador]";
+    const buyerId = orderData.buyerDni || orderData.buyerId || "[Cédula/DNI]";
+    const buyerEmail = orderData.buyerEmail || "[Correo del Comprador]";
+    const buyerPhone = orderData.buyerPhone || "";
+    const buyerCity = orderData.buyerCity || "[Ciudad]";
+    const buyerCountry = orderData.buyerCountry || "[País]";
+    const value = parseFloat(orderData.finalPrice !== undefined ? orderData.finalPrice : (orderData.price || defaultConfig.price)) || 0;
+    const refCode = orderData.reference || "[Código Referencia]";
+    const effectiveDate = orderData.timestamp ? orderData.timestamp.split('T')[0] : new Date().toISOString().split('T')[0];
+    const dateFormatted = (lang === 'en' ? formatFechaIngles(effectiveDate) : formatFechaEspanol(effectiveDate)) || "[Fecha]";
+    const celebrationPlace = orderData.celebrationPlace || (buyerCity ? `${buyerCity}, ${buyerCountry}` : "[Lugar de Celebración]");
+    const paymentMethod = orderData.method || "PayPal";
+    
+    let displayPaymentMethod = paymentMethod;
+    if (lang === 'en') {
+        const paymentTranslations = {
+            'PayPal': 'PayPal',
+            'Transferencia Bancaria': 'Bank Transfer',
+            'Tarjeta de Crédito': 'Credit Card',
+            'Western Union': 'Western Union',
+            'Otro': 'Other',
+            'deuna': 'Deuna!',
+            'payphone': 'PayPhone'
+        };
+        displayPaymentMethod = paymentTranslations[paymentMethod] || paymentMethod;
+    }
+    
+    const formats = orderData.formats || defaultConfig.formats || "[Formatos]";
+    const streams = orderData.streams || defaultConfig.streams || "[Límite Streams]";
+    const physical = orderData.physical || defaultConfig.physical || "[Límite Físicas]";
+    const videos = orderData.videos || defaultConfig.videos || "[Videos]";
+    const videoDuration = orderData.videoDuration || defaultConfig.videoDuration || "[Duración Video]";
+    const years = orderData.years || defaultConfig.years || "[Años de Vigencia]";
+    const terminationFee = orderData.terminationFee || '1000';
+    const writerShare = orderData.writerShare !== undefined ? orderData.writerShare : (defaultConfig.writerShare || 50);
+    const producerShare = orderData.producerShare !== undefined ? orderData.producerShare : (defaultConfig.producerShare || 50);
+    const credits = orderData.credits || `Prod. por ${producerConfig.aka || 'Sossa'}`;
+    const contentIdProhibited = orderData.contentIdProhibited !== undefined 
+        ? orderData.contentIdProhibited 
+        : (defaultConfig.contentId !== undefined ? !defaultConfig.contentId : true);
+
+    const valueLetters = lang === 'en' ? numberToEnglishWords(value) : numeroALetras(value);
+    const tierName = LICENSE_CONFIGS[type] 
+        ? (lang === 'en' ? (type === 'exclusive' ? 'Exclusive' : type === 'premium' ? 'Premium' : type === 'premium_plus' ? 'Premium Plus' : type === 'unlimited_flp' ? 'Unlimited' : 'Basic') : LICENSE_CONFIGS[type].name)
+        : (lang === 'en' ? 'Custom' : 'Personalizada');
+
+    const cityParts = celebrationPlace.split(',');
+    const cityOfJurisdiction = cityParts[0].trim();
+
+    let activeTemplate = activeTemplates.find(t => t.id === templateId);
+    if (!activeTemplate) {
+        activeTemplate = DEFAULT_TEMPLATES.find(t => t.id === templateId) || DEFAULT_TEMPLATES[0];
+    }
+
+    const clause_rescission_rules = isExclusive 
+        ? (lang === 'en' 
+            ? 'Once the agreement expires or becomes perpetual, the rights will be maintained as stipulated without the need for renewal.'
+            : 'Una vez vencido o perpetuo el acuerdo, los derechos se mantendrán según lo estipulado sin necesidad de renovación.')
+        : (lang === 'en'
+            ? 'Consequently, this license will automatically expire upon the completion of the term stipulated, counted from the date stipulated in the header.'
+            : 'En consecuencia, esta licencia expirará automáticamente al cumplirse el término estipulado contados a partir de la fecha estipulada en el encabezado.');
+
+    const clause_content_id_rules = contentIdProhibited
+        ? (lang === 'en'
+            ? 'The Licensee is **strictly prohibited** from registering the Beat or the New Song in any automated content identification system (such as *Content ID*, *Facebook Rights Manager*, *Identifyy*, or automatic digital distribution tools like TuneCore, CD Baby, or DistroKid that index audio fingerprints). This measure is mandatory to protect the rights of other legitimate licensees of the same Beat. The original material has already been indexed and preventively protected by the Producer. Failure to comply with this rule will result in the immediate revocation of the license.'
+            : 'El Licenciatario tiene **estrictamente prohibido** registrar el Beat o la Nueva Canción en cualquier plataforma de identificación automatizada de contenido (*Content ID*, *Facebook Rights Manager*, *Identifyy*, o herramientas de distribución digital automáticas como TuneCore, CD Baby o DistroKid que indexen huellas de audio). Esta medida es obligatoria para resguardar los derechos de otros licenciatarios legítimos del mismo Beat. El material original ya ha sido indexado y protegido preventivamente por el Productor. El incumplimiento de esta norma provocará la revocación inmediata de la licencia.')
+        : (lang === 'en'
+            ? 'As this is an Exclusive License, the Licensee is authorized to execute standard digital distribution and use the Content ID system in a controlled manner on their final version (the New Song), provided they strictly refrain from claiming exclusive ownership or monetization rights over the instrumental track itself, and they are obligated to whitelist any pre-existing legitimate non-exclusive derivative songs created by other licensees prior to this agreement.'
+            : 'Al tratarse de una Licencia Exclusiva, el Licenciatario está facultado para la distribución digital estándar y el uso del sistema Content ID de manera controlada sobre su versión final (la Nueva Canción) siempre y cuando se abstenga estrictamente de reclamar la propiedad exclusiva o la monetización de la pista instrumental en sí misma, quedando obligado a incluir en lista blanca (*whitelist*) cualquier canción derivada legítima no exclusiva preexistente creada por otros licenciatarios antes de este acuerdo.');
+
+    const vars = {
+        producer_name: producerConfig.name || "Joao David Dominguez",
+        producer_aka: producerConfig.aka || "Sossa",
+        producer_id: producerConfig.id || "0803743111",
+        producer_email: producerConfig.email || "masterjuego25@gmail.com",
+        producer_phone: producerConfig.phone || "",
+        producer_pro: producerConfig.pro || "BMI",
+        producer_ipi: producerConfig.ipi || "01170943066",
+        producer_publisher: producerConfig.publisher || "Songtrust",
+        buyer_name: buyerName,
+        buyer_id: buyerId,
+        buyer_email: buyerEmail,
+        buyer_phone: buyerPhone,
+        buyer_city: buyerCity,
+        buyer_country: buyerCountry,
+        beat_name: beatName,
+        beat_bpm: beatBpm ? '(' + beatBpm + ' BPM)' : '',
+        beat_key: beatKey,
+        license_value: value.toFixed(2),
+        license_value_letters: valueLetters,
+        ref_code: refCode,
+        effective_date: dateFormatted,
+        celebration_place: celebrationPlace,
+        payment_method: displayPaymentMethod,
+        jurisdiction_city: cityOfJurisdiction,
+        current_year: effectiveDate ? new Date(effectiveDate + 'T00:00:00').getFullYear() : new Date().getFullYear(),
+        clause_formats: formats,
+        clause_streams: streams,
+        clause_physical: physical,
+        clause_videos: videos,
+        clause_video_duration: videoDuration,
+        clause_years: years,
+        clause_termination_fee: terminationFee,
+        clause_writer_share: writerShare,
+        clause_producer_share: producerShare,
+        clause_credits: credits,
+        license_type: tierName,
+        license_exclusivity: isExclusive ? (lang === 'en' ? 'Exclusive' : 'Exclusiva') : (lang === 'en' ? 'Non-Exclusive' : 'No Exclusiva'),
+        license_exclusivity_lower: isExclusive ? (lang === 'en' ? 'exclusive' : 'exclusiva') : (lang === 'en' ? 'non-exclusive' : 'no exclusiva'),
+        clause_rescission_rules: clause_rescission_rules,
+        clause_content_id_rules: clause_content_id_rules
+    };
+
+    const templateMarkdown = (lang === 'en' && activeTemplate.markdown_en) ? activeTemplate.markdown_en : activeTemplate.markdown;
+    let md = templateMarkdown.replace(/\{\{(\w+)\}\}/g, (match, tag) => {
+        const tagLower = tag.toLowerCase();
+        return tagLower in vars ? vars[tagLower] : match;
+    });
+
+    const t = TRANSLATIONS[lang] || {};
+    const isMonarco = (producerConfig.aka && producerConfig.aka.toLowerCase().includes('monarco'));
+    const isSossa = (producerConfig.aka && producerConfig.aka.toLowerCase().includes('sossa'));
+    const hasCustomLogo = producerConfig.logoBase64;
+    const logoHtml = hasCustomLogo
+            ? `<div style="text-align: center; margin-bottom: 15px;"><img src="${producerConfig.logoBase64}" alt="Logo" class="doc-logo" style="max-height: 80px; width: auto; margin: 0 auto; display: block;"></div>`
+            : (isMonarco
+                ? `<div style="font-size: 24px; font-weight: bold; color: #111112; padding: 10px; text-align: center; font-family: 'Montserrat', sans-serif;">CG MONARCO</div>` 
+                : (isSossa 
+                    ? `<div style="text-align: center; margin-bottom: 15px;"><img src="/logo-sossa.png" alt="SOSSA Logo" class="doc-logo" style="max-height: 80px; width: auto; margin: 0 auto; display: block;"></div>`
+                    : `<div style="font-size: 24px; font-weight: bold; color: #111112; padding: 10px; text-align: center; font-family: 'Montserrat', sans-serif;">${(producerConfig.aka || 'PRODUCTOR').toUpperCase()}</div>`
+                  )
+              );
+
+    const bodyHtml = parseMarkdownToHTML(md);
+    const needsBuyerSignature = (templateId === 'split_sheet' || templateId === 'coproduccion' || isExclusive);
+    
+    let signatureRoleL = t.producerRole || 'El Licenciante (Productor)';
+    let signatureNameL = producerConfig.name;
+    let signatureIdL = `${t.buyerId || 'Identificación/RUT:'} ${producerConfig.id || "0803743111"}`;
+    let signatureAkaL = `AKA: ${producerConfig.aka}`;
+
+    let signatureRoleR = t.buyerRole || 'El Licenciatario (Cliente)';
+    let signatureNameR = buyerName;
+    let signatureIdR = `${t.buyerId || 'Identificación/RUT:'} ${buyerId}`;
+    let signatureAkaR = ``;
+
+    let signatureLeftHtml = `
+        <div class="signature-block">
+            <div class="signature-line-container">
+                ${producerConfig.signatureBase64 ? `<img src="${producerConfig.signatureBase64}" class="signature-img" style="max-height: 70px; margin: 0 auto;">` : ''}
+            </div>
+            <div class="signature-name">${signatureNameL}</div>
+            <div class="signature-role">${signatureRoleL}</div>
+            <div class="signature-meta">${signatureAkaL}</div>
+            <div class="signature-meta">${signatureIdL}</div>
+        </div>
+    `;
+
+    let signatureRightHtml = '';
+    if (needsBuyerSignature) {
+        signatureRightHtml = `
+            <div class="signature-block">
+                <div class="signature-line-container"></div>
+                <div class="signature-name">${signatureNameR}</div>
+                <div class="signature-role">${signatureRoleR}</div>
+                <div class="signature-meta">${signatureAkaR}</div>
+                <div class="signature-meta">${signatureIdR}</div>
+            </div>
+        `;
+    } else {
+        const formattedDate = new Date(effectiveDate + 'T12:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-ES', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+        signatureRightHtml = `
+            <div class="signature-block" style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 15px; background: rgba(16, 185, 129, 0.02); text-align: center; page-break-inside: avoid; break-inside: avoid;">
+                <div style="font-size: 18px; color: #10b981; font-weight: 800; margin-bottom: 5px;">✓ Aceptado vía Pago</div>
+                <div style="font-size: 11px; color: #636366; line-height: 1.4;">
+                    Este acuerdo no requiere firma física de conformidad con los términos y condiciones de la plataforma y el pago registrado de manera electrónica el <strong>${formattedDate}</strong> bajo la referencia: <strong class="font-data-mono">${refCode}</strong>.
+                </div>
+            </div>
+        `;
+    }
+
+    const html = `
+        <div class="contract-doc-header">
+            ${logoHtml}
+            <h3>${activeTemplate.name ? activeTemplate.name.toUpperCase() : 'CONTRATO DE LICENCIA DE USO'}</h3>
+            <div class="doc-header-meta">
+                <span><strong>${t.refCodeLabel || 'REF:'}</strong> <span class="font-data-mono">${refCode}</span></span>
+                <span style="margin: 0 10px;">|</span>
+                <span><strong>${t.dateLabel || 'Fecha:'}</strong> ${dateFormatted}</span>
+            </div>
+        </div>
+        
+        <div class="contract-doc-body">
+            ${bodyHtml}
+        </div>
+
+        <div class="contract-closure" style="page-break-inside: avoid !important; break-inside: avoid !important;">
+            <div class="contract-signatures-wrapper">
+                ${signatureLeftHtml}
+                ${signatureRightHtml}
+            </div>
+        </div>
+    `;
+
+    return { md, html, needsBuyerSignature };
+}
+
+window.compileContractData = compileContractData;

@@ -13,6 +13,8 @@
 - [x] Paso 11: Añadir carátula predeterminada global (Vincular inputs UI, guardar/cargar base64 de Firestore, recortar y centrar imagen a cuadrado de 500x500 px, y desplegar en Vercel)
 - [x] Paso 12: Corregir el funcionamiento del botón Marketplace en la página de inicio (Vincular evento click de landing-btn-nav-catalog para redirigir a showAppView('catalog') y prevenir comportamiento por defecto)
 - [x] Paso 13: Reparar los botones de comprar ahora y añadir al carrito en el modal de checkout para el marketplace global (Implementar findBeatById para buscar tanto en storeBeats como en globalBeats y reemplazar búsquedas directas)
+- [x] Paso 14: Garantizar la inicialización del checkout modal desde cualquier flujo (Llamar a setupStoreCheckout() al abrir el modal en openBeatCheckoutModal() para asegurar la vinculación de escuchadores cuando se accede de forma directa por url a ?catalogo=1)
+
 
 
 

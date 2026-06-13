@@ -152,14 +152,24 @@ export function updateCartUI() {
 }
 
 export function findBeatById(beatId) {
+    console.log("🔍 findBeatById called with ID:", beatId);
+    console.log("  window.storeBeats:", window.storeBeats ? window.storeBeats.map(b => b.id) : "undefined");
+    console.log("  window.globalBeats:", window.globalBeats ? window.globalBeats.map(b => b.id) : "undefined");
     if (window.storeBeats) {
         const b = window.storeBeats.find(x => x.id === beatId);
-        if (b) return b;
+        if (b) {
+            console.log("  Found in storeBeats:", b);
+            return b;
+        }
     }
     if (window.globalBeats) {
         const b = window.globalBeats.find(x => x.id === beatId);
-        if (b) return b;
+        if (b) {
+            console.log("  Found in globalBeats:", b);
+            return b;
+        }
     }
+    console.warn("  Beat NOT found for ID:", beatId);
     return null;
 }
 
@@ -642,6 +652,8 @@ export function updateExclusivePrice(val) {
 }
 
 export function openBeatCheckoutModal(beatId) {
+    console.log("🚀 openBeatCheckoutModal called with ID:", beatId);
+    setupStoreCheckout();
     checkoutSelectedBeatId = beatId;
     checkoutSelectedLicense = 'basic';
     checkoutCurrentStep = 1;
@@ -1528,8 +1540,12 @@ export function setupStoreCheckout() {
 
     const cartAddBtn = document.getElementById('btn-checkout-add-to-cart');
     if (cartAddBtn) cartAddBtn.addEventListener('click', () => {
+        console.log("🛒 click: btn-checkout-add-to-cart. ID:", checkoutSelectedBeatId);
         const beat = findBeatById(checkoutSelectedBeatId);
-        if (!beat) return;
+        if (!beat) {
+            console.warn("  Cannot add to cart: Beat not found for ID:", checkoutSelectedBeatId);
+            return;
+        }
         const price = window.getCheckoutPrice();
         const producerId = window.storeProducerUid;
         const producerName = window.storeProducerConfig.aka || window.storeProducerConfig.name || 'Productor';
@@ -1549,8 +1565,12 @@ export function setupStoreCheckout() {
 
     const buyNowBtn = document.getElementById('btn-checkout-buy-now');
     if (buyNowBtn) buyNowBtn.addEventListener('click', () => {
+        console.log("⚡ click: btn-checkout-buy-now. ID:", checkoutSelectedBeatId);
         const beat = findBeatById(checkoutSelectedBeatId);
-        if (!beat) return;
+        if (!beat) {
+            console.warn("  Cannot buy now: Beat not found for ID:", checkoutSelectedBeatId);
+            return;
+        }
         const price = window.getCheckoutPrice();
         const producerId = window.storeProducerUid;
         const producerName = window.storeProducerConfig.aka || window.storeProducerConfig.name || 'Productor';
@@ -1836,6 +1856,7 @@ export async function submitBeatPurchasePayment(method, reference = '') {
             if (nextBtn) nextBtn.innerHTML = '⏳ Guardando pedido...';
         }
 
+        let redirectPaymentId = null;
         for (const item of itemsToProcess) {
             const orderData = {
                 type: 'beat_purchase',
@@ -1862,6 +1883,9 @@ export async function submitBeatPurchasePayment(method, reference = '') {
             };
 
             const docRef = await addDoc(colRef, orderData);
+            if (!redirectPaymentId) {
+                redirectPaymentId = docRef.id;
+            }
             
             if (method === 'paypal') {
                 await autoDeliverBeatSale(docRef.id, orderData);
@@ -1881,6 +1905,11 @@ export async function submitBeatPurchasePayment(method, reference = '') {
         storePaymentReceiptBase64 = null;
 
         document.getElementById('beat-checkout-modal').style.display = 'none';
+        
+        // Redirigir al portal de descargas
+        if (redirectPaymentId) {
+            window.showAppView('download', { paymentId: redirectPaymentId });
+        }
         if (nextBtn) {
             nextBtn.disabled = false;
             nextBtn.innerHTML = originalText;
@@ -2057,6 +2086,7 @@ export async function checkPayphoneRedirectResult() {
                 window.storeProducerUid = state.producerId;
                 
                 const colRef = collection(db, "payments");
+                let redirectPaymentId = null;
                 for (const item of state.items) {
                     const orderData = {
                         type: 'beat_purchase',
@@ -2083,6 +2113,9 @@ export async function checkPayphoneRedirectResult() {
                     };
                     
                     const docRef = await addDoc(colRef, orderData);
+                    if (!redirectPaymentId) {
+                        redirectPaymentId = docRef.id;
+                    }
                     await autoDeliverBeatSale(docRef.id, orderData);
                 }
                 
@@ -2096,7 +2129,7 @@ export async function checkPayphoneRedirectResult() {
                     <div style="font-size: 60px; color: #4ade80; text-align: center; margin-bottom: 10px;">✓</div>
                     <div style="font-size: 20px; font-weight: 700; color: #4ade80; text-align: center; margin-bottom: 8px;">¡Pago aprobado con éxito!</div>
                     <div style="font-size: 14px; color: #cdd; text-align: center; max-width: 320px; line-height: 1.4; margin-bottom: 20px; padding: 0 20px;">Tus archivos y contratos de licencia han sido enviados automáticamente a tu correo electrónico.</div>
-                    <button onclick="window.closePayphoneOverlay()" style="padding: 12px 28px; background: #00ccff; border: none; border-radius: 8px; color: #000; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 204, 255, 0.3);">Entendido</button>
+                    <button onclick="window.closePayphoneOverlay(); if ('${redirectPaymentId}') window.showAppView('download', { paymentId: '${redirectPaymentId}' });" style="padding: 12px 28px; background: #00ccff; border: none; border-radius: 8px; color: #000; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 204, 255, 0.3);">Descargar Archivos</button>
                 `;
             } else {
                 throw new Error(result.message || 'La transacción no fue aprobada');
@@ -2124,4 +2157,257 @@ export function closePayphoneOverlay() {
 
 window.checkPayphoneRedirectResult = checkPayphoneRedirectResult;
 window.closePayphoneOverlay = closePayphoneOverlay;
+
+export async function loadBuyerDownloadPage(paymentId) {
+    console.log("📥 Cargando portal de descargas para el pago:", paymentId);
+    
+    // Elementos de la interfaz
+    const bannerPending = document.getElementById('buyer-download-pending-banner');
+    const logoImg = document.getElementById('buyer-download-logo');
+    const logoIcon = document.getElementById('buyer-download-logo-icon');
+    const producerNameEl = document.getElementById('buyer-download-producer-name');
+    const beatArtwork = document.getElementById('buyer-download-artwork');
+    const beatArtworkIcon = document.getElementById('buyer-download-artwork-icon');
+    const beatNameEl = document.getElementById('buyer-download-beat-name');
+    const beatMetaEl = document.getElementById('buyer-download-beat-meta');
+    const orderRefEl = document.getElementById('buyer-download-order-ref');
+    const buttonsContainer = document.getElementById('buyer-download-buttons-container');
+    const historyList = document.getElementById('buyer-download-history-list');
+
+    if (typeof window.showToast === 'function') {
+        window.showToast("Cargando tus descargas...");
+    }
+
+    try {
+        // Consultar el endpoint de descargas públicas de la orden
+        const response = await fetch(`/api/get-order-downloads?id=${paymentId}`);
+        if (!response.ok) {
+            throw new Error("No se pudo recuperar la información del pedido.");
+        }
+        
+        const data = await response.json();
+        console.log("Datos de la orden cargados con éxito:", data);
+
+        const payment = data.payment;
+        const beat = data.beat;
+        const producer = data.producer;
+        const signedLinks = data.signedLinks;
+
+        // 1. Mostrar/ocultar banner de pago pendiente
+        if (payment.status === 'pending') {
+            bannerPending.style.display = 'block';
+        } else {
+            bannerPending.style.display = 'none';
+        }
+
+        // 2. Poblar datos del productor
+        if (producer.logoBase64) {
+            logoImg.src = producer.logoBase64;
+            logoImg.style.display = 'block';
+            logoIcon.style.display = 'none';
+        } else {
+            logoImg.style.display = 'none';
+            logoIcon.style.display = 'block';
+        }
+        producerNameEl.textContent = producer.aka || producer.name || "Productor";
+
+        // 3. Poblar datos del beat
+        if (beat.artwork) {
+            beatArtwork.src = beat.artwork;
+            beatArtwork.style.display = 'block';
+            beatArtworkIcon.style.display = 'none';
+        } else {
+            beatArtwork.style.display = 'none';
+            beatArtworkIcon.style.display = 'block';
+        }
+        beatNameEl.textContent = beat.name;
+        
+        const priceFormatted = parseFloat(payment.finalPrice !== undefined ? payment.finalPrice : payment.price).toFixed(2);
+        const licenseLabels = {
+            basic: 'Licencia Básica',
+            premium: 'Licencia Premium',
+            premium_plus: 'Licencia Premium Plus',
+            unlimited_flp: 'Licencia Ilimitada + FLP',
+            unlimited: 'Licencia Ilimitada',
+            exclusive: 'Licencia Exclusiva'
+        };
+        const licenseLabel = licenseLabels[payment.licenseType] || payment.licenseType;
+        beatMetaEl.textContent = `Pista • ${licenseLabel} • $${priceFormatted}`;
+        orderRefEl.textContent = `Ref: ${payment.reference} | ID: ${payment.id}`;
+
+        // 4. Renderizar botones de descarga
+        buttonsContainer.innerHTML = '';
+        
+        // Botón: Descargar licencia (PDF generado client-side)
+        const btnLicense = document.createElement('button');
+        btnLicense.className = 'w-full bg-white/5 border border-white/10 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-2';
+        btnLicense.innerHTML = '<i data-lucide="file-text" class="w-4 h-4"></i> Descargar licencia';
+        if (payment.status === 'pending') {
+            btnLicense.disabled = true;
+            btnLicense.style.opacity = '0.5';
+            btnLicense.style.cursor = 'not-allowed';
+        } else {
+            btnLicense.onclick = async () => {
+                const originalHtml = btnLicense.innerHTML;
+                btnLicense.disabled = true;
+                btnLicense.innerHTML = '<i data-lucide="loader" class="animate-spin w-4 h-4"></i> Generando PDF...';
+                if (window.safeCreateIcons) window.safeCreateIcons();
+                
+                try {
+                    // Cargar librería html2pdf.js si es necesario
+                    if (typeof html2pdf === 'undefined') {
+                        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+                    }
+                    
+                    // Compilar el contrato
+                    const compiled = window.compileContractData(payment, producer, 'licencia_uso', window.currentLang || 'es');
+                    const element = document.getElementById('buyer-rendered-contract-content');
+                    element.innerHTML = compiled.html;
+                    element.classList.add('printing-pdf');
+
+                    const opt = {
+                        margin:       [15, 20, 15, 20],
+                        filename:     `Licencia_${payment.licenseType.toUpperCase()}_${payment.reference}.pdf`,
+                        image:        { type: 'jpeg', quality: 0.98 },
+                        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+                        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
+                        pagebreak:    { mode: ['css', 'legacy'] }
+                    };
+
+                    await html2pdf().from(element).set(opt).save();
+
+                    // Registrar descarga en Firestore a través del endpoint
+                    await fetch('/api/log-download', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ paymentId, fileType: 'license' })
+                    });
+                    
+                    // Recargar el historial
+                    setTimeout(() => refreshDownloadHistory(paymentId), 2000);
+                } catch (err) {
+                    console.error("Error al generar PDF o registrar descarga:", err);
+                    if (typeof window.showToast === 'function') {
+                        window.showToast("Error al descargar la licencia.", true);
+                    }
+                } finally {
+                    btnLicense.innerHTML = originalHtml;
+                    btnLicense.disabled = false;
+                    if (window.safeCreateIcons) window.safeCreateIcons();
+                }
+            };
+        }
+        buttonsContainer.appendChild(btnLicense);
+
+        // Ayudante para descargar y recargar
+        const triggerAudioDownload = (url, fileType) => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.click();
+            setTimeout(() => refreshDownloadHistory(paymentId), 3000);
+        };
+
+        // Botón: MP3
+        if (signedLinks.mp3) {
+            const btnMp3 = document.createElement('button');
+            btnMp3.className = 'w-full bg-white/5 border border-white/10 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-2';
+            btnMp3.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i> Descargar archivo MP3';
+            if (payment.status === 'pending') {
+                btnMp3.disabled = true;
+                btnMp3.style.opacity = '0.5';
+                btnMp3.style.cursor = 'not-allowed';
+            } else {
+                btnMp3.onclick = () => triggerAudioDownload(signedLinks.mp3, 'mp3');
+            }
+            buttonsContainer.appendChild(btnMp3);
+        }
+
+        // Botón: WAV
+        if (signedLinks.wav) {
+            const btnWav = document.createElement('button');
+            btnWav.className = 'w-full bg-white/5 border border-white/10 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-2';
+            btnWav.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i> Descargar archivo WAV';
+            if (payment.status === 'pending') {
+                btnWav.disabled = true;
+                btnWav.style.opacity = '0.5';
+                btnWav.style.cursor = 'not-allowed';
+            } else {
+                btnWav.onclick = () => triggerAudioDownload(signedLinks.wav, 'wav');
+            }
+            buttonsContainer.appendChild(btnWav);
+        }
+
+        // Botón: Stems
+        if (signedLinks.stems) {
+            const btnStems = document.createElement('button');
+            btnStems.className = 'w-full bg-white/5 border border-white/10 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-2';
+            btnStems.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i> Descargar archivo Stems';
+            if (payment.status === 'pending') {
+                btnStems.disabled = true;
+                btnStems.style.opacity = '0.5';
+                btnStems.style.cursor = 'not-allowed';
+            } else {
+                btnStems.onclick = () => triggerAudioDownload(signedLinks.stems, 'stems');
+            }
+            buttonsContainer.appendChild(btnStems);
+        }
+
+        // 5. Historial de descargas
+        renderDownloadLogs(data.downloads, historyList);
+
+        if (window.safeCreateIcons) {
+            window.safeCreateIcons();
+        }
+
+    } catch (error) {
+        console.error("Fallo al cargar la página de descargas:", error);
+        if (typeof window.showToast === 'function') {
+            window.showToast("Error al cargar la orden de compra.", true);
+        }
+        beatNameEl.textContent = "Error";
+        beatMetaEl.textContent = "No pudimos validar tu enlace de descarga.";
+        buttonsContainer.innerHTML = '';
+    }
+}
+
+async function refreshDownloadHistory(paymentId) {
+    try {
+        const response = await fetch(`/api/get-order-downloads?id=${paymentId}`);
+        if (response.ok) {
+            const data = await response.json();
+            const historyList = document.getElementById('buyer-download-history-list');
+            if (historyList) {
+                renderDownloadLogs(data.downloads, historyList);
+            }
+        }
+    } catch (e) {
+        console.warn("Fallo al refrescar historial de descargas:", e);
+    }
+}
+
+function renderDownloadLogs(downloads, container) {
+    if (!downloads || downloads.length === 0) {
+        container.innerHTML = '<div class="text-on-surface-variant/40 italic">Ninguna descarga registrada aún.</div>';
+        return;
+    }
+
+    container.innerHTML = downloads.map(log => {
+        const timestampFormatted = log.timestamp ? log.timestamp.split('.')[0] + 'Z' : 'N/A';
+        const fileTypeLabel = {
+            mp3: 'MP3',
+            wav: 'WAV',
+            stems: 'Stems',
+            license: 'Licencia PDF'
+        }[log.fileType] || log.fileType;
+        
+        return `<div class="flex justify-between items-center py-1 border-b border-white/[0.02]">
+            <span>${timestampFormatted} [${log.ip}]</span>
+            <span class="text-neon-blue font-semibold uppercase text-[9px] bg-neon-blue/10 px-2 py-0.5 rounded border border-neon-blue/20">${fileTypeLabel}</span>
+        </div>`;
+    }).join('');
+}
+
+window.loadBuyerDownloadPage = loadBuyerDownloadPage;
+window.refreshDownloadHistory = refreshDownloadHistory;
 

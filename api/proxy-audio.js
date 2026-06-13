@@ -23,10 +23,21 @@ function initFirebaseAdmin() {
 }
 
 // Verificar la firma de descarga del comprador
-function verifySignature(fileId, expires, signature) {
+function verifySignature(fileId, expires, signature, paymentId, fileType) {
     if (!expires || !signature) return false;
     const now = Math.floor(Date.now() / 1000);
     if (now > parseInt(expires, 10)) return false; // Expirado
+
+    // Intentar firma reforzada con paymentId y fileType
+    const dataToSignWithAll = `${fileId}:${expires}:${paymentId || ''}:${fileType || ''}`;
+    const expectedSignatureWithAll = crypto.createHmac('sha256', SIGNING_SECRET).update(dataToSignWithAll).digest('hex');
+    try {
+        if (crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignatureWithAll))) {
+            return true;
+        }
+    } catch (e) {}
+
+    // Intentar firma antigua por retrocompatibilidad
     const dataToSign = `${fileId}:${expires}`;
     const expectedSignature = crypto.createHmac('sha256', SIGNING_SECRET).update(dataToSign).digest('hex');
     try {
@@ -80,6 +91,8 @@ export default async function handler(req, res) {
     const fileId = req.query.id;
     const expires = req.query.expires;
     const signature = req.query.signature;
+    const paymentId = req.query.paymentId;
+    const fileType = req.query.fileType;
 
     if (!fileId) {
         return res.status(400).json({ error: 'Falta el ID del archivo.' });
@@ -88,8 +101,27 @@ export default async function handler(req, res) {
     let isAuthorized = false;
 
     // 1. Validar firma digital de descarga (Compradores)
-    if (verifySignature(fileId, expires, signature)) {
+    if (verifySignature(fileId, expires, signature, paymentId, fileType)) {
         isAuthorized = true;
+        
+        // Registrar descarga en Firestore
+        if (paymentId) {
+            try {
+                initFirebaseAdmin();
+                const db = getFirestore();
+                const forwardedFor = req.headers['x-forwarded-for'];
+                const clientIp = forwardedFor ? forwardedFor : (req.socket.remoteAddress || 'Unknown');
+                
+                await db.collection('payments').doc(paymentId).collection('downloads').add({
+                    timestamp: new Date().toISOString(),
+                    ip: clientIp,
+                    fileType: fileType || 'audio'
+                });
+                console.log(`Download logged for payment ${paymentId}: ${fileType || 'audio'} from IP ${clientIp}`);
+            } catch (dbErr) {
+                console.error('Error logging download to Firestore:', dbErr.message);
+            }
+        }
     }
 
     // 2. Validar si es el productor propietario o administrador (Autenticado)

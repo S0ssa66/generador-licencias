@@ -8,7 +8,7 @@ import crypto from 'crypto';
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://generador-licencias.vercel.app';
 const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY || process.env.FIREBASE_PRIVATE_KEY || 'default_fallback_secret';
 
-function getSignedProxyUrl(rawUrl, host) {
+function getSignedProxyUrl(rawUrl, host, paymentId, fileType) {
     if (!rawUrl) return '';
     let fileId = '';
     
@@ -31,11 +31,11 @@ function getSignedProxyUrl(rawUrl, host) {
     if (!fileId) return rawUrl;
     
     const expires = Math.floor(Date.now() / 1000) + 86400 * 7; // 7 días
-    const dataToSign = `${fileId}:${expires}`;
+    const dataToSign = `${fileId}:${expires}:${paymentId || ''}:${fileType || ''}`;
     const signature = crypto.createHmac('sha256', SIGNING_SECRET).update(dataToSign).digest('hex');
     
     const baseUrl = host ? `https://${host}` : ALLOWED_ORIGIN;
-    return `${baseUrl}/api/proxy-audio?id=${fileId}&expires=${expires}&signature=${signature}`;
+    return `${baseUrl}/api/proxy-audio?id=${fileId}&expires=${expires}&paymentId=${paymentId || ''}&fileType=${fileType || ''}&signature=${signature}`;
 }
 
 
@@ -220,25 +220,19 @@ export default async function handler(req, res) {
             await paymentRef.set(paymentData);
 
             // Generar enlaces de descarga para este item
-            const mp3 = beatData.mp3 || "";
+            const mp3 = getSignedProxyUrl(beatData.mp3 || "", req.headers.host, paymentRef.id, 'mp3');
             const rawWav = wavLink || beatData.wav || "";
             const rawStems = stemsLink || beatData.stems || "";
             
-            const wav = getSignedProxyUrl(rawWav, req.headers.host);
-            const stems = getSignedProxyUrl(rawStems, req.headers.host);
+            const wav = getSignedProxyUrl(rawWav, req.headers.host, paymentRef.id, 'wav');
+            const stems = getSignedProxyUrl(rawStems, req.headers.host, paymentRef.id, 'stems');
 
-            let linksHtml = `<h4>Instrumental: ${item.beatName} (${typeLabels[item.licenseType] || item.licenseType})</h4><ul>`;
-            if (mp3) linksHtml += `<li><strong>MP3 (320kbps):</strong> <a href="${mp3}">Descargar MP3</a></li>`;
-            
-            // WAV se incluye si no es licencia básica
-            if (wav && item.licenseType !== 'basic') {
-                linksHtml += `<li><strong>WAV (Master):</strong> <a href="${wav}">Descargar WAV</a></li>`;
-            }
-            // Stems se incluye si es superior a premium
-            if (stems && item.licenseType !== 'basic' && item.licenseType !== 'premium') {
-                linksHtml += `<li><strong>Stems (Pistas Separadas):</strong> <a href="${stems}">Descargar Pistas</a></li>`;
-            }
-            linksHtml += `</ul>`;`;
+            let linksHtml = `
+            <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #edf2f7; border-radius: 8px; background-color: #f8fafc;">
+                <h4 style="margin: 0 0 10px 0; color: #2d3748;">Instrumental: <strong>${item.beatName}</strong> (${typeLabels[item.licenseType] || item.licenseType})</h4>
+                <a href="${ALLOWED_ORIGIN}/?download=${paymentRef.id}" style="display: inline-block; padding: 10px 20px; background-color: #0055ee; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: bold; border: 1px solid #0044cc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">📥 Acceder a Descargas e Historial</a>
+            </div>
+            `;
 
             deliveredItems.push({
                 beatName: item.beatName,
