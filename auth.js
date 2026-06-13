@@ -132,6 +132,14 @@ export function setupAuthModalEvents() {
         }
     });
 
+    // Redirigir al catálogo/marketplace desde la Landing Page
+    document.getElementById('landing-btn-nav-catalog')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof window.showAppView === 'function') {
+            window.showAppView('catalog');
+        }
+    });
+
     document.getElementById('landing-btn-start')?.addEventListener('click', () => {
         const modal = document.getElementById('login-modal');
         if (modal) {

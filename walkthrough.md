@@ -52,6 +52,10 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
 * **Procesamiento en Canvas:** Al subir una imagen, esta se escala, centra y recorta automáticamente a un cuadrado perfecto de `500x500` píxeles para asegurar consistencia y calidad visual, guardándose en base64 en Firestore (`producerConfig.defaultBeatArtwork`).
 * **Visualización Inteligente:** En `checkout.js`, la función `getBeatArtwork()` prioriza esta carátula predeterminada en el primer orden de jerarquía de retorno. Esto asegura que la carátula global se propague en tiempo real a todas las vistas del catálogo (tanto el de administración como la tienda pública).
 
+### 9. 🛒 Corrección del Botón Marketplace en la Página Principal
+* **Fuga de Controlador:** Identificamos que el botón de Marketplace de la barra de navegación principal (`landing-btn-nav-catalog`) y del footer (`landing-btn-nav-catalog-2`) no tenían ningún manejador de eventos click vinculado en JavaScript, provocando que no hicieran nada al pulsarse.
+* **Vinculación Activa:** Añadimos un escuchador del evento click en [auth.js](file:///Users/sossa/IA/generador-licencias/auth.js) para interceptar el click, llamar a `e.preventDefault()` para evitar el comportamiento predeterminado de anclaje, e invocar la función de ruteo global `window.showAppView('catalog')`. Esto activa y repara automáticamente todos los botones de "VER CATÁLOGO" y "Marketplace" de la landing page.
+
 ---
 
 ## Verificación
@@ -64,3 +68,5 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
    * La opción se muestra correctamente en el panel de configuración de Sossa Admin.
    * La previsualización de la imagen cargada funciona, adaptando imágenes de cualquier proporción a un recorte cuadrado.
    * La carátula se renderiza en todos los beats en la interfaz de catálogo y tienda pública.
+   * Todos los botones de Marketplace e inicio/catálogo en la landing page redirigen ahora instantáneamente a la vista del catálogo/marketplace.
+
