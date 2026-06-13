@@ -749,19 +749,16 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 /* ==========================================================================
    VISTA DEL PAPEL (Simulación de Impresión)
    ========================================================================== */
-/* ==========================================================================
-   VISTA DEL PAPEL (Simulación de Impresión)
-   ========================================================================== */
 .paper {
-    background-color: #121520; /* Soft paper mode: dark screen preview */
-    color: #cbd5e1;
+    background-color: #ffffff; /* Soft paper mode: white screen preview */
+    color: #2c2c2e;
     width: 800px;
     margin: 0 auto;
     min-height: 1030px;
     padding: 60px 70px;
     box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
     border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--contract-badge-border);
     font-family: var(--font-sans);
     font-size: 13px;
     line-height: 1.6;
@@ -769,10 +766,10 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     position: relative;
 }
 
-/* Formateo de Contrato en Papel (Modo Oscuro en pantalla por defecto) */
+/* Formateo de Contrato en Papel (Modo Blanco en pantalla por defecto) */
 .paper h1, .paper h2, .paper h3, .paper h4,
 .contract-doc h1, .contract-doc h2, .contract-doc h3, .contract-doc h4 {
-    color: #ffffff;
+    color: #111112;
     font-weight: 600;
 }
 
@@ -783,7 +780,7 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     text-transform: uppercase;
     margin-top: 10px;
     margin-bottom: 6px;
-    color: #ffffff;
+    color: #111112;
     font-weight: 800;
 }
 
@@ -807,13 +804,13 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     text-align: left;
     margin-top: 20px;
     margin-bottom: 8px;
-    color: #e2e8f0;
+    color: #1c1c1e;
     font-weight: 700;
 }
 
 .paper p, .contract-doc p {
     margin-bottom: 12px;
-    color: #94a3b8;
+    color: #2c2c2e;
 }
 
 .paper hr, .contract-doc hr {
@@ -829,11 +826,11 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 
 .paper li, .contract-doc li {
     margin-bottom: 6px;
-    color: #94a3b8;
+    color: #2c2c2e;
 }
 
 .paper strong, .contract-doc strong {
-    color: #ffffff;
+    color: #111112;
     font-weight: 600;
 }
 
@@ -841,23 +838,23 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     border-left: 4px solid var(--contract-accent);
     padding: 12px 16px;
     font-style: italic;
-    color: #cbd5e1;
+    color: #2c2c2e;
     margin: 16px 0;
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: var(--contract-quote-bg);
     border-radius: 0 8px 8px 0;
 }
 
 /* Estilo para Markdown en papel */
 .paper pre {
-    background-color: rgba(255, 255, 255, 0.02);
-    color: #e2e8f0;
+    background-color: #f8f9fa;
+    color: #2c2c2e;
     padding: 16px;
     border-radius: 8px;
     font-family: var(--font-mono);
     font-size: 12px;
     white-space: pre-wrap;
     text-align: left;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--contract-badge-border);
     width: 100%;
     overflow-x: auto;
 }
