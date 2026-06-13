@@ -151,6 +151,18 @@ export function updateCartUI() {
     }
 }
 
+export function findBeatById(beatId) {
+    if (window.storeBeats) {
+        const b = window.storeBeats.find(x => x.id === beatId);
+        if (b) return b;
+    }
+    if (window.globalBeats) {
+        const b = window.globalBeats.find(x => x.id === beatId);
+        if (b) return b;
+    }
+    return null;
+}
+
 export function renderCartItems() {
     const container = document.getElementById('cart-items-container');
     if (!container) return;
@@ -166,7 +178,7 @@ export function renderCartItems() {
     }
     
     container.innerHTML = window.cart.map((item, index) => {
-        const beat = window.storeBeats.find(b => b.id === item.beatId) || item;
+        const beat = findBeatById(item.beatId) || item;
         const artwork = window.getBeatArtwork(beat) || window.getBeatArtwork(item);
         
         // Generar las opciones de licencia para el select
@@ -665,7 +677,7 @@ export function openBeatCheckoutModal(beatId) {
         }
 
         // Mostrar y poblar previsualización del beat individual
-        const beat = window.storeBeats.find(b => b.id === beatId) || (window.globalBeats && window.globalBeats.find(b => b.id === beatId));
+        const beat = findBeatById(beatId);
         const previewContainer = document.getElementById('checkout-single-beat-preview');
         if (previewContainer && beat) {
             previewContainer.style.display = 'flex';
@@ -1147,7 +1159,7 @@ export function renderStorePayphoneButton() {
     
     let itemsToProcess = [];
     if (checkoutSelectedBeatId) {
-        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+        const beat = findBeatById(checkoutSelectedBeatId);
         if (beat) {
             itemsToProcess.push({
                 beatId: checkoutSelectedBeatId,
@@ -1212,7 +1224,7 @@ export function getSelectedStorePaymentMethod() {
 }
 
 export async function submitExclusiveOffer() {
-    const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+    const beat = findBeatById(checkoutSelectedBeatId);
     const buyerName = document.getElementById('store-buyer-name').value.trim();
     const buyerEmail = document.getElementById('store-buyer-email').value.trim();
     const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
@@ -1295,7 +1307,7 @@ export async function submitExclusiveOffer() {
 }
 
 export function openFreeDownloadModal(beatId) {
-    const beat = window.storeBeats.find(b => b.id === beatId);
+    const beat = findBeatById(beatId);
     if (!beat) return;
 
     document.getElementById('free-download-beat-id').value = beatId;
@@ -1308,7 +1320,7 @@ export function openFreeDownloadModal(beatId) {
 
 export async function submitFreeDownloadLead() {
     const beatId = document.getElementById('free-download-beat-id').value;
-    const beat = window.storeBeats.find(b => b.id === beatId);
+    const beat = findBeatById(beatId);
     if (!beat) return;
 
     const buyerName = document.getElementById('free-buyer-name').value.trim();
@@ -1516,7 +1528,7 @@ export function setupStoreCheckout() {
 
     const cartAddBtn = document.getElementById('btn-checkout-add-to-cart');
     if (cartAddBtn) cartAddBtn.addEventListener('click', () => {
-        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+        const beat = findBeatById(checkoutSelectedBeatId);
         if (!beat) return;
         const price = window.getCheckoutPrice();
         const producerId = window.storeProducerUid;
@@ -1537,7 +1549,7 @@ export function setupStoreCheckout() {
 
     const buyNowBtn = document.getElementById('btn-checkout-buy-now');
     if (buyNowBtn) buyNowBtn.addEventListener('click', () => {
-        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+        const beat = findBeatById(checkoutSelectedBeatId);
         if (!beat) return;
         const price = window.getCheckoutPrice();
         const producerId = window.storeProducerUid;
@@ -1654,7 +1666,7 @@ export function renderStorePayPalButton(clientId) {
     let description = '';
     
     if (checkoutSelectedBeatId) {
-        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+        const beat = findBeatById(checkoutSelectedBeatId);
         description = `Licencia ${checkoutSelectedLicense.toUpperCase()} - Beat: ${beat ? beat.name : 'Desconocido'}`;
     } else {
         description = `Licencias de Beats: ${window.cart.map(item => `${item.beatName} (${item.licenseType.toUpperCase()})`).join(', ')}`;
@@ -1687,7 +1699,7 @@ export function renderStorePayPalButton(clientId) {
                     
                     let itemsToProcess = [];
                     if (checkoutSelectedBeatId) {
-                        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+                        const beat = findBeatById(checkoutSelectedBeatId);
                         itemsToProcess.push({
                             beatId: checkoutSelectedBeatId,
                             beatName: beat ? beat.name : 'Desconocido',
@@ -1775,7 +1787,7 @@ export async function submitBeatPurchasePayment(method, reference = '') {
     // Identificar los items a comprar
     let itemsToProcess = [];
     if (checkoutSelectedBeatId) {
-        const beat = window.storeBeats.find(b => b.id === checkoutSelectedBeatId);
+        const beat = findBeatById(checkoutSelectedBeatId);
         if (!beat) return;
         itemsToProcess.push({
             beatId: checkoutSelectedBeatId,

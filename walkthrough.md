@@ -56,6 +56,10 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
 * **Fuga de Controlador:** Identificamos que el botón de Marketplace de la barra de navegación principal (`landing-btn-nav-catalog`) y del footer (`landing-btn-nav-catalog-2`) no tenían ningún manejador de eventos click vinculado en JavaScript, provocando que no hicieran nada al pulsarse.
 * **Vinculación Activa:** Añadimos un escuchador del evento click en [auth.js](file:///Users/sossa/IA/generador-licencias/auth.js) para interceptar el click, llamar a `e.preventDefault()` para evitar el comportamiento predeterminado de anclaje, e invocar la función de ruteo global `window.showAppView('catalog')`. Esto activa y repara automáticamente todos los botones de "VER CATÁLOGO" y "Marketplace" de la landing page.
 
+### 10. 💳 Reparación de los Botones de Compra y Carrito en el Checkout del Marketplace
+* **Incompatibilidad del Contexto Global:** Al estar en la vista del catálogo global (Marketplace), la lista de beats se almacena en `window.globalBeats` en lugar de `window.storeBeats` (que se usa para tiendas individuales). Los botones de "Comprar Ahora", "Añadir al Carrito", "PayPal", "PayPhone", etc. realizaban búsquedas de beats directamente en `window.storeBeats.find()`, devolviendo `undefined` y cancelando la ejecución de la compra silenciosamente.
+* **Búsqueda Robusta y Cruzada (`findBeatById`):** Implementamos un ayudante centralizado `findBeatById` en [checkout.js](file:///Users/sossa/IA/generador-licencias/checkout.js) que inspecciona de forma secuencial tanto `window.storeBeats` como `window.globalBeats`. Reemplazamos las búsquedas directas en el archivo por este helper, lo que asegura que las compras directas e integraciones de pago (PayPal, PayPhone) funcionen al 100% tanto en la tienda pública del productor como en el Marketplace global de la plataforma.
+
 ---
 
 ## Verificación
@@ -69,4 +73,6 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
    * La previsualización de la imagen cargada funciona, adaptando imágenes de cualquier proporción a un recorte cuadrado.
    * La carátula se renderiza en todos los beats en la interfaz de catálogo y tienda pública.
    * Todos los botones de Marketplace e inicio/catálogo en la landing page redirigen ahora instantáneamente a la vista del catálogo/marketplace.
+   * Las acciones de "Comprar Ahora" y "Añadir al Carrito" proceden sin bloqueos al paso de facturación y pasarela en el checkout del Marketplace.
+
 
