@@ -2395,6 +2395,27 @@
                          ⚠️ Esta opción requiere el plan Elite.
                      </div>
                  </div>
+                 <!-- Carátula Predeterminada para todos los Beats -->
+                 <div class="input-group" id="cfg-default-artwork-section" style="margin-top: 16px;">
+                      <label style="display: flex; align-items: center; gap: 6px;">
+                          Carátula Predeterminada (Todos los Beats)
+                      </label>
+                      <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
+                          <input type="file" id="cfg-default-beat-artwork-file" accept="image/*" style="display: none;">
+                          <button class="btn btn-secondary" type="button" id="btn-upload-default-artwork" style="flex: 1; padding: 10px 14px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                              <i data-lucide="upload" style="width: 16px; height: 16px;"></i> Subir Carátula
+                          </button>
+                          <button class="btn" type="button" id="btn-clear-default-artwork" style="display: none; padding: 10px 14px; font-size: 13px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444;">
+                              Quitar
+                          </button>
+                      </div>
+                      <div id="default-artwork-preview-container" style="display: none; margin-top: 10px; padding: 12px; background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 8px; text-align: center;">
+                          <div style="font-size: 10px; color: #8a91a6; margin-bottom: 6px;">Vista Previa (Se adaptará a 1:1 cuadrado):</div>
+                          <div style="background-color: transparent; padding: 5px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; display: inline-block; width: 120px; height: 120px;">
+                              <img id="default-artwork-preview-img" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;" alt="Vista Previa de Carátula">
+                          </div>
+                      </div>
+                  </div>
                   <!-- Configuración de DocuSign -->
                   <hr style="border: none; border-top: 1px solid var(--border-color); margin: 8px 0;">
                   <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.8px;">Configuración de DocuSign</div>

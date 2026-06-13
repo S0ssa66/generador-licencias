@@ -47,13 +47,20 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
 * **Cálculo y Renderizado Dinámico:** Se implementó la lógica en [catalog.js](file:///Users/sossa/IA/generador-licencias/catalog.js) dentro de `renderBeatsGrid` para calcular los contadores dinámicos `Total Beats`, `Con MP3`, `Con WAV` y `Con Stems` basándose en el arreglo global de beats del usuario (`window.localBeats`).
 * **Visualización de Métricas:** Ahora la interfaz de administración del catálogo muestra correctamente los contadores de archivos subidos en lugar de mostrar siempre `0` para MP3, WAV y Stems.
 
+### 8. 🖼️ Carátula Predeterminado Global para todos los Beats
+* **Opción en Ajustes:** Añadimos un grupo de entrada en el modal de configuración de la cuenta (`index.html`) para que el productor suba/elimine una carátula global predeterminada.
+* **Procesamiento en Canvas:** Al subir una imagen, esta se escala, centra y recorta automáticamente a un cuadrado perfecto de `500x500` píxeles para asegurar consistencia y calidad visual, guardándose en base64 en Firestore (`producerConfig.defaultBeatArtwork`).
+* **Visualización Inteligente:** En `checkout.js`, la función `getBeatArtwork()` prioriza esta carátula predeterminada en el primer orden de jerarquía de retorno. Esto asegura que la carátula global se propague en tiempo real a todas las vistas del catálogo (tanto el de administración como la tienda pública).
+
 ---
 
 ## Verificación
 
 1. **Compilación Continua:**
-   Ejecutamos con éxito `npm run build`, generando el bundle final en `dist/assets/index-d92qi980.js` y `index-Bv9UNAer.css` de 58 kB.
-2. **Prueba de Carga en Entorno de Validación (Node.js/JSDOM):**
-   Ejecutamos `node scratch/test_bundle.js` para asegurar que el bundle se carga sin ReferenceErrors y que el ruteo de inicio de `showAppView` se ejecuta correctamente.
-3. **Despliegue Completo en Vercel:**
-   Los cambios de producción se han desplegado de manera exitosa en [Production URL](https://generador-licencias.vercel.app). El diseño de la previsualización del contrato y las firmas originales se encuentran totalmente restablecidos.iginales cyberpunk-futuristas de la landing page y el marketplace están totalmente restaurados.
+   Ejecutamos con éxito `npm run build`, generando los assets de producción de Vite sin errores.
+2. **Despliegue Completo en Vercel:**
+   Los cambios de producción se han desplegado de manera exitosa en la URL de producción: https://generador-licencias.vercel.app
+3. **Verificación de Carga y Visualización:**
+   * La opción se muestra correctamente en el panel de configuración de Sossa Admin.
+   * La previsualización de la imagen cargada funciona, adaptando imágenes de cualquier proporción a un recorte cuadrado.
+   * La carátula se renderiza en todos los beats en la interfaz de catálogo y tienda pública.

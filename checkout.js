@@ -1399,14 +1399,6 @@ export function getDefaultBeatArtwork() {
 export function getBeatArtwork(beat) {
     if (!beat) return '';
     
-    let art = (beat.artwork || '').trim();
-    art = art.replace(/^["']|["']$/g, '').trim();
-    
-    const lowerArt = art.toLowerCase();
-    if (art !== '' && lowerArt !== 'null' && lowerArt !== 'undefined' && lowerArt !== 'none' && !lowerArt.includes('placeholder')) {
-        return art;
-    }
-    
     let config = null;
     
     // Check if the beat has its own producerConfig
@@ -1431,18 +1423,23 @@ export function getBeatArtwork(beat) {
     } else if (!config && typeof producerConfig !== 'undefined' && producerConfig && Object.keys(producerConfig).length > 0) {
         config = producerConfig;
     }
-    
-    if (!config) {
-        config = {};
+
+    if (config && config.defaultBeatArtwork && config.defaultBeatArtwork.trim() !== '') {
+        return config.defaultBeatArtwork.trim();
     }
-    if (!config.aka && !config.name && (beat.producerName || beat.producerAka)) {
-        config = { aka: beat.producerName || beat.producerAka };
+    
+    let art = (beat.artwork || '').trim();
+    art = art.replace(/^["']|["']$/g, '').trim();
+    
+    const lowerArt = art.toLowerCase();
+    if (art !== '' && lowerArt !== 'null' && lowerArt !== 'undefined' && lowerArt !== 'none' && !lowerArt.includes('placeholder')) {
+        return art;
     }
     
     let producerLogo = null;
     if (window.getProducerAvatar) {
         producerLogo = window.getProducerAvatar(config);
-    } else if (config.logoBase64) {
+    } else if (config && config.logoBase64) {
         producerLogo = config.logoBase64;
     }
     

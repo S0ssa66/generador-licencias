@@ -1232,6 +1232,25 @@ async function loadProducerConfig() {
         }
     }
 
+    // Rellenar carátula predeterminada
+    const defaultArtworkPreviewImg = document.getElementById('default-artwork-preview-img');
+    const defaultArtworkPreviewContainer = document.getElementById('default-artwork-preview-container');
+    const btnClearDefaultArtwork = document.getElementById('btn-clear-default-artwork');
+
+    if (defaultArtworkPreviewImg && defaultArtworkPreviewContainer && btnClearDefaultArtwork) {
+        if (producerConfig.defaultBeatArtwork) {
+            defaultArtworkPreviewImg.src = producerConfig.defaultBeatArtwork;
+            defaultArtworkPreviewContainer.style.display = 'block';
+            btnClearDefaultArtwork.style.display = 'inline-block';
+            window.tempDefaultArtworkBase64 = producerConfig.defaultBeatArtwork;
+        } else {
+            defaultArtworkPreviewImg.src = '';
+            defaultArtworkPreviewContainer.style.display = 'none';
+            btnClearDefaultArtwork.style.display = 'none';
+            window.tempDefaultArtworkBase64 = null;
+        }
+    }
+
     // Cargar estado de la vinculación de Google para iniciar sesión
     updateGoogleLoginLinkStatus();
     window.producerConfig = producerConfig;
@@ -1255,6 +1274,7 @@ async function saveProducerConfig() {
     } else {
         producerConfig.logoBase64 = "";
     }
+    producerConfig.defaultBeatArtwork = window.tempDefaultArtworkBase64 || "";
     // Guardar campos de DocuSign
     const oldClientId = producerConfig.dsClientId;
     const oldEnv = producerConfig.dsEnv;
@@ -2310,6 +2330,78 @@ function setupEventListeners() {
             document.getElementById('logo-preview-container').style.display = 'none';
             btnClearLogoEl.style.display = 'none';
             window.tempLogoBase64 = null;
+        });
+    }
+
+    // Eventos de carátula predeterminada (para todos los beats)
+    const btnUploadDefaultArtworkEl = document.getElementById('btn-upload-default-artwork');
+    const fileDefaultArtworkInputEl = document.getElementById('cfg-default-beat-artwork-file');
+    const btnClearDefaultArtworkEl = document.getElementById('btn-clear-default-artwork');
+
+    if (btnUploadDefaultArtworkEl && fileDefaultArtworkInputEl && btnClearDefaultArtworkEl) {
+        btnUploadDefaultArtworkEl.addEventListener('click', () => {
+            fileDefaultArtworkInputEl.click();
+        });
+
+        fileDefaultArtworkInputEl.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validar tipo de archivo
+            if (!file.type.startsWith('image/')) {
+                showToast("❌ Por favor selecciona un archivo de imagen válido.", true);
+                fileDefaultArtworkInputEl.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const size = 500; // Cuadrado de 500x500 píxeles para excelente calidad y rendimiento
+                    canvas.width = size;
+                    canvas.height = size;
+                    
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Calcular recorte proporcional para centrado (crop cover)
+                    let srcX = 0;
+                    let srcY = 0;
+                    let srcWidth = img.width;
+                    let srcHeight = img.height;
+                    
+                    if (img.width > img.height) {
+                        // Horizontal (paisaje): recortar laterales
+                        srcWidth = img.height;
+                        srcX = (img.width - img.height) / 2;
+                    } else if (img.height > img.width) {
+                        // Vertical (retrato): recortar superior/inferior
+                        srcHeight = img.width;
+                        srcY = (img.height - img.width) / 2;
+                    }
+                    
+                    ctx.drawImage(img, srcX, srcY, srcWidth, srcHeight, 0, 0, size, size);
+                    
+                    // Comprimir y codificar en JPEG con calidad premium (0.85)
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                    
+                    document.getElementById('default-artwork-preview-img').src = compressedBase64;
+                    document.getElementById('default-artwork-preview-container').style.display = 'block';
+                    btnClearDefaultArtworkEl.style.display = 'inline-block';
+                    window.tempDefaultArtworkBase64 = compressedBase64;
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        btnClearDefaultArtworkEl.addEventListener('click', () => {
+            fileDefaultArtworkInputEl.value = '';
+            document.getElementById('default-artwork-preview-img').src = '';
+            document.getElementById('default-artwork-preview-container').style.display = 'none';
+            btnClearDefaultArtworkEl.style.display = 'none';
+            window.tempDefaultArtworkBase64 = null;
         });
     }
 
