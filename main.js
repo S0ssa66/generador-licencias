@@ -34,6 +34,39 @@ import './checkout.js';
 import './editor.js';
 import './dashboard.js';
 
+// Alias locales para funciones en otros módulos asignadas al objeto global window
+const checkDocuSignOAuth = (...args) => window.checkDocuSignOAuth(...args);
+const loadTemplates = (...args) => window.loadTemplates(...args);
+const loadContacts = (...args) => window.loadContacts(...args);
+const initBeatsDB = (...args) => window.initBeatsDB(...args);
+const selectLicenseType = (...args) => window.selectLicenseType(...args);
+const loadFormDraft = (...args) => window.loadFormDraft(...args);
+const loadReferralData = (...args) => window.loadReferralData(...args);
+const loadSalesData = (...args) => window.loadSalesData(...args);
+const requestNotificationPermission = (...args) => window.requestNotificationPermission(...args);
+const loadPlatformGDriveStatus = (...args) => window.loadPlatformGDriveStatus(...args);
+const updateGoogleLoginLinkStatus = (...args) => window.updateGoogleLoginLinkStatus(...args);
+const getGdriveToken = (...args) => window.getGdriveToken(...args);
+const getOrCreateDriveFolder = (...args) => window.getOrCreateDriveFolder(...args);
+const triggerReferralConversion = (...args) => window.triggerReferralConversion(...args);
+const registerLanguageToggle = (...args) => window.registerLanguageToggle(...args);
+const renderBeatsGrid = (...args) => window.renderBeatsGrid(...args);
+const updateGenreAndKeyFilters = (...args) => window.updateGenreAndKeyFilters(...args);
+const loadConsolidatedAccounting = (...args) => window.loadConsolidatedAccounting(...args);
+const updateDashboardView = (...args) => window.updateDashboardView(...args);
+const handleFolderImport = (...args) => window.handleFolderImport(...args);
+const dataURLtoBlob = (...args) => window.dataURLtoBlob(...args);
+const uploadFileToStorage = (...args) => window.uploadFileToStorage(...args);
+const loadTemplateToEditor = (...args) => window.loadTemplateToEditor(...args);
+const saveTemplateCustom = (...args) => window.saveTemplateCustom(...args);
+const resetTemplateCustom = (...args) => window.resetTemplateCustom(...args);
+const generateReferenceCode = (...args) => window.generateReferenceCode(...args);
+const checkPayphoneRedirectResult = (...args) => window.checkPayphoneRedirectResult(...args);
+const renderGlobalBeats = (...args) => window.renderGlobalBeats(...args);
+const renderStoreBeats = (...args) => window.renderStoreBeats(...args);
+const updateHistoryTable = (...args) => window.updateHistoryTable(...args);
+const initPlatformGDriveOAuth = (...args) => window.initPlatformGDriveOAuth(...args);
+
 // Estado global de la aplicación
 let currentLang = 'es';
 window.currentLang = currentLang;
@@ -2429,9 +2462,9 @@ function setupEventListeners() {
     if (switchBtn) {
         switchBtn.addEventListener('click', () => {
             // Cancelar listener de pagos en tiempo real antes de cerrar sesión
-            if (typeof _salesUnsubscribe === 'function') {
-                _salesUnsubscribe();
-                _salesUnsubscribe = null;
+            if (typeof window._salesUnsubscribe === 'function') {
+                window._salesUnsubscribe();
+                window._salesUnsubscribe = null;
             }
             signOut(auth).then(() => {
                 localStorage.removeItem('active_user');
@@ -2886,8 +2919,28 @@ function showToast(message, isError = false) {
         setTimeout(() => toast.remove(), 300);
     }, 3500);
 }
+
+// Inicializar tooltips premium reemplazando el atributo 'title' nativo
+function initTooltips() {
+    document.querySelectorAll('button[title], a[title], .btn-icon-only[title], .btn[title]').forEach(el => {
+        const titleText = el.getAttribute('title');
+        if (titleText) {
+            el.setAttribute('data-tooltip', titleText);
+            el.removeAttribute('title');
+        }
+    });
+}
+
 // Exponer como global para uso en onclick inline
 window.showToast = showToast;
+window.initTooltips = initTooltips;
+window.checkPlanLimitExceeded = checkPlanLimitExceeded;
+window.saveHistory = saveHistory;
+window.loadHistory = loadHistory;
+window.openSettingsModal = openSettingsModal;
+window.addCustomFieldRow = addCustomFieldRow;
+window.initDefaultDate = initDefaultDate;
+window.safeGetItem = safeGetItem;
 
 // Escuchar el evento de recarga del dashboard de ventas en el panel
 document.getElementById('btn-sales-refresh')?.addEventListener('click', loadSalesData);

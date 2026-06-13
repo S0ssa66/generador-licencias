@@ -1,6 +1,8 @@
 import { LICENSE_CONFIGS } from './config.js';
 import { TRANSLATIONS } from './i18n.js';
 import { 
+    auth,
+    onSnapshot,
     db, 
     collection, 
     getDocs, 
@@ -14,6 +16,20 @@ import {
     where,
     updateDoc
 } from "./firebase.js";
+
+// Alias locales para funciones en otros módulos asignadas al objeto global window
+const getActiveLicenseType = (...args) => window.getActiveLicenseType(...args);
+const checkPlanLimitExceeded = (...args) => window.checkPlanLimitExceeded(...args);
+const saveHistory = (...args) => window.saveHistory(...args);
+const loadHistory = (...args) => window.loadHistory(...args);
+const downloadPDF = (...args) => window.downloadPDF(...args);
+const selectLicenseType = (...args) => window.selectLicenseType(...args);
+const compileContract = (...args) => window.compileContract(...args);
+const sendEmailDelivery = (...args) => window.sendEmailDelivery(...args);
+const safeSetItem = (...args) => window.safeSetItem(...args);
+const safeGetItem = (...args) => window.safeGetItem(...args);
+const safeCreateIcons = (...args) => window.safeCreateIcons(...args);
+const initTooltips = (...args) => window.initTooltips(...args);
 
 // Helper to dynamically load external scripts inside module scope
 function loadScript(src) {
@@ -2389,7 +2405,7 @@ function parseBeatStarsDate(dateStr) {
 
 // PANEL DEL PRODUCTOR: GESTIÓN DE VENTAS
 // ── Listener de pagos en tiempo real ──────────────────────────────────────────
-let _salesUnsubscribe = null;          // guarda el unsubscribe para limpieza
+window._salesUnsubscribe = window._salesUnsubscribe || null; // guarda el unsubscribe para limpieza
 let _salesFirstLoad   = true;          // para no notificar en la carga inicial
 let _knownPaymentIds  = new Set();     // IDs ya conocidos
 
@@ -2397,7 +2413,7 @@ function initSalesRealtimeListener() {
     if (!window.currentUser) return;
 
     // Cancelar listener anterior si existe
-    if (_salesUnsubscribe) { _salesUnsubscribe(); _salesUnsubscribe = null; }
+    if (window._salesUnsubscribe) { window._salesUnsubscribe(); window._salesUnsubscribe = null; }
     _salesFirstLoad   = true;
     _knownPaymentIds  = new Set();
     window.storePayments = [];
@@ -2409,7 +2425,7 @@ function initSalesRealtimeListener() {
         where("producerId", "==", window.currentUser)
     );
 
-    _salesUnsubscribe = onSnapshot(q, (snapshot) => {
+    window._salesUnsubscribe = onSnapshot(q, (snapshot) => {
         const newDocs = [];
 
         snapshot.docChanges().forEach(change => {

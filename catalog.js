@@ -428,9 +428,9 @@ export function initFileUploads() {
                 throw new Error("Preferencia de almacenamiento establecida a servidores alternativos.");
             }
 
-            // Si el proveedor preferido es Firebase Storage (firebase) o el central del SaaS (gdrive-central, migrado a Firebase),
+            // Si el proveedor preferido es Firebase Storage (firebase),
             // subimos de forma nativa a Firebase Storage para evitar exponer tokens al cliente.
-            if (config.storageProvider === 'firebase' || config.storageProvider === 'gdrive-central') {
+            if (config.storageProvider === 'firebase') {
                 activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Firebase...`;
                 if (window.lucide) window.lucide.createIcons();
                 
@@ -484,10 +484,22 @@ export function initFileUploads() {
             }
             
             let token;
-            if (typeof window.getGdriveToken === 'function') {
-                token = await window.getGdriveToken();
+            if (config.storageProvider === 'gdrive-central') {
+                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Central...`;
+                if (window.lucide) window.lucide.createIcons();
+                if (typeof window.getCentralGdriveToken === 'function') {
+                    token = await window.getCentralGdriveToken();
+                } else {
+                    throw new Error("Servicio de Google Drive Central no disponible.");
+                }
             } else {
-                throw new Error("Google Drive Token Helper personal no disponible.");
+                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Drive...`;
+                if (window.lucide) window.lucide.createIcons();
+                if (typeof window.getGdriveToken === 'function') {
+                    token = await window.getGdriveToken();
+                } else {
+                    throw new Error("Google Drive Token Helper personal no disponible.");
+                }
             }
             
             activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo a Drive...`;

@@ -1,6 +1,10 @@
 import { LICENSE_CONFIGS, SEED_LICENSES, DEFAULT_TEMPLATES } from './config.js';
 import { TRANSLATIONS, UI_TRANSLATIONS } from './i18n.js';
 import { 
+    auth,
+    googleProvider,
+    linkWithPopup,
+    unlink,
     db, 
     storage,
     doc,
@@ -17,6 +21,20 @@ import {
     uploadBytesResumable,
     getDownloadURL
 } from "./firebase.js";
+
+// Alias locales para funciones en otros módulos asignadas al objeto global window
+const checkPlanLimitExceeded = (...args) => window.checkPlanLimitExceeded(...args);
+const autoSaveContact = (...args) => window.autoSaveContact(...args);
+const saveCurrentLicenseToHistory = (...args) => window.saveCurrentLicenseToHistory(...args);
+const saveHistory = (...args) => window.saveHistory(...args);
+const updateHistoryTable = (...args) => window.updateHistoryTable(...args);
+const openSettingsModal = (...args) => window.openSettingsModal(...args);
+const openPaymentModal = (...args) => window.openPaymentModal(...args);
+const addCustomFieldRow = (...args) => window.addCustomFieldRow(...args);
+const initDefaultDate = (...args) => window.initDefaultDate(...args);
+const safeSetItem = (...args) => window.safeSetItem(...args);
+const safeGetItem = (...args) => window.safeGetItem(...args);
+const safeCreateIcons = (...args) => window.safeCreateIcons(...args);
 
 // Helper to dynamically load external scripts inside module scope
 function loadScript(src) {
