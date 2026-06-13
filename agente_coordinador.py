@@ -47,6 +47,21 @@ if not GEMINI_API_KEY:
     sys.exit(1)
 
 # Prompts de los agentes
+ROUTER_AGENT_PROMPT = """
+Eres el Agente Enrutador de BEATSS. Tu única tarea es analizar la consulta del usuario y clasificarla en una de las dos siguientes categorías:
+
+1. "DIRECT": Para saludos, despedidas, conversaciones generales, preguntas simples sobre la plataforma que no requieren especialistas de diseño, programación, contabilidad o seguridad.
+2. "DELEGATE": Para requerimientos complejos que requieran análisis técnico, cambios de diseño, programación en javascript, reglas de seguridad de firebase o cálculos contables/financieros.
+
+Responde estrictamente en formato JSON con la siguiente estructura:
+{
+  "routing_decision": "DIRECT" | "DELEGATE",
+  "pensamiento": "Tu explicación breve y razonamiento sobre por qué tomas esta decisión.",
+  "respuesta_directa": "Si decides DIRECT, coloca aquí tu respuesta final, amable y en español. Si decides DELEGATE, deja este campo vacío."
+}
+No agregues explicaciones fuera del JSON.
+"""
+
 MAIN_AGENT_PROMPT = """
 Eres el Agente Principal (Director de Proyecto) de BEATSS. Tu objetivo es coordinar y resolver los requerimientos del usuario delegando a los subagentes adecuados.
 Tienes disponibles los siguientes subagentes especialistas:
@@ -159,6 +174,41 @@ def main():
             if not user_input.strip():
                 continue
             
+            print(f"\n{C_CYAN}{C_BOLD}🔍 [Agente Enrutador] Clasificando requerimiento...{C_RESET}")
+            time.sleep(0.4)
+            
+            # 0. Llamar al Agente Enrutador
+            router_text = call_gemini(ROUTER_AGENT_PROMPT, user_input)
+            if not router_text:
+                continue
+                
+            # Limpiar posibles bloques markdown si responde con ```json
+            if router_text.strip().startswith("```"):
+                lines = router_text.strip().split("\n")
+                if lines[0].startswith("```json"):
+                    router_text = "\n".join(lines[1:-1])
+                elif lines[0].startswith("```"):
+                    router_text = "\n".join(lines[1:-1])
+            
+            try:
+                router_decision = json.loads(router_text.strip())
+            except Exception:
+                # Si falla el parseo, caemos por defecto en DELEGATE
+                router_decision = {"routing_decision": "DELEGATE", "pensamiento": "Fallo al parsear JSON del enrutador. Delegando por seguridad."}
+            
+            print(f"{C_CYAN}🧠 Pensamiento del Enrutador: {C_GRAY}{router_decision.get('pensamiento', 'Ninguno')}{C_RESET}")
+            print(f"{C_CYAN}🎯 Decisión de Enrutamiento: {C_GREEN if router_decision.get('routing_decision') == 'DIRECT' else C_YELLOW}{router_decision.get('routing_decision')}{C_RESET}")
+            
+            if router_decision.get("routing_decision") == "DIRECT":
+                # Respuesta directa e inmediata
+                resp_directa = router_decision.get("respuesta_directa", "Hola. ¿En qué puedo ayudarte hoy?")
+                print(f"\n{C_CYAN}{C_BOLD}================================================================{C_RESET}")
+                print(f"{C_CYAN}{C_BOLD}   RESPUESTA DIRECTA (BEATSS)                                  {C_RESET}")
+                print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}")
+                print(f"{C_WHITE}{resp_directa}{C_RESET}")
+                print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}\n")
+                continue
+
             print(f"\n{C_CYAN}{C_BOLD}🔍 [Agente Principal] Analizando requerimiento...{C_RESET}")
             time.sleep(0.5)
             
@@ -237,8 +287,8 @@ def main():
                 print(f"{C_WHITE}{final_response}{C_RESET}")
                 print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}\n")
             
-        except KeyboardInterrupt:
-            print(f"\n\n{C_CYAN}Programa interrumpido. ¡Hasta luego!{C_RESET}")
+        except (KeyboardInterrupt, EOFError):
+            print(f"\n\n{C_CYAN}Programa finalizado. ¡Hasta luego!{C_RESET}")
             break
 
 if __name__ == "__main__":
