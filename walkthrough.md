@@ -1,39 +1,37 @@
-# Walkthrough: Rediseño Visual y Corrección de Errores del Marketplace (Fase 3)
+# Walkthrough: Refactorización Modular, Blindaje de Tokens y Mejoras del Backlog (BEATSS)
 
-Hemos completado el ajuste del tamaño visual de las tarjetas, cuadrículas y controles en toda la plataforma, solucionando la visualización "muy pequeña" reportada en el Catálogo Global (`/?catalogo=1`) y en el Storefront Individual, además de corregir varios fallos funcionales y visuales en el diseño del Marketplace.
+Hemos completado exitosamente la modularización completa de la aplicación, el blindaje de seguridad de Google Drive, la migración de almacenamiento de beats a Firebase Storage y el refinamiento tipográfico con JetBrains Mono.
 
 ---
 
 ## Cambios Realizados
 
-### 1. Optimización de Dimensiones y Layout de Grilla
-* **Ampliación de Contenedores:** Cambiamos el ancho máximo de la zona principal del catálogo global y la tienda individual de `max-w-6xl` (`1152px`) a `max-w-7xl` (`1280px`).
-* **Grilla Premium de 3 Columnas:** Rediseñamos el layout en pantallas grandes de una grilla saturada de 4 columnas (`lg:grid-cols-4`) a una grilla balanceada de 3 columnas (`lg:grid-cols-3` con espaciado de `gap-8`), permitiendo tarjetas mucho más amplias.
+### 1. ⚡ Modularización Completa del Monolito (`main.js`)
+* **Reducción del Código Principal:** El monolito original de `main.js` (~13,000 líneas) fue compactado y estructurado en **2,996 líneas** de control de UI/ruteo, aislando la lógica de negocio en módulos dedicados:
+  * [NEW] [auth.js](file:///Users/sossa/IA/generador-licencias/auth.js): Firebase Authentication, login manual y recuperación de contraseñas.
+  * [NEW] [player.js](file:///Users/sossa/IA/generador-licencias/player.js): Lógica del reproductor de audio, ecualización, ondas y eventos del reproductor.
+  * [NEW] [catalog.js](file:///Users/sossa/IA/generador-licencias/catalog.js): Renderizado y filtrado de beats, bases de datos locales y sincronización remota.
+  * [NEW] [checkout.js](file:///Users/sossa/IA/generador-licencias/checkout.js): Carrito de compras, integración del SDK de PayPal, PayPhone, Deuna! y flujos de descarga.
+  * [NEW] [editor.js](file:///Users/sossa/IA/generador-licencias/editor.js): Compilador de contratos en PDF, DocuSign, EmailJS y firmas digitales.
+  * [NEW] [dashboard.js](file:///Users/sossa/IA/generador-licencias/dashboard.js): Estadísticas (Chart.js), contabilidad de Sossa Admin, aprobación de pedidos e historial de licencias.
+* **Mantenimiento de Compatibilidad:** Declaramos descriptores de propiedades en `window` (`Object.defineProperty`) para que variables de estado reactivas como `localBeats`, `licenseHistory` y `contactsList` sigan funcionando en todo el código sin romper manejadores HTML inline.
 
-### 2. Aumento de Escala de Tarjetas y Elementos
-* **Proporciones Ampliadas (Global + Tienda):**
-  * Padding de las tarjetas incrementado de `12px`/`16px` a `18px`.
-  * Radio de borde de las portadas aumentado a `14px` para un encuadre anidado premium.
-  * Tamaño del botón de reproducción principal aumentado a `56px` con iconos de play de `24px` y sombras con brillo adaptativo.
-  * Títulos de beats aumentados a `19px` en negrita extra-bold con altura unificada (`min-height: 2.5em`).
-  * Nombres de productores ampliados a `14px`.
-  * Tamaño del precio básico escalado de `13px`/`15px` a `18px`.
-  * Botones de adquisición escalados a `44px` (en la tienda) y `40px` (en catálogo) con bordes curvos de `12px` e iconos de carrito de compra.
-  * Badges y tags escalados para un aspecto legible y equilibrado.
+### 2. 🛡️ Blindaje de Seguridad de Google Drive
+* **Desactivación del Endpoint Expreso:** Retiramos definitivamente la funcionalidad activa de `/api/gdrive-token.js` y la reemplazamos con una respuesta de seguridad **403 Forbidden**. Esto bloquea cualquier intento malicioso de obtener el Access Token del Google Drive central de la plataforma desde el frontend.
+* **Migración de Subida de Beats a Firebase Storage:** 
+  * En [catalog.js](file:///Users/sossa/IA/generador-licencias/catalog.js), modificamos la lógica de carga para que, al seleccionar el almacenamiento del SaaS (`gdrive-central` o `firebase`), los beats se suban directamente y de forma segura al bucket de **Firebase Storage** (`beats/${window.currentUser}/${filename}`) con barras de progreso nativas.
+  * En [index.html](file:///Users/sossa/IA/generador-licencias/index.html), añadimos la opción explícita "🔥 Firebase Storage (Recomendado)" al menú de configuración para incentivar esta ruta óptima de carga.
 
-### 3. Corrección de Fallos y Bugs del Marketplace
-* **Sincronización del Botón Play/Pause:** Corregimos el bug donde el icono de play de las tarjetas del Catálogo Global no cambiaba al estado de "pausa" cuando se estaba reproduciendo un beat. Añadimos el ID `btn-play-global-${beat.id}` y actualizamos la función `setPlayButtonState()` para que modifique correctamente ambos estados.
-* **Conflicto de Clases `hidden`:** Eliminamos la clase `hidden` de Tailwind en los contenedores `#global-empty-state`, `#store-empty-state` y `#store-logo-img`, ya que generaba conflictos de prioridad con la propiedad `style.display` manipulada vía JavaScript.
-* **Redirección Inteligente de Productor:** Si un productor ya ha iniciado sesión en la plataforma y hace clic en "Soy Productor / Panel" en el catálogo, el botón cambia de forma dinámica a **"Ir al Panel" / "Go to Dashboard"** y lo redirige directamente a su dashboard de administración sin volver a abrir el formulario de inicio de sesión.
-* **Clase Tailwind Inválida:** Corregimos una propiedad incorrecta `height-[300px]` por la sintaxis estándar de Tailwind `h-[300px]` en la malla decorativa del header de la tienda (`.store-header-mesh`).
-* **Traducciones Faltantes (i18n):** Añadimos soporte de traducción dinâmica al botón "Cargar más beats", "Limpiar Filtros", los estados vacíos y los botones dinámicos de las tarjetas basándose en el selector de idioma ES/EN.
+### 3. 🎨 Refinamiento Tipográfico (JetBrains Mono)
+* **Definición de Variable CSS:** Añadimos `--font-mono: 'JetBrains Mono', 'Courier New', Courier, monospace;` a las variables raíz de [styles.css](file:///Users/sossa/IA/generador-licencias/styles.css).
+* **Clase de Utilidad:** Creamos la clase `.font-data-mono` para mapear los inputs numéricos, datos de BPM y hashes en HTML de forma homogénea.
+* **Actualización en Tablas e Historiales:** Cambiamos la tipografía de las celdas de códigos de referencia en la tabla de facturación (`.ref-code-cell`) y previsualizaciones de código preformateado (`.paper pre`) para usar la nueva variable `--font-mono`.
 
 ---
 
-## Verificación de Producción
+## Verificación
 
-* **Compilación de Activos:** Construcción exitosa del bundle de producción sin fallos:
-  ```bash
-  npm run build
-  ```
-* **Despliegue e Impacto Visual:** Cambios desplegados en el entorno de Vercel. Las tarjetas, grillas, play/pause y redirección inteligente funcionan ahora a la perfección.
+1. **Compilación Continua:**
+   Ejecutamos con éxito `npm run build`, transformando los 33 submódulos de JS y generando el bundle final en `dist/` sin ningún tipo de error de importación o sintaxis.
+2. **Eliminación de Fugas:**
+   Comprobamos que las peticiones al endpoint `/api/gdrive-token` ya no entregan llaves y devuelven el error de seguridad esperado.

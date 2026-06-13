@@ -236,7 +236,7 @@ El Licenciatario mantendrá la obligación comercial y moral de otorgar los cré
 > **{{clause_credits}}**
 
 ### Cláusula 9. Opción de Rescisión del Licenciante (Cláusula de Salvaguarda)
-El Licenciante se reserva la facultad discrecional y la opción exclusiva, ejecutable dentro de los primeros **tres (3) años** a partir de la firma de este Contrato, de dar por terminado el presente acuerdo de forma anticipada y unilateral mediante notificación escrita. Para que esta rescisión surta efecto, el Licenciante pagará al Licenciatario una indemnización equivalente al **{{clause_termination_fee}}**. Tras la notificación y el pago de dicha penalidad, el Licenciatario dispondrá de un plazo máximo de siete (7) días para dar de baja y retirar la Nueva Canción de todos los canales de distribución físicos y digitales del mercado.
+El Licenciante se reserva la facultad discrecional y la opción exclusiva, ejecutable dentro de los primeros **tres (3) años** a partir de la firma de este Contrato, de dar por terminado el presente acuerdo de forma anticipada y unilateral mediante notificación escrita. Para que esta rescisión surta efecto, el Licenciante pagará al Licenciatario una indemnización equivalente al **{{clause_termination_fee}}**. Tras la notificación y el pago de dicha penalidad, el Licenciatario dispondrá de un plazo máximo de siete (7) días para dar de baja y retirar la Nueva Canción de todos los canales de distribución físicos y digitales del mercado. El Licenciatario acepta expresamente que el pago de dicha penalidad constituye una indemnización total, única y final por la terminación del contrato, y renuncia irrevocablemente a reclamar cualquier otro valor, compensación o indemnización por concepto de daños, pérdidas, gastos de promoción, marketing, producción de videoclips o cualquier otra inversión realizada en relación con la Nueva Canción.
 
 ### Cláusula 10. Incumplimiento y Penalizaciones
 Cualquier violación directa o indirecta a las cláusulas descritas en este documento facultará al Productor a rescindir la licencia de manera inmediata y sin derecho a reembolsos. El Licenciatario será civil y económicamente responsable de todos los daños, perjuicios, costos legales, honorarios de abogados y gastos judiciales en los que incurra el Productor con el fin de defender sus derechos de propiedad intelectual frente a un uso no autorizado de la obra musical.
@@ -326,7 +326,7 @@ The Licensee will maintain the commercial and moral obligation to grant correspo
 > **{{clause_credits}}**
 
 ### Clause 9. Licensor's Termination Option (Safeguard Clause)
-The Licensor reserves the discretionary power and exclusive option, executable within the first **three (3) years** from the signing of this Contract, to terminate this agreement early and unilaterally by written notice. For this termination to take effect, the Licensor will pay the Licensee compensation equivalent to **{{clause_termination_fee}}**. Following notification and payment of said penalty, the Licensee will have a period of seven (7) days to take down and withdraw the New Song from all physical and digital distribution channels in the market.
+The Licensor reserves the discretionary power and exclusive option, executable within the first **three (3) years** from the signing of this Contract, to terminate this agreement early and unilaterally by written notice. For this termination to take effect, the Licensor will pay the Licensee compensation equivalent to **{{clause_termination_fee}}**. Following notification and payment of said penalty, the Licensee will have a period of seven (7) days to take down and withdraw the New Song from all physical and digital distribution channels in the market. The Licensee expressly agrees that the payment of said penalty constitutes a full, sole, and final compensation for the termination of the agreement, and irrevocably waives the right to claim any other value, compensation, or damages for promotion, marketing, video production expenses, or any other investment made in connection with the New Song.
 
 ### Clause 10. Breach and Penalties
 Any direct or indirect violation of the clauses described in this document will entitle the Producer to terminate the license immediately and without right to refunds. The Licensee will be civilly and financially responsible for all damages, losses, legal costs, attorney fees, and court expenses incurred by the Producer to defend their intellectual property rights against unauthorized use of the musical work.
@@ -389,6 +389,8 @@ Cualquier ingreso comercial derivado de la venta o reproducción de la grabació
 
 El Licenciatario se obliga a configurar esta división (*splits*) de manera formal directa en su plataforma de distribución digital dentro de los 7 días posteriores a la carga de la Nueva Canción.
 
+**Cláusula de Prevalencia:** En caso de conflicto o contradicción entre los términos de la Licencia de Uso Comercial principal y el presente Acuerdo de Splits, prevalecerán las divisiones y porcentajes de distribución de Master y Composición aquí estipulados.
+
 ## 3. Créditos Obligatorios
 En cualquier medio digital, físico o red social, se otorgará el crédito de coproducción de la siguiente manera obligatoria:
 > **{{clause_credits}}**
@@ -437,6 +439,8 @@ Any commercial income derived from the sale or reproduction of the master sound 
 - **Producer/Licensor Share:** {{clause_producer_share}}% of net revenues received.
 
 The Licensee agrees to formally set up this division (*splits*) directly on their digital distribution platform within 7 days of uploading the New Song.
+
+**Prevalence Clause:** In the event of any conflict or contradiction between the terms of the main Commercial License Agreement and this Split Sheet Agreement, the splits and distribution percentages set forth herein shall prevail.
 
 ## 3. Mandatory Credit
 In any digital, physical medium or social network, co-production credit must be granted in the following mandatory format:
@@ -488,7 +492,10 @@ Los derechos comerciales y regalías de la obra resultante se distribuyen de la 
 
 Ambas partes se registran ante sus respectivas sociedades de autor registrando sus porcentajes correspondientes.
 
-### 4. Acreditación de Coproducción
+### 4. Administración Comercial de la Obra
+El Coproductor otorga mandato exclusivo al Productor Principal para que este administre, licencie, venda y comercialice licencias no exclusivas sobre la obra instrumental co-producida a través de plataformas digitales (v.g., BEATSS, BeatStars). El Productor Principal se obliga irrevocablemente a liquidar y transferir al Coproductor su porcentaje de participación acordado del {{clause_writer_share}}% sobre las ventas recaudadas de forma trimestral.
+
+### 5. Acreditación de Coproducción
 Los créditos de la composición resultante se listarán siempre de la siguiente manera:
 > **{{clause_credits}}**
 
@@ -534,7 +541,10 @@ Commercial rights and royalties of the resulting work are distributed as follows
 
 Both parties register before their respective copyright societies recording their corresponding percentages.
 
-### 4. Co-production Credit
+### 4. Commercial Administration of the Work
+The Co-producer grants exclusive authority to the Principal Producer to administer, license, sell, and commercialize non-exclusive licenses for the co-produced instrumental work through digital platforms (e.g., BEATSS, BeatStars). The Principal Producer irrevocably agrees to pay and transfer to the Co-producer their agreed participation share of {{clause_writer_share}}% on the revenues collected, on a quarterly basis.
+
+### 5. Co-production Credit
 Credits of the resulting composition will always be listed in the following manner:
 > **{{clause_credits}}**
 

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <link rel="preload" href="producer_sossa.webp" as="image" fetchpriority="high">
     <title>Generador de Licencias de Uso Musical | sossa</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10,16 +11,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Montserrat:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <!-- Lucide Icons (versión estable fija) -->
     <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
-    <!-- html2pdf.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <!-- PDF.js para leer texto de PDFs importados -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- JSZip para leer archivos ZIP cargados -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- EmailJS SDK para envío de correos -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <!-- Chart.js para estadísticas -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <!-- Google Identity Services (para Google Drive API) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- PayPal SDK Business -->
@@ -30,101 +21,7 @@
 
     <!-- Material Symbols for Redesign -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-    <!-- Tailwind CSS for Redesign -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script id="tailwind-config">
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "inverse-on-surface": "#2e3037",
-                        "elite-gold": "#FACC15",
-                        "surface-container-lowest": "#0b0e14",
-                        "surface-bright": "#363940",
-                        "on-surface": "#e1e2eb",
-                        "surface": "#10131a",
-                        "on-background": "#e1e2eb",
-                        "on-secondary": "#003545",
-                        "error-red": "#EF4444",
-                        "surface-container-highest": "#32353c",
-                        "surface-container-low": "#191c22",
-                        "on-secondary-container": "#005268",
-                        "on-secondary-fixed-variant": "#004d63",
-                        "on-primary-container": "#340080",
-                        "neon-blue": "#00CCFF",
-                        "secondary": "#9be1ff",
-                        "tertiary": "#eec200",
-                        "success-green": "#10B981",
-                        "on-surface-variant": "#cbc3d7",
-                        "background": "#10131a",
-                        "primary-fixed-dim": "#d0bcff",
-                        "primary": "#d0bcff",
-                        "charcoal-deep": "#12141C",
-                        "on-primary-fixed": "#23005c",
-                        "secondary-fixed-dim": "#5ed4ff",
-                        "on-primary": "#3c0091",
-                        "outline": "#958ea0",
-                        "surface-container": "#1d2026",
-                        "surface-dim": "#10131a",
-                        "on-tertiary-fixed": "#231b00",
-                        "inverse-primary": "#6d3bd7",
-                        "on-tertiary-container": "#4e3e00",
-                        "error-container": "#93000a",
-                        "on-tertiary-fixed-variant": "#574500",
-                        "tertiary-fixed-dim": "#eec200",
-                        "on-secondary-fixed": "#001f29",
-                        "inverse-surface": "#e1e2eb",
-                        "tertiary-fixed": "#ffe083",
-                        "on-error": "#690005",
-                        "secondary-container": "#00cbfe",
-                        "primary-container": "#a078ff",
-                        "primary-fixed": "#e9ddff",
-                        "on-tertiary": "#3c2f00",
-                        "outline-variant": "#494454",
-                        "surface-glass": "rgba(255, 255, 255, 0.03)",
-                        "electric-purple": "#8B5CF6",
-                        "on-error-container": "#ffdad6",
-                        "surface-variant": "#32353c",
-                        "tertiary-container": "#cea700",
-                        "surface-tint": "#d0bcff",
-                        "surface-container-high": "#272a31",
-                        "error": "#ffb4ab",
-                        "secondary-fixed": "#bbe9ff",
-                        "on-primary-fixed-variant": "#5516be"
-                    },
-                    spacing: {
-                        "base": "8px",
-                        "container-max": "1440px",
-                        "margin-mobile": "16px",
-                        "gutter": "24px",
-                        "margin-desktop": "48px"
-                    },
-                    fontFamily: {
-                        "sans": ["Outfit", "Inter", "sans-serif"],
-                        "headline-lg-mobile": ["Montserrat", "sans-serif"],
-                        "body-lg": ["Outfit", "sans-serif"],
-                        "headline-md": ["Montserrat", "sans-serif"],
-                        "headline-lg": ["Montserrat", "sans-serif"],
-                        "display-lg": ["Montserrat", "sans-serif"],
-                        "data-mono": ["JetBrains Mono", "monospace"],
-                        "body-md": ["Outfit", "sans-serif"],
-                        "label-caps": ["Montserrat", "sans-serif"]
-                    },
-                    fontSize: {
-                        "headline-lg-mobile": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
-                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
-                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
-                        "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
-                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800" }],
-                        "data-mono": ["14px", { "lineHeight": "1.4", "fontWeight": "500" }],
-                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
-                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600" }]
-                    }
-                }
-            }
-        }
-    </script>
+
     <style>
         @keyframes pulse-glow {
             0%, 100% { transform: scale(1); opacity: 0.15; }
@@ -281,7 +178,7 @@
                     </div>
                     <div class="lg:col-span-5 relative hidden lg:block lg:mt-12">
                         <div class="relative w-full aspect-[0.76] rounded-2xl overflow-hidden glass-card p-2 group">
-                            <img alt="Sossa in high-end studio" class="w-full h-full object-cover rounded-xl filter grayscale group-hover:grayscale-0 transition-all duration-700" src="producer_sossa.png" style="object-position: center 5%;"/>
+                            <img alt="Sossa in high-end studio" class="w-full h-full object-cover rounded-xl filter grayscale group-hover:grayscale-0 transition-all duration-700" src="producer_sossa.webp" style="object-position: center 5%;"/>
                             <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60"></div>
                             <div class="absolute bottom-8 left-8 right-8 p-6 glass-card rounded-xl border-l-4 border-electric-purple translate-y-4 group-hover:translate-y-0 transition-transform">
                                 <p data-i18n="featured_artist" class="font-label-caps text-electric-purple text-xs mb-2">FEATURED ARTIST</p>
@@ -458,7 +355,7 @@
                         <!-- Producer Card 1 -->
                         <div class="w-[300px] md:w-[400px] flex-shrink-0 snap-center group">
                             <div class="relative aspect-square rounded-2xl overflow-hidden mb-6">
-                                <img class="w-full h-full object-cover group-hover:scale-110 group-hover:grayscale-0 transition-all duration-700 grayscale" src="producer_sossa.png" style="object-position: center 8%;"/>
+                                <img class="w-full h-full object-cover group-hover:scale-110 group-hover:grayscale-0 transition-all duration-700 grayscale" src="producer_sossa.webp" style="object-position: center 8%;"/>
                                 <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
                                 <div class="absolute top-4 right-4 px-3 py-1 bg-elite-gold text-on-tertiary-fixed font-label-caps text-[10px] rounded-full font-bold">ELITE TIER</div>
                             </div>
@@ -1165,7 +1062,7 @@
                     <div class="input-group">
                         <label for="beat-name" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="disc" class="w-4 h-4"></i> <span data-i18n="sidebar_beat_name">Nombre del Beat</span></label>
                         <div class="flex gap-2 w-full">
-                            <input type="text" id="beat-name" placeholder="Escribe el nombre del beat..." data-i18n-placeholder="sidebar_beat_placeholder" class="flex-1 min-w-0 bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                            <input type="text" id="beat-name" placeholder="Escribe el nombre del beat..." data-i18n-placeholder="sidebar_beat_placeholder" required class="flex-1 min-w-0 bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
                             <button type="button" class="btn btn-secondary border border-white/5 hover:bg-white/5 text-on-surface rounded-lg px-3 flex items-center justify-center" id="btn-beats-modal" title="Base de Datos de Beats" data-i18n-title="sidebar_select_beat_tooltip">
                                 <i data-lucide="library" class="w-4 h-4"></i>
                             </button>
@@ -1186,7 +1083,7 @@
                     <div class="input-group">
                         <label for="buyer-name" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="user" class="w-4 h-4"></i> <span data-i18n="sidebar_buyer_name">Nombre de quien compra</span></label>
                         <div class="flex gap-2 w-full">
-                            <input type="text" id="buyer-name" placeholder="Nombre completo del comprador" data-i18n-placeholder="sidebar_buyer_placeholder" class="flex-1 min-w-0 bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                            <input type="text" id="buyer-name" placeholder="Nombre completo del comprador" data-i18n-placeholder="sidebar_buyer_placeholder" required class="flex-1 min-w-0 bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
                             <button type="button" class="btn btn-secondary border border-white/5 hover:bg-white/5 text-on-surface rounded-lg px-3 flex items-center justify-center" id="btn-contacts-modal" title="Directorio de Contactos" data-i18n-title="sidebar_select_contact_tooltip">
                                 <i data-lucide="users" class="w-4 h-4"></i>
                             </button>
@@ -1201,7 +1098,7 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div class="input-group">
                             <label for="buyer-email" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="mail" class="w-4 h-4"></i> <span data-i18n="sidebar_email">Correo</span></label>
-                            <input type="email" id="buyer-email" placeholder="correo@ejemplo.com" data-i18n-placeholder="sidebar_email_placeholder" class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
+                            <input type="email" id="buyer-email" placeholder="correo@ejemplo.com" data-i18n-placeholder="sidebar_email_placeholder" required class="w-full bg-surface-container border border-white/5 rounded-lg p-2.5 text-on-surface focus:border-electric-purple focus:ring-1 focus:ring-electric-purple outline-none">
                         </div>
                         <div class="input-group">
                             <label for="buyer-phone" class="font-label-caps text-label-caps text-[11px] text-on-surface-variant flex items-center gap-2 mb-1"><i data-lucide="phone" class="w-4 h-4"></i> <span data-i18n="sidebar_phone">Teléfono / WhatsApp</span></label>
@@ -1488,6 +1385,17 @@
                     <button class="tab-btn" data-tab="tab-admin" id="tab-admin-btn" style="display: none;">
                         <i data-lucide="trending-up"></i> <span data-i18n="tab_admin">Contabilidad General</span>
                     </button>
+                </div>
+                <!-- Selector de pestañas para móviles -->
+                <div class="tabs-mobile">
+                    <select id="mobile-tab-select" class="w-full bg-surface-container border border-white/10 rounded-lg p-2 text-on-surface text-[13px] outline-none">
+                        <option value="tab-preview" data-i18n="tab_preview">👁️ Previsualización de Contrato</option>
+                        <option value="tab-history" data-i18n="tab_history">📜 Historial de Licencias</option>
+                        <option value="tab-beats" data-i18n="tab_beats">🎵 Catálogo de Beats</option>
+                        <option value="tab-dashboard" data-i18n="tab_dashboard">📈 Dashboard de Ventas</option>
+                        <option value="tab-sales" data-i18n="tab_sales">🛒 Pedidos de Beats</option>
+                        <option value="tab-admin" data-i18n="tab_admin" id="mobile-tab-admin-opt" style="display: none;">📊 Contabilidad General</option>
+                    </select>
                 </div>
             </header>
 
@@ -2435,6 +2343,7 @@
                   <div class="input-group" style="margin-top: 8px;">
                       <label for="cfg-storage-provider">Almacenamiento Preferido para Beats</label>
                       <select id="cfg-storage-provider" style="width: 100%; padding: 8px 12px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; font-size: 13px; height: 38px; cursor: pointer; outline: none; box-sizing: border-box;">
+                          <option value="firebase">🔥 Firebase Storage (Recomendado - Sin Configurar)</option>
                           <option value="gdrive-central">🏢 Google Drive de la Plataforma (SaaS - Sin Login)</option>
                           <option value="gdrive">☁️ Google Drive Personal (Requiere Login)</option>
                           <option value="alternative">🚀 Servidores Alternativos (Carga rápida sin login)</option>
@@ -3110,98 +3019,57 @@
     <!-- ======================================================= -->
     <!-- CATÁLOGO GLOBAL DE BEATSS (MARKETPLACE)                 -->
     <!-- ======================================================= -->
-    <div id="global-catalog-view" style="display: none;" class="h-screen overflow-y-auto bg-[radial-gradient(circle_at_top,_#0b0e14_0%,_#05070a_100%)] text-on-surface font-body-md cyber-grid-bg">
+    <div id="global-catalog-view" style="display: none;" class="h-screen overflow-y-auto bg-[radial-gradient(circle_at_50%_0%,_#1A1D26_0%,_#0B0E14_100%)] text-on-surface font-body-md">
         <!-- Header del Catálogo Global -->
-        <header class="sticky top-0 z-50 bg-[#070913]/90 backdrop-blur-md border-b border-white/5 shadow-[0_0_20px_rgba(139,92,246,0.1)] py-5 px-6">
+        <header class="sticky top-0 z-50 bg-[#0B0E14]/80 backdrop-blur-md border-b border-white/5 py-5 px-6">
             <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="flex items-center gap-3 cursor-pointer" id="catalog-logo-home">
-                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6; filter: drop-shadow(0 0 6px rgba(139,92,246,0.6));">
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6;">
                         <path d="M12 2v20M17 5v14M7 9v6M22 8v8M2 11v2"></path>
                     </svg>
-                    <span class="font-headline-md text-[22px] font-black tracking-tighter text-on-surface cyber-glow-text">BEATSS <span class="text-neon-blue font-bold">Marketplace</span></span>
+                    <span class="font-headline-md text-[22px] font-black tracking-tighter text-on-surface">BEATSS <span class="text-neon-blue font-bold">Marketplace</span></span>
                 </div>
                 
-                <!-- Buscador principal (Estilo Terminal) -->
+                <!-- Buscador principal (Estilo Minimalista) -->
                 <div class="flex-1 w-full max-w-lg relative">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-neon-blue text-[20px] animate-pulse">terminal</span>
-                    <input type="text" id="global-search-input" placeholder="Buscar beats, productores o géneros..." data-i18n-placeholder="catalog_search_placeholder" class="w-full pl-12 pr-6 py-2.5 bg-black/50 border border-white/10 rounded-xl text-on-surface placeholder:text-on-surface-variant text-sm focus:border-neon-blue focus:ring-1 focus:ring-neon-blue focus:outline-none transition-all font-mono">
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/60 text-[20px]">search</span>
+                    <input type="text" id="global-search-input" placeholder="Buscar beats, productores o géneros..." data-i18n-placeholder="catalog_search_placeholder" class="w-full pl-12 pr-6 py-2.5 bg-white/[0.03] border border-white/10 rounded-full text-on-surface placeholder:text-on-surface-variant/60 text-sm focus:border-white/20 focus:ring-1 focus:ring-white/20 focus:outline-none transition-all">
                 </div>
 
                 <div class="flex gap-4">
-                    <button id="catalog-btn-language" class="border border-neon-blue/30 text-neon-blue hover:text-white hover:border-neon-blue px-4 py-2 rounded-xl font-mono text-xs font-bold bg-neon-blue/5 hover:bg-neon-blue/20 transition-all outline-none">[ ES ]</button>
-                    <button id="catalog-btn-login" data-i18n="catalog_i_am_producer" class="border border-electric-purple/40 text-electric-purple hover:text-white hover:border-electric-purple px-6 py-2 rounded-xl text-sm font-mono font-bold bg-electric-purple/5 hover:bg-electric-purple/20 transition-all shadow-[0_0_15px_rgba(139,92,246,0.1)]">Soy Productor</button>
+                    <button id="catalog-btn-language" class="border border-white/10 text-on-surface-variant hover:text-white hover:bg-white/5 px-4 py-2 rounded-full text-xs font-bold transition-all outline-none">ES</button>
+                    <button id="catalog-btn-login" data-i18n="catalog_i_am_producer" class="border border-white/10 text-on-surface-variant hover:text-white hover:bg-white/5 px-6 py-2 rounded-full text-sm font-bold transition-all outline-none">Soy Productor</button>
                 </div>
             </div>
         </header>
 
         <!-- Contenido Principal -->
         <main class="max-w-7xl mx-auto px-6 py-10 flex flex-col gap-8">
-            <!-- Hero Banner (HUD Cyberpunk) -->
-            <div class="relative overflow-hidden rounded-2xl border border-electric-purple/30 bg-[#070913]/40 backdrop-blur-xl p-10 text-center shadow-[0_0_30px_rgba(139,92,246,0.15)] cyber-corners">
-                <div class="cyber-corners-inner"></div>
+            <!-- Hero Banner (Minimalista Premium) -->
+            <div class="relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-xl p-10 text-center shadow-lg">
                 <!-- Acentos de brillo de fondo -->
-                <div class="absolute -left-10 -top-10 w-48 h-48 bg-electric-purple/20 rounded-full blur-[100px] pointer-events-none"></div>
-                <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-neon-blue/20 rounded-full blur-[100px] pointer-events-none"></div>
+                <div class="absolute -left-10 -top-10 w-48 h-48 bg-electric-purple/10 rounded-full blur-[100px] pointer-events-none"></div>
+                <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-neon-blue/10 rounded-full blur-[100px] pointer-events-none"></div>
                 
-                <!-- Telemetría digital de adorno -->
-                <div class="flex justify-between items-center text-[9px] font-mono text-electric-purple/75 mb-6 border-b border-white/5 pb-3 opacity-80">
-                    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-green-500 rounded-full cyber-pulse-dot"></span> SYSTEM_ONLINE // LATENCY_2MS</span>
-                    <span class="hidden sm:inline">BEATSS_DATALINK_ESTABLISHED v1.0.8</span>
-                    <span>COORDINATES: 2.1189° S, 79.8942° W</span>
-                </div>
-                
-                <div class="text-[10px] font-mono text-neon-blue uppercase tracking-widest bg-neon-blue/10 px-3 py-1 rounded-full border border-neon-blue/20 mb-4 inline-block animate-pulse">
-                    [ MARKETPLACE_HUD_DISPLAY ]
-                </div>
-                
-                <h2 class="font-headline-lg text-[40px] font-black mb-3 tracking-tighter bg-gradient-to-r from-white via-on-surface to-[#00ccff] bg-clip-text text-transparent cyber-glow-text uppercase" data-i18n="catalog_find_beat">Encuentra el Beat Perfecto</h2>
-                <p class="text-on-surface-variant text-sm max-w-xl mx-auto leading-relaxed opacity-90 font-medium" data-i18n="catalog_find_desc">Licencias directas de los mejores productores independientes de la escena. Sin comisiones ocultas, trato y pago directo al creador.</p>
-                
-                <!-- Líneas decorativas vectoriales animadas en el fondo -->
-                <div class="absolute inset-0 pointer-events-none opacity-[0.08] flex justify-center items-center">
-                    <svg width="450" height="450" viewBox="0 0 100 100" fill="none" stroke="#00ccff" stroke-width="0.5">
-                        <circle cx="50" cy="50" r="45" stroke-dasharray="2 2" class="hud-radar-circle" style="animation-duration: 4s;"></circle>
-                        <circle cx="50" cy="50" r="30" stroke-dasharray="6 3" class="hud-radar-circle" style="animation-duration: 2.5s;"></circle>
-                        <circle cx="50" cy="50" r="15" stroke-dasharray="1 1"></circle>
-                        <g class="hud-radar-sweep">
-                            <line x1="50" y1="50" x2="50" y2="5" stroke="#8b5cf6" stroke-width="0.75"></line>
-                            <polygon points="50,50 47,15 50,5 53,15" fill="rgba(139, 92, 246, 0.15)" stroke="none"></polygon>
-                        </g>
-                        <line x1="5" y1="50" x2="95" y2="50" stroke-dasharray="1 3"></line>
-                        <line x1="50" y1="5" x2="50" y2="95" stroke-dasharray="1 3"></line>
-                    </svg>
-                </div>
+                <h2 class="font-headline-lg text-white font-black text-4xl mb-4 tracking-tight uppercase" data-i18n="catalog_find_beat">Encuentra el Beat Perfecto</h2>
+                <p class="text-on-surface-variant/80 text-sm max-w-xl mx-auto leading-relaxed font-medium" data-i18n="catalog_find_desc">Licencias directas de los mejores productores independientes de la escena. Sin comisiones ocultas, trato y pago directo al creador.</p>
             </div>
 
-            <!-- Zona de Filtros (High-Tech Console) -->
-            <div class="relative flex flex-wrap items-end gap-6 bg-[#070913]/40 backdrop-blur-xl border border-white/5 p-6 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.4)] cyber-corners">
-                <div class="cyber-corners-inner"></div>
-                
-                <!-- Título Consola -->
-                <div class="w-full flex items-center justify-between border-b border-white/5 pb-3 mb-1">
-                    <span class="text-xs font-mono text-neon-blue flex items-center gap-2 uppercase tracking-widest">
-                        <span class="material-symbols-outlined text-[16px] text-neon-blue animate-pulse">settings_input_component</span>
-                        <span>[CONTROL_CONSOLE_TELEMETRY]</span>
-                    </span>
-                    <span class="text-[9px] font-mono text-on-surface-variant opacity-60">SELECTORS: ACTIVE</span>
-                </div>
+            <!-- Zona de Filtros (Estilo Minimalista) -->
+            <div class="flex flex-wrap items-center gap-4 bg-white/[0.02] backdrop-blur-md border border-white/5 p-4 rounded-2xl">
                 
                 <!-- Filtro Género -->
                 <div class="flex flex-col gap-1.5 min-w-[150px] flex-1 sm:w-auto">
-                    <span class="text-[9px] font-mono text-neon-blue/80 tracking-widest uppercase flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 bg-neon-blue rounded-full"></span> [GENRE_SELECTOR]
-                    </span>
-                    <select id="global-genre-select" class="cyber-select bg-black/40 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none h-11 transition-all">
+                    <span class="text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-wider">Género</span>
+                    <select id="global-genre-select" class="minimal-select bg-white/[0.03] border border-white/10 hover:bg-white/5 rounded-xl px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none transition-all">
                         <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_genre">Cualquier Género</option>
                     </select>
                 </div>
 
                 <!-- Filtro Precio -->
                 <div class="flex flex-col gap-1.5 min-w-[150px] flex-1 sm:w-auto">
-                    <span class="text-[9px] font-mono text-neon-blue/80 tracking-widest uppercase flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 bg-neon-blue rounded-full"></span> [MAX_VALUE]
-                    </span>
-                    <select id="global-price-select" class="cyber-select bg-black/40 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none h-11 transition-all">
+                    <span class="text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-wider">Precio Máximo</span>
+                    <select id="global-price-select" class="minimal-select bg-white/[0.03] border border-white/10 hover:bg-white/5 rounded-xl px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none transition-all">
                         <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_price">Cualquier Precio</option>
                         <option value="0-20" class="bg-charcoal-deep text-white" data-i18n="catalog_price_0_20">Hasta $20</option>
                         <option value="20-50" class="bg-charcoal-deep text-white" data-i18n="catalog_price_20_50">$20 - $50</option>
@@ -3212,10 +3080,8 @@
 
                 <!-- Filtro BPM -->
                 <div class="flex flex-col gap-1.5 min-w-[150px] flex-1 sm:w-auto">
-                    <span class="text-[9px] font-mono text-neon-blue/80 tracking-widest uppercase flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 bg-neon-blue rounded-full"></span> [TEMPO_SPEED]
-                    </span>
-                    <select id="global-bpm-select" class="cyber-select bg-black/40 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none h-11 transition-all">
+                    <span class="text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-wider">BPM / Tempo</span>
+                    <select id="global-bpm-select" class="minimal-select bg-white/[0.03] border border-white/10 hover:bg-white/5 rounded-xl px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none transition-all">
                         <option value="" class="bg-charcoal-deep text-white" data-i18n="catalog_any_bpm">Cualquier BPM</option>
                         <option value="0-90" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_slow">Lento (&lt; 90)</option>
                         <option value="90-130" class="bg-charcoal-deep text-white" data-i18n="catalog_bpm_medium">Medio (90 - 130)</option>
@@ -3225,10 +3091,8 @@
                 
                 <!-- Ordenación -->
                 <div class="md:ml-auto flex flex-col gap-1.5 min-w-[150px] w-full sm:w-auto">
-                    <span class="text-[9px] font-mono text-neon-blue/80 tracking-widest uppercase flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 bg-neon-blue rounded-full"></span> [SORT_CRITERIA]
-                    </span>
-                    <select id="global-sort-select" class="cyber-select bg-black/40 border border-white/10 hover:border-white/20 hover:bg-white/5 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none h-11 transition-all">
+                    <span class="text-[10px] font-bold text-on-surface-variant/80 uppercase tracking-wider">Ordenar por</span>
+                    <select id="global-sort-select" class="minimal-select bg-white/[0.03] border border-white/10 hover:bg-white/5 rounded-xl px-4 py-2 text-white text-xs font-semibold cursor-pointer outline-none transition-all">
                         <option value="newest" class="bg-charcoal-deep text-white" data-i18n="catalog_sort_newest">Más Recientes</option>
                         <option value="price_asc" class="bg-charcoal-deep text-white" data-i18n="catalog_sort_lowest">Menor Precio</option>
                         <option value="price_desc" class="bg-charcoal-deep text-white" data-i18n="catalog_sort_highest">Mayor Precio</option>
@@ -3243,7 +3107,7 @@
             
             <!-- Contenedor del Botón Cargar Más -->
             <div id="global-load-more-container" class="text-center mt-6" style="display: none;">
-                <button id="btn-load-more-global" class="bg-white/5 border border-white/10 hover:border-electric-purple text-on-surface hover:text-electric-purple px-6 py-3 rounded-xl font-label-caps text-label-caps flex items-center gap-1.5 mx-auto transition-all shadow-md">
+                <button id="btn-load-more-global" class="bg-white/[0.03] border border-white/10 hover:bg-white/5 hover:border-white/20 text-on-surface px-6 py-3 rounded-full font-medium flex items-center justify-center gap-1.5 mx-auto transition-all text-xs shadow-sm">
                     <span class="material-symbols-outlined text-[16px]">expand_more</span>
                     <span data-i18n="catalog_load_more">Cargar más beats</span>
                 </button>
