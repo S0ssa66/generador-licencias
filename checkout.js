@@ -994,24 +994,24 @@ export function updateCheckoutStepView(step) {
                 if (receiptSec) receiptSec.style.display = 'none';
                 footerNextBtn.style.display = 'none';
             } else {
-                let defaultTab = 'deuna';
+                let defaultTab = 'payphone';
                 const currentTab = getSelectedStorePaymentMethod();
                 
                 if (currentTab === 'offer' && checkoutSelectedLicense !== 'exclusive') {
-                    if (deunaVisible) defaultTab = 'deuna';
-                    else if (transferVisible) defaultTab = 'transfer';
+                    if (payphoneVisible) defaultTab = 'payphone';
                     else if (paypalVisible) defaultTab = 'paypal';
-                    else if (payphoneVisible) defaultTab = 'payphone';
+                    else if (deunaVisible) defaultTab = 'deuna';
+                    else if (transferVisible) defaultTab = 'transfer';
                 } else if (currentTab === 'offer' && checkoutSelectedLicense === 'exclusive') {
                     defaultTab = 'offer';
+                } else if (payphoneVisible) {
+                    defaultTab = 'payphone';
+                } else if (paypalVisible) {
+                    defaultTab = 'paypal';
                 } else if (deunaVisible) {
                     defaultTab = 'deuna';
                 } else if (transferVisible) {
                     defaultTab = 'transfer';
-                } else if (paypalVisible) {
-                    defaultTab = 'paypal';
-                } else if (payphoneVisible) {
-                    defaultTab = 'payphone';
                 } else if (checkoutSelectedLicense === 'exclusive') {
                     defaultTab = 'offer';
                 }

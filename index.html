@@ -3541,15 +3541,15 @@
                     </div>
                     
                     <div class="pay-method-tabs" style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 16px; box-sizing: border-box; flex-wrap: wrap;">
-                        <button type="button" class="pay-tab-btn active" id="btn-pay-deuna" onclick="window.switchStorePaymentMethod('deuna')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 700; color: var(--accent, #00ccff); border-bottom: 2px solid var(--accent, #00ccff); cursor: pointer; outline: none;">Deuna!</button>
-                        <button type="button" class="pay-tab-btn" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')" data-i18n="checkout_pay_transfer" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">Transferencia</button>
+                        <button type="button" class="pay-tab-btn active" id="btn-pay-payphone" onclick="window.switchStorePaymentMethod('payphone')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 700; color: var(--accent, #00ccff); border-bottom: 2px solid var(--accent, #00ccff); cursor: pointer; outline: none; white-space: nowrap;">PayPhone</button>
                         <button type="button" class="pay-tab-btn" id="btn-pay-paypal" onclick="window.switchStorePaymentMethod('paypal')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">PayPal</button>
-                        <button type="button" class="pay-tab-btn" id="btn-pay-payphone" onclick="window.switchStorePaymentMethod('payphone')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none; white-space: nowrap;">PayPhone</button>
+                        <button type="button" class="pay-tab-btn" id="btn-pay-deuna" onclick="window.switchStorePaymentMethod('deuna')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">Deuna!</button>
+                        <button type="button" class="pay-tab-btn" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')" data-i18n="checkout_pay_transfer" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">Transferencia</button>
                         <button type="button" class="pay-tab-btn" id="btn-pay-offer" onclick="window.switchStorePaymentMethod('offer')" data-i18n="checkout_pay_offer" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #f59e0b; border-bottom: 2px solid transparent; cursor: pointer; outline: none; white-space: nowrap;">🏷️ Oferta</button>
                     </div>
 
                     <!-- Panel Deuna -->
-                    <div class="store-payment-panel" id="store-pay-deuna">
+                    <div class="store-payment-panel" id="store-pay-deuna" style="display: none;">
                         <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 12px; margin-top: 0;" data-i18n="deuna_steps_title">Sigue los pasos para completar tu pago con <strong style="color: #fff;">Deuna!</strong>:</p>
                         <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
                             <div style="display: flex; align-items: flex-start; gap: 10px;">
@@ -3609,7 +3609,7 @@
                     </div>
 
                     <!-- Panel PayPhone -->
-                    <div class="store-payment-panel" id="store-pay-payphone" style="display: none;">
+                    <div class="store-payment-panel" id="store-pay-payphone">
                         <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;" data-i18n="checkout_payphone_desc">Paga al instante de forma segura usando tu cuenta <strong style="color: #fff;">PayPhone</strong> o tu tarjeta de crédito/débito favorita:</p>
                         
                         <div style="display: flex; justify-content: center; width: 100%; box-sizing: border-box;">
