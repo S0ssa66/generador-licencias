@@ -3678,3 +3678,46 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     margin: 0 !important;
 }
 
+/* ==========================================================================
+   CENTRO DE SOPORTE & FAQ - MEJORAS PREMIUM
+   ========================================================================== */
+.support-tabs-container {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 18px;
+    height: 44px;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+    -webkit-overflow-scrolling: touch;
+}
+
+.support-tabs-container::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+}
+
+.support-tab-btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    height: 100% !important;
+}
+
+#support-info-modal details {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#support-info-modal details[open] {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+#support-info-modal summary {
+    list-style: none !important;
+}
+
+#support-info-modal summary::-webkit-details-marker {
+    display: none !important;
+}
+
+
