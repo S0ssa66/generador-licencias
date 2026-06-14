@@ -486,6 +486,45 @@ window.closePaymentModal = function() {
     if (modal) modal.style.display = 'none';
 };
 
+window.openSupportModal = function(tabName) {
+    const modal = document.getElementById('support-info-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        if (tabName) {
+            window.switchSupportTab(tabName);
+        }
+        if (typeof window.safeCreateIcons === 'function') {
+            window.safeCreateIcons();
+        }
+    }
+};
+
+window.closeSupportModal = function() {
+    const modal = document.getElementById('support-info-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+window.switchSupportTab = function(tabName) {
+    // Desactivar todas las pestañas y ocultar contenidos
+    document.querySelectorAll('.support-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelectorAll('.support-tab-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Activar pestaña y mostrar contenido seleccionado
+    const activeBtn = document.getElementById('btn-support-tab-' + tabName);
+    const activeContent = document.getElementById('support-content-' + tabName);
+    if (activeBtn && activeContent) {
+        activeBtn.classList.add('active');
+        activeContent.style.display = 'block';
+    }
+    if (typeof window.safeCreateIcons === 'function') {
+        window.safeCreateIcons();
+    }
+};
+
 // Contar licencias generadas este mes para Plan Inicial
 function getLicensesThisMonthCount() {
     const today = new Date();

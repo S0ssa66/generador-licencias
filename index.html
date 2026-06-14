@@ -562,17 +562,17 @@
                 <div class="space-y-6">
                     <h4 class="font-label-caps text-label-caps text-white" data-i18n="footer_legal">Legal</h4>
                     <ul class="space-y-4 text-sm text-on-surface-variant">
-                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_terms" href="#">Terms of Service</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_privacy" href="#">Privacy Policy</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_license_agreement" href="#">License Agreement</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_copyright_guide" href="#">Copyright Guide</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_terms" onclick="window.openSupportModal('terms')">Terms of Service</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_privacy" onclick="window.openSupportModal('terms')">Privacy Policy</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_license_agreement" onclick="window.openSupportModal('license')">License Agreement</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_copyright_guide" onclick="window.openSupportModal('copyright')">Copyright Guide</a></li>
                     </ul>
                 </div>
                 <div class="space-y-6">
                     <h4 class="font-label-caps text-label-caps text-white" data-i18n="footer_support">Support</h4>
                     <ul class="space-y-4 text-sm text-on-surface-variant">
-                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_help_center" href="#">Help Center</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_contact" href="#">Contact Support</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_help_center" onclick="window.openSupportModal('faq')">Help Center</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_contact" onclick="window.openSupportModal('faq')">Contact Support</a></li>
                         <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_api" href="#">API Docs</a></li>
                         <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_status" href="#">System Status</a></li>
                     </ul>
@@ -3772,6 +3772,121 @@
     <div id="floating-cart-btn" style="position: fixed; bottom: 100px; right: 24px; z-index: 999; display: none; align-items: center; justify-content: center; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--accent, #00ccff) 0%, #0055ee 100%); box-shadow: 0 10px 30px rgba(0, 204, 255, 0.3); border: 2px solid rgba(255,255,255,0.1); cursor: pointer; transition: transform 0.2s, hover 0.2s;">
         <i data-lucide="shopping-cart" style="width: 26px; height: 26px; color: #fff;"></i>
         <span id="cart-count-badge" style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: #fff; font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 10px; border: 2px solid #0c0e14;">0</span>
+    </div>
+
+    <!-- Modal de Soporte y FAQs -->
+    <div class="modal-backdrop" id="support-info-modal" style="display: none; z-index: 10020;">
+        <div class="modal" style="width: 760px; max-width: 95vw; background-color: var(--bg-modal); border: 1px solid var(--border-color); border-radius: 20px; padding: 24px 24px 20px 24px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); position: relative; display: flex; flex-direction: column; max-height: 85vh;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 18px; background: none;">
+                <h3 class="font-headline-sm font-bold text-white" data-i18n="support_modal_title">Centro de Soporte y Ayuda Legal</h3>
+                <button class="icon-btn" onclick="window.closeSupportModal()" style="padding: 4px; background: transparent; border: none; cursor: pointer; color: var(--text-secondary);"><i data-lucide="x"></i></button>
+            </div>
+            
+            <!-- Tabs del Modal -->
+            <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); margin-bottom: 18px; height: 36px; overflow-x: auto;">
+                <button class="tab-btn active support-tab-btn" id="btn-support-tab-faq" onclick="window.switchSupportTab('faq')">
+                    <i data-lucide="help-circle"></i>
+                    <span data-i18n="support_tab_faq">FAQs</span>
+                </button>
+                <button class="tab-btn support-tab-btn" id="btn-support-tab-copyright" onclick="window.switchSupportTab('copyright')">
+                    <i data-lucide="music-2"></i>
+                    <span data-i18n="support_tab_copyright">Guía de Derechos</span>
+                </button>
+                <button class="tab-btn support-tab-btn" id="btn-support-tab-license" onclick="window.switchSupportTab('license')">
+                    <i data-lucide="file-text"></i>
+                    <span data-i18n="support_tab_license">Acuerdo de Licencia</span>
+                </button>
+                <button class="tab-btn support-tab-btn" id="btn-support-tab-terms" onclick="window.switchSupportTab('terms')">
+                    <i data-lucide="shield-check"></i>
+                    <span data-i18n="support_tab_terms">Términos y Privacidad</span>
+                </button>
+            </div>
+            
+            <!-- Cuerpo del Modal -->
+            <div class="modal-body" style="flex: 1; overflow-y: auto; text-align: left; padding: 0 4px 10px 4px;">
+                
+                <!-- Contenido FAQ -->
+                <div class="support-tab-content" id="support-content-faq" style="display: block; space-y: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        
+                        <!-- Q1 -->
+                        <details class="group" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; cursor: pointer;">
+                            <summary class="font-bold text-white flex justify-between items-center" style="outline: none; list-style: none;">
+                                <span data-i18n="support_faq_q1">¿Cuál es la diferencia entre una licencia No Exclusiva y una Exclusiva?</span>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-on-surface-variant transition-transform group-open:rotate-180"></i>
+                            </summary>
+                            <p class="text-on-surface-variant mt-3 text-sm leading-relaxed" data-i18n="support_faq_a1" style="cursor: default;"></p>
+                        </details>
+                        
+                        <!-- Q2 -->
+                        <details class="group" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; cursor: pointer;">
+                            <summary class="font-bold text-white flex justify-between items-center" style="outline: none; list-style: none;">
+                                <span data-i18n="support_faq_q2">¿Qué formatos de archivo recibiré con mi compra?</span>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-on-surface-variant transition-transform group-open:rotate-180"></i>
+                            </summary>
+                            <div class="text-on-surface-variant mt-3 text-sm leading-relaxed" data-i18n="support_faq_a2" style="cursor: default;"></div>
+                        </details>
+                        
+                        <!-- Q3 -->
+                        <details class="group" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; cursor: pointer;">
+                            <summary class="font-bold text-white flex justify-between items-center" style="outline: none; list-style: none;">
+                                <span data-i18n="support_faq_q3">¿Qué significan los límites de streams en mi licencia?</span>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-on-surface-variant transition-transform group-open:rotate-180"></i>
+                            </summary>
+                            <p class="text-on-surface-variant mt-3 text-sm leading-relaxed" data-i18n="support_faq_a3" style="cursor: default;"></p>
+                        </details>
+                        
+                        <!-- Q4 -->
+                        <details class="group" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; cursor: pointer;">
+                            <summary class="font-bold text-white flex justify-between items-center" style="outline: none; list-style: none;">
+                                <span data-i18n="support_faq_q4">¿Puedo registrar mi canción en YouTube Content ID o sistemas de huellas digitales?</span>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-on-surface-variant transition-transform group-open:rotate-180"></i>
+                            </summary>
+                            <p class="text-on-surface-variant mt-3 text-sm leading-relaxed" data-i18n="support_faq_a4" style="cursor: default;"></p>
+                        </details>
+                        
+                        <!-- Q5 -->
+                        <details class="group" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; cursor: pointer;">
+                            <summary class="font-bold text-white flex justify-between items-center" style="outline: none; list-style: none;">
+                                <span data-i18n="support_faq_q5">¿Qué ocurre cuando expira el plazo de años de mi licencia?</span>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-on-surface-variant transition-transform group-open:rotate-180"></i>
+                            </summary>
+                            <p class="text-on-surface-variant mt-3 text-sm leading-relaxed" data-i18n="support_faq_a5" style="cursor: default;"></p>
+                        </details>
+                        
+                    </div>
+                </div>
+                
+                <!-- Contenido Guía de Derechos -->
+                <div class="support-tab-content" id="support-content-copyright" style="display: none;">
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                        <h4 class="font-bold text-white mb-4" data-i18n="support_copyright_title">Guía de Derechos de Autor y Registro de Regalías</h4>
+                        <div class="text-on-surface-variant text-sm leading-relaxed" data-i18n="support_copyright_text"></div>
+                    </div>
+                </div>
+                
+                <!-- Contenido Acuerdo de Licencia -->
+                <div class="support-tab-content" id="support-content-license" style="display: none;">
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                        <h4 class="font-bold text-white mb-4" data-i18n="support_license_title">Acuerdo de Licencia Comercial</h4>
+                        <p class="text-on-surface-variant text-sm leading-relaxed" data-i18n="support_license_text"></p>
+                    </div>
+                </div>
+                
+                <!-- Contenido Términos y Privacidad -->
+                <div class="support-tab-content" id="support-content-terms" style="display: none;">
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                        <h4 class="font-bold text-white mb-4" data-i18n="support_terms_title">Términos de Servicio y Privacidad</h4>
+                        <p class="text-on-surface-variant text-sm leading-relaxed" data-i18n="support_terms_text"></p>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 14px; background: none;">
+                <button class="btn btn-secondary" onclick="window.closeSupportModal()">Cerrar</button>
+            </div>
+        </div>
     </div>
 
     <!-- Barra de navegación táctil para móviles -->
