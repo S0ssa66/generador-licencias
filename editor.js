@@ -2110,7 +2110,19 @@ async function fetchWithTimeout(resource, options = {}) {
 async function uploadPDFToCloud(base64DataUri, filename) {
     const blob = await dataURLtoBlob(base64DataUri);
 
-    // 0. Intentar con Firebase Storage (Excelente alternativa oficial, 100% segura y estable)
+    // 0. Intentar con Google Drive (prioritario si está configurado)
+    if (producerConfig.gdriveClientId) {
+        try {
+            console.log('Subiendo PDF a Google Drive...');
+            const driveUrl = await uploadToGoogleDrive(base64DataUri, filename);
+            console.log('PDF subido con éxito a Google Drive:', driveUrl);
+            return driveUrl;
+        } catch (driveErr) {
+            console.warn('Google Drive falló, intentando con Firebase Storage / otros métodos:', driveErr.message);
+        }
+    }
+
+    // 0.1 Intentar con Firebase Storage (Excelente alternativa oficial, 100% segura y estable)
     if (typeof storage !== 'undefined' && auth.currentUser) {
         try {
             console.log('Subiendo PDF a Firebase Storage...');
@@ -2120,16 +2132,6 @@ async function uploadPDFToCloud(base64DataUri, filename) {
             return downloadUrl;
         } catch (storageErr) {
             console.warn('Firebase Storage falló, intentando otros métodos:', storageErr.message);
-        }
-    }
-
-    // 0.1 Intentar con Google Drive (prioritario si está configurado)
-    if (producerConfig.gdriveClientId) {
-        try {
-            const driveUrl = await uploadToGoogleDrive(base64DataUri, filename);
-            return driveUrl;
-        } catch (driveErr) {
-            console.warn('Google Drive falló, intentando con servidores alternativos:', driveErr.message);
         }
     }
     
