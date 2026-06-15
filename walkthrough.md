@@ -88,9 +88,20 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
   * Creamos `generador-licencias/Dashboard BEATSS.md` en la raíz del proyecto para centralizar el acceso a todas las notas, reportes y bitácoras usando enlaces relativos de Obsidian (`[[...]]`).
   * Incluimos instrucciones premium para excluir directorios ruidosos de desarrollo de la indexación de Obsidian.
 
+### 12. 🤖 Orquestador Multi-Agente con Herramientas y 17 Agentes (`agente_coordinador.py`)
+* **Integración Completa de Especialistas:** Rediseñamos el script `agente_coordinador.py` para ampliar su equipo de 4 a los **17 subagentes especializados** documentados en el sistema de BEATSS, mapeando los prompts de sistema y colores de consola individuales para cada uno.
+* **Implementación del Loop ReAct (Razonamiento y Acción):** 
+  * Los agentes ahora operan en un loop iterativo, decidiendo si necesitan información del código o realizar cambios mediante un formato JSON unificado de salida.
+  * Dotamos a los agentes de tres herramientas locales en Python: `read_file(path)`, `list_dir(path)` y `write_file(path, content)`.
+  * La lectura de archivos y listado de directorios se resuelve de forma automática y transparente en segundo plano, devolviendo la "OBSERVACIÓN" directamente al contexto de Gemini.
+* **Seguridad Activa y Aprobación Interactiva:** 
+  * Implementamos un sistema de verificación de rutas (`get_safe_path`) que impide el acceso a archivos fuera de la raíz de la bóveda del proyecto.
+  * Diseñamos un paso de control interactivo en consola para `write_file`: si un agente propone guardar o modificar un archivo, el script pausa la ejecución, muestra un preview de las modificaciones y solicita confirmación explícita `(s/n)` del usuario.
+* **Flujo de Respuesta Consolidado:** El Agente Principal recopila los hallazgos y cambios sugeridos en los ReAct loops de los subagentes delegados y los unifica en una respuesta final descriptiva y formateada en Markdown.
+
 ---
 
-## Verificación de Obsidian
-* Verificamos la creación correcta de directorios y archivos.
-* Confirmamos que todos los documentos se encuentran bajo seguimiento en el control de versiones de Git (`generador-licencias/docs/` y `generador-licencias/Dashboard BEATSS.md`).
-* Agregamos y confirmamos los archivos mediante un commit de Git: `docs: implement Obsidian vault documentation structure and central Dashboard`.
+## Verificación de Cambios y Estructura
+* **Vault de Obsidian:** Verificamos la creación correcta de directorios y archivos de documentación.
+* **Sintaxis de Python:** Validamos la compilación del script local sin errores de sintaxis (`python3 -m py_compile agente_coordinador.py`).
+* **Git:** Todos los cambios se encuentran bajo seguimiento en el control de versiones de Git con el commit de infraestructura correspondiente.
