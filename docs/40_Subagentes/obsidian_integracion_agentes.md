@@ -115,3 +115,10 @@ Este documento detalla la propuesta técnica y operativa de cómo cada uno de lo
 *   **Cómo lo usaría:** 
     *   Especificando los endpoints que la app móvil consumirá de Firestore y del backend serverless de Vercel.
     *   Documentando la máquina de estados del reproductor en segundo plano nativo.
+
+### 📚 `obsidian_expert` (Gestión de Conocimiento y Vault)
+*   **Ámbito de Obsidian:** Curaduría, mantenimiento e indexación de la bóveda completa.
+*   **Cómo lo usaría:** 
+    *   Supervisando y actualizando el panel central `[[Dashboard BEATSS]]`.
+    *   Manteniendo estructurada la base de conocimientos y aplicando la taxonomía de carpetas para evitar la entropía de archivos.
+    *   Creando y distribuyendo plantillas Markdown de notas técnicas para los demás subagentes.
