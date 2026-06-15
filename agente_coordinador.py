@@ -84,11 +84,12 @@ Tienes disponibles los siguientes subagentes especialistas:
 15. `devops_admin`: Despliegue en Vercel, CI/CD, monitoreo de salud e índices compuestos de Firestore.
 16. `refactor_expert`: Arquitectura JS modular, resolver dependencias circulares y window retrocompatible.
 17. `obsidian_expert`: Gestión de la bóveda de Obsidian, Dashboard BEATSS.md y mantenimiento de documentación organizada.
+18. `token_optimizer`: Optimización del consumo de tokens, gestión de contextos eficientes y optimización de prompts.
 
 Dado el requerimiento del usuario, debes decidir a quién(es) delegar y qué preguntarles. Puedes delegar a uno o más subagentes en paralelo.
 Responde estrictamente en formato JSON con la siguiente estructura:
 {
-  "pensamiento": "Tu razonamiento interno sobre cómo abordar el problema.",
+  "pensamiento": "Tu razonamiento interno sobre cómo abordar el problema y a qué especialistas delegar.",
   "delegados": [
     {
       "rol": "nombre_del_agente",
@@ -108,14 +109,17 @@ Tu system prompt específico es:
 Tienes acceso a herramientas locales para interactuar con la base de código. Puedes usar estas herramientas de forma iterativa antes de dar tu respuesta final:
 1. `list_dir(path)`: Lista los contenidos de un directorio.
 2. `read_file(path)`: Lee el contenido completo de un archivo de texto.
-3. `write_file(path, content)`: Escribe o modifica un archivo de texto (requiere confirmación del usuario).
+3. `read_file_lines(path, start_line, end_line)`: Lee únicamente un rango específico de líneas (1-indexed, inclusive) de un archivo. ¡Úsala preferentemente para archivos grandes para ahorrar tokens!
+4. `write_file(path, content)`: Escribe o modifica un archivo de texto (requiere confirmación del usuario).
 
 Para usar una herramienta, debes responder con un objeto JSON válido con la siguiente estructura:
 {{
   "pensamiento": "Tu razonamiento detallado sobre qué información necesitas de la base de código o qué acción vas a tomar.",
   "tool_use": {{
-    "tool": "list_dir" | "read_file" | "write_file",
+    "tool": "list_dir" | "read_file" | "read_file_lines" | "write_file",
     "path": "ruta_relativa_del_archivo_o_directorio",
+    "start_line": numero_linea_inicio (solo si tool es read_file_lines),
+    "end_line": numero_linea_fin (solo si tool es read_file_lines),
     "content": "Contenido completo a escribir (solo si tool es write_file)"
   }}
 }}
@@ -236,6 +240,13 @@ Eres el Agente de Obsidian y Gestión del Conocimiento de BEATSS. Mantienes estr
 Tus prioridades:
 1. Organizar reportes en carpetas por categoría (docs/10_Pagos, docs/20_Soporte, etc.).
 2. Mantener Dashboard BEATSS.md limpio y excluir archivos no deseados.
+""",
+    "token_optimizer": """
+Eres el Agente de Eficiencia de Tokens y Gestión de Contexto de BEATSS. Tu misión es maximizar la inteligencia de la plataforma minimizando el consumo de tokens en los prompts.
+Tus prioridades:
+1. Analizar la base de código para proponer divisiones de archivos y refactorizaciones que reduzcan el tamaño físico del código.
+2. Recomendar estructuras de notas atómicas en Obsidian.
+3. Optimizar las llamadas en agente_coordinador.py promoviendo la lectura por rangos de líneas (read_file_lines) en lugar de lecturas completas.
 """
 }
 
@@ -270,7 +281,8 @@ AGENT_COLORS = {
     "audio_dsp_expert": C_YELLOW,
     "devops_admin": C_RED,
     "refactor_expert": C_CYAN,
-    "obsidian_expert": C_MAGENTA
+    "obsidian_expert": C_MAGENTA,
+    "token_optimizer": C_BLUE
 }
 
 def GET_COLOR_FOR_ROL(rol):
@@ -392,6 +404,38 @@ def run_tool_read_file(path):
     except Exception as e:
         return f"Error al leer el archivo: {str(e)}"
 
+def run_tool_read_file_lines(path, start_line, end_line):
+    safe_path = get_safe_path(path)
+    if not safe_path:
+        return "Error: Acceso denegado. No puedes leer archivos fuera del proyecto."
+        
+    if not os.path.exists(safe_path):
+        return f"Error: El archivo '{path}' no existe."
+        
+    if os.path.isdir(safe_path):
+        return f"Error: '{path}' es un directorio. Usa list_dir en su lugar."
+        
+    try:
+        start = int(start_line)
+        end = int(end_line)
+    except (ValueError, TypeError):
+        return "Error: start_line y end_line deben ser números enteros válidos."
+        
+    try:
+        with open(safe_path, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+            
+        start_idx = max(0, start - 1)
+        end_idx = min(len(lines), end)
+        
+        if start_idx >= len(lines) or start_idx > end_idx:
+            return f"Error: Rango de líneas {start}-{end} fuera de límites. El archivo tiene {len(lines)} líneas."
+            
+        content = "".join(lines[start_idx:end_idx])
+        return f"[Líneas {start_idx+1} a {end_idx} de {len(lines)} del archivo '{path}']:\n{content}"
+    except Exception as e:
+        return f"Error al leer rango de líneas: {str(e)}"
+
 def run_tool_list_dir(path):
     safe_path = get_safe_path(path)
     if not safe_path:
@@ -504,11 +548,15 @@ def execute_subagent_react_loop(rol, prompt_especifico, consulta):
             return agent_decision.get("respuesta", "Operación completada.")
             
         # Ejecutar herramienta
-        print(f"{color}[Agente {rol}] 🛠️  Herramienta: {C_BOLD}{tool_name}{C_RESET} ➔ {C_CYAN}{tool_path}{C_RESET}")
+        print(f"{color}[Agente {rol}] 🛠  Herramienta: {C_BOLD}{tool_name}{C_RESET} ➔ {C_CYAN}{tool_path}{C_RESET}")
         
         observation = ""
         if tool_name == "read_file":
             observation = run_tool_read_file(tool_path)
+        elif tool_name == "read_file_lines":
+            start_line = tool_use.get("start_line", 1)
+            end_line = tool_use.get("end_line", 100)
+            observation = run_tool_read_file_lines(tool_path, start_line, end_line)
         elif tool_name == "list_dir":
             observation = run_tool_list_dir(tool_path)
         elif tool_name == "write_file":
@@ -526,7 +574,7 @@ def main():
     print(f"\n{C_CYAN}{C_BOLD}================================================================{C_RESET}")
     print(f"{C_CYAN}{C_BOLD}   BEATSS - SISTEMA DE ORQUESTACIÓN MULTI-AGENTE AUTÓNOMO      {C_RESET}")
     print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}")
-    print(f"{C_GRAY}Gemini API conectada exitosamente (con soporte de 17 subagentes y herramientas).{C_RESET}")
+    print(f"{C_GRAY}Gemini API conectada exitosamente (con soporte de 18 subagentes y herramientas).{C_RESET}")
     print(f"Escribe tus requerimientos. Los agentes podrán leer y proponer cambios de código.")
     print(f"Escribe {C_RED}'salir'{C_RESET} para terminar.\n")
 
