@@ -8,13 +8,10 @@
 - [x] Paso 6: Agregar alias locales en `main.js`, `dashboard.js` y `editor.js` para funciones de `window`
 - [x] Paso 7: Verificar compilación y resolver ReferenceErrors en local
 - [x] Paso 8: Desplegar cambios en producción en Vercel
-- [x] Paso 9: Corregir el color de fondo de la previsualización del documento a blanco y texto oscuro en styles.css y desplegar.
-- [x] Paso 10: Corregir y verificar estadísticas del catálogo de beats (Total Beats, Con MP3, Con WAV, Con Stems) re-compilando y desplegando a Vercel.
-- [x] Paso 11: Añadir carátula predeterminada global (Vincular inputs UI, guardar/cargar base64 de Firestore, recortar y centrar imagen a cuadrado de 500x500 px, y desplegar en Vercel)
-- [x] Paso 12: Corregir el funcionamiento del botón Marketplace en la página de inicio (Vincular evento click de landing-btn-nav-catalog para redirigir a showAppView('catalog') y prevenir comportamiento por defecto)
-- [x] Paso 13: Reparar los botones de comprar ahora y añadir al carrito en el modal de checkout para el marketplace global (Implementar findBeatById para buscar tanto en storeBeats como en globalBeats y reemplazar búsquedas directas)
-- [x] Paso 14: Garantizar la inicialización del checkout modal desde cualquier flujo (Llamar a setupStoreCheckout() al abrir el modal en openBeatCheckoutModal() para asegurar la vinculación de escuchadores cuando se accede de forma directa por url a ?catalogo=1)
-
+- [x] Paso 9: Crear estructura de carpetas de documentación en `generador-licencias/docs/`
+- [x] Paso 10: Mover y copiar los reportes técnicos, legales, de soporte y de subagentes a sus respectivas carpetas de categoría
+- [x] Paso 11: Generar la nota central de control `Dashboard BEATSS.md`
+- [x] Paso 12: Comitear la nueva estructura de documentación en el repositorio Git
 
 
 

@@ -75,4 +75,22 @@ Hemos completado exitosamente la modularización completa de la aplicación, el 
    * Todos los botones de Marketplace e inicio/catálogo en la landing page redirigen ahora instantáneamente a la vista del catálogo/marketplace.
    * Las acciones de "Comprar Ahora" y "Añadir al Carrito" proceden sin bloqueos al paso de facturación y pasarela en el checkout del Marketplace.
 
+### 11. 🗂️ Integración y Estructuración de la Bóveda de Obsidian
+* **Diseño y Estructuración del Vault (`/Users/sossa/IA`):**
+  * Creamos la carpeta de documentación `generador-licencias/docs/` dentro del repositorio para almacenar de forma organizada todos los reportes, auditorías de seguridad, y análisis de negocio del proyecto BEATSS.
+  * Agrupamos los documentos por categorías funcionales:
+    * `docs/10_Pagos/`: Contiene la viabilidad de Stripe en Ecuador vía LLC (`viabilidad_stripe_ecuador_llc.md`) y las opciones de pago local con RUC de Ecuador (`opciones_pago_con_ruc_ecuador.md`).
+    * `docs/20_Soporte/`: Contiene la propuesta y guías de soporte y FAQs de la plataforma (`propuesta_ayuda_soporte.md`).
+    * `docs/30_Contratos/`: Contiene la auditoría de maquetación y salto de página de contratos PDF (`analisis_contratos_pdf.md`).
+    * `docs/40_Subagentes/`: Contiene la definición de roles de subagentes (`agents_analysis.md`) y la guía de integración de subagentes en Obsidian (`obsidian_integracion_agentes.md`).
+    * `docs/50_Seguridad/`: Contiene el análisis y auditoría de seguridad de Firestore (`firebase_security_audit.md`).
+* **Panel de Control Central (`Dashboard BEATSS.md`):**
+  * Creamos `generador-licencias/Dashboard BEATSS.md` en la raíz del proyecto para centralizar el acceso a todas las notas, reportes y bitácoras usando enlaces relativos de Obsidian (`[[...]]`).
+  * Incluimos instrucciones premium para excluir directorios ruidosos de desarrollo de la indexación de Obsidian.
 
+---
+
+## Verificación de Obsidian
+* Verificamos la creación correcta de directorios y archivos.
+* Confirmamos que todos los documentos se encuentran bajo seguimiento en el control de versiones de Git (`generador-licencias/docs/` y `generador-licencias/Dashboard BEATSS.md`).
+* Agregamos y confirmamos los archivos mediante un commit de Git: `docs: implement Obsidian vault documentation structure and central Dashboard`.
