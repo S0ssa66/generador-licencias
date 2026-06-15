@@ -2057,10 +2057,25 @@ async function uploadFileToStorage(blob, path) {
     const uploadTask = uploadBytesResumable(storageRef, blob);
     
     return new Promise((resolve, reject) => {
+        // Timeout de 10 segundos para cancelar la tarea si Firebase Storage se queda colgado
+        const timeoutId = setTimeout(() => {
+            try {
+                uploadTask.cancel();
+                console.warn('Firebase Storage upload cancelado por timeout.');
+            } catch (err) {
+                console.error('Error al cancelar uploadTask:', err);
+            }
+            reject(new Error('Timeout al subir a Firebase Storage (10s)'));
+        }, 10000);
+
         uploadTask.on('state_changed', 
             null, 
-            (error) => reject(error), 
+            (error) => {
+                clearTimeout(timeoutId);
+                reject(error);
+            }, 
             async () => {
+                clearTimeout(timeoutId);
                 try {
                     const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
                     resolve(downloadUrl);
@@ -2072,6 +2087,24 @@ async function uploadFileToStorage(blob, path) {
     });
 }
 window.uploadFileToStorage = uploadFileToStorage;
+
+// Helper to perform fetch with a timeout
+async function fetchWithTimeout(resource, options = {}) {
+    const { timeout = 8000 } = options;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    try {
+        const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        throw error;
+    }
+}
 
 // Subir PDF a la nube usando Google Drive > GoFile > PixelDrain > file.io > tmpfiles.org
 async function uploadPDFToCloud(base64DataUri, filename) {
@@ -2106,10 +2139,11 @@ async function uploadPDFToCloud(base64DataUri, filename) {
         const formData = new FormData();
         formData.append('file', blob, filename);
 
-        const response = await fetch('https://pixeldrain.com/api/file', {
+        const response = await fetchWithTimeout('https://pixeldrain.com/api/file', {
             method: 'POST',
             body: formData,
-            credentials: 'omit'
+            credentials: 'omit',
+            timeout: 8000
         });
 
         if (response.ok) {
@@ -2129,9 +2163,10 @@ async function uploadPDFToCloud(base64DataUri, filename) {
         const formData = new FormData();
         formData.append('file', blob, filename);
 
-        const response = await fetch('https://tmpfiles.org/api/v1/upload', {
+        const response = await fetchWithTimeout('https://tmpfiles.org/api/v1/upload', {
             method: 'POST',
-            body: formData
+            body: formData,
+            timeout: 8000
         });
 
         if (response.ok) {
@@ -2150,7 +2185,7 @@ async function uploadPDFToCloud(base64DataUri, filename) {
     // 3. Intentar con GoFile (Recomendado, sin límites de descarga)
     try {
         console.log('Subiendo a GoFile...');
-        const serverResponse = await fetch('https://api.gofile.io/getServer');
+        const serverResponse = await fetchWithTimeout('https://api.gofile.io/getServer', { timeout: 6000 });
         let server = 'store1';
         if (serverResponse.ok) {
             const serverData = await serverResponse.json();
@@ -2162,9 +2197,10 @@ async function uploadPDFToCloud(base64DataUri, filename) {
         const formData = new FormData();
         formData.append('file', blob, filename);
         
-        const uploadResponse = await fetch(`https://${server}.gofile.io/uploadFile`, {
+        const uploadResponse = await fetchWithTimeout(`https://${server}.gofile.io/uploadFile`, {
             method: 'POST',
-            body: formData
+            body: formData,
+            timeout: 8000
         });
         
         if (uploadResponse.ok) {
@@ -2184,9 +2220,10 @@ async function uploadPDFToCloud(base64DataUri, filename) {
         const formData = new FormData();
         formData.append('file', blob, filename);
 
-        const response = await fetch('https://file.io/', {
+        const response = await fetchWithTimeout('https://file.io/', {
             method: 'POST',
-            body: formData
+            body: formData,
+            timeout: 8000
         });
 
         if (response.ok) {
