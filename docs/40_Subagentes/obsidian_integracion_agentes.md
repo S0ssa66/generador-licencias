@@ -122,3 +122,9 @@ Este documento detalla la propuesta técnica y operativa de cómo cada uno de lo
     *   Supervisando y actualizando el panel central `[[Dashboard BEATSS]]`.
     *   Manteniendo estructurada la base de conocimientos y aplicando la taxonomía de carpetas para evitar la entropía de archivos.
     *   Creando y distribuyendo plantillas Markdown de notas técnicas para los demás subagentes.
+
+### 📉 `token_optimizer` (Eficiencia de Tokens y Contexto)
+*   **Ámbito de Obsidian:** Auditoría de densidad de información en notas y optimización de prompts del orquestador.
+*   **Cómo lo usaría:**
+    *   Estableciendo pautas de longitud máxima para notas de documentación a fin de evitar desperdicio de tokens al ser leídas.
+    *   Diseñando resúmenes ejecutivos autocontenidos en las cabeceras de notas pesadas para que los agentes puedan leer solo el frontmatter o resumen en lugar de la nota completa.
