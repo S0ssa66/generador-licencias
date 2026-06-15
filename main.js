@@ -278,12 +278,40 @@ function renderLiveLicensesFeed() {
                     valueDisplay = currentLang === 'es' ? `${diffMin}m atrás` : `${diffMin}m ago`;
                 } else {
                     const diffHours = Math.floor(diffMin / 60);
-                    valueDisplay = currentLang === 'es' ? `${diffHours}h atrás` : `${diffHours}h ago`;
+                    if (diffHours < 24) {
+                        valueDisplay = currentLang === 'es' ? `${diffHours}h atrás` : `${diffHours}h ago`;
+                    } else {
+                        const diffDays = Math.floor(diffHours / 24);
+                        if (diffDays < 30) {
+                            if (diffDays === 1) {
+                                valueDisplay = currentLang === 'es' ? 'Ayer' : 'Yesterday';
+                            } else {
+                                valueDisplay = currentLang === 'es' ? `${diffDays} días atrás` : `${diffDays} days ago`;
+                            }
+                        } else {
+                            const diffMonths = Math.floor(diffDays / 30);
+                            if (diffMonths < 12) {
+                                if (diffMonths === 1) {
+                                    valueDisplay = currentLang === 'es' ? 'Hace 1 mes' : '1 month ago';
+                                } else {
+                                    valueDisplay = currentLang === 'es' ? `${diffMonths} meses atrás` : `${diffMonths} months ago`;
+                                }
+                            } else {
+                                const diffYears = Math.floor(diffMonths / 12);
+                                if (diffYears === 1) {
+                                    valueDisplay = currentLang === 'es' ? 'Hace 1 año' : '1 year ago';
+                                } else {
+                                    valueDisplay = currentLang === 'es' ? `${diffYears} años atrás` : `${diffYears} years ago`;
+                                }
+                            }
+                        }
+                    }
                 }
             } else {
                 valueDisplay = currentLang === 'es' ? item.value.replace('ago', 'atrás') : item.value;
             }
         }
+
 
         return `
             <div class="relative z-10 p-5 bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.04] hover:border-white/[0.08] rounded-xl flex items-center gap-5 transition-all duration-300 transform hover:scale-[1.02] cursor-pointer group">
