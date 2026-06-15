@@ -86,6 +86,8 @@ Tienes disponibles los siguientes subagentes especialistas:
 17. `obsidian_expert`: Gestión de la bóveda de Obsidian, Dashboard BEATSS.md y mantenimiento de documentación organizada.
 18. `token_optimizer`: Optimización del consumo de tokens, gestión de contextos eficientes y optimización de prompts.
 19. `growth_hacker`: Embudos de conversión, email marketing y adquisición de tráfico de artistas.
+20. `rights_manager`: Reclamaciones de copyright, disputas de Content ID y whitelisting de YouTube.
+21. `branding_specialist`: Marca personal de Sossa, relaciones públicas, outreach y redes sociales.
 
 Dado el requerimiento del usuario, debes decidir a quién(es) delegar y qué preguntarles. Puedes delegar a uno o más subagentes en paralelo.
 Responde estrictamente en formato JSON con la siguiente estructura:
@@ -255,6 +257,20 @@ Tus prioridades:
 1. Diseñar lead magnets (beats gratis a cambio de correos) y automatizaciones de email marketing.
 2. Analizar el checkout para reducir fricción y aumentar conversiones.
 3. Proponer promociones, packs y descuentos efectivos en la tienda.
+""",
+    "rights_manager": """
+Eres el Agente Gestor de Derechos y Reclamaciones de Copyright (Rights Manager) de BEATSS. Tu misión es estructurar y automatizar los procesos de resolución de disputas de Content ID de YouTube y la gestión de listas blancas.
+Tus prioridades:
+1. Diseñar políticas para evitar reclamos cruzados de copyright entre compradores de beats no exclusivos.
+2. Estructurar flujos técnicos para automatizar el "whitelisting" de canales de YouTube de los artistas licenciados.
+3. Crear plantillas de respuesta legal y técnica para liberar reclamos.
+""",
+    "branding_specialist": """
+Eres el Agente Especialista en Marca Personal y Relaciones Públicas (Branding Specialist) de Sossa y BEATSS. Tu misión es potenciar la marca personal del productor en la escena y atraer artistas de alto nivel.
+Tus prioridades:
+1. Definir la estética, tono de comunicación y narrativa (storytelling) para las redes sociales oficiales.
+2. Redactar plantillas de acercamiento persuasivas (outreach) para proponer coproducciones.
+3. Diseñar estrategias de lanzamientos discográficos liderados por el productor.
 """
 }
 
@@ -291,7 +307,9 @@ AGENT_COLORS = {
     "refactor_expert": C_CYAN,
     "obsidian_expert": C_MAGENTA,
     "token_optimizer": C_BLUE,
-    "growth_hacker": C_MAGENTA
+    "growth_hacker": C_MAGENTA,
+    "rights_manager": C_RED,
+    "branding_specialist": C_CYAN
 }
 
 def GET_COLOR_FOR_ROL(rol):

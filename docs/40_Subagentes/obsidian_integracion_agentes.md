@@ -135,3 +135,17 @@ Este documento detalla la propuesta técnica y operativa de cómo cada uno de lo
     *   Bocetando flujos de embudos de correo electrónico en formato Mermaid directas en notas.
     *   Manteniendo un registro dinámico de las tácticas de conversión de A/B testing ejecutadas en la pasarela de pagos.
     *   Diseñando listas de chequeo sobre los pasos necesarios para optimizar el SEO del catálogo musical en plataformas de terceros.
+
+### 🛡️ `rights_manager` (Gestor de Derechos y Reclamaciones)
+*   **Ámbito de Obsidian:** Logs de apelaciones de copyright, registro de disputas y lista de canales en lista blanca.
+*   **Cómo lo usaría:**
+    *   Manteniendo tablas Markdown con el histórico de disputas resueltas para identificar patrones de falsas reclamaciones de Content ID.
+    *   Escribiendo notas con plantillas de apelación legal optimizadas según los lineamientos de YouTube.
+    *   Guardando las listas de canales autorizados (whitelist) para sincronización con herramientas de automatización.
+
+### 📣 `branding_specialist` (Marca Personal y Relaciones Públicas)
+*   **Ámbito de Obsidian:** Wiki de identidad de marca, guiones de outreach para colaboraciones y calendarios de lanzamientos de EPs/Álbumes.
+*   **Cómo lo usaría:**
+    *   Redactando notas de marca (v.g. manual de estilo, tipografías y paletas visuales para redes).
+    *   Escribiendo y perfeccionando borradores de mensajes de acercamiento para Instagram o correo dirigidos a artistas urbanos.
+    *   Organizando la bitácora de lanzamiento de singles y coproducciones en formato de tableros de tareas.

@@ -20,8 +20,8 @@ Análisis de la legalidad de los contratos generados y su formato de impresión.
 *   **[[generador-licencias/docs/30_Contratos/analisis_contratos_pdf|Análisis de Contratos PDF]]**: Auditoría de las plantillas contractuales, saltos de página y estilo de la firma digital en PDF.
 
 ### 🤖 40. Organización de Subagentes
-El funcionamiento, roles y estructura de integración con Obsidian de los 18 subagentes de la plataforma (incluyendo los nuevos agentes `token_optimizer` y `growth_hacker`).
-*   **[[generador-licencias/docs/40_Subagentes/agents_analysis|Roles de los 18 Subagentes]]**: Definición y funciones de los especialistas que componen el equipo de BEATSS.
+El funcionamiento, roles y estructura de integración con Obsidian de los 21 subagentes de la plataforma (incluyendo los nuevos agentes `token_optimizer`, `growth_hacker`, `rights_manager` y `branding_specialist`).
+*   **[[generador-licencias/docs/40_Subagentes/agents_analysis|Roles de los 21 Subagentes]]**: Definición y funciones de los especialistas que componen el equipo de BEATSS.
 *   **[[generador-licencias/docs/40_Subagentes/obsidian_integracion_agentes|Integración de Subagentes con Obsidian]]**: Detalle de cómo cada agente utiliza esta bóveda de notas para interactuar y registrar sus tareas.
 
 ### 🔒 50. Seguridad de Datos
