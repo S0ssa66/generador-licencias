@@ -12,6 +12,12 @@
 - [x] Paso 10: Mover y copiar los reportes técnicos, legales, de soporte y de subagentes a sus respectivas carpetas de categoría
 - [x] Paso 11: Generar la nota central de control `Dashboard BEATSS.md`
 - [x] Paso 12: Comitear la nueva estructura de documentación en el repositorio Git
+- [x] Paso 13: Expandir subagentes a 17 e implementar prompts ReAct en `agente_coordinador.py`
+- [x] Paso 14: Codificar funciones de lectura/escritura/listado seguras en Python
+- [x] Paso 15: Implementar el loop ReAct interactivo con confirmación de escritura en consola
+- [ ] Paso 16: Probar y verificar la ejecución del script con consultas locales
+
+
 
 
 
