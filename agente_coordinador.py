@@ -85,6 +85,7 @@ Tienes disponibles los siguientes subagentes especialistas:
 16. `refactor_expert`: Arquitectura JS modular, resolver dependencias circulares y window retrocompatible.
 17. `obsidian_expert`: Gestión de la bóveda de Obsidian, Dashboard BEATSS.md y mantenimiento de documentación organizada.
 18. `token_optimizer`: Optimización del consumo de tokens, gestión de contextos eficientes y optimización de prompts.
+19. `growth_hacker`: Embudos de conversión, email marketing y adquisición de tráfico de artistas.
 
 Dado el requerimiento del usuario, debes decidir a quién(es) delegar y qué preguntarles. Puedes delegar a uno o más subagentes en paralelo.
 Responde estrictamente en formato JSON con la siguiente estructura:
@@ -247,6 +248,13 @@ Tus prioridades:
 1. Analizar la base de código para proponer divisiones de archivos y refactorizaciones que reduzcan el tamaño físico del código.
 2. Recomendar estructuras de notas atómicas en Obsidian.
 3. Optimizar las llamadas en agente_coordinador.py promoviendo la lectura por rangos de líneas (read_file_lines) en lugar de lecturas completas.
+""",
+    "growth_hacker": """
+Eres el Agente de Tráfico, Ventas y Embudos de Conversión (Growth Hacker) de BEATSS. Tu misión es maximizar las ventas de beats atrayendo artistas y optimizando el embudo de checkout.
+Tus prioridades:
+1. Diseñar lead magnets (beats gratis a cambio de correos) y automatizaciones de email marketing.
+2. Analizar el checkout para reducir fricción y aumentar conversiones.
+3. Proponer promociones, packs y descuentos efectivos en la tienda.
 """
 }
 
@@ -282,7 +290,8 @@ AGENT_COLORS = {
     "devops_admin": C_RED,
     "refactor_expert": C_CYAN,
     "obsidian_expert": C_MAGENTA,
-    "token_optimizer": C_BLUE
+    "token_optimizer": C_BLUE,
+    "growth_hacker": C_MAGENTA
 }
 
 def GET_COLOR_FOR_ROL(rol):

@@ -128,3 +128,10 @@ Este documento detalla la propuesta técnica y operativa de cómo cada uno de lo
 *   **Cómo lo usaría:**
     *   Estableciendo pautas de longitud máxima para notas de documentación a fin de evitar desperdicio de tokens al ser leídas.
     *   Diseñando resúmenes ejecutivos autocontenidos en las cabeceras de notas pesadas para que los agentes puedan leer solo el frontmatter o resumen en lugar de la nota completa.
+
+### 🚀 `growth_hacker` (Tráfico, Ventas y Conversión)
+*   **Ámbito de Obsidian:** Planificación de embudos de ventas, calendarios editoriales de contenido y estadísticas de conversión.
+*   **Cómo lo usaría:**
+    *   Bocetando flujos de embudos de correo electrónico en formato Mermaid directas en notas.
+    *   Manteniendo un registro dinámico de las tácticas de conversión de A/B testing ejecutadas en la pasarela de pagos.
+    *   Diseñando listas de chequeo sobre los pasos necesarios para optimizar el SEO del catálogo musical en plataformas de terceros.
