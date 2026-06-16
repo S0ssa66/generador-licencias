@@ -1424,15 +1424,15 @@ async function loadProducerConfig() {
 
 // Guardar configuración de productor
 async function saveProducerConfig() {
-    producerConfig.name = document.getElementById('cfg-producer-name').value.trim() || "Joao David Dominguez";
-    producerConfig.id = document.getElementById('cfg-producer-id').value.trim() || "0803743111";
-    producerConfig.aka = document.getElementById('cfg-producer-aka').value.trim() || "Sossa";
-    producerConfig.place = document.getElementById('cfg-default-place').value.trim() || "Quito, Ecuador";
-    producerConfig.email = document.getElementById('cfg-producer-email').value.trim() || "masterjuego25@gmail.com";
-    producerConfig.phone = document.getElementById('cfg-producer-phone').value.trim() || "+593961201184";
-    producerConfig.pro = document.getElementById('cfg-producer-pro').value.trim() || "BMI";
-    producerConfig.ipi = document.getElementById('cfg-producer-ipi').value.trim() || "01170943066";
-    producerConfig.publisher = document.getElementById('cfg-producer-publisher').value.trim() || "Songtrust";
+    producerConfig.name = document.getElementById('cfg-producer-name').value.trim() || producerConfig.name || "Joao David Dominguez";
+    producerConfig.id = document.getElementById('cfg-producer-id').value.trim() || producerConfig.id || "";
+    producerConfig.aka = document.getElementById('cfg-producer-aka').value.trim() || producerConfig.aka || "Productor";
+    producerConfig.place = document.getElementById('cfg-default-place').value.trim() || producerConfig.place || "Quito, Ecuador";
+    producerConfig.email = document.getElementById('cfg-producer-email').value.trim() || producerConfig.email || (auth.currentUser ? auth.currentUser.email : "");
+    producerConfig.phone = document.getElementById('cfg-producer-phone').value.trim() || producerConfig.phone || "";
+    producerConfig.pro = document.getElementById('cfg-producer-pro').value.trim() || producerConfig.pro || "BMI";
+    producerConfig.ipi = document.getElementById('cfg-producer-ipi').value.trim() || producerConfig.ipi || "";
+    producerConfig.publisher = document.getElementById('cfg-producer-publisher').value.trim() || producerConfig.publisher || "";
     producerConfig.signature = window.tempSignatureBase64 || "";
     const isElite = (producerConfig.plan === 'elite' || window.currentUserIsAdmin);
     if (isElite) {
