@@ -876,7 +876,7 @@ async function initApp(user) {
             document.body.classList.remove('theme-sossa', 'theme-mrmicua');
             document.body.classList.add('theme-cgmonarco');
         } else if (isMicua) {
-            logoImg.innerHTML = '<img src="/producer_mrmicua.jpg" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">';
+            logoImg.innerHTML = '<img src="/producer_mrmicua.jpg" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; object-position: center 10%;">';
             document.body.classList.remove('theme-sossa', 'theme-cgmonarco');
             document.body.classList.add('theme-mrmicua');
         } else {
