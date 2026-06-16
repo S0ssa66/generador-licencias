@@ -43,7 +43,24 @@ Hemos implementado exitosamente el conjunto de mejoras y nuevas características
     Se corroboró localmente que el botón de pago y las integraciones dinámicas permanecen inhabilitados y con opacidad disminuida hasta activar de forma explícita el checkbox de aceptación de términos de servicio.
 
 ---
+## Corrección Visual de Imagen (Foto de Mr. Micua)
+
+### 6. 🖼️ Ajuste de Encuadre de Imagen
+*   **Problema**: La foto de Mr. Micua (`producer_mrmicua.jpg`) es un retrato vertical en el que su rostro se encuentra en la parte superior. Al aplicarse el recorte cuadrado (con `object-fit: cover`), la imagen se centraba por defecto (`center center` o `50% 50%`), lo que cortaba su rostro y mostraba únicamente el torso.
+*   **Ajuste en Landing Page**: Se configuró `style="object-position: center 10%;"` en el elemento `<img>` de su tarjeta en [index.html](file:///Users/sossa/IA/generador-licencias/index.html). Esto desplaza verticalmente el encuadre para mostrar su rostro y gorra con un margen estético adecuado.
+*   **Ajuste en Sidebar Logo**: Se aplicó la misma propiedad `object-position: center 10%;` en el código JavaScript de [main.js](file:///Users/sossa/IA/generador-licencias/main.js) (línea 879) para que su cara se encuadre a la perfección dentro del avatar circular del sidebar al iniciar sesión.
+
+---
+
+## Corrección del Botón de Modificación de Plan Manual
+
+### 7. 🔌 Registro de Eventos del Modal de Plan Manual
+*   **Problema**: El botón "Aplicar Plan" y los botones de cerrar/cancelar del modal no hacían nada al ser clickeados. Esto ocurría porque la función `setupAdminPlanModalEvents()` en [dashboard/accounting.js](file:///Users/sossa/IA/generador-licencias/dashboard/accounting.js) estaba definida pero nunca se invocaba en la carga de la aplicación o al renderizar el panel de administración, impidiendo el registro de los manejadores de eventos.
+*   **Solución**:
+    1. Se añadió la llamada a `setupAdminPlanModalEvents()` al inicio de `loadConsolidatedAccounting()` en `dashboard/accounting.js` para asegurar su inicialización automática en cuanto el administrador cargue los datos consolidados.
+    2. Se agregó una variable de control `window._adminPlanModalEventsSetup` al inicio de `setupAdminPlanModalEvents()` para evitar registros duplicados de listeners en clics sucesivos de actualización.
+
+---
 
 ## 💡 Próximos Pasos Recomendados
-1.  **Habilitar credenciales reales:** Configura tu ClientID y AppID en tu perfil del panel de administración para habilitar cobros reales con PayPhone en producción.
-2.  **Despliegue a Producción:** Haz push a tu repositorio Git para desplegar de forma definitiva los cambios frontend actualizados a Vercel/Firebase.
+1.  **Verificación**: Ingresa al panel de administración como administrador Sossa, abre la ventana de "Modificar Plan Manual" para cualquier productor, y valida que el botón "Aplicar Plan" guarde los cambios y actualice el plan exitosamente, y que los botones "Cancelar" y "x" funcionen correctamente.

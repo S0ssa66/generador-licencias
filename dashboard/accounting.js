@@ -11,6 +11,9 @@ let adminSelectedUserId = '';
 async function loadConsolidatedAccounting() {
     if (!window.currentUserIsAdmin) return;
     
+    // Configurar eventos del modal de plan manual para admin
+    setupAdminPlanModalEvents();
+    
     // Cargar también las solicitudes de pago pendientes
     await loadPendingPaymentsAdmin();
     
@@ -665,6 +668,9 @@ function openAdminPlanModal(userId, email, name, aka, plan, expirationPro) {
 }
 
 function setupAdminPlanModalEvents() {
+    if (window._adminPlanModalEventsSetup) return;
+    window._adminPlanModalEventsSetup = true;
+    
     const modal = document.getElementById('admin-plan-modal');
     const closeBtn = document.getElementById('btn-close-admin-plan');
     const cancelBtn = document.getElementById('btn-cancel-admin-plan');
