@@ -450,9 +450,11 @@ def clean_and_parse_json(text):
     return None
 
 def get_safe_path(path):
-    """Resuelve y valida que la ruta se encuentre dentro del repositorio del proyecto."""
+    """Resuelve y valida que la ruta se encuentre dentro de la bóveda de Obsidian (/Users/sossa/IA)."""
     # El directorio base es donde está este script
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Permitir acceso al directorio padre (bóveda de Obsidian)
+    base_dir = os.path.dirname(script_dir)
     path = os.path.normpath(path)
     
     if os.path.isabs(path):
@@ -460,7 +462,7 @@ def get_safe_path(path):
             return None
         return path
         
-    full_path = os.path.abspath(os.path.join(base_dir, path))
+    full_path = os.path.abspath(os.path.join(script_dir, path))
     if not full_path.startswith(base_dir):
         return None
     return full_path

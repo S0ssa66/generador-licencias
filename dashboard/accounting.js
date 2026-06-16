@@ -11,7 +11,8 @@ let adminSelectedUserId = '';
 async function loadConsolidatedAccounting() {
     if (!window.currentUserIsAdmin) return;
     
-    // Configurar eventos del modal de plan manual para admin
+    // Configurar eventos de Obsidian y del modal de plan manual para admin
+    setupObsidianEvents();
     setupAdminPlanModalEvents();
     
     // Cargar también las solicitudes de pago pendientes
@@ -665,6 +666,60 @@ function openAdminPlanModal(userId, email, name, aka, plan, expirationPro) {
     statusEl.style.display = 'none';
     modal.style.display = 'flex';
     safeCreateIcons();
+}
+
+function setupObsidianEvents() {
+    if (window._obsidianEventsSetup) return;
+    window._obsidianEventsSetup = true;
+
+    const organizeBtn = document.getElementById('btn-admin-organize-obsidian');
+    const statusEl = document.getElementById('obsidian-organize-status');
+
+    if (!organizeBtn) return;
+
+    organizeBtn.addEventListener('click', async () => {
+        organizeBtn.disabled = true;
+        const originalText = organizeBtn.innerHTML;
+        organizeBtn.innerHTML = `⏳ Organizando...`;
+        if (statusEl) {
+            statusEl.textContent = 'Organizando bóveda de Obsidian...';
+            statusEl.style.color = '#ffd700'; // Yellow
+        }
+
+        try {
+            const response = await fetch('/api/organize-obsidian', {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (response.ok && data.status === 'success') {
+                if (statusEl) {
+                    statusEl.textContent = '¡Bóveda organizada y Dashboard BEATSS.md actualizado!';
+                    statusEl.style.color = '#10b981'; // Green
+                }
+                alert('¡Bóveda organizada y Dashboard BEATSS.md actualizado con éxito!');
+            } else {
+                throw new Error(data.error || 'Error desconocido');
+            }
+        } catch (err) {
+            console.error('Error al organizar Obsidian:', err);
+            if (statusEl) {
+                statusEl.textContent = 'Error al organizar la bóveda.';
+                statusEl.style.color = '#ef4444'; // Red
+            }
+            alert('Error al organizar la bóveda: ' + err.message);
+        } finally {
+            organizeBtn.disabled = false;
+            organizeBtn.innerHTML = originalText;
+            // Restore default text after 5 seconds
+            setTimeout(() => {
+                if (statusEl && statusEl.style.color !== '#ffd700') {
+                    statusEl.textContent = 'Auto-organización en segundo plano activa';
+                    statusEl.style.color = '#8a91a6';
+                }
+            }, 5000);
+        }
+    });
 }
 
 function setupAdminPlanModalEvents() {

@@ -2335,6 +2335,24 @@
                         <p>No se encontraron licencias emitidas por ningún productor en la base de datos.</p>
                     </div>
                 </div>
+
+                <!-- Gestión de Obsidian (Solo Admin Sossa) -->
+                <div id="admin-obsidian-container" style="margin-top: 24px; background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); margin-bottom: 24px;">
+                    <h3 style="color: #ffffff; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="book-open" style="color: #8b5cf6; width: 20px; height: 20px;"></i> Gestión de Bóveda de Obsidian
+                    </h3>
+                    <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="font-size: 13px; color: #8a91a6; line-height: 1.6;">
+                            La bóveda de Obsidian se encuentra activa y se organiza automáticamente en segundo plano cada 5 minutos. También puedes forzar una reorganización manual inmediata. Esto escaneará el directorio raíz de la bóveda, moverá los archivos correspondientes a sus respectivas carpetas y regenerará el panel central <strong>Dashboard BEATSS.md</strong>.
+                        </div>
+                        <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-primary" id="btn-admin-organize-obsidian" style="height: 38px; padding: 0 20px; font-weight: 700; border-radius: 8px; background: var(--electric-purple); border-color: var(--electric-purple); cursor: pointer; color: white; border: none; display: flex; align-items: center; gap: 6px;">
+                                <i data-lucide="folder-sync" style="width: 16px; height: 16px;"></i> Organizar Bóveda Ahora
+                            </button>
+                            <span id="obsidian-organize-status" style="font-size: 12px; font-weight: 600; color: #8a91a6;">Auto-organización en segundo plano activa</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>

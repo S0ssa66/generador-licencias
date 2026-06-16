@@ -27,6 +27,7 @@ from server_utils import get_admin_token, resolve_backup_file
 from pdf_generator import generate_pdf_from_contract
 from sri_service import emitir_factura_sri_background, actualizar_secuencial_sri, actualizar_estado_factura_db
 from payment_verifier import verify_paypal_order, update_user_plan_in_firestore, confirm_payment_in_firestore
+from organize_obsidian import organize_files, generate_dashboard
 PORT = 8000
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
@@ -1279,6 +1280,26 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 err_response = {"error": str(e)}
                 self.wfile.write(json.dumps(err_response).encode('utf-8'))
                 print(f"❌ Error al iniciar tarea asíncrona: {str(e)}")
+        elif parsed.path == '/api/organize-obsidian':
+            try:
+                # Ejecutar organización y regeneración de dashboard
+                organize_files()
+                generate_dashboard()
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.end_headers()
+                self.wfile.write(b'{"status": "success", "message": "Obsidian vault organized successfully"}')
+                print("[+] Obsidian vault organized successfully on request")
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.end_headers()
+                err_response = {"error": str(e)}
+                self.wfile.write(json.dumps(err_response).encode('utf-8'))
+                print(f"❌ Error organizing Obsidian: {str(e)}")
         elif parsed.path == '/api/payments/deuna/qr':
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
@@ -1966,6 +1987,27 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         elif "GET /" not in message: # Imprimir cualquier error u otro tipo de petición
             super().log_message(format, *args)
 
+def run_obsidian_organizer_background():
+    """Bucle en segundo plano para escanear y organizar la bóveda de Obsidian periódicamente."""
+    import time
+    print("[*] [Obsidian Auto-Organizer] Iniciando escaneo periódico en segundo plano...")
+    # Ejecución inmediata al iniciar
+    try:
+        organize_files()
+        generate_dashboard()
+        print("[+] [Obsidian Auto-Organizer] Organización inicial completada con éxito.")
+    except Exception as e:
+        print(f"[-] [Obsidian Auto-Organizer] Error en la organización inicial: {e}")
+        
+    while True:
+        time.sleep(300)  # Cada 5 minutos
+        try:
+            print("[*] [Obsidian Auto-Organizer] Ejecutando organización periódica de la bóveda...")
+            organize_files()
+            generate_dashboard()
+        except Exception as e:
+            print(f"[-] [Obsidian Auto-Organizer] Error durante la organización periódica: {e}")
+
 def load_dotenv():
     env_path = os.path.join(DIRECTORY, '.env')
     if os.path.exists(env_path):
@@ -2000,6 +2042,10 @@ if __name__ == '__main__':
     print(f"[*] Iniciando servidor personalizado de Sossa Licencias...")
     print(f"[*] Directorio raíz: {DIRECTORY}")
     print(f"[*] Escuchando en http://localhost:{port}")
+    
+    # Lanzar el organizador de Obsidian en segundo plano
+    obsidian_thread = threading.Thread(target=run_obsidian_organizer_background, daemon=True)
+    obsidian_thread.start()
     
     server_address = ('', port)
     httpd = http.server.HTTPServer(server_address, CustomHandler)

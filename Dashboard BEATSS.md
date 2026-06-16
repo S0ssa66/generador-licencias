@@ -8,25 +8,33 @@ Bienvenido a la Bóveda de Documentación de **BEATSS**. Este panel sirve como e
 
 ### 💳 10. Pagos y Viabilidad Financiera
 Documentos relacionados con la integración de pasarelas de pago y la viabilidad del cobro internacional desde Ecuador.
-*   **[[generador-licencias/docs/10_Pagos/viabilidad_stripe_ecuador_llc|Viabilidad Stripe Ecuador (LLC)]]**: Análisis detallado sobre la creación de una LLC en EE.UU. para acceder a Stripe.
-*   **[[generador-licencias/docs/10_Pagos/opciones_pago_con_ruc_ecuador|Opciones de Pago con RUC de Ecuador]]**: Alternativas locales (PayPhone, PayPal, Deuna!, Kushki) para operar comercialmente en el país.
+*   **[[generador-licencias/docs/10_Pagos/Order details _ eBay|Order Details   Ebay (PDF)]]**
+*   **[[generador-licencias/docs/10_Pagos/opciones_pago_con_ruc_ecuador|Opciones Pago Con Ruc Ecuador (MD)]]**
+*   **[[generador-licencias/docs/10_Pagos/viabilidad_stripe_ecuador_llc|Viabilidad Stripe Ecuador Llc (MD)]]**
 
 ### 🤝 20. Soporte y Educación al Cliente
 Guías y recursos estructurados para optimizar la experiencia de soporte de BEATSS.
-*   **[[generador-licencias/docs/20_Soporte/propuesta_ayuda_soporte|Propuesta de Soporte y FAQs]]**: Diseño de módulos educativos sobre derechos de autor, regalías y preguntas frecuentes de los usuarios.
+*   **[[generador-licencias/docs/20_Soporte/propuesta_ayuda_soporte|Propuesta Ayuda Soporte (MD)]]**
 
 ### 📜 30. Contratos y Licenciamiento
 Análisis de la legalidad de los contratos generados y su formato de impresión.
-*   **[[generador-licencias/docs/30_Contratos/analisis_contratos_pdf|Análisis de Contratos PDF]]**: Auditoría de las plantillas contractuales, saltos de página y estilo de la firma digital en PDF.
+*   **[[generador-licencias/docs/30_Contratos/Analisis_Codigo_BEATSS|Analisis Codigo Beatss (PDF)]]**
+*   **[[generador-licencias/docs/30_Contratos/Solicitud_Permiso_Sol_De_Miami|Solicitud Permiso Sol De Miami (PDF)]]**
+*   **[[generador-licencias/docs/30_Contratos/analisis_contratos_pdf|Analisis Contratos Pdf (MD)]]**
 
 ### 🤖 40. Organización de Subagentes
-El funcionamiento, roles y estructura de integración con Obsidian de los 21 subagentes de la plataforma (incluyendo los nuevos agentes `token_optimizer`, `growth_hacker`, `rights_manager` y `branding_specialist`).
-*   **[[generador-licencias/docs/40_Subagentes/agents_analysis|Roles de los 21 Subagentes]]**: Definición y funciones de los especialistas que componen el equipo de BEATSS.
-*   **[[generador-licencias/docs/40_Subagentes/obsidian_integracion_agentes|Integración de Subagentes con Obsidian]]**: Detalle de cómo cada agente utiliza esta bóveda de notas para interactuar y registrar sus tareas.
+El funcionamiento, roles y estructura de integración con Obsidian de los 21 subagentes de la plataforma.
+*   **[[generador-licencias/docs/40_Subagentes/agents_analysis|Agents Analysis (MD)]]**
+*   **[[generador-licencias/docs/40_Subagentes/arquitectura_agent_os|Arquitectura Agent Os (MD)]]**
+*   **[[generador-licencias/docs/40_Subagentes/arquitectura_state_manager|Arquitectura State Manager (MD)]]**
+*   **[[generador-licencias/docs/40_Subagentes/obsidian_integracion_agentes|Obsidian Integracion Agentes (MD)]]**
+*   **[[generador-licencias/docs/40_Subagentes/reporte_optimizacion_tokens|Reporte Optimizacion Tokens (MD)]]**
 
 ### 🔒 50. Seguridad de Datos
 Análisis de vulnerabilidades y seguridad del backend.
-*   **[[generador-licencias/docs/50_Seguridad/firebase_security_audit|Auditoría de Seguridad de Firestore]]**: Evaluación del endurecimiento de las reglas de seguridad de la base de datos de Firebase.
+*   **[[generador-licencias/docs/50_Seguridad/firebase_security_audit|Firebase Security Audit (MD)]]**
+*   **[[generador-licencias/docs/50_Seguridad/reporte_seguridad|Reporte Seguridad (MD)]]**
+
 
 ---
 
