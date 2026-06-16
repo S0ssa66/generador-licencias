@@ -850,66 +850,144 @@ async function downloadPDF() {
 
     const element = document.getElementById('rendered-contract-content');
     
-    // Configuración para html2pdf
-    const opt = {
-        margin:       [15, 20, 15, 20], // Margen en mm [arriba, izquierda, abajo, derecha]
-        filename:     `Licencia_${type.toUpperCase()}_${finalRef} - ${beatName} - ${buyerName}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-        pagebreak:    { mode: ['css', 'legacy'] }
-    };
-    
     // Mostrar cargando en el botón
     btn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width:14px;height:14px;margin-right:4px;"></i> Generando PDF...';
     safeCreateIcons();
     btn.disabled = true;
 
-    // Aplicar clase para impresión a blanco y negro
-    element.classList.add('printing-pdf');
-
-    try {
-        const worker = html2pdf().from(element).set(opt);
-
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            const pdfDataUri = await worker.outputPdf('datauristring');
-            try {
-                // Guardar en el servidor local (Carpeta Documentos/Licencias)
-                const res = await fetch('/api/save-pdf', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        filename: opt.filename,
-                        pdfData: pdfDataUri
-                    })
-                });
-                if (res.ok) {
-                    showToast('📄 PDF guardado directamente en Documentos/Licencias');
-                } else {
-                    console.warn('Error al guardar PDF en servidor local, forzando descarga web...');
-                    await worker.save();
-                    showToast('PDF descargado con éxito');
-                }
-            } catch (e) {
-                console.warn('Error de conexión con el servidor local para guardar PDF:', e);
-                await worker.save();
-                showToast('PDF descargado con éxito');
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        try {
+            const { md } = compileContract();
+            
+            const buyerId = document.getElementById('buyer-id').value.trim() || "";
+            const buyerEmail = document.getElementById('buyer-email').value.trim() || "";
+            const buyerPhone = document.getElementById('buyer-phone').value.trim() || "";
+            const buyerCity = document.getElementById('buyer-city').value.trim() || "";
+            const buyerCountry = document.getElementById('buyer-country').value.trim() || "";
+            const value = parseFloat(document.getElementById('license-value').value) || 0;
+            const date = document.getElementById('effective-date').value || new Date().toISOString().split('T')[0];
+            
+            const activeTemplateSelect = document.getElementById('contract-template-select');
+            const activeTemplateId = activeTemplateSelect ? activeTemplateSelect.value : 'licencia_uso';
+            const needsBuyerSig = (activeTemplateId === 'split_sheet' || activeTemplateId === 'coproduccion' || type === 'exclusive');
+            
+            const pConfig = window.producerConfig || {};
+            
+            const payload = {
+                refCode: finalRef,
+                beatName: beatName,
+                beatBpm: document.getElementById('beat-bpm') ? document.getElementById('beat-bpm').value.trim() : "",
+                beatKey: document.getElementById('beat-key') ? document.getElementById('beat-key').value.trim() : "",
+                buyerName: buyerName,
+                buyerId: buyerId,
+                buyerEmail: buyerEmail,
+                buyerPhone: buyerPhone,
+                buyerCity: buyerCity,
+                buyerCountry: buyerCountry,
+                value: value,
+                date: date,
+                licenseType: type,
+                markdownText: md,
+                producerId: window.currentUser || 'sossa',
+                producerName: pConfig.name || "Joao David Dominguez",
+                aka: pConfig.aka || "Sossa",
+                producerIdNum: pConfig.id || "0803743111",
+                producerRole: (activeTemplateId === 'coproduccion') ? 'Productor Principal' : 'El Licenciante (Productor)',
+                buyerRole: (activeTemplateId === 'coproduccion') ? 'Coproductor / Colaborador' : (activeTemplateId === 'split_sheet' ? 'Autor/Letra/Voz' : 'El Licenciatario (Usuario)'),
+                producerSignatureBase64: pConfig.signature || "",
+                buyerSignatureBase64: "", // En espera de DocuSign si aplica
+                needsBuyerSignature: needsBuyerSig,
+                logoBase64: (pConfig.plan === 'elite' || window.currentUserIsAdmin) ? (pConfig.logoBase64 || "") : ""
+            };
+            
+            const res = await fetch('/api/generate-contract-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!res.ok) {
+                const errJson = await res.json();
+                throw new Error(errJson.error || 'Fallo al generar PDF criptográfico.');
             }
-        } else {
-            // En producción / Vercel: Descarga nativa del navegador
+            
+            const blob = await res.blob();
+            const cryptoHash = res.headers.get('X-Crypto-Hash') || '';
+            
+            // Actualizar hash criptográfico localmente en la lista de licencias
+            const existingIdx = licenseHistory.findIndex(l => l.refCode === finalRef);
+            if (existingIdx !== -1) {
+                licenseHistory[existingIdx].cryptoHash = cryptoHash;
+                // Guardar historial para que se sincronice en local y Firestore
+                if (typeof saveHistory === 'function') {
+                    await saveHistory();
+                }
+            }
+            
+            // Forzar descarga del archivo
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `Licencia_${type.toUpperCase()}_${finalRef} - ${beatName} - ${buyerName}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+            
+            showToast('📄 PDF Criptográfico descargado con éxito y guardado en Documentos/Licencias');
+        } catch (err) {
+            console.error('Error al generar PDF criptográfico en el servidor:', err);
+            showToast('Error al generar el PDF criptográfico: ' + err.message, true);
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            safeCreateIcons();
+        }
+    } else {
+        // En producción / Vercel: Descarga clásica del navegador con html2pdf.js
+        const opt = {
+            margin:       [15, 20, 15, 20],
+            filename:     `Licencia_${type.toUpperCase()}_${finalRef} - ${beatName} - ${buyerName}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+            jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
+            pagebreak:    { mode: ['css', 'legacy'] }
+        };
+        
+        element.classList.add('printing-pdf');
+        const paper = document.getElementById('license-paper');
+        if (paper) paper.classList.add('printing-pdf');
+        
+        if (typeof html2pdf === 'undefined') {
+            try {
+                btn.innerHTML = '⏳ Cargando librería PDF...';
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+            } catch (e) {
+                showToast('La librería PDF no se pudo cargar. Revisa tu conexión.', true);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                safeCreateIcons();
+                return;
+            }
+        }
+        
+        try {
+            const worker = html2pdf().from(element).set(opt);
             await worker.save();
             showToast('PDF descargado con éxito');
+        } catch (err) {
+            console.error('Error al generar PDF en producción:', err);
+            showToast('Error al generar el PDF', true);
+        } finally {
+            element.classList.remove('printing-pdf');
+            if (paper) paper.classList.remove('printing-pdf');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            safeCreateIcons();
         }
-    } catch (err) {
-        console.error('Error al generar PDF:', err);
-        showToast('Error al generar el PDF', true);
-    } finally {
-        element.classList.remove('printing-pdf');
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        safeCreateIcons();
     }
 }
+
 
 // Copiar formato markdown al portapapeles
 function copyMarkdown() {
@@ -3212,3 +3290,270 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
 }
 
 window.compileContractData = compileContractData;
+
+// --- WHITING LIST / CONTENT ID LOGIC ---
+
+// Cargar y mostrar la lista blanca de canales
+async function loadWhitelistData() {
+    if (!window.currentUser) return;
+
+    const tbody = document.getElementById('whitelist-table-tbody');
+    const emptyState = document.getElementById('whitelist-empty-state');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-secondary);">Cargando canales autorizados...</td></tr>';
+    if (emptyState) emptyState.style.display = 'none';
+
+    try {
+        const qRef = collection(db, "users", window.currentUser, "whitelist");
+        const snapshot = await getDocs(qRef);
+        
+        tbody.innerHTML = '';
+        
+        if (snapshot.empty) {
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+
+        const items = [];
+        snapshot.forEach(doc => {
+            items.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Ordenar por fecha de creación descendente
+        items.sort((a, b) => {
+            const dateA = a.createdAt || '';
+            const dateB = b.createdAt || '';
+            return dateB.localeCompare(dateA);
+        });
+
+        items.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--border-color)';
+            
+            // Link de canal
+            const channelUrl = item.channelUrl || '#';
+            const artistName = item.artistName || 'Canal sin nombre';
+            const songName = item.songName || '-';
+            const licenseRef = item.licenseRef || '-';
+
+            tr.innerHTML = `
+                <td style="padding: 12px 8px; font-size: 13px; color: #fff;">
+                    <a href="${channelUrl}" target="_blank" style="color: var(--accent); text-decoration: none; display: flex; align-items: center; gap: 6px; font-weight: 500;">
+                        <i data-lucide="external-link" style="width: 12px; height: 12px;"></i> ${artistName}
+                    </a>
+                </td>
+                <td style="padding: 12px 8px; font-size: 13px; color: var(--text-secondary);">${songName}</td>
+                <td style="padding: 12px 8px; font-size: 13px; color: var(--text-secondary); font-family: monospace;">${licenseRef}</td>
+                <td style="padding: 12px 8px; text-align: right;">
+                    <button class="btn-copy-clearance btn btn-secondary" data-ref="${licenseRef}" style="padding: 4px 8px; font-size: 11px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-right: 6px;" title="Copiar enlace de clearance para el cliente">
+                        <i data-lucide="copy" style="width: 12px; height: 12px;"></i> Clearance Link
+                    </button>
+                    <button class="btn-delete-whitelist btn btn-danger" data-id="${item.id}" style="padding: 4px 8px; font-size: 11px; height: 26px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #ef4444;" title="Revocar autorización">
+                        <i data-lucide="trash-2" style="width: 12px; height: 12px;"></i> Revocar
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Configurar eventos para copiar link de clearance
+        tbody.querySelectorAll('.btn-copy-clearance').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const ref = e.currentTarget.getAttribute('data-ref');
+                const clearanceUrl = `${window.location.origin}/clearance.html?ref=${encodeURIComponent(ref)}&p=${window.currentUser}`;
+                navigator.clipboard.writeText(clearanceUrl).then(() => {
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('¡Enlace de clearance copiado al portapapeles!');
+                    }
+                }).catch(err => {
+                    console.error('Error al copiar link:', err);
+                });
+            });
+        });
+
+        // Configurar eventos para revocar
+        tbody.querySelectorAll('.btn-delete-whitelist').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const docId = e.currentTarget.getAttribute('data-id');
+                if (confirm('¿Estás seguro de que deseas revocar la autorización para este canal? Recibirá reclamos de derechos de autor.')) {
+                    try {
+                        const docRef = doc(db, "users", window.currentUser, "whitelist", docId);
+                        await deleteDoc(docRef);
+                        if (typeof window.showToast === 'function') {
+                            window.showToast('Canal revocado correctamente.');
+                        }
+                        loadWhitelistData();
+                    } catch (err) {
+                        console.error('Error al eliminar de whitelist:', err);
+                        if (typeof window.showToast === 'function') {
+                            window.showToast('Error al revocar autorización', true);
+                        }
+                    }
+                }
+            });
+        });
+
+        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+            lucide.createIcons();
+        }
+
+    } catch (err) {
+        console.error("Error al cargar whitelist de Firestore:", err);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: #ef4444;">Error al cargar los datos desde la nube.</td></tr>';
+    }
+}
+
+// Agregar canal manualmente
+async function addChannelToWhitelist(e) {
+    e.preventDefault();
+    if (!window.currentUser) return;
+
+    const urlInput = document.getElementById('whitelist-channel-url');
+    const artistInput = document.getElementById('whitelist-artist-name');
+    const songInput = document.getElementById('whitelist-song-name');
+    const refInput = document.getElementById('whitelist-license-ref');
+
+    if (!urlInput || !artistInput || !songInput || !refInput) return;
+
+    const channelUrl = urlInput.value.trim();
+    const artistName = artistInput.value.trim();
+    const songName = songInput.value.trim();
+    const licenseRef = refInput.value.trim();
+
+    if (!channelUrl || !artistName || !songName || !licenseRef) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Todos los campos son obligatorios.', true);
+        }
+        return;
+    }
+
+    const submitBtn = e.currentTarget.querySelector('button[type="submit"]');
+    const originalHtml = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="animate-spin">⏳</i> Autorizando...';
+
+    try {
+        const whitelistCollection = collection(db, "users", window.currentUser, "whitelist");
+        await addDoc(whitelistCollection, {
+            channelUrl: channelUrl,
+            artistName: artistName,
+            songName: songName,
+            licenseRef: licenseRef,
+            createdAt: new Date().toISOString()
+        });
+
+        if (typeof window.showToast === 'function') {
+            window.showToast('Canal autorizado exitosamente.');
+        }
+
+        // Resetear formulario
+        e.target.reset();
+        
+        // Recargar datos
+        loadWhitelistData();
+    } catch (err) {
+        console.error("Error al añadir canal a whitelist:", err);
+        if (typeof window.showToast === 'function') {
+            window.showToast('Error al autorizar canal.', true);
+        }
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalHtml;
+    }
+}
+
+// Configurar listeners para Whitelist
+function setupWhitelistEvents() {
+    const form = document.getElementById('form-add-whitelist');
+    if (form) {
+        form.removeEventListener('submit', addChannelToWhitelist); // Evitar duplicados
+        form.addEventListener('submit', addChannelToWhitelist);
+    }
+}
+
+window.loadWhitelistData = loadWhitelistData;
+window.setupWhitelistEvents = setupWhitelistEvents;
+
+// Inicializar eventos de whitelist
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupWhitelistEvents);
+} else {
+    setupWhitelistEvents();
+}
+
+// ==========================================================================
+// CONTROLES DE ESTILO DE PAPEL VIRTUAL (SOFT PAPER MODE)
+// ==========================================================================
+
+// Establecer el estilo de tipografía del papel (Sans / Serif)
+window.setPaperStyle = function(style) {
+    const paper = document.getElementById('license-paper');
+    const btnSans = document.getElementById('btn-paper-style-sans');
+    const btnSerif = document.getElementById('btn-paper-style-serif');
+    if (!paper) return;
+
+    if (style === 'serif') {
+        paper.classList.add('paper-serif');
+        if (btnSans && btnSerif) {
+            btnSans.style.background = 'transparent';
+            btnSans.style.color = '#8a91a6';
+            btnSerif.style.background = 'var(--accent)';
+            btnSerif.style.color = '#fff';
+        }
+        localStorage.setItem('paper_preference_style', 'serif');
+    } else {
+        paper.classList.remove('paper-serif');
+        if (btnSans && btnSerif) {
+            btnSans.style.background = 'var(--accent)';
+            btnSans.style.color = '#fff';
+            btnSerif.style.background = 'transparent';
+            btnSerif.style.color = '#8a91a6';
+        }
+        localStorage.setItem('paper_preference_style', 'sans');
+    }
+};
+
+// Establecer el color de fondo del papel (White / Cream)
+window.setPaperColor = function(color) {
+    const paper = document.getElementById('license-paper');
+    const btnWhite = document.getElementById('btn-paper-color-white');
+    const btnCream = document.getElementById('btn-paper-color-cream');
+    if (!paper) return;
+
+    if (color === 'cream') {
+        paper.classList.add('paper-cream');
+        if (btnWhite && btnCream) {
+            btnWhite.style.background = 'transparent';
+            btnWhite.style.color = '#8a91a6';
+            btnCream.style.background = 'var(--accent)';
+            btnCream.style.color = '#fff';
+        }
+        localStorage.setItem('paper_preference_color', 'cream');
+    } else {
+        paper.classList.remove('paper-cream');
+        if (btnWhite && btnCream) {
+            btnWhite.style.background = 'var(--accent)';
+            btnWhite.style.color = '#fff';
+            btnCream.style.background = 'transparent';
+            btnCream.style.color = '#8a91a6';
+        }
+        localStorage.setItem('paper_preference_color', 'white');
+    }
+};
+
+// Cargar preferencias guardadas de estilo de papel
+window.loadPaperPreferences = function() {
+    const savedStyle = localStorage.getItem('paper_preference_style') || 'serif';
+    const savedColor = localStorage.getItem('paper_preference_color') || 'cream';
+    window.setPaperStyle(savedStyle);
+    window.setPaperColor(savedColor);
+};
+
+// Inicializar preferencias del papel al cargar
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.loadPaperPreferences);
+} else {
+    setTimeout(window.loadPaperPreferences, 100);
+}
+

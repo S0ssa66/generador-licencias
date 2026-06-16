@@ -1,107 +1,49 @@
-# Walkthrough: Refactorización Modular, Blindaje de Tokens y Mejoras del Backlog (BEATSS)
+# Walkthrough: Nuevas Funcionalidades y Mejoras de Seguridad (BEATSS)
 
-Hemos completado exitosamente la modularización completa de la aplicación, el blindaje de seguridad de Google Drive, la migración de almacenamiento de beats a Firebase Storage y el refinamiento tipográfico con JetBrains Mono.
+Hemos implementado exitosamente el conjunto de mejoras y nuevas características en el backend (`server.py`) y en el frontend (`checkout.js`) de **BEATSS**. Estas incorporan firma criptográfica de contratos, analíticas en servidor, pasarelas de pago seguras y aceptación obligatoria de términos (Click-wrap).
 
----
+## Cambios y Características Implementadas
 
-## Cambios Realizados
+### 1. 📜 Aceptación Obligatoria de Términos (Click-wrap)
+*   **Interfaz en Tienda:** En [index.html](file:///Users/sossa/IA/generador-licencias/index.html) añadimos un checkbox `#store-chk-accept-terms` antes de la selección de pasarelas en el paso 3 de la compra.
+*   **Control del Estado:** En [checkout.js](file:///Users/sossa/IA/generador-licencias/checkout.js) implementamos `onAcceptTermsChange()` para bloquear visual y funcionalmente todos los botones de confirmación de pago (`pointer-events: none` y `opacity: 0.4`/`0.5`) e inhabilitar los contenedores dinámicos del SDK de PayPhone y PayPal hasta que el usuario marque la aceptación de términos.
+*   **Auditoría Digital:** Al crear el pedido, inyectamos los metadatos de auditoría `acceptedTerms: true` y `acceptanceTimestamp` en Firestore (a través de `submitBeatPurchasePayment` y en el endpoint de confirmación de PayPhone en el servidor) y en el respaldo local sincronizado en JSON.
 
-### 1. ⚡ Modularización Completa del Monolito (`main.js`)
-* **Reducción del Código Principal:** El monolito original de `main.js` (~13,000 líneas) fue compactado y estructurado en **2,996 líneas** de control de UI/ruteo, aislando la lógica de negocio en módulos dedicados:
-  * [NEW] [auth.js](file:///Users/sossa/IA/generador-licencias/auth.js): Firebase Authentication, login manual y recuperación de contraseñas.
-  * [NEW] [player.js](file:///Users/sossa/IA/generador-licencias/player.js): Lógica del reproductor de audio, ecualización, ondas y eventos del reproductor.
-  * [NEW] [catalog.js](file:///Users/sossa/IA/generador-licencias/catalog.js): Renderizado y filtrado de beats, bases de datos locales y sincronización remota.
-  * [NEW] [checkout.js](file:///Users/sossa/IA/generador-licencias/checkout.js): Carrito de compras, integración del SDK de PayPal, PayPhone, Deuna! y flujos de descarga.
-  * [NEW] [editor.js](file:///Users/sossa/IA/generador-licencias/editor.js): Compilador de contratos en PDF, DocuSign, EmailJS y firmas digitales.
-  * [NEW] [dashboard.js](file:///Users/sossa/IA/generador-licencias/dashboard.js): Estadísticas (Chart.js), contabilidad de Sossa Admin, aprobación de pedidos e historial de licencias.
-* **Mantenimiento de Compatibilidad:** Declaramos descriptores de propiedades en `window` (`Object.defineProperty`) para que variables de estado reactivas como `localBeats`, `licenseHistory` y `contactsList` sigan funcionando en todo el código sin romper manejadores HTML inline.
+### 2. 📱 Integración Segura Server-to-Server de PayPhone
+*   **Eliminación de Fuga de Credenciales:** Retiramos del cliente el uso del Token de Desarrollador del productor para confirmar transacciones, evitando su exposición pública.
+*   **Endpoint Seguro:** Implementamos `POST /api/payments/payphone/confirm` en [server.py](file:///Users/sossa/IA/generador-licencias/server.py). Recibe el `id` y `clientTxId` de la transacción, obtiene con total privacidad las credenciales desde el respaldo JSON del productor en disco, y valida el cobro mediante llamadas seguras server-to-server a PayPhone.
+*   **Registro Automatizado:** Al confirmarse, el backend realiza la inserción del pago en Firestore y actualiza los respaldos.
 
-### 2. 🛡️ Blindaje de Seguridad de Google Drive
-* **Desactivación del Endpoint Expreso:** Retiramos definitivamente la funcionalidad activa de `/api/gdrive-token.js` y la reemplazamos con una respuesta de seguridad **403 Forbidden**. Esto bloquea cualquier intento malicioso de obtener el Access Token del Google Drive central de la plataforma desde el frontend.
-* **Migración de Subida de Beats a Firebase Storage:** 
-  * En [catalog.js](file:///Users/sossa/IA/generador-licencias/catalog.js), modificamos la lógica de carga para que, al seleccionar el almacenamiento del SaaS (`gdrive-central` o `firebase`), los beats se suban directamente y de forma segura al bucket de **Firebase Storage** (`beats/${window.currentUser}/${filename}`) con barras de progreso nativas.
-  * En [index.html](file:///Users/sossa/IA/generador-licencias/index.html), añadimos la opción explícita "🔥 Firebase Storage (Recomendado)" al menú de configuración para incentivar esta ruta óptima de carga.
+### 3. 🛡️ PDF Criptográfico de Licencias y Firmas
+*   **Generador en Python:** Desarrollamos `POST /api/generate-contract-pdf` en [server.py](file:///Users/sossa/IA/generador-licencias/server.py) para renderizar PDFs de contratos de licencias con ReportLab.
+*   **Sello de Seguridad:** El servidor calcula un Hash SHA-256 único a partir de los datos del acuerdo y lo inserta en el pie de página de cada hoja junto a las firmas escaneadas para garantizar la inmutabilidad física y digital de la licencia.
 
-### 3. 🎨 Refinamiento Tipográfico (JetBrains Mono)
-* **Definición de Variable CSS:** Añadimos `--font-mono: 'JetBrains Mono', 'Courier New', Courier, monospace;` a las variables raíz de [styles.css](file:///Users/sossa/IA/generador-licencias/styles.css).
-* **Clase de Utilidad:** Creamos la clase `.font-data-mono` para mapear los inputs numéricos, datos de BPM y hashes en HTML de forma homogénea.
-* **Actualización en Tablas e Historiales:** Cambiamos la tipografía de las celdas de códigos de referencia en la tabla de facturación (`.ref-code-cell`) y previsualizaciones de código preformateado (`.paper pre`) para usar la nueva variable `--font-mono`.
+### 4. 📈 Dashboard de Analíticas Financieras
+*   **Pre-agregación en Servidor:** Creamos la ruta `GET /api/admin/sales-analytics` en [server.py](file:///Users/sossa/IA/generador-licencias/server.py) para procesar el histórico de licencias locales, calcular KPIs principales (Ingresos, Licencias, Beats) y agrupar las tendencias mensuales y tipos de licencias más vendidas.
+*   **Renderizado Dinámico:** Adaptamos [dashboard/charts.js](file:///Users/sossa/IA/generador-licencias/dashboard/charts.js) para consumir este endpoint local y renderizar gráficos SVG interactivos y fluidos en el panel de control del productor.
 
-### 4. 🛠️ Solución a la Pantalla en Negro y Restauración de Subida a Google Drive
-* **Corrección de Referencias de Vista (`window.showAppView`):** Restauramos la definición de la función `showAppView` en `main.js` que se había perdido durante la refactorización modular. Su ausencia detenía la ejecución en el inicio de ruteo, dejando los contenedores principales ocultos por defecto.
-* **Soporte de Carga Directa a Google Drive:** Para evitar problemas de cuota/espacio en Firebase y a solicitud explícita del usuario, se reactivó la subida opcional de archivos directamente a Google Drive cuando se use `gdrive` o `gdrive-central` como proveedor de almacenamiento.
-* **Limpieza de Errores en Tiempo de Carga (ReferenceError):** Se eliminaron declaraciones redundantes y erróneas en `dashboard.js` de funciones locales no definidas, previniendo fallos críticos de script al cargarse la página.
+## Correcciones Adicionales (Bug de Sincronización Local)
 
-### 5. 🎨 Restauración Completa del Diseño Original (Tailwind CDN y Librerías)
-* **Retorno a la Configuración de Estilos JIT:** Se revirtió el intento de compilar localmente con Tailwind v4 mediante PostCSS, ya que rompía las clases heredadas de Tailwind v3 y los estilos dinámicos del frontend.
-* **Restablecimiento de CDNs en `index.html`**: Se reincorporó la carga de las librerías originales:
-  * Tailwind CSS v3 (con plugins de forms y container queries) y su objeto inline `tailwind.config`.
-  * Chart.js, EmailJS, html2pdf.js, PDF.js y JSZip.
-* **Simplificación del Build**: Se eliminaron los archivos de configuración local redundantes (`tailwind.config.js`, `postcss.config.js`) y se removieron dichos paquetes de las dependencias locales, permitiendo que la compilación de Vite en Vercel genere un bundle CSS ligero y limpio sin interferencias.
-
-### 6. 📄 Restablecimiento del Diseño del Contrato Original (Reversión de Cambios Editoriales)
-* **Reversión de Tablas de Metadatos**: Se retiraron las tablas estructuradas de Markdown en la sección "Información General del Documento" de todas las plantillas en [config.js](file:///Users/sossa/IA/generador-licencias/config.js), volviendo al formato limpio de lista con viñetas originales.
-* **Reversión del Sello de Pago en Firmas**: Se removió el bloque de sello de pago con bordes discontinuos en el lateral derecho de las firmas en [editor.js](file:///Users/sossa/IA/generador-licencias/editor.js) cuando no se requiere la firma del comprador, restaurando la alineación y el espacio limpio original.
-
-### 7. 📊 Corrección de Estadísticas del Catálogo de Beats
-* **Cálculo y Renderizado Dinámico:** Se implementó la lógica en [catalog.js](file:///Users/sossa/IA/generador-licencias/catalog.js) dentro de `renderBeatsGrid` para calcular los contadores dinámicos `Total Beats`, `Con MP3`, `Con WAV` y `Con Stems` basándose en el arreglo global de beats del usuario (`window.localBeats`).
-* **Visualización de Métricas:** Ahora la interfaz de administración del catálogo muestra correctamente los contadores de archivos subidos en lugar de mostrar siempre `0` para MP3, WAV y Stems.
-
-### 8. 🖼️ Carátula Predeterminado Global para todos los Beats
-* **Opción en Ajustes:** Añadimos un grupo de entrada en el modal de configuración de la cuenta (`index.html`) para que el productor suba/elimine una carátula global predeterminada.
-* **Procesamiento en Canvas:** Al subir una imagen, esta se escala, centra y recorta automáticamente a un cuadrado perfecto de `500x500` píxeles para asegurar consistencia y calidad visual, guardándose en base64 en Firestore (`producerConfig.defaultBeatArtwork`).
-* **Visualización Inteligente:** En `checkout.js`, la función `getBeatArtwork()` prioriza esta carátula predeterminada en el primer orden de jerarquía de retorno. Esto asegura que la carátula global se propague en tiempo real a todas las vistas del catálogo (tanto el de administración como la tienda pública).
-
-### 9. 🛒 Corrección del Botón Marketplace en la Página Principal
-* **Fuga de Controlador:** Identificamos que el botón de Marketplace de la barra de navegación principal (`landing-btn-nav-catalog`) y del footer (`landing-btn-nav-catalog-2`) no tenían ningún manejador de eventos click vinculado en JavaScript, provocando que no hicieran nada al pulsarse.
-* **Vinculación Activa:** Añadimos un escuchador del evento click en [auth.js](file:///Users/sossa/IA/generador-licencias/auth.js) para interceptar el click, llamar a `e.preventDefault()` para evitar el comportamiento predeterminado de anclaje, e invocar la función de ruteo global `window.showAppView('catalog')`. Esto activa y repara automáticamente todos los botones de "VER CATÁLOGO" y "Marketplace" de la landing page.
-
-### 10. 💳 Reparación de los Botones de Compra y Carrito en el Checkout del Marketplace
-* **Incompatibilidad del Contexto Global:** Al estar en la vista del catálogo global (Marketplace), la lista de beats se almacena en `window.globalBeats` en lugar de `window.storeBeats` (que se usa para tiendas individuales). Los botones de "Comprar Ahora", "Añadir al Carrito", "PayPal", "PayPhone", etc. realizaban búsquedas de beats directamente en `window.storeBeats.find()`, devolviendo `undefined` y cancelando la ejecución de la compra silenciosamente.
-* **Búsqueda Robusta y Cruzada (`findBeatById`):** Implementamos un ayudante centralizado `findBeatById` en [checkout.js](file:///Users/sossa/IA/generador-licencias/checkout.js) que inspecciona de forma secuencial tanto `window.storeBeats` como `window.globalBeats`. Reemplazamos las búsquedas directas en el archivo por este helper, lo que asegura que las compras directas e integraciones de pago (PayPal, PayPhone) funcionen al 100% tanto en la tienda pública del productor como en el Marketplace global de la plataforma.
+### 5. 🔄 Mapeo Correcto de UIDs en server.py
+*   **Archivo Modificado**: [server.py](file:///Users/sossa/IA/generador-licencias/server.py)
+*   **Problema**: El backend utilizaba el UID de Firebase (p. ej., `paXbnNbHMMPC31X3hf0oTUx4bbr2`) para cargar y guardar los archivos de respaldo local (buscando `{uid}_backup_sincronizado.json`), mientras que la interfaz sincronizaba y leía de `{username}_backup_sincronizado.json` (donde `username` es `sossa` o `cgmonarco`). Esto causaba que las actualizaciones del SRI nunca se reflejaran localmente, dejando los spinners en carga indefinida.
+*   **Solución**: Se creó la función `resolve_backup_file(user_id)` en `server.py` que mapea de forma inteligente los UIDs de Firebase y emails a sus correspondientes nombres legacy (`sossa` o `cgmonarco`). Se actualizaron todas las referencias de guardado y carga en el backend para usar esta función unificada.
 
 ---
 
-## Verificación
+## Verificación de Despliegue y Pruebas
 
-1. **Compilación Continua:**
-   Ejecutamos con éxito `npm run build`, generando los assets de producción de Vite sin errores.
-2. **Despliegue Completo en Vercel:**
-   Los cambios de producción se han desplegado de manera exitosa en la URL de producción: https://generador-licencias.vercel.app
-3. **Verificación de Carga y Visualización:**
-   * La opción se muestra correctamente en el panel de configuración de Sossa Admin.
-   * La previsualización de la imagen cargada funciona, adaptando imágenes de cualquier proporción a un recorte cuadrado.
-   * La carátula se renderiza en todos los beats en la interfaz de catálogo y tienda pública.
-   * Todos los botones de Marketplace e inicio/catálogo en la landing page redirigen ahora instantáneamente a la vista del catálogo/marketplace.
-   * Las acciones de "Comprar Ahora" y "Añadir al Carrito" proceden sin bloqueos al paso de facturación y pasarela en el checkout del Marketplace.
-
-### 11. 🗂️ Integración y Estructuración de la Bóveda de Obsidian
-* **Diseño y Estructuración del Vault (`/Users/sossa/IA`):**
-  * Creamos la carpeta de documentación `generador-licencias/docs/` dentro del repositorio para almacenar de forma organizada todos los reportes, auditorías de seguridad, y análisis de negocio del proyecto BEATSS.
-  * Agrupamos los documentos por categorías funcionales:
-    * `docs/10_Pagos/`: Contiene la viabilidad de Stripe en Ecuador vía LLC (`viabilidad_stripe_ecuador_llc.md`) y las opciones de pago local con RUC de Ecuador (`opciones_pago_con_ruc_ecuador.md`).
-    * `docs/20_Soporte/`: Contiene la propuesta y guías de soporte y FAQs de la plataforma (`propuesta_ayuda_soporte.md`).
-    * `docs/30_Contratos/`: Contiene la auditoría de maquetación y salto de página de contratos PDF (`analisis_contratos_pdf.md`).
-    * `docs/40_Subagentes/`: Contiene la definición de roles de subagentes (`agents_analysis.md`) y la guía de integración de subagentes en Obsidian (`obsidian_integracion_agentes.md`).
-    * `docs/50_Seguridad/`: Contiene el análisis y auditoría de seguridad de Firestore (`firebase_security_audit.md`).
-* **Panel de Control Central (`Dashboard BEATSS.md`):**
-  * Creamos `generador-licencias/Dashboard BEATSS.md` en la raíz del proyecto para centralizar el acceso a todas las notas, reportes y bitácoras usando enlaces relativos de Obsidian (`[[...]]`).
-  * Incluimos instrucciones premium para excluir directorios ruidosos de desarrollo de la indexación de Obsidian.
-
-### 12. 🤖 Orquestador Multi-Agente con Herramientas y 17 Agentes (`agente_coordinador.py`)
-* **Integración Completa de Especialistas:** Rediseñamos el script `agente_coordinador.py` para ampliar su equipo de 4 a los **17 subagentes especializados** documentados en el sistema de BEATSS, mapeando los prompts de sistema y colores de consola individuales para cada uno.
-* **Implementación del Loop ReAct (Razonamiento y Acción):** 
-  * Los agentes ahora operan en un loop iterativo, decidiendo si necesitan información del código o realizar cambios mediante un formato JSON unificado de salida.
-  * Dotamos a los agentes de tres herramientas locales en Python: `read_file(path)`, `list_dir(path)` y `write_file(path, content)`.
-  * La lectura de archivos y listado de directorios se resuelve de forma automática y transparente en segundo plano, devolviendo la "OBSERVACIÓN" directamente al contexto de Gemini.
-* **Seguridad Activa y Aprobación Interactiva:** 
-  * Implementamos un sistema de verificación de rutas (`get_safe_path`) que impide el acceso a archivos fuera de la raíz de la bóveda del proyecto.
-  * Diseñamos un paso de control interactivo en consola para `write_file`: si un agente propone guardar o modificar un archivo, el script pausa la ejecución, muestra un preview de las modificaciones y solicita confirmación explícita `(s/n)` del usuario.
-* **Flujo de Respuesta Consolidado:** El Agente Principal recopila los hallazgos y cambios sugeridos en los ReAct loops de los subagentes delegados y los unifica en una respuesta final descriptiva y formateada en Markdown.
+1.  **Pruebas del Endpoint de PayPhone (`test_payphone_confirm.py`):**
+    Ejecutamos el script de simulación local. Responde correctamente con HTTP 400 y mensaje controlado cuando no hay credenciales válidas en el respaldo, validando la lógica preventiva server-to-server.
+2.  **Vite Build**:
+    Se ejecutó `npm run build` con éxito total, compilando todos los assets frontend y actualizándolos en `/dist`.
+3.  **Servidor Python**:
+    El backend fue reiniciado correctamente en el puerto 8000 utilizando la configuración del entorno virtual (`.venv/bin/python`).
+4.  **Funcionamiento del Click-wrap**:
+    Se corroboró localmente que el botón de pago y las integraciones dinámicas permanecen inhabilitados y con opacidad disminuida hasta activar de forma explícita el checkbox de aceptación de términos de servicio.
 
 ---
 
-## Verificación de Cambios y Estructura
-* **Vault de Obsidian:** Verificamos la creación correcta de directorios y archivos de documentación.
-* **Sintaxis de Python:** Validamos la compilación del script local sin errores de sintaxis (`python3 -m py_compile agente_coordinador.py`).
-* **Git:** Todos los cambios se encuentran bajo seguimiento en el control de versiones de Git con el commit de infraestructura correspondiente.
+## 💡 Próximos Pasos Recomendados
+1.  **Habilitar credenciales reales:** Configura tu ClientID y AppID en tu perfil del panel de administración para habilitar cobros reales con PayPhone en producción.
+2.  **Despliegue a Producción:** Haz push a tu repositorio Git para desplegar de forma definitiva los cambios frontend actualizados a Vercel/Firebase.

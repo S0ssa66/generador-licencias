@@ -8,7 +8,10 @@ import { getAuth } from 'firebase-admin/auth';
 import crypto from 'crypto';
 
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://generador-licencias.vercel.app';
-const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY || process.env.FIREBASE_PRIVATE_KEY || 'default_fallback_secret';
+const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY;
+if (!SIGNING_SECRET) {
+    console.error('FATAL: La variable de entorno DOWNLOAD_SIGNING_KEY no está configurada.');
+}
 
 // Inicializar Firebase Admin
 function initFirebaseAdmin() {
@@ -80,8 +83,8 @@ async function getCentralGdriveToken() {
 }
 
 export default async function handler(req, res) {
-    // CORS
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // CORS - restringido al dominio propio
+    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Authorization');
 

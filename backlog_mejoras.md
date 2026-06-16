@@ -69,9 +69,26 @@ Mejoras para acelerar la carga de la página, mejorar el SEO y refinar la interf
 
 Automatizaciones para erradicar la validación manual de comprobantes y cambiar a un modelo de suscripción recurrente real.
 
-- [ ] **QR Dinámico para Deuna! y Pagos Locales (BusinessAnalyst)**:
-  - *Descripción:* Automatizar los pagos manuales generando códigos QR dinámicos a través de API comercial, confirmando transacciones mediante webhooks para entregar los beats de inmediato.
-- [ ] **Suscripción Recurrente para Productores (BusinessAnalyst)**:
+- `[x]` **QR Dinámico para Deuna! y Pagos Locales (BusinessAnalyst)**:
+  - *Descripción:* Automatizar los pagos manuales generando códigos QR dinámicos e integrando un listener asíncrono que actualiza Firestore cuando el webhook aprueba el pago.
+- `[ ]` **Suscripción Recurrente para Productores (BusinessAnalyst)**:
   - *Descripción:* Integrar Stripe Billing o suscripciones recurrentes de PayPal para cobrar mensualmente de forma automática los planes Pro ($10/mes) o Elite ($30/mes).
-- [ ] **Procesamiento de Pagos Centralizado (Stripe Connect)**:
+- `[ ]` **Procesamiento de Pagos Centralizado (Stripe Connect)**:
   - *Descripción:* Permitir que la plataforma retenga automáticamente una comisión (v.g. 5% - 10%) en cada transacción de los productores y envíe el resto automáticamente a su cuenta de banco.
+
+---
+
+## 🟣 Fases Tecnológicas Recientes (Completadas)
+
+Nuevas funcionalidades avanzadas que han sido integradas en la plataforma:
+
+- `[x]` **PWA & Reproducción en Segundo Plano (Fase 4) (MobileDeveloper & AudioDSP)**:
+  - *Descripción:* Registro de Service Worker para caching Stale-While-Revalidate e instalabilidad progresiva (PWA). API Media Session para controles de audio en el lockscreen y lock screen media actions.
+- `[x]` **Chatbot Virtual Asistente Bilingüe (Fase 5) (SupportHelper)**:
+  - *Descripción:* Widget flotante conversacional que asiste a compradores en ES/EN con respuestas rápidas y plantillas autocompletadas de disputa de reclamos de Content ID.
+- `[x]` **Press Kit (EPK) del Productor (Fase 6) (BrandingSpecialist)**:
+  - *Descripción:* Sección de Press Kit interactiva en el storefront público para lucir la biografía, afiliación PRO, colaboraciones y contadores de beats.
+- `[x]` **Visualizador Soft Paper para Contratos (Fase 7) (DocumentExpert & Designer)**:
+  - *Descripción:* Toggle de estilos en el editor (Sans/Serif y Blanco/Crema) y previsualización notarial interactiva con sello de seguridad, anulando colores crema en la descarga de PDF.
+- `[x]` **Web Audio Mixer en Tiempo Real (Fase 8) (AudioDSP & Designer)**:
+  - *Descripción:* Consola de mezcla de stems (Kicks/Bass, Melodías, Hi-Hats, Mix) con Web Audio API y filtros divisores de frecuencia activos.

@@ -1,0 +1,64 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<factura id="comprobante" version="2.1.0"><infoTributaria><ambiente>1</ambiente><tipoEmision>1</tipoEmision><razonSocial>JOAO DAVID DOMINGUEZ</razonSocial><nombreComercial>BEATSS</nombreComercial><ruc>0803743111001</ruc><claveAcceso>1606202601080374311100110010010000000011234567817</claveAcceso><codDoc>01</codDoc><estab>001</estab><ptoEmi>001</ptoEmi><secuencial>000000001</secuencial><dirMatriz>Av. de las Americas, Quito</dirMatriz><contribuyenteRimpe>CONTRIBUYENTE RÉGIMEN RIMPE</contribuyenteRimpe></infoTributaria><infoFactura><fechaEmision>15/06/2026</fechaEmision><dirEstablecimiento>Av. de las Americas, Quito</dirEstablecimiento><obligadoContabilidad>NO</obligadoContabilidad><tipoIdentificacionComprador>05</tipoIdentificacionComprador><razonSocialComprador>COMPRADOR PRUEBA</razonSocialComprador><identificacionComprador>1712345678</identificacionComprador><direccionComprador>Quito</direccionComprador><totalSinImpuestos>60.00</totalSinImpuestos><totalDescuento>0.00</totalDescuento><totalConImpuestos><totalImpuesto><codigo>2</codigo><codigoPorcentaje>0</codigoPorcentaje><baseImponible>60.00</baseImponible><valor>0.00</valor></totalImpuesto></totalConImpuestos><propina>0.00</propina><importeTotal>60.00</importeTotal><moneda>DOLAR</moneda><pagos><pago><formaPago>20</formaPago><total>60.00</total></pago></pagos></infoFactura><detalles><detalle><codigoPrincipal>BEAT-001</codigoPrincipal><descripcion>Pa Un Lao (Licencia Premium)</descripcion><cantidad>1.00</cantidad><precioUnitario>60.00</precioUnitario><descuento>0.00</descuento><precioTotalSinImpuesto>60.00</precioTotalSinImpuesto><impuestos><impuesto><codigo>2</codigo><codigoPorcentaje>0</codigoPorcentaje><tarifa>0</tarifa><baseImponible>60.00</baseImponible><valor>0.00</valor></impuesto></impuestos></detalle></detalles><infoAdicional><campoAdicional nombre="Email">cliente@pruebas.com</campoAdicional><campoAdicional nombre="Direccion">Quito</campoAdicional><campoAdicional nombre="Regimen">Contribuyente Régimen RIMPE</campoAdicional></infoAdicional><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:etsi="http://uri.etsi.org/01903/v1.3.2#" Id="Signature568890">
+<ds:SignedInfo Id="Signature-SignedInfo534060">
+<ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+<ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+<ds:Reference Id="SignedPropertiesID52869" Type="http://uri.etsi.org/01903#SignedProperties" URI="#Signature568890-SignedProperties917946">
+<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+<ds:DigestValue>1A6zfK32LNolyuIzJYe/JHmkqYc=</ds:DigestValue>
+</ds:Reference>
+<ds:Reference URI="#Certificate602591">
+<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+<ds:DigestValue>rbm+9EhM4i5tWXFumjudvptSRlw=</ds:DigestValue>
+</ds:Reference>
+<ds:Reference Id="Reference-ID-285727" URI="#comprobante">
+<ds:Transforms>
+<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+<ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+</ds:Transforms>
+<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+<ds:DigestValue>v+8+ZBauK3xkDOiz1o09lEy1wrE=</ds:DigestValue>
+</ds:Reference>
+</ds:SignedInfo>
+<ds:SignatureValue>
+N1vUaXSmoFNDo4tEDjBP4EElNm4DawmWIsaLblSMjHwR8IXnNWhuddPSLsgXUIv3d1pAmNR5bfcu
+J0vpYiuvgdRbnHar5ok3/8hnHO96TembmW2DoqBD8limPFAnInPUEg2mFL6PhzuTct/dabviSvFY
+MKaZ9C0WZNw+E6ILRFtRX95+G6dz4lxIIfjeBR3WwHrnxPGGrdu5h/mNz0hecFU4MpcSgKyCBI/K
+sJGpqCgwm2ui1r3RZB/nOAV7CFT908PrqFt2uI8ZP/6cltz7g+UFxNkapmpanmiUE3poQ70ZPv/S
+r76c/Xpapzg6WnSET8YDGLZLG+lkYu/zUtMjDA==
+</ds:SignatureValue>
+<ds:KeyInfo Id="Certificate602591">
+<ds:X509Data>
+<ds:X509Certificate>
+MIIDcDCCAligAwIBAgIUULjAnGUejwIAXodHgpnc1DCu4JYwDQYJKoZIhvcNAQELBQAwcjELMAkG
+A1UEBhMCRUMxEjAQBgNVBAgMCVBpY2hpbmNoYTEOMAwGA1UEBwwFUXVpdG8xGzAZBgNVBAoMEkJF
+QVRTUyBUZXN0IElzc3VlcjEiMCAGA1UEAwwZSm9hbyBEYXZpZCBEb21pbmd1ZXogTW9jazAeFw0y
+NjA2MTUwNDA4NDlaFw0yNzA2MTYwNDA4NDlaMHIxCzAJBgNVBAYTAkVDMRIwEAYDVQQIDAlQaWNo
+aW5jaGExDjAMBgNVBAcMBVF1aXRvMRswGQYDVQQKDBJCRUFUU1MgVGVzdCBJc3N1ZXIxIjAgBgNV
+BAMMGUpvYW8gRGF2aWQgRG9taW5ndWV6IE1vY2swggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQC2RfkV9R/gCz/KdQwKbJBTpYdlwE6VKTNxAZCk2y9qx9dtPASFzga3slLMsnG6OPZMvdfF
+On3oCTlJG0/JGGRlvBAw/cooWtAT5DN0gtfhfwkN6mwsv87j1qtqPHD71GamFaaWV7V1mxal41sw
+7onknyaXupMew318t82z4W+f/lFq107VOrkaVNpwOyvfcgSTxXhEE4AirsdUfy1+THkm9Cpncn9g
+ig6jJe7RD1ZUQRaGoL8qOuIdiO/0O5E7wLNdhsnUPtj4OFSLEZyMRaljd8RU2m2z6oeKz/JGC+xR
+V5WfmB3spZODF2YEvT8gb+1YipUDyWZGdAePDKRCdvwJAgMBAAEwDQYJKoZIhvcNAQELBQADggEB
+ALUZJRxw5oXAMcNX/sPNJLgR7AjToZaNBu/CpIhD1dZUQ6VStI4TTUP285olRBS23FY2fNlK/tcI
+DKIGD1K2uhWtBOh/iBaJXujPzmC6kEzXw3xS95hm/1xQmew+X//iuZhKINB5xJl7LXWqxCk0Wd1H
++PPwpHlxZIEJkyoMFO8A5wPpMIkrbrfZUBjWNvrKOxo6HSMWdr8lVN4XbNSUNRcT3vtcBkEVw7yD
+/CDRWvVvHJq2qnsEVy1IxdILlB/eP1EL9WNkjueJXVb7papfOULfcHkueVvgUvm934z8PbgpIiNU
+SJAqtDC4b1bZJeqfqpp5cdxGsB3gJlt+5VsN7w8=
+</ds:X509Certificate>
+</ds:X509Data>
+<ds:KeyValue>
+<ds:RSAKeyValue>
+<ds:Modulus>
+tkX5FfUf4As/ynUMCmyQU6WHZcBOlSkzcQGQpNsvasfXbTwEhc4Gt7JSzLJxujj2TL3XxTp96Ak5
+SRtPyRhkZbwQMP3KKFrQE+QzdILX4X8JDepsLL/O49arajxw+9RmphWmlle1dZsWpeNbMO6J5J8m
+l7qTHsN9fLfNs+Fvn/5RatdO1Tq5GlTacDsr33IEk8V4RBOAIq7HVH8tfkx5JvQqZ3J/YIoOoyXu
+0Q9WVEEWhqC/KjriHYjv9DuRO8CzXYbJ1D7Y+DhUixGcjEWpY3fEVNpts+qHis/yRgvsUVeVn5gd
+7KWTgxdmBL0/IG/tWIqVA8lmRnQHjwykQnb8CQ==
+</ds:Modulus>
+<ds:Exponent>AQAB</ds:Exponent>
+</ds:RSAKeyValue>
+</ds:KeyValue>
+</ds:KeyInfo>
+<ds:Object Id="Signature568890-Object673997"><etsi:QualifyingProperties Target="#Signature568890"><etsi:SignedProperties Id="Signature568890-SignedProperties917946"><etsi:SignedSignatureProperties><etsi:SigningTime>2026-06-15T23:08:49-05:00</etsi:SigningTime><etsi:SigningCertificate><etsi:Cert><etsi:CertDigest><ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><ds:DigestValue>vizTX4nAQcF0rkzPzZAHTKP7TZk=</ds:DigestValue></etsi:CertDigest><etsi:IssuerSerial><ds:X509IssuerName>CN=Joao David Dominguez Mock,O=BEATSS Test Issuer,L=Quito,ST=Pichincha,C=EC</ds:X509IssuerName><ds:X509SerialNumber>460839377559795631253627007536337302886942695574</ds:X509SerialNumber></etsi:IssuerSerial></etsi:Cert></etsi:SigningCertificate></etsi:SignedSignatureProperties><etsi:SignedDataObjectProperties><etsi:DataObjectFormat ObjectReference="#Reference-ID-285727"><etsi:Description>contenido comprobante</etsi:Description><etsi:MimeType>text/xml</etsi:MimeType></etsi:DataObjectFormat></etsi:SignedDataObjectProperties></etsi:SignedProperties></etsi:QualifyingProperties></ds:Object></ds:Signature></factura>

@@ -198,12 +198,23 @@ export function initAuthAndApp() {
         sessionStorage.removeItem('beatss_manual_login');
     }
 
-    // Desactivar y desregistrar todos los Service Workers para evitar problemas de caché (solo una vez)
-    if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_cleaned')) {
+    // Función para registrar el nuevo Service Worker de la PWA
+    function registerPWA() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').then((reg) => {
+                console.log('🚀 Service Worker de BEATSS registrado con éxito:', reg.scope);
+            }).catch((err) => {
+                console.error('❌ Error al registrar el Service Worker:', err);
+            });
+        }
+    }
+
+    // Desactivar y desregistrar todos los Service Workers antiguos para evitar problemas de caché (solo una vez)
+    if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_cleaned_v2')) {
         const swPromise = navigator.serviceWorker.getRegistrations().then((registrations) => {
             const promises = registrations.map(registration => {
                 return registration.unregister().then(() => {
-                    console.log('🗑️ Service Worker desregistrado.');
+                    console.log('🗑️ Service Worker antiguo desregistrado.');
                 });
             });
             return Promise.all(promises);
@@ -216,10 +227,14 @@ export function initAuthAndApp() {
         }) : Promise.resolve();
 
         Promise.all([swPromise, cachePromise]).then(() => {
-            localStorage.setItem('beatss_sw_cleaned', 'true');
+            localStorage.setItem('beatss_sw_cleaned_v2', 'true');
+            window.location.reload();
         }).catch(err => {
             console.error('Error durante la limpieza del Service Worker:', err);
+            registerPWA();
         });
+    } else {
+        registerPWA();
     }
 
     // Capturar código de referido si viene en la URL
@@ -229,11 +244,11 @@ export function initAuthAndApp() {
     const isStore = urlParams.get('p') || urlParams.get('producer');
     const isCatalog = urlParams.has('catalogo') || window.location.hash === '#catalogo';
     if (isStore) {
-        window.isPublicStoreMode = true;
-        window.isGlobalCatalogMode = false;
+        window.stateManager.setState('isPublicStoreMode', true);
+        window.stateManager.setState('isGlobalCatalogMode', false);
     } else if (isCatalog) {
-        window.isPublicStoreMode = false;
-        window.isGlobalCatalogMode = true;
+        window.stateManager.setState('isPublicStoreMode', false);
+        window.stateManager.setState('isGlobalCatalogMode', true);
     }
 
     const refCode = urlParams.get('ref');
@@ -281,9 +296,11 @@ export function initAuthAndApp() {
 
         if (user) {
             window.currentUser = user.uid;
-            window.currentUserIsAdmin = (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com');
+            window.currentUserEmail = user.email;
+            window.currentUserIsAdmin = (user.email && (user.email.toLowerCase() === 'masterjuego25@gmail.com' || user.email.toLowerCase() === 'sossabeatz1@gmail.com'));
         } else {
             window.currentUser = null;
+            window.currentUserEmail = null;
             window.currentUserIsAdmin = false;
         }
 
@@ -309,7 +326,7 @@ export function initAuthAndApp() {
             const landing = document.getElementById('landing-page');
             if (landing) landing.style.display = 'none';
             
-            window.currentUserIsAdmin = (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com');
+            window.currentUserIsAdmin = (user.email && (user.email.toLowerCase() === 'masterjuego25@gmail.com' || user.email.toLowerCase() === 'sossabeatz1@gmail.com'));
             
             if (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com' && user.providerData) {
                 const googleProv = user.providerData.find(p => p.providerId === 'google.com');

@@ -23,11 +23,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <!-- Google Identity Services (para Google Drive API) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <!-- PayPal SDK Business -->
-    <script src="https://www.paypal.com/sdk/js?client-id=AaZODyYne1mAl_ujEEAr5tP2hRcm2ii_1QSzAhexfXKMdue-aVQRX_kbPLUgmpm1ZimxFSWpejImUU1-&currency=USD&intent=capture" id="paypal-sdk-script"></script>
+    <!-- PayPal SDK loaded dynamically -->
     <link rel="stylesheet" href="styles.css?v=36">
     <link rel="stylesheet" href="https://cdn.payphonetodoesposible.com/box/v1.1/payphone-payment-box.css">
     <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="/logo-sossa.png">
 
     <!-- Material Symbols for Redesign -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
@@ -479,6 +479,17 @@
                             <p class="text-on-surface-variant text-sm mb-4">Géneros: Reggaeton, Trap, HipHop</p>
                             <button onclick="document.getElementById('landing-btn-nav-catalog').click()" data-i18n="btn_view_catalog" class="w-full py-3 bg-white/5 hover:bg-electric-purple hover:text-on-primary border border-white/10 transition-all font-bold rounded-lg">VER CATÁLOGO</button>
                         </div>
+                        <!-- Producer Card 3 -->
+                        <div class="w-[300px] md:w-[400px] flex-shrink-0 snap-center group">
+                            <div class="relative aspect-square rounded-2xl overflow-hidden mb-6">
+                                <img class="w-full h-full object-cover group-hover:scale-110 transition-all duration-700" src="producer_mrmicua.jpg"/>
+                                <div class="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-60"></div>
+                                <div class="absolute top-4 right-4 px-3 py-1 bg-neon-blue text-on-secondary-container font-label-caps text-[10px] rounded-full font-bold">PLATINUM</div>
+                            </div>
+                            <h4 class="font-headline-md text-white font-bold">Mr. Micua</h4>
+                            <p class="text-on-surface-variant text-sm mb-4">Géneros: Trap, Reggaeton, Dancehall</p>
+                            <button onclick="document.getElementById('landing-btn-nav-catalog').click()" data-i18n="btn_view_catalog" class="w-full py-3 bg-white/5 hover:bg-electric-purple hover:text-on-primary border border-white/10 transition-all font-bold rounded-lg">VER CATÁLOGO</button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -683,15 +694,18 @@
             </div>
 
             <!-- Selector de Métodos de Pago (Tabs) -->
-            <div style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px; padding-bottom: 4px;">
-                <button type="button" class="pay-method-tab active" onclick="switchPaymentMethodTab('deuna')" style="flex: 1; height: 38px; border: none; background: none; color: #00ccff; border-bottom: 2px solid #00ccff; font-weight: 700; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none;">
-                    📱 Deuna! / QR
+            <div style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px; padding-bottom: 4px; overflow-x: auto;">
+                <button type="button" class="pay-method-tab active" onclick="switchPaymentMethodTab('deuna')" style="flex: 1; height: 38px; border: none; background: none; color: #00ccff; border-bottom: 2px solid #00ccff; font-weight: 700; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none; white-space: nowrap;">
+                    📱 Deuna!
                 </button>
-                <button type="button" class="pay-method-tab" onclick="switchPaymentMethodTab('transfer')" style="flex: 1; height: 38px; border: none; background: none; color: #8a91a6; font-weight: 600; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none;">
+                <button type="button" class="pay-method-tab" onclick="switchPaymentMethodTab('transfer')" style="flex: 1; height: 38px; border: none; background: none; color: #8a91a6; font-weight: 600; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none; white-space: nowrap;">
                     🏦 Transferencia
                 </button>
-                <button type="button" class="pay-method-tab" onclick="switchPaymentMethodTab('paypal')" style="flex: 1; height: 38px; border: none; background: none; color: #8a91a6; font-weight: 600; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none;">
-                    💳 Tarjeta / PayPal
+                <button type="button" class="pay-method-tab" onclick="switchPaymentMethodTab('payphone')" style="flex: 1; height: 38px; border: none; background: none; color: #8a91a6; font-weight: 600; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none; white-space: nowrap;">
+                    📱 PayPhone
+                </button>
+                <button type="button" class="pay-method-tab" onclick="switchPaymentMethodTab('paypal')" style="flex: 1; height: 38px; border: none; background: none; color: #8a91a6; font-weight: 600; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none; white-space: nowrap;">
+                    💳 PayPal
                 </button>
             </div>
 
@@ -834,7 +848,23 @@
                 </div>
             </div>
 
-            <!-- PANEL 3: PAYPAL -->
+            <!-- PANEL 3: PAYPHONE -->
+            <div id="pay-tab-payphone" class="pay-method-panel" style="display: none;">
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(0,170,204,0.25); border-radius:16px; padding:20px; margin-bottom:16px; text-align: center; box-sizing: border-box;">
+                    <i data-lucide="smartphone" style="width: 28px; height: 28px; color: #00aacc; margin-bottom: 8px; display: inline-block;"></i>
+                    <div style="color: #ffffff; font-size: 13px; font-weight: 700; margin-bottom: 4px;">PAGO CON PAYPHONE</div>
+                    <p style="color: #cbd5e0; font-size: 11px; line-height: 1.4; margin: 0 0 16px 0;">Paga con tu saldo de PayPhone o cualquier tarjeta de crédito/débito directamente. Activación automática en segundos.</p>
+                    
+                    <div id="payphone-subscription-button-container" style="display: flex; justify-content: center; align-items: center; min-height: 48px; border-radius: 8px; overflow: hidden;"></div>
+                    
+                    <!-- Botón de Simulación Local para PayPhone -->
+                    <button type="button" id="simulate-payphone-btn" onclick="simulatePayphoneSubscription()" style="display: none; margin-top: 12px; width: 100%; height: 40px; border-radius: 8px; border: 1px dashed #00ccff; background: rgba(0,204,255,0.1); color: #00ccff; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                        ⚡ Simular Pago Exitoso (PayPhone)
+                    </button>
+                </div>
+            </div>
+
+            <!-- PANEL 4: PAYPAL -->
             <div id="pay-tab-paypal" class="pay-method-panel" style="display: none;">
                 <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(0,102,255,0.25); border-radius:16px; padding:20px; margin-bottom:16px; text-align: center; box-sizing: border-box;">
                     <i data-lucide="credit-card" style="width: 28px; height: 28px; color: #0079c1; margin-bottom: 8px; display: inline-block;"></i>
@@ -842,6 +872,11 @@
                     <p style="color: #cbd5e0; font-size: 11px; line-height: 1.4; margin: 0 0 16px 0;">Paga de manera segura con tu tarjeta de crédito o cuenta de PayPal. Activación automática en segundos.</p>
                     
                     <div id="paypal-button-container" style="border-radius:12px; overflow:hidden; min-height:44px;"></div>
+
+                    <!-- Botón de Simulación Local para PayPal -->
+                    <button type="button" id="simulate-paypal-btn" onclick="simulatePaypalSubscription()" style="display: none; margin-top: 12px; width: 100%; height: 40px; border-radius: 8px; border: 1px dashed #ffc439; background: rgba(255,196,57,0.1); color: #ffc439; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
+                        ⚡ Simular Pago Exitoso (PayPal)
+                    </button>
                 </div>
             </div>
 
@@ -1490,6 +1525,9 @@
                     <button class="tab-btn" data-tab="tab-admin" id="tab-admin-btn" style="display: none;">
                         <i data-lucide="trending-up"></i> <span data-i18n="tab_admin">Contabilidad General</span>
                     </button>
+                    <button class="tab-btn" data-tab="tab-whitelist" id="tab-whitelist-btn">
+                        <i data-lucide="shield-check"></i> <span data-i18n="tab_whitelist">Content ID Whitelist</span>
+                    </button>
                 </div>
                 <!-- Selector de pestañas para móviles -->
                 <div class="tabs-mobile">
@@ -1499,6 +1537,7 @@
                         <option value="tab-beats" data-i18n="tab_beats">🎵 Catálogo de Beats</option>
                         <option value="tab-dashboard" data-i18n="tab_dashboard">📈 Dashboard de Ventas</option>
                         <option value="tab-sales" data-i18n="tab_sales">🛒 Pedidos de Beats</option>
+                        <option value="tab-whitelist" data-i18n="tab_whitelist">🛡️ Whitelisting Content ID</option>
                         <option value="tab-admin" data-i18n="tab_admin" id="mobile-tab-admin-opt" style="display: none;">📊 Contabilidad General</option>
                     </select>
                 </div>
@@ -1523,11 +1562,26 @@
                             <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Personalizar
                         </button>
                     </div>
+
+                    <!-- Controles de Estilo del Papel Virtual -->
+                    <div style="display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 3px 6px; border-radius: 8px; height: 32px; box-sizing: border-box;">
+                        <span style="font-size: 10px; color: #8a91a6; font-weight: 700; text-transform: uppercase; margin-right: 4px; letter-spacing: 0.5px;">Papel:</span>
+                        
+                        <!-- Tipografía -->
+                        <button type="button" id="btn-paper-style-sans" class="btn" style="height: 24px; padding: 0 8px; font-size: 10px; font-weight: 700; border-radius: 5px; background: transparent; border: none; color: #8a91a6; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: all 0.2s;" onclick="window.setPaperStyle('sans')" title="Fuente Sin Serif (Moderna)">Sans</button>
+                        <button type="button" id="btn-paper-style-serif" class="btn" style="height: 24px; padding: 0 8px; font-size: 10px; font-weight: 700; border-radius: 5px; background: var(--accent); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: all 0.2s;" onclick="window.setPaperStyle('serif')" title="Fuente Serif (Legal Clásica)">Serif</button>
+                        
+                        <div style="width: 1px; height: 14px; background: var(--border-color); margin: 0 4px;"></div>
+                        
+                        <!-- Color -->
+                        <button type="button" id="btn-paper-color-white" class="btn" style="height: 24px; padding: 0 8px; font-size: 10px; font-weight: 700; border-radius: 5px; background: transparent; border: none; color: #8a91a6; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: all 0.2s;" onclick="window.setPaperColor('white')" title="Papel Blanco Puro">Blanco</button>
+                        <button type="button" id="btn-paper-color-cream" class="btn" style="height: 24px; padding: 0 8px; font-size: 10px; font-weight: 700; border-radius: 5px; background: var(--accent); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: all 0.2s;" onclick="window.setPaperColor('cream')" title="Papel Crema Natural (Soft Paper)">Crema</button>
+                    </div>
                 </div>
 
                 <div class="preview-container">
                     <!-- Contenedor del papel virtual para PDF -->
-                    <div class="paper" id="license-paper">
+                    <div class="paper paper-serif paper-cream" id="license-paper">
                         <div id="rendered-contract-content">
                             <!-- Contrato compilado por JS -->
                         </div>
@@ -1608,32 +1662,47 @@
                     </div>
                 </div>
 
-                <div class="chart-container" style="position: relative; height:250px; width:100%; margin: 20px 0; display: none;" id="history-chart-container">
-                    <canvas id="salesChart"></canvas>
+                <div class="history-main-layout" id="history-main-layout" style="display: none;">
+                    <!-- Columna Izquierda: Tabla del Historial -->
+                    <div class="history-left-col">
+                        <div class="history-list-wrapper">
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="history_th_ref">Referencia</th>
+                                        <th data-i18n="history_th_date">Fecha</th>
+                                        <th data-i18n="history_th_beat">Beat</th>
+                                        <th data-i18n="history_th_buyer">Comprador</th>
+                                        <th data-i18n="history_th_type">Tipo</th>
+                                        <th data-i18n="history_th_value">Valor</th>
+                                        <th data-i18n="history_th_sri">Facturación SRI</th>
+                                        <th class="text-right" data-i18n="history_th_actions">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-table-body">
+                                    <!-- Filas generadas por JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Gráfico Compacto -->
+                    <div class="history-right-col">
+                        <div class="chart-card-premium">
+                            <div class="chart-card-header">
+                                <h3 class="chart-card-title" data-i18n="history_chart_title">Ingresos Mensuales</h3>
+                            </div>
+                            <div class="chart-container" style="position: relative; height: 180px; width: 100%; display: none;" id="history-chart-container">
+                                <canvas id="salesChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="history-list-wrapper">
-                    <table class="history-table">
-                        <thead>
-                            <tr>
-                                <th data-i18n="history_th_ref">Referencia</th>
-                                <th data-i18n="history_th_date">Fecha</th>
-                                <th data-i18n="history_th_beat">Beat</th>
-                                <th data-i18n="history_th_buyer">Comprador</th>
-                                <th data-i18n="history_th_type">Tipo</th>
-                                <th data-i18n="history_th_value">Valor</th>
-                                <th class="text-right" data-i18n="history_th_actions">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="history-table-body">
-                            <!-- Filas generadas por JS -->
-                        </tbody>
-                    </table>
-                    <div class="empty-state" id="history-empty">
-                        <i data-lucide="folder-open"></i>
-                        <h3>No hay licencias registradas</h3>
-                        <p>Las licencias que guardes aparecerán en esta lista para descargarlas o copiarlas rápidamente.</p>
-                    </div>
+                <div class="empty-state" id="history-empty" style="display: none;">
+                    <i data-lucide="folder-open"></i>
+                    <h3>No hay licencias registradas</h3>
+                    <p>Las licencias que guardes aparecerán en esta lista para descargarlas o copiarlas rápidamente.</p>
                 </div>
             </div>
 
@@ -2063,6 +2132,65 @@
                 </div>
             </div>
 
+            <!-- Tab Content: Whitelisting Content ID -->
+            <div class="tab-content" id="tab-whitelist">
+                <div class="history-controls" style="margin-bottom: 20px;">
+                    <h2 style="font-family: var(--font-title); font-size: 20px; font-weight: 700; color: var(--text-primary);">🛡️ Whitelisting de Canales (Content ID YouTube)</h2>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 0;">Administra los canales autorizados para usar tus instrumentales sin recibir reclamos de derechos de autor.</p>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; box-sizing: border-box; align-items: start; margin-top: 20px;">
+                    <!-- Formulario de adición manual -->
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-sizing: border-box;">
+                        <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 15px; color: #fff; font-weight: 700;">Añadir Canal Manualmente</h3>
+                        <form id="form-add-whitelist" style="display: flex; flex-direction: column; gap: 12px;">
+                            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+                                <label for="whitelist-channel-url" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase;">URL del Canal de YouTube *</label>
+                                <input type="url" id="whitelist-channel-url" placeholder="https://youtube.com/@artista" required style="width: 100%; box-sizing: border-box; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; color: #fff; outline: none; font-size: 13px; font-family: inherit;">
+                            </div>
+                            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+                                <label for="whitelist-artist-name" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase;">Nombre del Artista / Canal *</label>
+                                <input type="text" id="whitelist-artist-name" placeholder="Ej: Jair Nogales" required style="width: 100%; box-sizing: border-box; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; color: #fff; outline: none; font-size: 13px; font-family: inherit;">
+                            </div>
+                            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+                                <label for="whitelist-song-name" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase;">Canción Derivada *</label>
+                                <input type="text" id="whitelist-song-name" placeholder="Ej: Mami (Remix)" required style="width: 100%; box-sizing: border-box; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; color: #fff; outline: none; font-size: 13px; font-family: inherit;">
+                            </div>
+                            <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
+                                <label for="whitelist-license-ref" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase;">Código de Licencia (Referencia) *</label>
+                                <input type="text" id="whitelist-license-ref" placeholder="Ej: Invoice # CANDY-..." required style="width: 100%; box-sizing: border-box; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; color: #fff; outline: none; font-size: 13px; font-family: inherit;">
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="height: 38px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; margin-top: 8px; font-size: 13px;">
+                                <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Autorizar Canal
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Listado de canales -->
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-sizing: border-box; overflow-x: auto;">
+                        <h3 style="margin-top: 0; margin-bottom: 16px; font-size: 15px; color: #fff; font-weight: 700;">Canales Autorizados (Whitelist Activa)</h3>
+                        <table class="history-table" style="width: 100%; min-width: 500px; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
+                                    <th style="padding: 10px 8px; font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Artista / Canal</th>
+                                    <th style="padding: 10px 8px; font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Canción</th>
+                                    <th style="padding: 10px 8px; font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Licencia</th>
+                                    <th style="padding: 10px 8px; font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; text-align: right;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="whitelist-table-tbody">
+                                <!-- Elementos inyectados por JS -->
+                            </tbody>
+                        </table>
+                        
+                        <div class="empty-state" id="whitelist-empty-state" style="display: none; text-align: center; padding: 40px 0;">
+                            <i data-lucide="shield-alert" style="width: 32px; height: 32px; color: var(--text-secondary); opacity: 0.3; margin-bottom: 8px; display: inline-block;"></i>
+                            <p style="color: var(--text-secondary); margin: 0; font-size: 13px;">No hay canales en lista blanca registrados.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tab Content: Contabilidad General (Solo Admin Sossa) -->
             <div class="tab-content" id="tab-admin">
                 <div class="history-controls">
@@ -2075,32 +2203,89 @@
                 </div>
 
                 <!-- Resumen Consolidado -->
-                <div class="history-stats-cards" id="admin-stats-container">
+                <div class="history-stats-cards" id="admin-stats-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                     <div class="stat-card">
-                        <div class="stat-icon">
+                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
                             <i data-lucide="banknote"></i>
                         </div>
                         <div class="stat-details">
-                            <span class="stat-label">Ingresos Totales (SaaS)</span>
+                            <span class="stat-label">Volumen Beats (GMV)</span>
                             <h3 class="stat-value" id="admin-stat-total-collected">$0.00</h3>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon">
+                        <div class="stat-icon" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">
+                            <i data-lucide="shield-check"></i>
+                        </div>
+                        <div class="stat-details">
+                            <span class="stat-label">Ingresos SaaS (Plataforma)</span>
+                            <h3 class="stat-value" id="admin-stat-total-saas">$0.00</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: rgba(0, 204, 255, 0.1); color: #00ccff;">
                             <i data-lucide="files"></i>
                         </div>
                         <div class="stat-details">
-                            <span class="stat-label">Licencias Emitidas (Global)</span>
+                            <span class="stat-label">Licencias (Global)</span>
                             <h3 class="stat-value" id="admin-stat-total-licenses">0</h3>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon">
+                        <div class="stat-icon" style="background: rgba(236, 72, 153, 0.1); color: #ec4899;">
                             <i data-lucide="users"></i>
                         </div>
                         <div class="stat-details">
-                            <span class="stat-label">Productores Registrados</span>
+                            <span class="stat-label">Productores</span>
                             <h3 class="stat-value" id="admin-stat-total-users">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de Analíticas Avanzadas (Sossa Admin) -->
+                <div class="admin-analytics-grid" style="margin-top: 24px;">
+                    <!-- Columna Izquierda: Ventas por Productor -->
+                    <div id="admin-producer-analytics" style="background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(0, 102, 255, 0.15); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                            <h3 style="color: #ffffff; font-size: 16px; font-weight: 700; margin: 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
+                                <i data-lucide="bar-chart-3" style="color: #10b981; width: 20px; height: 20px;"></i> Rendimiento por Productor
+                            </h3>
+                            <!-- Filtros Rápidos -->
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="admin-producer-search" placeholder="🔍 Buscar productor..." style="background: #1a1e27; border: 1px solid rgba(255,255,255,0.08); color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 12px; outline: none; width: 150px;">
+                                <select id="admin-producer-filter-plan" style="background: #1a1e27; border: 1px solid rgba(255,255,255,0.08); color: #fff; border-radius: 6px; padding: 4px 6px; font-size: 12px; outline: none;">
+                                    <option value="all">Todos los planes</option>
+                                    <option value="inicial">Inicial</option>
+                                    <option value="pro">Pro ⚡</option>
+                                    <option value="elite">Elite 👑</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="producer-stats-grid" id="admin-producer-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
+                            <!-- Tarjetas de productores inyectadas dinámicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Columna Derecha: Métodos de Pago y Distribución de Planes -->
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <!-- Métodos de Pago -->
+                        <div style="background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(0, 102, 255, 0.15); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); flex: 1;">
+                            <h3 style="color: #ffffff; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
+                                <i data-lucide="wallet" style="color: #a855f7; width: 18px; height: 18px;"></i> Métodos de Pago (Beats)
+                            </h3>
+                            <div id="admin-payment-methods-breakdown" style="display: flex; flex-direction: column; gap: 14px;">
+                                <!-- Barras de métodos de pago inyectadas dinámicamente -->
+                            </div>
+                        </div>
+
+                        <!-- Distribución de Planes SaaS -->
+                        <div style="background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(0, 102, 255, 0.15); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); flex: 1;">
+                            <h3 style="color: #ffffff; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
+                                <i data-lucide="layers" style="color: #ec4899; width: 18px; height: 18px;"></i> Distribución de Planes SaaS
+                            </h3>
+                            <div id="admin-saas-plans-breakdown" style="display: flex; flex-direction: column; gap: 14px;">
+                                <!-- Barras de planes SaaS inyectadas dinámicamente -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2200,6 +2385,22 @@
                                 <!-- Filas de códigos VIP inyectadas dinámicamente -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Barra de filtros del historial consolidado -->
+                <div class="history-controls" style="margin-top: 32px; background: rgba(15, 19, 32, 0.3); border: 1px solid rgba(255,255,255,0.05); padding: 12px 20px; border-radius: 12px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;">
+                    <h3 style="color: #ffffff; font-size: 14px; font-weight: 700; margin: 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 6px;">
+                        <i data-lucide="list" style="color: #00ccff; width: 16px; height: 16px;"></i> Historial de Licencias Consolidado
+                    </h3>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 12px; color: #8a91a6; font-weight: 600; text-transform: uppercase;">Filtrar Productor:</span>
+                            <select id="admin-filter-producer" style="background: #1a1e27; border: 1px solid rgba(255,255,255,0.08); color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 13px; outline: none; min-width: 160px;">
+                                <option value="all">Todos los Productores</option>
+                            </select>
+                        </div>
+                        <span id="admin-licenses-count" style="font-size: 12px; background: rgba(0, 204, 255, 0.15); color: #00ccff; padding: 3px 8px; border-radius: 6px; font-weight: 600;">0 licencias</span>
                     </div>
                 </div>
 
@@ -2481,6 +2682,7 @@
                           <option value="default">✨ Automático (Según aka/marca)</option>
                           <option value="purple">🟣 Púrpura Sossa</option>
                           <option value="red">🔴 Rojo Monarco</option>
+                          <option value="cyan">🟢 Cyan/Celeste Micua</option>
                           <option value="blue">🔵 Azul Eléctrico</option>
                           <option value="charcoal">⚫ Gris Pizarra (Classic)</option>
                           <option value="gold">🟡 Oro Premium</option>
@@ -2497,6 +2699,38 @@
                           <input type="text" id="cfg-brand-color-hex" value="#00ccff" placeholder="#00ccff" style="flex: 1; height: 38px; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; padding: 0 12px; font-size: 13px; font-weight: 600; font-family: monospace; outline: none;">
                       </div>
                       <div id="brand-color-warning" style="font-size: 11px; color: #ef4444; margin-top: 4px; display: none;">⚠️ Disponible solo en el Plan Elite.</div>
+                  </div>
+
+                  <!-- Configuración del Press Kit (EPK) -->
+                  <hr style="border: none; border-top: 1px solid var(--border-color); margin: 12px 0 8px 0;">
+                  <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.8px; margin-bottom: 6px;">📰 Configuración del Press Kit (EPK)</div>
+                  <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">Completa la información pública para tu Press Kit (EPK) que se mostrará en tu tienda.</div>
+                  
+                  <div class="input-group">
+                      <label for="cfg-epk-bio">Biografía / Perfil Profesional</label>
+                      <textarea id="cfg-epk-bio" rows="3" placeholder="Ej: Productor y compositor con más de 8 años de experiencia especializado en ritmos urbanos y trap..." style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; padding: 10px; font-size: 13px; font-family: inherit; resize: vertical; outline: none;"></textarea>
+                  </div>
+
+                  <div class="input-row" style="margin-top: 8px;">
+                      <div class="input-group">
+                          <label for="cfg-epk-pro">Afiliación PRO / Código IPI</label>
+                          <input type="text" id="cfg-epk-pro" placeholder="Ej: ASCAP / IPI: 123456789" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; padding: 10px; font-size: 13px; font-family: inherit; outline: none;">
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-epk-collabs">Colaboraciones Clave</label>
+                          <input type="text" id="cfg-epk-collabs" placeholder="Ej: Feid, Ryan Castro, etc." style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; padding: 10px; font-size: 13px; font-family: inherit; outline: none;">
+                      </div>
+                  </div>
+
+                  <div class="input-row" style="margin-top: 8px; margin-bottom: 8px;">
+                      <div class="input-group">
+                          <label for="cfg-epk-sales">Hito de Ventas de Licencias</label>
+                          <input type="text" id="cfg-epk-sales" placeholder="Ej: +2,500 Ventas" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; padding: 10px; font-size: 13px; font-family: inherit; outline: none;">
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-epk-streams">Hito de Reproducciones (Streams)</label>
+                          <input type="text" id="cfg-epk-streams" placeholder="Ej: +5 Millones de Streams" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; padding: 10px; font-size: 13px; font-family: inherit; outline: none;">
+                      </div>
                   </div>
 
                   <!-- Gestión de Cupones de Descuento -->
@@ -2624,6 +2858,96 @@
                           <label for="cfg-payphone-appid">PayPhone App ID</label>
                           <input type="text" id="cfg-payphone-appid" placeholder="ID de la Aplicación">
                       </div>
+                  </div>
+                  
+                  <div style="font-weight: 600; font-size: 11px; color: var(--text-primary); margin-top: 12px; margin-bottom: 4px;">Facturación Electrónica SRI (Ecuador):</div>
+                  <div class="input-row">
+                      <div class="input-group">
+                          <label for="cfg-sri-ruc">RUC del Emisor (13 dígitos)</label>
+                          <input type="text" id="cfg-sri-ruc" placeholder="Ej: 0803743111001">
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-sri-razon-social">Razón Social (Oficial)</label>
+                          <input type="text" id="cfg-sri-razon-social" placeholder="Nombre completo según RUC">
+                      </div>
+                  </div>
+                  <div class="input-row" style="margin-top: 4px;">
+                      <div class="input-group">
+                          <label for="cfg-sri-nombre-comercial">Nombre Comercial</label>
+                          <input type="text" id="cfg-sri-nombre-comercial" placeholder="Ej: BEATSS">
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-sri-dir-matriz">Dirección de la Matriz</label>
+                          <input type="text" id="cfg-sri-dir-matriz" placeholder="Calle principal y secundaria">
+                      </div>
+                  </div>
+                  <div class="input-row" style="margin-top: 4px;">
+                      <div class="input-group">
+                          <label for="cfg-sri-estab">Establecimiento (3 dig)</label>
+                          <input type="text" id="cfg-sri-estab" placeholder="Ej: 001">
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-sri-pto-emi">Punto Emisión (3 dig)</label>
+                          <input type="text" id="cfg-sri-pto-emi" placeholder="Ej: 001">
+                      </div>
+                  </div>
+                  <div class="input-row" style="margin-top: 4px;">
+                      <div class="input-group">
+                          <label for="cfg-sri-ambiente">Ambiente SRI</label>
+                          <select id="cfg-sri-ambiente" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); color: #fff; padding: 12px; border-radius: 8px; width: 100%; font-size: 13px; font-family: inherit;">
+                              <option value="1">1 - Pruebas / Sandbox</option>
+                              <option value="2">2 - Producción / Real</option>
+                          </select>
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-sri-rimpe">Tipo de Régimen</label>
+                          <select id="cfg-sri-rimpe" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); color: #fff; padding: 12px; border-radius: 8px; width: 100%; font-size: 13px; font-family: inherit;">
+                              <option value="no_rimpe">Régimen General</option>
+                              <option value="rimpe_popular">Contribuyente Negocio Popular - RIMPE</option>
+                              <option value="rimpe_emprendedor">Contribuyente Régimen RIMPE</option>
+                          </select>
+                      </div>
+                  </div>
+                  <div class="input-row" style="margin-top: 4px;">
+                      <div class="input-group">
+                          <label for="cfg-sri-contabilidad">Obligado a llevar Contabilidad</label>
+                          <select id="cfg-sri-contabilidad" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); color: #fff; padding: 12px; border-radius: 8px; width: 100%; font-size: 13px; font-family: inherit;">
+                              <option value="NO">NO</option>
+                              <option value="SI">SI</option>
+                          </select>
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-sri-p12-password">Contraseña Firma (.p12)</label>
+                          <input type="password" id="cfg-sri-p12-password" placeholder="Contraseña de tu firma">
+                      </div>
+                  </div>
+                  
+                  <div class="input-group" style="margin-top: 8px; border: 1px dashed var(--border-color); padding: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.01); box-sizing: border-box;">
+                      <label style="font-weight: 600; margin-bottom: 4px;">Firma Electrónica (.p12 / .pfx)</label>
+                      <div id="cfg-sri-p12-status" style="font-size: 11px; color: #8a91a6; margin-bottom: 8px; line-height: 1.4;">Sube tu archivo de firma para emitir facturas digitales oficiales.</div>
+                      <button type="button" id="btn-upload-sri-p12" class="btn btn-secondary" style="width: 100%; height: 36px; font-size: 12px; justify-content: center; gap: 4px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: #fff; border-radius: 8px; cursor: pointer;">
+                          <i data-lucide="key-round" style="width: 14px; height: 14px;"></i> Subir Archivo de Firma (.p12)
+                      </button>
+                      <input type="file" id="cfg-sri-p12-file" accept=".p12,.pfx" style="display: none;">
+                  </div>
+
+                  <!-- Marca de Agua / Audio Tagging -->
+                  <div class="input-group" style="margin-top: 12px; border: 1px dashed var(--border-color); padding: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.01); box-sizing: border-box;">
+                      <label style="font-weight: 600; margin-bottom: 4px;">Marca de Agua de Audio (Producer Tag)</label>
+                      <div style="font-size: 11px; color: #8a91a6; margin-bottom: 8px; line-height: 1.4;">Sube tu tag de audio (WAV o MP3) para mezclarlo automáticamente sobre las preescuchas de tus beats.</div>
+                      
+                      <div id="cfg-audio-tag-preview-container" style="display: none; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; box-sizing: border-box;">
+                          <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; color: #fff;">
+                              <i data-lucide="music-4" style="width: 14px; height: 14px; color: var(--accent, #00ccff);"></i>
+                              <span id="cfg-audio-tag-name">Producer_Tag.mp3</span>
+                          </div>
+                          <button type="button" id="btn-clear-audio-tag" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 4px; padding: 4px;"><i data-lucide="trash-2" style="width: 12px; height: 12px;"></i> Eliminar</button>
+                      </div>
+
+                      <button type="button" id="btn-upload-audio-tag" class="btn btn-secondary" style="width: 100%; height: 36px; font-size: 12px; justify-content: center; gap: 4px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: #fff; border-radius: 8px; cursor: pointer;">
+                          <i data-lucide="upload-cloud" style="width: 14px; height: 14px;"></i> Subir Tag de Audio
+                      </button>
+                      <input type="file" id="cfg-producer-audio-tag-file" accept=".mp3,.wav,audio/*" style="display: none;">
                   </div>
 
                   <!-- Vinculación de cuenta de Google para Inicio de Sesión -->
@@ -2962,25 +3286,87 @@
         }
     </script>
 
+    <script type="module" src="stateManager.js"></script>
     <script type="module" src="main.js"></script>
 
-    <!-- PayPal Button Init -->
+    <!-- PayPal & PayPhone Button Init -->
     <script>
         window.selectedPaymentPlan = 'pro';
+        window.adminPaymentConfig = null;
 
-        // Espera a que el PayPal SDK cargue completamente
-        function initPayPalButton() {
-            if (typeof paypal === 'undefined') {
-                setTimeout(initPayPalButton, 500);
+        async function initPaymentModalPasarelas() {
+            // 1. Fetch payment configuration from backend
+            try {
+                const res = await fetch('/api/payments/config');
+                if (!res.ok) throw new Error('Error al cargar config de pagos');
+                window.adminPaymentConfig = await res.json();
+            } catch (err) {
+                console.error('Failed to load payment config:', err);
                 return;
             }
-            renderPayPalButton();
+
+            // 2. Show simulation buttons if local
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            if (isLocal) {
+                const paypalSim = document.getElementById('simulate-paypal-btn');
+                if (paypalSim) paypalSim.style.display = 'block';
+                const payphoneSim = document.getElementById('simulate-payphone-btn');
+                if (payphoneSim) payphoneSim.style.display = 'block';
+            }
+
+            // 3. Load PayPal SDK and render
+            if (window.adminPaymentConfig.paypalClientId) {
+                loadAdminPayPalSDK(window.adminPaymentConfig.paypalClientId, () => {
+                    renderPayPalButton();
+                });
+            }
+
+            // 4. Load PayPhone SDK and render
+            loadPayphoneSDK(() => {
+                renderPayphoneSubscriptionButton();
+            });
+        }
+
+        function loadAdminPayPalSDK(clientId, callback) {
+            const existing = document.getElementById('paypal-sdk-script');
+            if (existing) {
+                if (existing.getAttribute('data-client-id') === clientId) {
+                    if (callback) callback();
+                    return;
+                }
+                existing.remove();
+            }
+            const script = document.createElement('script');
+            script.id = 'paypal-sdk-script';
+            script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=capture`;
+            script.setAttribute('data-client-id', clientId);
+            script.onload = callback;
+            document.head.appendChild(script);
+        }
+
+        function loadPayphoneSDK(callback) {
+            const existing = document.getElementById('payphone-sdk-script');
+            if (existing) {
+                if (callback) callback();
+                return;
+            }
+            const sdk = document.createElement('script');
+            sdk.id = 'payphone-sdk-script';
+            sdk.src = 'https://cdn.payphonetodoesposible.com/box/v1.1/payphone-payment-box.js';
+            sdk.onload = callback;
+            document.head.appendChild(sdk);
         }
 
         function renderPayPalButton() {
             const container = document.getElementById('paypal-button-container');
             if (!container) return;
             container.innerHTML = ''; // Limpiar botón anterior
+
+            if (typeof paypal === 'undefined') {
+                container.innerHTML = '<div style="color: #cbd5e0; font-size: 11px;">Cargando PayPal...</div>';
+                setTimeout(renderPayPalButton, 500);
+                return;
+            }
 
             const tier = window.selectedPaymentPlan;
             const price = tier === 'elite' ? '30.00' : '10.00';
@@ -3008,15 +3394,11 @@
                     });
                 },
                 onApprove: async function(data, actions) {
-                    // 1. Capturar el pago
                     const orderData = await actions.order.capture();
                     const orderId = orderData.id;
-
-                    // 2. Obtener el uid del usuario logueado (si lo está)
                     const uid = window.currentUser || null;
-                    const email = orderData.payer?.email_address || '';
+                    const email = orderData.payer?.email_address || window.currentUserEmail || '';
 
-                    // 3. Llamar al backend para verificar y activar el Plan
                     try {
                         const idToken = window.getFirebaseIdToken ? await window.getFirebaseIdToken() : '';
                         const response = await fetch('/api/activate-pro', {
@@ -3025,15 +3407,13 @@
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${idToken}`
                             },
-                            body: JSON.stringify({ orderId, uid, email })
+                            body: JSON.stringify({ orderId, uid, email, plan: tier })
                         });
                         const result = await response.json();
 
-                        // Cerrar modal de pago
                         document.getElementById('payment-modal').style.display = 'none';
 
                         if (result.success) {
-                            // Mostrar toast de éxito premium
                             const toast = document.createElement('div');
                             toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#0055ee,#00aacc);color:#fff;padding:18px 32px;border-radius:14px;font-weight:700;font-size:16px;z-index:99999;box-shadow:0 12px 32px rgba(0,102,255,0.4);text-align:center;max-width:90vw;';
                             const planLabel = result.plan === 'elite' ? 'Elite 👑' : 'Pro';
@@ -3062,16 +3442,249 @@
             }).render('#paypal-button-container');
         }
 
+        function renderPayphoneSubscriptionButton() {
+            const container = document.getElementById('payphone-subscription-button-container');
+            if (!container) return;
+            container.innerHTML = ''; // Limpiar anterior
+
+            if (typeof PPaymentButtonBox === 'undefined') {
+                container.innerHTML = '<div style="color: #cbd5e0; font-size: 11px;">Cargando PayPhone...</div>';
+                setTimeout(renderPayphoneSubscriptionButton, 500);
+                return;
+            }
+
+            const tier = window.selectedPaymentPlan;
+            const priceDollars = tier === 'elite' ? 30 : 10;
+            const priceCents = priceDollars * 100;
+
+            if (!window.adminPaymentConfig || !window.adminPaymentConfig.payphoneClientId || !window.adminPaymentConfig.payphoneAppId) {
+                container.innerHTML = '<div style="color: #cbd5e0; font-size: 11px;">Credenciales de PayPhone no configuradas por admin.</div>';
+                return;
+            }
+
+            const token = window.adminPaymentConfig.payphoneClientId;
+            const appId = window.adminPaymentConfig.payphoneAppId;
+            const clientTxId = 'PAYPHONE-SUB-' + Date.now();
+            const buyerEmail = window.currentUserEmail || 'sossamusic@gmail.com';
+
+            const state = {
+                uid: window.currentUser || 'mock-uid',
+                email: buyerEmail,
+                plan: tier
+            };
+            localStorage.setItem('payphone_sub_pending_' + clientTxId, JSON.stringify(state));
+
+            try {
+                const ppb = new PPaymentButtonBox({
+                    token: token,
+                    clientTransactionId: clientTxId,
+                    amount: priceCents,
+                    amountWithoutTax: priceCents,
+                    amountWithTax: 0,
+                    tax: 0,
+                    service: 0,
+                    tip: 0,
+                    storeId: appId,
+                    reference: 'Suscripción BEATSS ' + tier.toUpperCase(),
+                    email: buyerEmail,
+                    documentId: '9999999999',
+                    phoneNumber: '0999999999'
+                });
+                ppb.render('#payphone-subscription-button-container');
+            } catch (err) {
+                console.error('Error rendering PayPhone subscription button:', err);
+                container.innerHTML = '<div style="color: #ef4444; font-size: 11px;">Error al inicializar PayPhone.</div>';
+            }
+        }
+
+        window.simulatePayphoneSubscription = async function() {
+            const uid = window.currentUser;
+            const email = window.currentUserEmail || 'sossamusic@gmail.com';
+            const tier = window.selectedPaymentPlan;
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+            if (!uid) {
+                alert('Inicia sesión antes de simular el pago');
+                return;
+            }
+            if (!isLocal) {
+                alert('La simulación de pago solo está disponible en entorno local.');
+                return;
+            }
+
+            try {
+                const idToken = window.getFirebaseIdToken ? await window.getFirebaseIdToken() : '';
+                const response = await fetch('/api/payments/payphone/subscription/confirm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        id: 999999,
+                        clientTxId: 'PAYPHONE-SUB-MOCK-' + Date.now(),
+                        uid: uid,
+                        plan: tier,
+                        email: email
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok && result.status === 'success') {
+                    document.getElementById('payment-modal').style.display = 'none';
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#00aacc,#00ccff);color:#fff;padding:18px 32px;border-radius:14px;font-weight:700;font-size:16px;z-index:99999;box-shadow:0 12px 32px rgba(0,170,204,0.4);text-align:center;max-width:90vw;';
+                    const planLabel = tier === 'elite' ? 'Elite 👑' : 'Pro';
+                    toast.innerHTML = `🎉 <strong>¡Suscripción ${planLabel} Activada!</strong><br><span style="font-weight:400;font-size:13px;">Simulación exitosa. Recargando...</span>`;
+                    document.body.appendChild(toast);
+                    setTimeout(() => {
+                        toast.remove();
+                        window.location.reload();
+                    }, 4000);
+                } else {
+                    throw new Error(result.error || 'Error desconocido');
+                }
+            } catch (err) {
+                alert('Error al simular pago: ' + err.message);
+            }
+        }
+
+        window.simulatePaypalSubscription = async function() {
+            const uid = window.currentUser;
+            const email = window.currentUserEmail || 'sossamusic@gmail.com';
+            const tier = window.selectedPaymentPlan;
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+            if (!uid) {
+                alert('Inicia sesión antes de simular el pago');
+                return;
+            }
+            if (!isLocal) {
+                alert('La simulación de pago solo está disponible en entorno local.');
+                return;
+            }
+
+            try {
+                const idToken = window.getFirebaseIdToken ? await window.getFirebaseIdToken() : '';
+                const response = await fetch('/api/activate-pro', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({
+                        orderId: 'PAYPAL-SUB-MOCK-' + Date.now(),
+                        uid: uid,
+                        plan: tier,
+                        email: email
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    document.getElementById('payment-modal').style.display = 'none';
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#0055ee,#00aacc);color:#fff;padding:18px 32px;border-radius:14px;font-weight:700;font-size:16px;z-index:99999;box-shadow:0 12px 32px rgba(0,102,255,0.4);text-align:center;max-width:90vw;';
+                    const planLabel = tier === 'elite' ? 'Elite 👑' : 'Pro';
+                    toast.innerHTML = `🎉 <strong>¡Suscripción ${planLabel} Activada!</strong><br><span style="font-weight:400;font-size:13px;">Simulación exitosa. Recargando...</span>`;
+                    document.body.appendChild(toast);
+                    setTimeout(() => {
+                        toast.remove();
+                        window.location.reload();
+                    }, 4000);
+                } else {
+                    throw new Error(result.error || 'Error desconocido');
+                }
+            } catch (err) {
+                alert('Error al simular pago: ' + err.message);
+            }
+        }
+
+        window.checkPayphoneSubscriptionRedirectResult = async function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            const clientTxId = urlParams.get('clientTransactionId');
+
+            if (id && clientTxId && clientTxId.startsWith('PAYPHONE-SUB-')) {
+                const pendingKey = 'payphone_sub_pending_' + clientTxId;
+                const pendingStateStr = localStorage.getItem(pendingKey);
+                if (!pendingStateStr) return;
+
+                let state;
+                try {
+                    state = JSON.parse(pendingStateStr);
+                } catch (e) {
+                    console.error('Error parsing payphone sub pending state:', e);
+                    return;
+                }
+
+                const overlay = document.createElement('div');
+                overlay.id = 'payphone-sub-processing-overlay';
+                overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(10,12,22,0.95); z-index:999999; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-family:sans-serif; gap:20px;';
+                overlay.innerHTML = `
+                    <div style="width: 50px; height: 50px; border: 5px solid rgba(0,204,255,0.1); border-top-color: #00ccff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <div style="font-size: 18px; font-weight: 700;">Verificando suscripción con PayPhone...</div>
+                    <div style="font-size: 13px; color: #8a91a6;">Por favor, no cierres esta ventana</div>
+                    <style>
+                        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                    </style>
+                `;
+                document.body.appendChild(overlay);
+
+                try {
+                    const idToken = window.getFirebaseIdToken ? await window.getFirebaseIdToken() : '';
+                    const response = await fetch('/api/payments/payphone/subscription/confirm', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${idToken}`
+                        },
+                        body: JSON.stringify({
+                            id: parseInt(id, 10),
+                            clientTxId: clientTxId,
+                            uid: state.uid,
+                            plan: state.plan,
+                            email: state.email
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    localStorage.removeItem(pendingKey);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+
+                    if (response.ok && result.status === 'success') {
+                        overlay.innerHTML = `
+                            <div style="font-size: 40px; margin-bottom: 10px;">🎉</div>
+                            <div style="font-size: 20px; font-weight: 700; color: #00ccff;">¡Suscripción Activada Exitosamente!</div>
+                            <div style="font-size: 13px; color: #a3a9b9; margin-top: 8px;">Redirigiendo de vuelta a BEATSS...</div>
+                        `;
+                        setTimeout(() => {
+                            overlay.remove();
+                            window.location.reload();
+                        }, 3000);
+                    } else {
+                        throw new Error(result.error || 'Error al validar la suscripción');
+                    }
+                } catch (err) {
+                    console.error('Error verifying PayPhone subscription:', err);
+                    overlay.innerHTML = `
+                        <div style="font-size: 40px; margin-bottom: 10px;">❌</div>
+                        <div style="font-size: 18px; font-weight: 700; color: #ef4444;">No se pudo verificar la suscripción</div>
+                        <div style="font-size: 13px; color: #a3a9b9; margin-top: 8px; max-width: 80%; text-align: center;">${err.message}</div>
+                        <button onclick="document.getElementById('payphone-sub-processing-overlay').remove(); window.location.reload();" style="margin-top: 20px; padding: 10px 20px; border-radius: 8px; border: none; background: #00ccff; color: #0f1320; font-weight: 700; cursor: pointer;">Volver a BEATSS</button>
+                    `;
+                }
+            }
+        }
+
         window.switchPaymentMethodTab = function(method) {
-            // Ocultar todos los paneles de método de pago
             document.querySelectorAll('.pay-method-panel').forEach(panel => {
                 panel.style.display = 'none';
             });
-            // Mostrar el panel activo
             const activePanel = document.getElementById(`pay-tab-${method}`);
             if (activePanel) activePanel.style.display = 'block';
 
-            // Actualizar clases activas en los botones de pestañas
             document.querySelectorAll('.pay-method-tab').forEach(btn => {
                 btn.classList.remove('active');
                 btn.style.color = '#8a91a6';
@@ -3079,7 +3692,6 @@
                 btn.style.fontWeight = '600';
             });
 
-            // Encontrar el botón clickeado
             const activeBtn = Array.from(document.querySelectorAll('.pay-method-tab')).find(btn => {
                 const onclickAttr = btn.getAttribute('onclick') || '';
                 return onclickAttr.includes(`'${method}'`) || onclickAttr.includes(`"${method}"`);
@@ -3091,24 +3703,22 @@
                 activeBtn.style.borderBottom = '2px solid #00ccff';
                 activeBtn.style.fontWeight = '700';
             }
-            
-            // Re-disparar iconos si Lucide está listo
+
             if (window.lucide) window.lucide.createIcons();
         }
 
         window.switchPaymentPlan = function(plan) {
             window.selectedPaymentPlan = plan;
-            
-            // Actualizar botones de pestañas
+
             const btnPro = document.getElementById('pay-select-pro');
             const btnElite = document.getElementById('pay-select-elite');
-            
+
             if (plan === 'elite') {
                 btnPro.classList.remove('active');
                 btnPro.style.background = 'transparent';
                 btnPro.style.color = '#8a91a6';
                 btnPro.style.fontWeight = '600';
-                
+
                 btnElite.classList.add('active');
                 btnElite.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
                 btnElite.style.color = '#fff';
@@ -3118,28 +3728,26 @@
                 btnPro.style.background = 'linear-gradient(135deg, #0055ee 0%, #00aacc 100%)';
                 btnPro.style.color = '#fff';
                 btnPro.style.fontWeight = '700';
-                
+
                 btnElite.classList.remove('active');
                 btnElite.style.background = 'transparent';
                 btnElite.style.color = '#8a91a6';
                 btnElite.style.fontWeight = '600';
             }
 
-            // Cambiar placeholder del formulario de comprobante
             const refInput = document.getElementById('receipt-ref');
             if (refInput) {
                 refInput.placeholder = plan === 'elite' ? 'Ej. Ref Elite 123456' : 'Ej. 123456';
             }
 
-            // Volver a renderizar botón de PayPal con el nuevo precio
             renderPayPalButton();
+            renderPayphoneSubscriptionButton();
         }
 
-        // Iniciar cuando el DOM esté listo
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initPayPalButton);
+            document.addEventListener('DOMContentLoaded', initPaymentModalPasarelas);
         } else {
-            initPayPalButton();
+            initPaymentModalPasarelas();
         }
     </script>
     <!-- ======================================================= -->
@@ -3354,30 +3962,137 @@
 
         <!-- Filtros y Grid de Beats -->
         <main class="store-container max-w-7xl mx-auto px-6 py-10">
-            <!-- Buscador y Filtros -->
-            <div class="store-controls flex flex-wrap items-center gap-4 bg-white/[0.02] backdrop-blur-md border border-white/5 p-5 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] mb-8">
-                <div class="flex-1 min-w-[280px] relative">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
-                    <input type="text" id="store-search-input" placeholder="Buscar instrumentales..." data-i18n-placeholder="store_search_placeholder" class="w-full pl-12 pr-6 py-2.5 bg-white/5 border border-white/10 rounded-full text-on-surface placeholder:text-on-surface-variant text-sm focus:border-electric-purple focus:ring-1 focus:ring-electric-purple focus:outline-none transition-all">
+            <!-- Pestañas de Navegación del Storefront -->
+            <div class="flex justify-center gap-4 mb-8">
+                <button id="store-tab-beats" class="px-6 py-2.5 rounded-full font-bold text-sm bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 transition-all hover:bg-[var(--accent)]/25 focus:outline-none flex items-center gap-2" onclick="window.switchStoreTab('beats')">
+                    <span class="material-symbols-outlined text-[18px]">music_note</span>
+                    <span data-i18n="store_tab_catalog">Catálogo de Beats</span>
+                </button>
+                <button id="store-tab-epk" class="px-6 py-2.5 rounded-full font-bold text-sm bg-white/5 text-on-surface-variant border border-white/10 transition-all hover:bg-white/10 focus:outline-none flex items-center gap-2" onclick="window.switchStoreTab('epk')">
+                    <span class="material-symbols-outlined text-[18px]">badge</span>
+                    <span data-i18n="store_tab_epk">Press Kit (EPK)</span>
+                </button>
+            </div>
+
+            <!-- Contenedor del Catálogo de Beats -->
+            <div id="beats-catalog-section">
+                <!-- Buscador y Filtros -->
+                <div class="store-controls flex flex-wrap items-center gap-4 bg-white/[0.02] backdrop-blur-md border border-white/5 p-5 rounded-2xl shadow-[0_8px_32px_0_rgba(0,0,0,0.2)] mb-8">
+                    <div class="flex-1 min-w-[280px] relative">
+                        <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+                        <input type="text" id="store-search-input" placeholder="Buscar instrumentales..." data-i18n-placeholder="store_search_placeholder" class="w-full pl-12 pr-6 py-2.5 bg-white/5 border border-white/10 rounded-full text-on-surface placeholder:text-on-surface-variant text-sm focus:border-electric-purple focus:ring-1 focus:ring-electric-purple focus:outline-none transition-all">
+                    </div>
+                    <div class="flex gap-3">
+                        <select id="store-genre-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
+                            <option value="" class="bg-charcoal-deep text-white" data-i18n="beats_all_genres">Todos los géneros</option>
+                        </select>
+                        <select id="store-key-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
+                            <option value="" class="bg-charcoal-deep text-white" data-i18n="beats_all_keys">Todas las escalas</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="flex gap-3">
-                    <select id="store-genre-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
-                        <option value="" class="bg-charcoal-deep text-white" data-i18n="beats_all_genres">Todos los géneros</option>
-                    </select>
-                    <select id="store-key-select" class="bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 focus:border-electric-purple/80 focus:ring-1 focus:ring-electric-purple/50 rounded-xl px-4 py-2.5 text-white text-sm font-semibold cursor-pointer outline-none min-w-[160px] h-11 transition-all">
-                        <option value="" class="bg-charcoal-deep text-white" data-i18n="beats_all_keys">Todas las escalas</option>
-                    </select>
+
+                <!-- Catálogo de Beats -->
+                <div id="store-beats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Tarjetas de beats generadas dinámicamente -->
+                </div>
+                
+                <div id="store-empty-state" class="text-center py-20 px-6 bg-charcoal-deep/30 rounded-2xl border border-dashed border-white/5" style="display: none;">
+                    <i data-lucide="music-2" class="w-12 h-12 mx-auto mb-4 opacity-40 text-on-surface-variant"></i>
+                    <p class="text-on-surface-variant text-sm m-0" data-i18n="store_empty_desc">No se encontraron beats en este catálogo.</p>
                 </div>
             </div>
 
-            <!-- Catálogo de Beats -->
-            <div id="store-beats-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Tarjetas de beats generadas dinámicamente -->
-            </div>
-            
-            <div id="store-empty-state" class="text-center py-20 px-6 bg-charcoal-deep/30 rounded-2xl border border-dashed border-white/5" style="display: none;">
-                <i data-lucide="music-2" class="w-12 h-12 mx-auto mb-4 opacity-40 text-on-surface-variant"></i>
-                <p class="text-on-surface-variant text-sm m-0" data-i18n="store_empty_desc">No se encontraron beats en este catálogo.</p>
+            <!-- Sección de Press Kit (EPK) -->
+            <div id="press-kit-section" style="display: none;" class="animate-fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Tarjeta Biografía e Información Básica (Ocupa 2 columnas en md+) -->
+                    <div class="md:col-span-2 flex flex-col gap-6">
+                        <!-- Tarjeta Biografía -->
+                        <div class="bg-white/[0.02] backdrop-blur-md border border-white/5 p-8 rounded-2xl shadow-xl">
+                            <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-white">
+                                <i data-lucide="user" class="text-[var(--accent)] w-5 h-5"></i>
+                                <span data-i18n="epk_bio_title">Biografía / Perfil</span>
+                            </h2>
+                            <p id="epk-bio-text" class="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">
+                                El productor no ha ingresado una biografía.
+                            </p>
+                        </div>
+
+                        <!-- Tarjeta Colaboraciones Clave -->
+                        <div class="bg-white/[0.02] backdrop-blur-md border border-white/5 p-8 rounded-2xl shadow-xl">
+                            <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-white">
+                                <i data-lucide="users" class="text-[var(--accent)] w-5 h-5"></i>
+                                <span data-i18n="epk_collabs_title">Colaboraciones Destacadas</span>
+                            </h2>
+                            <div id="epk-collabs-container" class="flex flex-wrap gap-2">
+                                <!-- Colaboraciones en píldoras con efecto neón -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta Lateral: Estadísticas y Afiliaciones -->
+                    <div class="flex flex-col gap-6">
+                        <!-- Tarjeta de Estadísticas (Milestones) -->
+                        <div class="bg-white/[0.02] backdrop-blur-md border border-white/5 p-8 rounded-2xl shadow-xl">
+                            <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-white">
+                                <i data-lucide="bar-chart-3" class="text-[var(--accent)] w-5 h-5"></i>
+                                <span data-i18n="epk_stats_title">Hitos & Estadísticas</span>
+                            </h2>
+                            <div class="flex flex-col gap-6">
+                                <!-- Hito Beats Activos -->
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)]">
+                                        <i data-lucide="music-4" class="w-6 h-6"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Beats en Catálogo</div>
+                                        <div id="epk-stat-beats" class="text-2xl font-black text-white mt-0.5">0</div>
+                                    </div>
+                                </div>
+
+                                <!-- Hito Ventas -->
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-xl bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)]">
+                                        <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Licencias Vendidas</div>
+                                        <div id="epk-stat-sales" class="text-2xl font-black text-white mt-0.5">-</div>
+                                    </div>
+                                </div>
+
+                                <!-- Hito Streams -->
+                                <div class="flex items-center gap-4">
+                                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                                        <i data-lucide="play-circle" class="w-6 h-6"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-on-surface-variant font-semibold uppercase tracking-wider">Reproducciones Totales</div>
+                                        <div id="epk-stat-streams" class="text-2xl font-black text-white mt-0.5">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tarjeta Afiliaciones -->
+                        <div class="bg-white/[0.02] backdrop-blur-md border border-white/5 p-8 rounded-2xl shadow-xl">
+                            <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-white">
+                                <i data-lucide="shield" class="text-[var(--accent)] w-5 h-5"></i>
+                                <span data-i18n="epk_pro_title">Derechos de Autor (PRO)</span>
+                            </h2>
+                            <div class="bg-white/5 rounded-xl p-4 border border-white/10 flex items-center justify-between">
+                                <div>
+                                    <div class="text-xs text-on-surface-variant font-bold uppercase tracking-wider">Afiliación Activa</div>
+                                    <div id="epk-pro-name" class="text-sm font-extrabold text-white mt-1">SAYCO / IPI: 00123456789</div>
+                                </div>
+                                <div class="w-8 h-8 rounded-full bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)]">
+                                    <i data-lucide="fingerprint" class="w-4 h-4"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -3415,14 +4130,65 @@
                 </div>
 
                 <!-- Volume & Action -->
-                <div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end; min-width: 220px; flex: 1; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; gap: 12px; justify-content: flex-end; min-width: 260px; flex: 1; box-sizing: border-box;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <i data-lucide="volume-2" style="width: 18px; height: 18px; color: #8a91a6;"></i>
                         <input type="range" id="player-volume" min="0" max="1" step="0.05" value="0.8" style="width: 80px; height: 4px; cursor: pointer; accent-color: var(--accent, #00ccff);">
                     </div>
+                    <button id="player-btn-mixer" style="background: none; border: 1px solid rgba(255,255,255,0.1); color: #8a91a6; cursor: pointer; padding: 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; transition: all 0.2s;" title="Mezclador de Stems" onclick="window.toggleMixerPanel()">
+                        <i data-lucide="sliders" style="width: 18px; height: 18px;"></i>
+                    </button>
                     <button id="player-btn-buy" class="btn btn-primary" style="height: 38px; padding: 0 20px; font-weight: 700; border-radius: 10px; font-size: 13px;">Comprar</button>
                 </div>
 
+            </div>
+        </div>
+
+        <!-- Panel del Mezclador de Stems (Fijo sobre el reproductor) -->
+        <div id="store-mixer-panel" style="display: none; position: fixed; bottom: 85px; right: 24px; background: rgba(12, 14, 20, 0.95); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 18px; width: 320px; z-index: 1001; box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(20px);" class="animate-fade-in">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #fff; letter-spacing: 0.8px; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="sliders" style="width: 14px; height: 14px; color: var(--accent, #00ccff);"></i> Mezclador de Stems (EQ)
+                </span>
+                <button style="background: none; border: none; color: #8a91a6; cursor: pointer; display: flex; align-items: center;" onclick="window.toggleMixerPanel()"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- Canal 1: Batería y Bajo -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 11px; color: #8a91a6; min-width: 80px; font-weight: 600;">🥁 Kicks/Bass</span>
+                    <input type="range" id="mixer-fader-1" min="0" max="1.5" step="0.05" value="1.0" style="flex: 1; height: 4px; accent-color: var(--accent, #00ccff); cursor: pointer;" oninput="window.setMixerGain(1, this.value)">
+                    <button id="mixer-mute-1" style="background: none; border: none; color: #8a91a6; cursor: pointer; display: flex; align-items: center;" onclick="window.toggleMixerMute(1)"><i data-lucide="volume-2" style="width: 14px; height: 14px;"></i></button>
+                </div>
+                <!-- Canal 2: Melodía / Medios -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 11px; color: #8a91a6; min-width: 80px; font-weight: 600;">🎹 Melodía</span>
+                    <input type="range" id="mixer-fader-2" min="0" max="1.5" step="0.05" value="1.0" style="flex: 1; height: 4px; accent-color: var(--accent, #00ccff); cursor: pointer;" oninput="window.setMixerGain(2, this.value)">
+                    <button id="mixer-mute-2" style="background: none; border: none; color: #8a91a6; cursor: pointer; display: flex; align-items: center;" onclick="window.toggleMixerMute(2)"><i data-lucide="volume-2" style="width: 14px; height: 14px;"></i></button>
+                </div>
+                <!-- Canal 3: Brillo / Agudos -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 11px; color: #8a91a6; min-width: 80px; font-weight: 600;">⚡ Hi-Hats</span>
+                    <input type="range" id="mixer-fader-3" min="0" max="1.5" step="0.05" value="1.0" style="flex: 1; height: 4px; accent-color: var(--accent, #00ccff); cursor: pointer;" oninput="window.setMixerGain(3, this.value)">
+                    <button id="mixer-mute-3" style="background: none; border: none; color: #8a91a6; cursor: pointer; display: flex; align-items: center;" onclick="window.toggleMixerMute(3)"><i data-lucide="volume-2" style="width: 14px; height: 14px;"></i></button>
+                </div>
+                <!-- Canal 4: Mix Principal -->
+                <div style="display: flex; align-items: center; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                    <span style="font-size: 11px; color: #fff; min-width: 80px; font-weight: 700;">🎛️ Mezcla (Mix)</span>
+                    <input type="range" id="mixer-fader-4" min="0" max="1.5" step="0.05" value="1.0" style="flex: 1; height: 4px; accent-color: var(--accent, #00ccff); cursor: pointer;" oninput="window.setMixerGain(4, this.value)">
+                    <button id="mixer-mute-4" style="background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center;" onclick="window.toggleMixerMute(4)"><i data-lucide="volume-2" style="width: 14px; height: 14px;"></i></button>
+                </div>
+                <!-- Efecto Reverb -->
+                <div style="display: flex; align-items: center; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">
+                    <span style="font-size: 11px; color: #8a91a6; min-width: 80px; font-weight: 600;">✨ Reverb</span>
+                    <input type="range" id="mixer-reverb-wet" min="0" max="1" step="0.05" value="0.0" style="flex: 1; height: 4px; accent-color: var(--accent, #00ccff); cursor: pointer;" oninput="window.setMixerEffect('reverb', this.value)">
+                    <button id="mixer-reverb-toggle" style="background: none; border: none; color: #8a91a6; cursor: pointer; display: flex; align-items: center;" onclick="window.toggleMixerEffect('reverb')"><i data-lucide="power" style="width: 14px; height: 14px;"></i></button>
+                </div>
+                <!-- Efecto Delay -->
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 11px; color: #8a91a6; min-width: 80px; font-weight: 600;">💫 Eco (Delay)</span>
+                    <input type="range" id="mixer-delay-feedback" min="0" max="0.8" step="0.05" value="0.0" style="flex: 1; height: 4px; accent-color: var(--accent, #00ccff); cursor: pointer;" oninput="window.setMixerEffect('delay', this.value)">
+                    <button id="mixer-delay-toggle" style="background: none; border: none; color: #8a91a6; cursor: pointer; display: flex; align-items: center;" onclick="window.toggleMixerEffect('delay')"><i data-lucide="power" style="width: 14px; height: 14px;"></i></button>
+                </div>
             </div>
         </div>
 
@@ -3523,6 +4289,10 @@
                                 <input type="text" id="store-buyer-country" value="Ecuador" data-i18n-placeholder="sidebar_country_placeholder" style="width: 100%; box-sizing: border-box;">
                             </div>
                         </div>
+                        <div class="input-group">
+                            <label for="store-txt-youtube-whitelist" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="store_youtube_whitelist_label">Canal de YouTube (Para Whitelist de Content ID)</label>
+                            <input type="text" id="store-txt-youtube-whitelist" placeholder="https://youtube.com/@tu_canal (Opcional)" data-i18n-placeholder="store_youtube_whitelist_placeholder" style="width: 100%; box-sizing: border-box;">
+                        </div>
                     </form>
                 </div>
 
@@ -3540,6 +4310,14 @@
                         <div id="checkout-coupon-msg" style="font-size: 11px; margin-top: 6px; display: none; font-weight: 600;"></div>
                     </div>
                     
+                    <!-- Aceptación obligatoria de términos (Click-Wrap) -->
+                    <div id="checkout-terms-section" style="margin-bottom: 16px; padding: 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; display: flex; align-items: flex-start; gap: 10px; box-sizing: border-box;">
+                        <input type="checkbox" id="store-chk-accept-terms" onchange="window.onAcceptTermsChange()" style="width: 18px; height: 18px; margin-top: 1px; accent-color: var(--accent, #00ccff); cursor: pointer; flex-shrink: 0;">
+                        <label for="store-chk-accept-terms" style="font-size: 12px; color: #cbd5e0; line-height: 1.4; cursor: pointer; user-select: none;">
+                            He leído y acepto los <a href="#" onclick="event.preventDefault(); window.openSupportModal('terms');" style="color: var(--accent, #00ccff); text-decoration: none; font-weight: 600;">Términos de Servicio</a> y las condiciones de la Licencia del Beat.
+                        </label>
+                    </div>
+
                     <div class="pay-method-tabs" style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 16px; box-sizing: border-box; flex-wrap: wrap;">
                         <button type="button" class="pay-tab-btn active" id="btn-pay-payphone" onclick="window.switchStorePaymentMethod('payphone')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 700; color: var(--accent, #00ccff); border-bottom: 2px solid var(--accent, #00ccff); cursor: pointer; outline: none; white-space: nowrap;">PayPhone</button>
                         <button type="button" class="pay-tab-btn" id="btn-pay-paypal" onclick="window.switchStorePaymentMethod('paypal')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">PayPal</button>
@@ -3571,6 +4349,25 @@
                             <div style="font-size: 12px; background: rgba(0, 204, 255, 0.08); color: var(--accent, #00ccff); padding: 8px 16px; border-radius: 8px; display: inline-block; font-weight: 700;">
                                 💳 Total a Pagar: <strong id="deuna-total-price">$0.00 USD</strong>
                             </div>
+                        </div>
+                        
+                        <!-- Contenedor del QR Dinámico y Estado de Pago -->
+                        <div id="deuna-qr-container" style="display: none; text-align: center; margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px; box-sizing: border-box;">
+                            <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px;">Código QR de Pago</div>
+                            <div id="deuna-qr-image-wrapper" style="background: #fff; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 12px;">
+                                <img id="deuna-qr-img" src="" style="width: 180px; height: 180px; display: block;" alt="Deuna QR">
+                            </div>
+                            <div id="deuna-deeplink-btn-container" style="margin-bottom: 12px;">
+                                <!-- Botón de pago móvil inyectado por JS -->
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; color: var(--accent, #00ccff);">
+                                <span class="loading-spinner-small" style="border: 2px solid rgba(0,204,255,0.2); border-left-color: var(--accent, #00ccff); border-radius: 50%; width: 14px; height: 14px; display: inline-block; animation: spin 1s linear infinite;"></span>
+                                <span>Esperando confirmación del pago en tiempo real...</span>
+                            </div>
+                            
+                            <button type="button" id="btn-deuna-simulate-confirm" style="margin-top: 16px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-block; transition: all 0.2s;">
+                                ⚡ Simular Confirmación de Pago
+                            </button>
                         </div>
                     </div>
 
@@ -3799,6 +4596,10 @@
                 <button class="tab-btn support-tab-btn" id="btn-support-tab-terms" onclick="window.switchSupportTab('terms')">
                     <i data-lucide="shield-check"></i>
                     <span data-i18n="support_tab_terms">Términos y Privacidad</span>
+                </button>
+                <button class="tab-btn support-tab-btn" id="btn-support-tab-chatbot" onclick="window.closeSupportModal(); window.beatssChatbot.toggleChat(true);" style="border: 1px solid rgba(124, 58, 237, 0.3); background: rgba(124, 58, 237, 0.05); color: #c084fc;">
+                    <i data-lucide="message-square"></i>
+                    <span data-i18n="support_tab_chatbot">Asistente Virtual</span>
                 </button>
             </div>
             

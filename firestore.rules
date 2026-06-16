@@ -3,11 +3,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Función auxiliar para verificar si el usuario es el administrador de Sossa
+    // Función auxiliar para verificar si el usuario es el administrador de Sossa (soporta Custom Claims y fallback de email)
     function isAdmin() {
       return request.auth != null && 
-             request.auth.token.email.lower() == 'masterjuego25@gmail.com' &&
-             request.auth.token.email_verified == true;
+             (request.auth.token.admin == true || 
+              (request.auth.token.email.lower() == 'masterjuego25@gmail.com' &&
+               request.auth.token.email_verified == true));
     }
 
     // Función auxiliar para validar datos de contacto públicos
@@ -33,12 +34,19 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Regla para solicitudes de pago local y compras de beats
+    // Regla para solicitudes de pago local y compras de beats (creación autenticada y edición restringida)
     match /payments/{paymentId} {
-      allow create: if request.resource.data.type in ['beat_purchase', 'exclusive_offer'] &&
-                       (request.resource.data.status == 'pending' || (request.auth != null && (request.auth.uid == request.resource.data.producerId || isAdmin())));
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.userId &&
+                       request.resource.data.type in ['beat_purchase', 'exclusive_offer'] &&
+                       request.resource.data.status == 'pending';
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || resource.data.producerId == request.auth.uid || isAdmin());
-      allow update: if request.auth != null && (isAdmin() || resource.data.producerId == request.auth.uid);
+      allow update: if request.auth != null && (
+                       isAdmin() || 
+                       (resource.data.producerId == request.auth.uid && 
+                        request.resource.data.status in ['cancelled', 'cancelado'] && 
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+                    );
       allow delete: if false;
     }
 
@@ -56,6 +64,14 @@ service cloud.firestore {
       allow list, write: if isAdmin();
     }
 
+    // Reglas para la cola de tareas asíncronas (tasks)
+    match /tasks/{taskId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
     // Regla principal por usuario
     match /users/{userId} {
       // Sossa Admin tiene acceso completo
@@ -64,16 +80,16 @@ service cloud.firestore {
       // El propio usuario puede leer su documento
       allow read: if request.auth != null && request.auth.uid == userId;
       
-      // El propio usuario puede crear/actualizar su documento principal con restricciones de plan
+      // El propio usuario puede crear/actualizar su documento principal con restricciones de plan y códigos
       allow create: if request.auth != null && request.auth.uid == userId && (
-        !request.resource.data.keys().hasAny(['plan', 'planActivatedAt']) || request.resource.data.plan == 'inicial'
+        !request.resource.data.keys().hasAny(['plan', 'planActivatedAt', 'expirationPro', 'redeemedCodes']) || request.resource.data.plan == 'inicial'
       );
       allow update: if request.auth != null && request.auth.uid == userId && (
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan', 'planActivatedAt']) || 
-        (request.resource.data.plan == 'inicial' && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['planActivatedAt']))
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan', 'planActivatedAt', 'expirationPro', 'redeemedCodes']) || 
+        (request.resource.data.plan == 'inicial' && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['planActivatedAt', 'expirationPro', 'redeemedCodes']))
       );
 
-      // Reglas para subcolección config/producer
+      // Reglas para subcolección config/producer (acceso público de lectura, escritura privada)
       match /config/producer {
         allow read: if true;
         allow create: if request.auth != null && request.auth.uid == userId && (
@@ -112,6 +128,11 @@ service cloud.firestore {
 
       match /licencias/{licenciaId} {
         allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      }
+
+      match /whitelist/{whitelistId} {
+        allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+        allow create: if exists(/databases/$(database)/documents/users/$(userId)/licencias/$(request.resource.data.licenseRef));
       }
 
       match /contacts/{contactId} {

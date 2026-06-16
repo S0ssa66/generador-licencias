@@ -10,7 +10,8 @@ import {
     collectionGroup, 
     query, 
     where,
-    updateDoc
+    updateDoc,
+    onSnapshot
 } from "./firebase.js";
 
 // Initialize global state on window
@@ -27,6 +28,20 @@ let checkoutSelectedLicense = 'basic';
 let checkoutCurrentStep = 1;
 let storePaymentReceiptBase64 = null;
 let checkoutIsOfferMode = false;
+
+// Función de sanitización XSS: escapa caracteres HTML peligrosos en datos de usuario
+// Usa la función global si dashboard.js ya la definió, de lo contrario crea la propia
+const sanitizeHtml = window.sanitizeHtml || function(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+};
+
+
 
 // Helpers to dynamically load script (since we might need to load PayPal or Payphone SDKs)
 function loadScript(src) {
@@ -144,7 +159,7 @@ export function updateCartUI() {
     badge.textContent = count;
     
     // Mostrar botón flotante si hay elementos en el carrito Y estamos en modo tienda o catálogo
-    if (count > 0 && (window.isPublicStoreMode || window.isGlobalCatalogMode)) {
+    if (count > 0 && (window.stateManager.getState('isPublicStoreMode') || window.stateManager.getState('isGlobalCatalogMode'))) {
         floatBtn.style.display = 'flex';
     } else {
         floatBtn.style.display = 'none';
@@ -367,6 +382,9 @@ export async function initPublicStore(producerAka) {
         setupStoreFilters();
         if (typeof window.setupStoreAudioPlayer === 'function') window.setupStoreAudioPlayer();
         setupStoreCheckout();
+        if (typeof window.switchStoreTab === 'function') {
+            window.switchStoreTab('beats');
+        }
         if (window.lucide) window.lucide.createIcons();
 
     } catch (err) {
@@ -434,43 +452,44 @@ export function renderStoreBeats(beats) {
 
     grid.innerHTML = beats.map(beat => {
         const artworkUrl = window.getBeatArtwork(beat);
-        const bpmText = beat.bpm ? `${beat.bpm} BPM` : 'N/A';
-        const keyText = beat.key ? `${beat.key}` : 'N/A';
+        const bpmText = beat.bpm ? `${sanitizeHtml(beat.bpm)} BPM` : 'N/A';
+        const keyText = beat.key ? `${sanitizeHtml(beat.key)}` : 'N/A';
         
-        // Formatear etiquetas de tags
+        // Formatear etiquetas de tags (sanitizadas)
         const tagsList = (beat.tags || '')
             .split(/[\s,]+/)
             .filter(t => t.trim().length > 0)
             .map(t => t.startsWith('#') ? t : `#${t}`);
         const tagsHtml = tagsList.length > 0
-            ? `<div class="store-beat-tags-container">${tagsList.map(tag => `<span class="store-beat-tag">${tag}</span>`).join('')}</div>`
+            ? `<div class="store-beat-tags-container">${tagsList.map(tag => `<span class="store-beat-tag">${sanitizeHtml(tag)}</span>`).join('')}</div>`
             : '';
 
-        // Formatear badges de género y moods
-        const genreBadge = beat.genre ? `<span class="store-genre-badge">${beat.genre}</span>` : '';
-        const moodBadge = beat.moods ? `<span class="store-mood-badge">${beat.moods}</span>` : '';
+        // Formatear badges de género y moods (sanitizados)
+        const genreBadge = beat.genre ? `<span class="store-genre-badge">${sanitizeHtml(beat.genre)}</span>` : '';
+        const moodBadge = beat.moods ? `<span class="store-mood-badge">${sanitizeHtml(beat.moods)}</span>` : '';
         const badgesHtml = (genreBadge || moodBadge)
             ? `<div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap;">${genreBadge}${moodBadge}</div>`
             : '';
         
         const buyLicenseText = window.currentLang === 'es' ? 'Adquirir Licencia' : 'Acquire License';
         const priceValue = beat.price_basic ? `$${beat.price_basic.toFixed(2)}` : (window.currentLang === 'es' ? 'Negociable' : 'Negotiable');
+        const safeBeatName = sanitizeHtml(beat.name);
         
         return `
-            <div class="store-beat-card" data-id="${beat.id}" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box; padding: 18px;">
+            <div class="store-beat-card" data-id="${sanitizeHtml(beat.id)}" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%; box-sizing: border-box; padding: 18px;">
                 <div>
                     <div class="store-beat-cover" style="position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #151722;">
-                        <img src="${artworkUrl}" alt="${beat.name}" style="width:100%; height:100%; object-fit:cover; object-position:top; border-radius:14px; transition: transform 0.5s ease;">
-                        <div class="store-play-overlay" onclick="window.toggleStorePlay('${beat.id}')">
-                            <button class="store-play-btn" id="btn-play-store-${beat.id}" style="width: 56px; height: 56px; border-radius: 50%; background: var(--accent, #00ccff); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px var(--accent-glow, rgba(0, 204, 255, 0.3)); transform: scale(0.9); transition: all 0.3s ease;">
+                        <img src="${artworkUrl}" alt="${safeBeatName}" style="width:100%; height:100%; object-fit:cover; object-position:top; border-radius:14px; transition: transform 0.5s ease;">
+                        <div class="store-play-overlay" onclick="window.toggleStorePlay('${sanitizeHtml(beat.id)}')">
+                            <button class="store-play-btn" id="btn-play-store-${sanitizeHtml(beat.id)}" style="width: 56px; height: 56px; border-radius: 50%; background: var(--accent, #00ccff); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px var(--accent-glow, rgba(0, 204, 255, 0.3)); transform: scale(0.9); transition: all 0.3s ease;">
                                 <i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>
                             </button>
                         </div>
-                        <button onclick="window.shareBeat('${beat.id}', '${beat.name.replace(/'/g, "\\'")}')" style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'" title="Compartir">
+                        <button onclick="window.shareBeat('${sanitizeHtml(beat.id)}', '${sanitizeHtml(beat.name).replace(/'/g, "\\'")}')\" style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'" title="Compartir">
                             <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
                         </button>
                     </div>
-                    <h3 style="font-size: 19px; font-weight: 800; color: #fff; margin: 16px 0 0 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: 2.5em;" title="${beat.name}">${beat.name}</h3>
+                    <h3 style="font-size: 19px; font-weight: 800; color: #fff; margin: 16px 0 0 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: 2.5em;" title="${safeBeatName}">${safeBeatName}</h3>
                     <div class="store-beat-meta" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 14px; color: #8a91a6; font-weight: 600;">${bpmText} • ${keyText}</span>
                         <span style="color: var(--accent, #00ccff); font-weight: 800; background: rgba(var(--accent-rgb, 0, 204, 255), 0.08); padding: 4px 12px; border-radius: 8px; font-size: 15px;">${priceValue}</span>
@@ -479,7 +498,7 @@ export function renderStoreBeats(beats) {
                     ${tagsHtml}
                 </div>
                 <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;">
-                    <button class="btn btn-primary" onclick="window.openBeatCheckoutModal('${beat.id}')" style="width: 100%; height: 44px; font-weight: 700; border-radius: 12px; font-size: 14px; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                    <button class="btn btn-primary" onclick="window.openBeatCheckoutModal('${sanitizeHtml(beat.id)}')" style="width: 100%; height: 44px; font-weight: 700; border-radius: 12px; font-size: 14px; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
                         <i data-lucide="shopping-cart" style="width: 16px; height: 16px; stroke-width: 2.5;"></i>
                         <span>${buyLicenseText}</span>
                     </button>
@@ -487,6 +506,7 @@ export function renderStoreBeats(beats) {
             </div>
         `;
     }).join('');
+
 
     if (window.lucide) window.lucide.createIcons();
     if (typeof window.apply3DTiltEffect === 'function') window.apply3DTiltEffect();
@@ -667,9 +687,16 @@ export function openBeatCheckoutModal(beatId) {
     document.getElementById('store-buyer-dni').value = '';
     document.getElementById('store-buyer-city').value = '';
     document.getElementById('store-buyer-country').value = 'Ecuador';
+    const ytField = document.getElementById('store-txt-youtube-whitelist');
+    if (ytField) ytField.value = '';
 
     document.getElementById('store-receipt-file-name').textContent = 'Ningún archivo seleccionado';
     document.getElementById('store-receipt-file').value = '';
+
+    const termsCheckbox = document.getElementById('store-chk-accept-terms');
+    if (termsCheckbox) {
+        termsCheckbox.checked = false;
+    }
 
     const singleView = document.getElementById('checkout-single-beat-view');
     const multiView = document.getElementById('checkout-multi-beat-view');
@@ -1017,6 +1044,7 @@ export function updateCheckoutStepView(step) {
                 }
                 window.switchStorePaymentMethod(defaultTab);
             }
+            onAcceptTermsChange();
         }
     }
 }
@@ -1103,11 +1131,20 @@ export function switchStorePaymentMethod(method) {
                 <div style="color: #ef4444; font-size: 13px;">El productor no ha configurado PayPal.</div>
             `;
         }
+    } else if (method === 'deuna') {
+        receiptSection.style.display = 'none';
+        nextBtn.style.display = 'block';
+        nextBtn.textContent = 'Confirmar Pedido y Ver QR';
+        const qrCont = document.getElementById('deuna-qr-container');
+        if (qrCont) qrCont.style.display = 'none';
     } else {
         receiptSection.style.display = 'block';
         nextBtn.style.display = 'block';
         nextBtn.textContent = 'Confirmar Compra';
     }
+
+    // Sincronizar estado del Click-wrap tras cambiar método de pago
+    onAcceptTermsChange();
 }
 
 export function loadStorePayphoneSDK(callback) {
@@ -1163,6 +1200,7 @@ export function renderStorePayphoneButton() {
     const buyerDni = document.getElementById('store-buyer-dni').value.trim();
     const buyerCity = document.getElementById('store-buyer-city').value.trim();
     const buyerCountry = document.getElementById('store-buyer-country').value.trim();
+    const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist').value.trim();
     
     if (!buyerName || !buyerEmail) {
         container.innerHTML = '<div style="color: #f59e0b; font-size: 13px; text-align: center;">Por favor completa tu nombre y correo en el Paso anterior.</div>';
@@ -1196,11 +1234,14 @@ export function renderStorePayphoneButton() {
         buyerDni,
         buyerCity,
         buyerCountry,
+        youtubeWhitelist,
         items: itemsToProcess,
         discountPercent: window.checkoutDiscountPercent || 0,
         couponCode: window.checkoutAppliedCoupon || '',
         producerId: window.storeProducerUid,
-        producerToken: token
+        producerToken: token,
+        acceptedTerms: true,
+        acceptanceTimestamp: new Date().toISOString()
     };
     
     localStorage.setItem('payphone_pending_' + clientTxId, JSON.stringify(state));
@@ -1243,6 +1284,7 @@ export async function submitExclusiveOffer() {
     const buyerDni = document.getElementById('store-buyer-dni').value.trim();
     const buyerCity = document.getElementById('store-buyer-city').value.trim();
     const buyerCountry = document.getElementById('store-buyer-country').value.trim();
+    const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist').value.trim();
     const offerPrice = parseFloat(document.getElementById('offer-price-input').value);
     const offerMessage = document.getElementById('offer-message-input').value.trim();
 
@@ -1273,6 +1315,7 @@ export async function submitExclusiveOffer() {
         buyerDni: buyerDni,
         buyerCity: buyerCity,
         buyerCountry: buyerCountry,
+        youtubeWhitelist: youtubeWhitelist,
         method: 'offer',
         reference: 'OFERTA-' + Date.now(),
         receiptUrl: '',
@@ -1521,9 +1564,78 @@ export function setupStoreCheckout() {
         } else if (checkoutCurrentStep === 2) {
             const buyerName = document.getElementById('store-buyer-name').value.trim();
             const buyerEmail = document.getElementById('store-buyer-email').value.trim();
+            const buyerDni = document.getElementById('store-buyer-dni').value.trim();
+            
             if (!buyerName || !buyerEmail) {
                 if (typeof window.showToast === 'function') window.showToast('Por favor escribe tu Nombre y Correo Electrónico.', true);
                 return;
+            }
+            
+            if (window.storeProducerConfig && window.storeProducerConfig.sriRuc) {
+                if (!buyerDni) {
+                    if (typeof window.showToast === 'function') window.showToast('Por favor escribe tu Identificación (Cédula/RUC/Pasaporte) para tu factura.', true);
+                    return;
+                }
+                
+                // Función de validación SRI
+                const validarIdentificacion = (id) => {
+                    if (!/^\d+$/.test(id)) return { valido: true, tipo: '06' }; // Pasaporte / Extranjero
+                    if (id === '9999999999999') return { valido: true, tipo: '07' }; // Consumidor final
+                    
+                    if (id.length === 10) {
+                        const prov = parseInt(id.substring(0, 2), 10);
+                        if (prov < 1 || prov > 24) return { valido: false, msg: 'Cédula inválida (código de provincia incorrecto).' };
+                        const digitoVerificador = parseInt(id.substring(9, 10), 10);
+                        let suma = 0;
+                        for (let i = 0; i < 9; i++) {
+                            let val = parseInt(id.charAt(i), 10);
+                            if (i % 2 === 0) {
+                                val = val * 2;
+                                if (val > 9) val = val - 9;
+                            }
+                            suma += val;
+                        }
+                        const residuo = suma % 10;
+                        const resultado = residuo === 0 ? 0 : 10 - residuo;
+                        if (resultado === digitoVerificador) return { valido: true, tipo: '05' };
+                        return { valido: false, msg: 'Cédula de identidad incorrecta.' };
+                    } else if (id.length === 13) {
+                        if (id.substring(10, 13) !== '001') return { valido: false, msg: 'RUC inválido (debe terminar en 001).' };
+                        const tercerDigito = parseInt(id.charAt(2), 10);
+                        if (tercerDigito < 6) {
+                            const cedulaParte = id.substring(0, 10);
+                            const resCed = validarIdentificacion(cedulaParte);
+                            if (resCed.valido) return { valido: true, tipo: '04' };
+                            return { valido: false, msg: 'RUC de persona natural incorrecto.' };
+                        } else if (tercerDigito === 6) {
+                            const digitoVerificador = parseInt(id.substring(8, 9), 10);
+                            const coefs = [3, 2, 7, 6, 5, 4, 3, 2];
+                            let suma = 0;
+                            for (let i = 0; i < 8; i++) suma += parseInt(id.charAt(i), 10) * coefs[i];
+                            const residuo = suma % 11;
+                            const resultado = residuo === 0 ? 0 : 11 - residuo;
+                            if (resultado === digitoVerificador) return { valido: true, tipo: '04' };
+                            return { valido: false, msg: 'RUC de sociedad pública incorrecto.' };
+                        } else if (tercerDigito === 9) {
+                            const digitoVerificador = parseInt(id.substring(9, 10), 10);
+                            const coefs = [4, 3, 2, 7, 6, 5, 4, 3, 2];
+                            let suma = 0;
+                            for (let i = 0; i < 9; i++) suma += parseInt(id.charAt(i), 10) * coefs[i];
+                            const residuo = suma % 11;
+                            const resultado = residuo === 0 ? 0 : 11 - residuo;
+                            if (resultado === digitoVerificador) return { valido: true, tipo: '04' };
+                            return { valido: false, msg: 'RUC de sociedad privada incorrecto.' };
+                        }
+                        return { valido: false, msg: 'RUC con formato incorrecto.' };
+                    }
+                    return { valido: true, tipo: '06' };
+                };
+                
+                const validation = validarIdentificacion(buyerDni);
+                if (!validation.valido) {
+                    if (typeof window.showToast === 'function') window.showToast(validation.msg, true);
+                    return;
+                }
             }
             updateCheckoutStepView(3);
         } else if (checkoutCurrentStep === 3) {
@@ -1716,6 +1828,7 @@ export function renderStorePayPalButton(clientId) {
                     const buyerDni = document.getElementById('store-buyer-dni').value.trim();
                     const buyerCity = document.getElementById('store-buyer-city').value.trim();
                     const buyerCountry = document.getElementById('store-buyer-country').value.trim();
+                    const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist').value.trim();
                     
                     let itemsToProcess = [];
                     if (checkoutSelectedBeatId) {
@@ -1744,6 +1857,7 @@ export function renderStorePayPalButton(clientId) {
                         buyerDni,
                         buyerCity,
                         buyerCountry,
+                        youtubeWhitelist,
                         items: itemsToProcess,
                         discountPercent: window.checkoutDiscountPercent || 0,
                         couponCode: window.checkoutAppliedCoupon || ''
@@ -1786,12 +1900,19 @@ export function renderStorePayPalButton(clientId) {
 }
 
 export async function submitBeatPurchasePayment(method, reference = '') {
+    const chkTerms = document.getElementById('store-chk-accept-terms');
+    if (!chkTerms || !chkTerms.checked) {
+        if (typeof window.showToast === 'function') window.showToast('Debes leer y aceptar los Términos de Servicio y la Licencia del Beat.', true);
+        return;
+    }
+
     const buyerName = document.getElementById('store-buyer-name').value.trim();
     const buyerEmail = document.getElementById('store-buyer-email').value.trim();
     const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
     const buyerDni = document.getElementById('store-buyer-dni').value.trim();
     const buyerCity = document.getElementById('store-buyer-city').value.trim();
     const buyerCountry = document.getElementById('store-buyer-country').value.trim();
+    const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist').value.trim();
 
     if (!buyerName || !buyerEmail) {
         if (typeof window.showToast === 'function') window.showToast('Por favor completa todos los campos del formulario.', true);
@@ -1799,7 +1920,7 @@ export async function submitBeatPurchasePayment(method, reference = '') {
         return;
     }
 
-    if (method !== 'paypal' && !storePaymentReceiptBase64) {
+    if (method !== 'paypal' && method !== 'deuna' && !storePaymentReceiptBase64) {
         if (typeof window.showToast === 'function') window.showToast('Por favor sube la captura de tu comprobante de pago.', true);
         return;
     }
@@ -1844,7 +1965,7 @@ export async function submitBeatPurchasePayment(method, reference = '') {
 
     try {
         let finalReceiptUrl = '';
-        if (method !== 'paypal' && storePaymentReceiptBase64) {
+        if (method !== 'paypal' && method !== 'deuna' && storePaymentReceiptBase64) {
             if (nextBtn) nextBtn.innerHTML = '⏳ Subiendo comprobante...';
             
             if (typeof window.dataURLtoBlob !== 'function' || typeof window.uploadFileToStorage !== 'function') {
@@ -1871,6 +1992,7 @@ export async function submitBeatPurchasePayment(method, reference = '') {
                 buyerDni: buyerDni,
                 buyerCity: buyerCity,
                 buyerCountry: buyerCountry,
+                youtubeWhitelist: youtubeWhitelist,
                 method: method,
                 reference: transactionId,
                 receiptUrl: finalReceiptUrl,
@@ -1879,7 +2001,9 @@ export async function submitBeatPurchasePayment(method, reference = '') {
                 couponCode: discountCode,
                 originalPrice: item.price,
                 finalPrice: item.price * (1 - (discountPercent / 100)),
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                acceptedTerms: true,
+                acceptanceTimestamp: new Date().toISOString()
             };
 
             const docRef = await addDoc(colRef, orderData);
@@ -1894,17 +2018,113 @@ export async function submitBeatPurchasePayment(method, reference = '') {
 
         if (method === 'paypal') {
             if (typeof window.showToast === 'function') window.showToast('¡Pago procesado y licencias enviadas con éxito!');
+            window.cart = [];
+            saveCartToStorage();
+            window.updateCartUI();
+            storePaymentReceiptBase64 = null;
+            document.getElementById('beat-checkout-modal').style.display = 'none';
+        } else if (method === 'deuna') {
+            try {
+                if (nextBtn) nextBtn.innerHTML = '⏳ Generando QR de pago...';
+                const deunaPhone = window.storeProducerConfig.deunaPhone || '0999999999';
+                
+                const res = await fetch('/api/payments/deuna/qr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        purchaseId: redirectPaymentId,
+                        amount: itemsToProcess.reduce((sum, item) => sum + item.price, 0) * (1 - (discountPercent / 100)),
+                        deunaPhone: deunaPhone
+                    })
+                });
+                
+                if (!res.ok) throw new Error("Error en el servidor al generar QR.");
+                const data = await res.json();
+                
+                // Cargar imagen y mostrar QR
+                document.getElementById('deuna-qr-img').src = data.qrUrl;
+                document.getElementById('deuna-qr-container').style.display = 'block';
+                
+                // Ocultar sección de subida de comprobantes
+                const uploadSec = document.getElementById('store-receipt-upload-section');
+                if (uploadSec) uploadSec.style.display = 'none';
+                
+                // Botón deeplink móvil
+                const dlContainer = document.getElementById('deuna-deeplink-btn-container');
+                if (dlContainer) {
+                    dlContainer.innerHTML = `
+                        <a href="${data.deeplink}" style="background: linear-gradient(135deg, #ff6b35, #ff9500); color: #fff; font-size: 13px; font-weight: 700; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; width: 100%; max-width: 280px; box-sizing: border-box; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);" target="_blank">📲 Pagar desde App Deuna!</a>
+                    `;
+                }
+                
+                // Simulación local de webhook
+                const simBtn = document.getElementById('btn-deuna-simulate-confirm');
+                if (simBtn) {
+                    simBtn.onclick = async () => {
+                        try {
+                            if (typeof window.showToast === 'function') window.showToast("Simulando confirmación de pago...");
+                            const simRes = await fetch('/api/payments/deuna/simulate-confirm', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ purchaseId: redirectPaymentId })
+                            });
+                            const simData = await simRes.json();
+                            if (simData.status !== 'success') {
+                                throw new Error(simData.error || "Fallo en simulación");
+                            }
+                        } catch (se) {
+                            console.error(se);
+                            if (typeof window.showToast === 'function') window.showToast("Error de simulación: " + se.message, true);
+                        }
+                    };
+                }
+                
+                // Listener reactivo Firestore
+                const docRef = doc(db, "payments", redirectPaymentId);
+                const unsub = onSnapshot(docRef, async (docSnap) => {
+                    if (docSnap.exists()) {
+                        const payData = docSnap.data();
+                        if (payData.status === 'completed' || payData.status === 'approved') {
+                            unsub();
+                            if (typeof window.showToast === 'function') window.showToast('✅ ¡Pago confirmado! Descargando archivos...');
+                            
+                            // Auto-entrega segura
+                            try {
+                                await autoDeliverBeatSale(redirectPaymentId, payData);
+                            } catch (ae) { console.warn("Error en auto-entrega:", ae); }
+                            
+                            // Vaciar el carrito
+                            window.cart = [];
+                            saveCartToStorage();
+                            window.updateCartUI();
+                            storePaymentReceiptBase64 = null;
+                            
+                            document.getElementById('beat-checkout-modal').style.display = 'none';
+                            
+                            if (typeof window.showAppView === 'function') {
+                                window.showAppView('download', { paymentId: redirectPaymentId, downloadToken: 'mock-token-' + redirectPaymentId });
+                            }
+                        }
+                    }
+                });
+                
+                if (nextBtn) {
+                    nextBtn.disabled = true;
+                    nextBtn.innerHTML = '⌛ Esperando pago...';
+                }
+                return;
+            } catch (qrErr) {
+                console.error("Error al iniciar QR Deuna:", qrErr);
+                if (typeof window.showToast === 'function') window.showToast("Error al inicializar pago con Deuna!.", true);
+            }
         } else {
             if (typeof window.showToast === 'function') window.showToast('¡Pedido registrado! Esperando aprobación del productor.');
+            window.cart = [];
+            saveCartToStorage();
+            window.updateCartUI();
+            storePaymentReceiptBase64 = null;
+            document.getElementById('beat-checkout-modal').style.display = 'none';
         }
-
-        // Vaciar el carrito
-        window.cart = [];
-        saveCartToStorage();
-        window.updateCartUI();
-        storePaymentReceiptBase64 = null;
-
-        document.getElementById('beat-checkout-modal').style.display = 'none';
         
         // Redirigir al portal de descargas
         if (redirectPaymentId) {
@@ -1999,7 +2219,47 @@ export async function autoDeliverBeatSale(paymentId, orderData) {
     }
 }
 
+export function onAcceptTermsChange() {
+    const chk = document.getElementById('store-chk-accept-terms');
+    const accepted = chk ? chk.checked : false;
+
+    const nextBtn = document.getElementById('btn-checkout-next');
+    const payphoneContainer = document.getElementById('payphone-button');
+    const paypalContainer = document.getElementById('store-paypal-button-container');
+
+    if (accepted) {
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.style.opacity = '1';
+            nextBtn.style.pointerEvents = 'auto';
+        }
+        if (payphoneContainer) {
+            payphoneContainer.style.opacity = '1';
+            payphoneContainer.style.pointerEvents = 'auto';
+        }
+        if (paypalContainer) {
+            paypalContainer.style.opacity = '1';
+            paypalContainer.style.pointerEvents = 'auto';
+        }
+    } else {
+        if (nextBtn) {
+            nextBtn.disabled = true;
+            nextBtn.style.opacity = '0.5';
+            nextBtn.style.pointerEvents = 'none';
+        }
+        if (payphoneContainer) {
+            payphoneContainer.style.opacity = '0.4';
+            payphoneContainer.style.pointerEvents = 'none';
+        }
+        if (paypalContainer) {
+            paypalContainer.style.opacity = '0.4';
+            paypalContainer.style.pointerEvents = 'none';
+        }
+    }
+}
+
 // Bind to window for global/inline access
+window.onAcceptTermsChange = onAcceptTermsChange;
 window.addToCart = addToCart;
 window.removeFromCart = removeFromCart;
 window.updateCartItemLicense = updateCartItemLicense;
@@ -2066,57 +2326,98 @@ export async function checkPayphoneRedirectResult() {
         
         try {
             // Confirm transaction using PayPhone API
-            const response = await fetch('https://pay.payphonetodoesposible.com/api/button/V2/Confirm', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'bearer ' + state.producerToken
-                },
-                body: JSON.stringify({
-                    id: parseInt(id, 10),
-                    clientTxId: clientTxId
-                })
-            });
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            let response;
+            let result;
             
-            const result = await response.json();
-            console.log('PayPhone Confirmation response:', result);
-            
-            if (response.ok && (result.transactionStatus === 'Approved' || result.statusCode === 3 || result.status === 'Approved')) {
-                // Payment is approved! Save transaction records and deliver licenses
-                window.storeProducerUid = state.producerId;
-                
-                const colRef = collection(db, "payments");
-                let redirectPaymentId = null;
-                for (const item of state.items) {
-                    const orderData = {
-                        type: 'beat_purchase',
+            if (isLocalhost) {
+                // Delegar al backend de forma segura para no exponer el token del productor y registrar la compra
+                response = await fetch('/api/payments/payphone/confirm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        id: parseInt(id, 10),
+                        clientTxId: clientTxId,
                         producerId: state.producerId,
-                        beatId: item.beatId,
-                        beatName: item.beatName,
-                        licenseType: item.licenseType,
-                        price: item.price,
+                        items: state.items,
                         buyerName: state.buyerName,
                         buyerEmail: state.buyerEmail,
                         buyerPhone: state.buyerPhone,
                         buyerDni: state.buyerDni,
                         buyerCity: state.buyerCity,
                         buyerCountry: state.buyerCountry,
-                        method: 'payphone',
-                        reference: clientTxId,
-                        receiptUrl: '',
-                        status: 'approved',
                         discountPercent: state.discountPercent || 0,
                         couponCode: state.couponCode || '',
-                        originalPrice: item.price,
-                        finalPrice: item.price * (1 - ((state.discountPercent || 0) / 100)),
-                        timestamp: new Date().toISOString()
-                    };
-                    
-                    const docRef = await addDoc(colRef, orderData);
-                    if (!redirectPaymentId) {
-                        redirectPaymentId = docRef.id;
+                        acceptedTerms: state.acceptedTerms || true,
+                        acceptanceTimestamp: state.acceptanceTimestamp || new Date().toISOString()
+                    })
+                });
+                result = await response.json();
+            } else {
+                // Fallback: Confirmación clásica directa en el cliente (Producción estática / Vercel)
+                response = await fetch('https://pay.payphonetodoesposible.com/api/button/V2/Confirm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'bearer ' + state.producerToken
+                    },
+                    body: JSON.stringify({
+                        id: parseInt(id, 10),
+                        clientTxId: clientTxId
+                    })
+                });
+                result = await response.json();
+            }
+            
+            console.log('PayPhone Confirmation response:', result);
+            
+            if (response.ok && (isLocalhost || result.transactionStatus === 'Approved' || result.statusCode === 3 || result.status === 'Approved')) {
+                // Payment is approved! Save transaction records and deliver licenses
+                window.storeProducerUid = state.producerId;
+                
+                let redirectPaymentId = null;
+                
+                if (isLocalhost) {
+                    // El backend ya registró en Firestore y localmente. Usamos clientTxId de referencia
+                    redirectPaymentId = clientTxId;
+                } else {
+                    const colRef = collection(db, "payments");
+                    for (const item of state.items) {
+                        const orderData = {
+                            type: 'beat_purchase',
+                            producerId: state.producerId,
+                            beatId: item.beatId,
+                            beatName: item.beatName,
+                            licenseType: item.licenseType,
+                            price: item.price,
+                            buyerName: state.buyerName,
+                            buyerEmail: state.buyerEmail,
+                            buyerPhone: state.buyerPhone,
+                            buyerDni: state.buyerDni,
+                            buyerCity: state.buyerCity,
+                            buyerCountry: state.buyerCountry,
+                            youtubeWhitelist: state.youtubeWhitelist || '',
+                            method: 'payphone',
+                            reference: clientTxId,
+                            receiptUrl: '',
+                            status: 'approved',
+                            discountPercent: state.discountPercent || 0,
+                            couponCode: state.couponCode || '',
+                            originalPrice: item.price,
+                            finalPrice: item.price * (1 - ((state.discountPercent || 0) / 100)),
+                            timestamp: new Date().toISOString(),
+                            acceptedTerms: state.acceptedTerms || true,
+                            acceptanceTimestamp: state.acceptanceTimestamp || new Date().toISOString()
+                        };
+                        
+                        const docRef = await addDoc(colRef, orderData);
+                        if (!redirectPaymentId) {
+                            redirectPaymentId = docRef.id;
+                        }
+                        await autoDeliverBeatSale(docRef.id, orderData);
                     }
-                    await autoDeliverBeatSale(docRef.id, orderData);
                 }
                 
                 // Clear state
@@ -2158,7 +2459,7 @@ export function closePayphoneOverlay() {
 window.checkPayphoneRedirectResult = checkPayphoneRedirectResult;
 window.closePayphoneOverlay = closePayphoneOverlay;
 
-export async function loadBuyerDownloadPage(paymentId) {
+export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
     console.log("📥 Cargando portal de descargas para el pago:", paymentId);
     
     // Elementos de la interfaz
@@ -2179,8 +2480,24 @@ export async function loadBuyerDownloadPage(paymentId) {
     }
 
     try {
-        // Consultar el endpoint de descargas públicas de la orden
-        const response = await fetch(`/api/get-order-downloads?id=${paymentId}`);
+        // Construir URL y headers de autenticación
+        let fetchUrl = `/api/get-order-downloads?id=${encodeURIComponent(paymentId)}`;
+        let fetchHeaders = {};
+
+        // Opción 1: usuario autenticado via Firebase
+        if (window._firebaseAuth && window._firebaseAuth.currentUser) {
+            try {
+                const idToken = await window._firebaseAuth.currentUser.getIdToken();
+                fetchHeaders['Authorization'] = `Bearer ${idToken}`;
+            } catch (e) { console.warn('No se pudo obtener el token de sesión:', e.message); }
+        }
+
+        // Opción 2: token firmado desde el email (compradores sin sesión)
+        if (!fetchHeaders['Authorization'] && downloadToken) {
+            fetchUrl += `&token=${encodeURIComponent(downloadToken)}`;
+        }
+
+        const response = await fetch(fetchUrl, { headers: fetchHeaders });
         if (!response.ok) {
             throw new Error("No se pudo recuperar la información del pedido.");
         }
@@ -2371,9 +2688,19 @@ export async function loadBuyerDownloadPage(paymentId) {
     }
 }
 
-async function refreshDownloadHistory(paymentId) {
+async function refreshDownloadHistory(paymentId, downloadToken = '') {
     try {
-        const response = await fetch(`/api/get-order-downloads?id=${paymentId}`);
+        let fetchUrl = `/api/get-order-downloads?id=${encodeURIComponent(paymentId)}`;
+        let fetchHeaders = {};
+        if (window._firebaseAuth && window._firebaseAuth.currentUser) {
+            try {
+                const idToken = await window._firebaseAuth.currentUser.getIdToken();
+                fetchHeaders['Authorization'] = `Bearer ${idToken}`;
+            } catch (e) {}
+        } else if (downloadToken) {
+            fetchUrl += `&token=${encodeURIComponent(downloadToken)}`;
+        }
+        const response = await fetch(fetchUrl, { headers: fetchHeaders });
         if (response.ok) {
             const data = await response.json();
             const historyList = document.getElementById('buyer-download-history-list');
@@ -2410,4 +2737,92 @@ function renderDownloadLogs(downloads, container) {
 
 window.loadBuyerDownloadPage = loadBuyerDownloadPage;
 window.refreshDownloadHistory = refreshDownloadHistory;
+
+// EPK (Electronic Press Kit)
+export function renderEPK() {
+    const configData = window.storeProducerConfig || {};
+    
+    // Biografía
+    const bioText = document.getElementById('epk-bio-text');
+    if (bioText) {
+        bioText.textContent = configData.epkBio || "Este productor aún no ha redactado su biografía.";
+    }
+    
+    // Colaboraciones (Píldoras)
+    const collabsContainer = document.getElementById('epk-collabs-container');
+    if (collabsContainer) {
+        collabsContainer.innerHTML = '';
+        const collabsStr = configData.epkCollabs || '';
+        const collabsArray = collabsStr.split(',').map(c => c.trim()).filter(c => c.length > 0);
+        
+        if (collabsArray.length > 0) {
+            collabsArray.forEach(collab => {
+                const badge = document.createElement('span');
+                badge.className = "px-3 py-1.5 rounded-full text-xs font-semibold bg-white/5 border border-white/10 text-white shadow-sm hover:border-[var(--accent)]/50 transition-all cursor-default";
+                badge.textContent = collab;
+                collabsContainer.appendChild(badge);
+            });
+        } else {
+            collabsContainer.innerHTML = `<span class="text-xs text-on-surface-variant italic">No se han especificado colaboraciones clave.</span>`;
+        }
+    }
+    
+    // Estadísticas
+    // Beats en catálogo (Dinámico)
+    const statBeats = document.getElementById('epk-stat-beats');
+    if (statBeats) {
+        statBeats.textContent = window.storeBeats ? window.storeBeats.length : 0;
+    }
+    
+    // Ventas (Curado)
+    const statSales = document.getElementById('epk-stat-sales');
+    if (statSales) {
+        statSales.textContent = configData.epkSales || '0';
+    }
+    
+    // Streams (Curado)
+    const statStreams = document.getElementById('epk-stat-streams');
+    if (statStreams) {
+        statStreams.textContent = configData.epkStreams || '0';
+    }
+    
+    // PRO / IPI
+    const proName = document.getElementById('epk-pro-name');
+    if (proName) {
+        proName.textContent = configData.epkPro || "No afiliado / No especificado";
+    }
+    
+    if (window.lucide) window.lucide.createIcons();
+}
+
+export function switchStoreTab(tab) {
+    const tabBeats = document.getElementById('store-tab-beats');
+    const tabEpk = document.getElementById('store-tab-epk');
+    const sectionBeats = document.getElementById('beats-catalog-section');
+    const sectionEpk = document.getElementById('press-kit-section');
+    
+    if (!tabBeats || !tabEpk || !sectionBeats || !sectionEpk) return;
+    
+    if (tab === 'beats') {
+        // Activar tab beats
+        tabBeats.className = "px-6 py-2.5 rounded-full font-bold text-sm bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 transition-all hover:bg-[var(--accent)]/25 focus:outline-none flex items-center gap-2";
+        tabEpk.className = "px-6 py-2.5 rounded-full font-bold text-sm bg-white/5 text-on-surface-variant border border-white/10 transition-all hover:bg-white/10 focus:outline-none flex items-center gap-2";
+        
+        sectionBeats.style.display = 'block';
+        sectionEpk.style.display = 'none';
+    } else {
+        // Activar tab epk
+        tabBeats.className = "px-6 py-2.5 rounded-full font-bold text-sm bg-white/5 text-on-surface-variant border border-white/10 transition-all hover:bg-white/10 focus:outline-none flex items-center gap-2";
+        tabEpk.className = "px-6 py-2.5 rounded-full font-bold text-sm bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 transition-all hover:bg-[var(--accent)]/25 focus:outline-none flex items-center gap-2";
+        
+        sectionBeats.style.display = 'none';
+        sectionEpk.style.display = 'block';
+        
+        // Renderizar info del EPK
+        renderEPK();
+    }
+}
+
+window.renderEPK = renderEPK;
+window.switchStoreTab = switchStoreTab;
 

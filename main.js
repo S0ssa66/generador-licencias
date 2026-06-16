@@ -33,6 +33,7 @@ import './catalog.js';
 import './checkout.js';
 import './editor.js';
 import './dashboard.js';
+import './chatbot.js';
 
 // Alias locales para funciones en otros módulos asignadas al objeto global window
 const checkDocuSignOAuth = (...args) => window.checkDocuSignOAuth(...args);
@@ -579,7 +580,7 @@ function updatePlanUI() {
     window.currentUserIsPro = (producerConfig && (producerConfig.plan === 'pro' || producerConfig.plan === 'elite')) || window.currentUserIsAdmin;
     
     // Aplicar tema de color al contrato PDF
-    document.body.classList.remove('contract-theme-purple', 'contract-theme-red', 'contract-theme-blue', 'contract-theme-charcoal', 'contract-theme-gold');
+    document.body.classList.remove('contract-theme-purple', 'contract-theme-red', 'contract-theme-cyan', 'contract-theme-blue', 'contract-theme-charcoal', 'contract-theme-gold');
     if (window.currentUserIsPro && producerConfig && producerConfig.contractColor && producerConfig.contractColor !== 'default') {
         document.body.classList.add(`contract-theme-${producerConfig.contractColor}`);
     }
@@ -676,6 +677,8 @@ async function saveToLocalServer() {
             const email = auth.currentUser.email.toLowerCase();
             if (email === 'beatscgmonarco@gmail.com') {
                 legacyUser = 'cgmonarco';
+            } else if (email === 'mistermicua@gmail.com') {
+                legacyUser = 'mrmicua';
             }
         }
 
@@ -722,6 +725,8 @@ async function loadFromLocalServer() {
             const email = auth.currentUser.email.toLowerCase();
             if (email === 'beatscgmonarco@gmail.com') {
                 legacyUser = 'cgmonarco';
+            } else if (email === 'mistermicua@gmail.com') {
+                legacyUser = 'mrmicua';
             }
         }
 
@@ -812,6 +817,14 @@ if (document.readyState === 'loading') {
 async function initApp(user) {
     window.currentUser = user;
     document.getElementById('app-container').style.display = 'grid';
+    document.body.classList.add('admin-active');
+
+    // Resetear modos globales y actualizar UI del carrito
+    window.stateManager.setState('isGlobalCatalogMode', false);
+    window.stateManager.setState('isPublicStoreMode', false);
+    if (typeof window.updateCartUI === 'function') {
+        window.updateCartUI();
+    }
 
     // Ocultar y pausar reproductor de tienda pública al entrar al panel de administración
     const player = document.getElementById('store-audio-player');
@@ -842,6 +855,7 @@ async function initApp(user) {
     }
     
     await loadProducerConfig();
+    updatePlanUI();
     await loadTemplates();
 
     // Configurar logo y tema por defecto según el AKA cargado en el config
@@ -850,20 +864,25 @@ async function initApp(user) {
     if (logoImg && sidebarTitle) {
         const akaName = (producerConfig.aka || "").toLowerCase();
         const isMonarco = akaName.includes('monarco') || (auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() === 'beatscgmonarco@gmail.com');
+        const isMicua = akaName.includes('micua') || (auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() === 'mistermicua@gmail.com');
         const isSossa = akaName.includes('sossa') || window.currentUserIsAdmin;
 
         if (isSossa) {
             logoImg.innerHTML = '<i data-lucide="music"></i>';
             document.body.classList.add('theme-sossa');
-            document.body.classList.remove('theme-cgmonarco');
+            document.body.classList.remove('theme-cgmonarco', 'theme-mrmicua');
         } else if (isMonarco) {
             logoImg.innerHTML = '<i data-lucide="headphones"></i>';
-            document.body.classList.remove('theme-sossa');
+            document.body.classList.remove('theme-sossa', 'theme-mrmicua');
             document.body.classList.add('theme-cgmonarco');
+        } else if (isMicua) {
+            logoImg.innerHTML = '<img src="/producer_mrmicua.jpg" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">';
+            document.body.classList.remove('theme-sossa', 'theme-cgmonarco');
+            document.body.classList.add('theme-mrmicua');
         } else {
             logoImg.innerHTML = '<i data-lucide="music"></i>';
             document.body.classList.add('theme-sossa');
-            document.body.classList.remove('theme-cgmonarco');
+            document.body.classList.remove('theme-cgmonarco', 'theme-mrmicua');
         }
         
         sidebarTitle.textContent = 'BEATSS';
@@ -1002,11 +1021,11 @@ async function loadProducerConfig() {
                     gdriveClientId: "",
                     storageProvider: "gdrive-central"
                 };
-            } else if (currentEmail.toLowerCase() === 'masterjuego25@gmail.com') {
+            } else if (currentEmail.toLowerCase() === 'masterjuego25@gmail.com' || currentEmail.toLowerCase() === 'sossabeatz1@gmail.com') {
                 producerConfig = {
                     name: "Joao David Dominguez",
                     aka: "Sossa",
-                    email: "masterjuego25@gmail.com",
+                    email: currentEmail.toLowerCase(),
                     phone: "+593961201184",
                     place: "Quito, Ecuador",
                     id: "0803743111",
@@ -1022,6 +1041,28 @@ async function loadProducerConfig() {
                     emailjsTemplateId: "",
                     emailjsPublicKey: "",
                     gdriveClientId: "216966055009-03rjdnq87uh3h15e3qfglp2pnmos9t5k.apps.googleusercontent.com",
+                    storageProvider: "gdrive-central"
+                };
+            } else if (currentEmail.toLowerCase() === 'mistermicua@gmail.com') {
+                producerConfig = {
+                    name: "Mister Micua",
+                    aka: "Mr. Micua",
+                    email: "mistermicua@gmail.com",
+                    phone: "",
+                    place: "Quito, Ecuador",
+                    id: "1724567890",
+                    pro: "BMI",
+                    ipi: "",
+                    publisher: "Mr. Micua Music",
+                    address: "Quito, Ecuador",
+                    birthdate: "",
+                    dsClientId: "",
+                    dsAccountId: "",
+                    dsEnv: "demo",
+                    emailjsServiceId: "",
+                    emailjsTemplateId: "",
+                    emailjsPublicKey: "",
+                    gdriveClientId: "",
                     storageProvider: "gdrive-central"
                 };
             } else {
@@ -1145,6 +1186,28 @@ async function loadProducerConfig() {
     document.getElementById('cfg-payphone-client-id').value = producerConfig.payphoneClientId || "";
     document.getElementById('cfg-payphone-appid').value = producerConfig.payphoneAppId || "";
 
+    // Cargar datos de Facturación Electrónica SRI (Ecuador)
+    document.getElementById('cfg-sri-ruc').value = producerConfig.sriRuc || "";
+    document.getElementById('cfg-sri-razon-social').value = producerConfig.sriRazonSocial || "";
+    document.getElementById('cfg-sri-nombre-comercial').value = producerConfig.sriNombreComercial || "";
+    document.getElementById('cfg-sri-dir-matriz').value = producerConfig.sriDirMatriz || "";
+    document.getElementById('cfg-sri-estab').value = producerConfig.sriEstab || "001";
+    document.getElementById('cfg-sri-pto-emi').value = producerConfig.sriPtoEmi || "001";
+    document.getElementById('cfg-sri-ambiente').value = producerConfig.sriAmbiente || "1";
+    document.getElementById('cfg-sri-rimpe').value = producerConfig.sriRimpe || "no_rimpe";
+    document.getElementById('cfg-sri-contabilidad').value = producerConfig.sriContabilidad || "NO";
+    document.getElementById('cfg-sri-p12-password').value = producerConfig.sriP12Password || "";
+    
+    // Mostrar estado del archivo .p12 subido
+    const p12Status = document.getElementById('cfg-sri-p12-status');
+    if (p12Status) {
+        if (producerConfig.sriP12Base64) {
+            p12Status.innerHTML = '✅ <strong style="color: #4ade80;">Firma electrónica (.p12) cargada.</strong> Puedes subir otra si deseas reemplazarla.';
+        } else {
+            p12Status.innerHTML = 'Firma electrónica (.p12 / .pfx) no cargada. Sube tu archivo para emitir facturas digitales oficiales.';
+        }
+    }
+
     const isProOrElite = (producerConfig.plan === 'pro' || producerConfig.plan === 'elite' || window.currentUserIsAdmin);
     
     // Configurar campos de PayPal
@@ -1207,6 +1270,23 @@ async function loadProducerConfig() {
     }
     if (document.getElementById('cfg-contract-color')) {
         document.getElementById('cfg-contract-color').value = producerConfig.contractColor || "default";
+    }
+
+    // Rellenar datos del EPK
+    if (document.getElementById('cfg-epk-bio')) {
+        document.getElementById('cfg-epk-bio').value = producerConfig.epkBio || "";
+    }
+    if (document.getElementById('cfg-epk-pro')) {
+        document.getElementById('cfg-epk-pro').value = producerConfig.epkPro || "";
+    }
+    if (document.getElementById('cfg-epk-collabs')) {
+        document.getElementById('cfg-epk-collabs').value = producerConfig.epkCollabs || "";
+    }
+    if (document.getElementById('cfg-epk-sales')) {
+        document.getElementById('cfg-epk-sales').value = producerConfig.epkSales || "";
+    }
+    if (document.getElementById('cfg-epk-streams')) {
+        document.getElementById('cfg-epk-streams').value = producerConfig.epkStreams || "";
     }
     
     // Rellenar Brand Color y Cupones
@@ -1318,6 +1398,25 @@ async function loadProducerConfig() {
         }
     }
 
+    // Rellenar Tag de Audio
+    const audioTagNameSpan = document.getElementById('cfg-audio-tag-name');
+    const audioTagPreviewContainer = document.getElementById('cfg-audio-tag-preview-container');
+    const btnClearAudioTag = document.getElementById('btn-clear-audio-tag');
+
+    if (audioTagNameSpan && audioTagPreviewContainer && btnClearAudioTag) {
+        if (producerConfig.audioTagBase64) {
+            audioTagNameSpan.textContent = producerConfig.audioTagName || "Producer_Tag.mp3";
+            audioTagPreviewContainer.style.display = 'flex';
+            window.tempAudioTagBase64 = producerConfig.audioTagBase64;
+            window.tempAudioTagName = producerConfig.audioTagName;
+        } else {
+            audioTagNameSpan.textContent = '';
+            audioTagPreviewContainer.style.display = 'none';
+            window.tempAudioTagBase64 = null;
+            window.tempAudioTagName = null;
+        }
+    }
+
     // Cargar estado de la vinculación de Google para iniciar sesión
     updateGoogleLoginLinkStatus();
     window.producerConfig = producerConfig;
@@ -1342,6 +1441,8 @@ async function saveProducerConfig() {
         producerConfig.logoBase64 = "";
     }
     producerConfig.defaultBeatArtwork = window.tempDefaultArtworkBase64 || "";
+    producerConfig.audioTagBase64 = window.tempAudioTagBase64 || "";
+    producerConfig.audioTagName = window.tempAudioTagName || "";
     // Guardar campos de DocuSign
     const oldClientId = producerConfig.dsClientId;
     const oldEnv = producerConfig.dsEnv;
@@ -1375,6 +1476,23 @@ async function saveProducerConfig() {
         producerConfig.brandColor = "";
     }
     
+    // Guardar datos del EPK
+    if (document.getElementById('cfg-epk-bio')) {
+        producerConfig.epkBio = document.getElementById('cfg-epk-bio').value.trim();
+    }
+    if (document.getElementById('cfg-epk-pro')) {
+        producerConfig.epkPro = document.getElementById('cfg-epk-pro').value.trim();
+    }
+    if (document.getElementById('cfg-epk-collabs')) {
+        producerConfig.epkCollabs = document.getElementById('cfg-epk-collabs').value.trim();
+    }
+    if (document.getElementById('cfg-epk-sales')) {
+        producerConfig.epkSales = document.getElementById('cfg-epk-sales').value.trim();
+    }
+    if (document.getElementById('cfg-epk-streams')) {
+        producerConfig.epkStreams = document.getElementById('cfg-epk-streams').value.trim();
+    }
+    
     // Guardar datos de cobro de tienda pública
     producerConfig.bankPichinchaAcc = document.getElementById('cfg-bank-pichincha-acc').value.trim();
     producerConfig.bankPichinchaType = document.getElementById('cfg-bank-pichincha-type').value;
@@ -1393,6 +1511,21 @@ async function saveProducerConfig() {
     producerConfig.payphoneClientId = document.getElementById('cfg-payphone-client-id').value.trim();
     producerConfig.payphoneAppId = document.getElementById('cfg-payphone-appid').value.trim();
 
+    // Guardar datos de Facturación Electrónica SRI (Ecuador)
+    producerConfig.sriRuc = document.getElementById('cfg-sri-ruc').value.trim();
+    producerConfig.sriRazonSocial = document.getElementById('cfg-sri-razon-social').value.trim();
+    producerConfig.sriNombreComercial = document.getElementById('cfg-sri-nombre-comercial').value.trim();
+    producerConfig.sriDirMatriz = document.getElementById('cfg-sri-dir-matriz').value.trim();
+    producerConfig.sriEstab = document.getElementById('cfg-sri-estab').value.trim() || "001";
+    producerConfig.sriPtoEmi = document.getElementById('cfg-sri-pto-emi').value.trim() || "001";
+    producerConfig.sriAmbiente = document.getElementById('cfg-sri-ambiente').value;
+    producerConfig.sriRimpe = document.getElementById('cfg-sri-rimpe').value;
+    producerConfig.sriContabilidad = document.getElementById('cfg-sri-contabilidad').value;
+    producerConfig.sriP12Password = document.getElementById('cfg-sri-p12-password').value;
+    if (window.tempSriP12Base64) {
+        producerConfig.sriP12Base64 = window.tempSriP12Base64;
+    }
+
     // Si cambió el Client ID, limpiar token cacheado de Drive
     if (producerConfig.gdriveClientId !== (JSON.parse(localStorage.getItem(`${window.currentUser}_producer_config`) || '{}').gdriveClientId || '')) {
         sessionStorage.removeItem('gdrive_access_token');
@@ -1404,7 +1537,7 @@ async function saveProducerConfig() {
     const privateDocRef = doc(db, "users", window.currentUser, "private_config", "producer");
     
     // Separar datos públicos y privados
-    const privateKeys = ['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey', 'paypalClientSecret'];
+    const privateKeys = ['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey', 'paypalClientSecret', 'sriP12Password', 'sriP12Base64'];
     const publicConfig = { ...producerConfig };
     const privateConfig = {};
     
@@ -1708,6 +1841,8 @@ function importBackup(event) {
                 const email = auth.currentUser.email.toLowerCase();
                 if (email === 'beatscgmonarco@gmail.com') {
                     legacyUser = 'cgmonarco';
+                } else if (email === 'mistermicua@gmail.com') {
+                    legacyUser = 'mrmicua';
                 }
             }
 
@@ -1852,6 +1987,8 @@ async function restoreFromGoogleDrive() {
             const email = auth.currentUser.email.toLowerCase();
             if (email === 'beatscgmonarco@gmail.com') {
                 legacyUser = 'cgmonarco';
+            } else if (email === 'mistermicua@gmail.com') {
+                legacyUser = 'mrmicua';
             }
         }
 
@@ -1922,6 +2059,8 @@ async function autoSyncGoogleDrive() {
                         const email = auth.currentUser.email.toLowerCase();
                         if (email === 'beatscgmonarco@gmail.com') {
                             legacyUser = 'cgmonarco';
+                        } else if (email === 'mistermicua@gmail.com') {
+                            legacyUser = 'mrmicua';
                         }
                     }
 
@@ -2400,6 +2539,93 @@ function setupEventListeners() {
         });
     }
 
+    // Eventos de Tag de Audio del Productor
+    const btnUploadAudioTagEl = document.getElementById('btn-upload-audio-tag');
+    const fileAudioTagInputEl = document.getElementById('cfg-producer-audio-tag-file');
+    const btnClearAudioTagEl = document.getElementById('btn-clear-audio-tag');
+    const audioTagNameSpanEl = document.getElementById('cfg-audio-tag-name');
+    const audioTagPreviewContainerEl = document.getElementById('cfg-audio-tag-preview-container');
+
+    if (btnUploadAudioTagEl && fileAudioTagInputEl && btnClearAudioTagEl) {
+        btnUploadAudioTagEl.addEventListener('click', () => {
+            fileAudioTagInputEl.click();
+        });
+
+        fileAudioTagInputEl.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validar tipo de archivo (audio)
+            if (!file.type.startsWith('audio/')) {
+                showToast("❌ Por favor selecciona un archivo de audio válido.", true);
+                fileAudioTagInputEl.value = '';
+                return;
+            }
+
+            // Validar tamaño de archivo (máximo 1.5 MB para el tag)
+            const MAX_SIZE = 1.5 * 1024 * 1024;
+            if (file.size > MAX_SIZE) {
+                showToast("❌ El archivo es demasiado grande (máximo 1.5 MB).", true);
+                fileAudioTagInputEl.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                window.tempAudioTagBase64 = evt.target.result;
+                window.tempAudioTagName = file.name;
+                if (audioTagNameSpanEl) audioTagNameSpanEl.textContent = file.name;
+                if (audioTagPreviewContainerEl) audioTagPreviewContainerEl.style.display = 'flex';
+                showToast("🎵 Tag de audio cargado localmente (se guardará al actualizar configuración).");
+            };
+            reader.readAsDataURL(file);
+        });
+
+        btnClearAudioTagEl.addEventListener('click', () => {
+            fileAudioTagInputEl.value = '';
+            if (audioTagNameSpanEl) audioTagNameSpanEl.textContent = '';
+            if (audioTagPreviewContainerEl) audioTagPreviewContainerEl.style.display = 'none';
+            window.tempAudioTagBase64 = null;
+            window.tempAudioTagName = null;
+            showToast("🗑️ Tag de audio de la marca eliminado.");
+        });
+    }
+
+    // Eventos para subir archivo de firma electrónica (.p12) para SRI
+    const btnUploadSriP12El = document.getElementById('btn-upload-sri-p12');
+    const fileSriP12InputEl = document.getElementById('cfg-sri-p12-file');
+    const sriP12StatusEl = document.getElementById('cfg-sri-p12-status');
+
+    if (btnUploadSriP12El && fileSriP12InputEl) {
+        btnUploadSriP12El.addEventListener('click', () => {
+            fileSriP12InputEl.click();
+        });
+
+        fileSriP12InputEl.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validar extensión
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (ext !== 'p12' && ext !== 'pfx') {
+                showToast("❌ Por favor selecciona un archivo de firma electrónica válido (.p12 o .pfx).", true);
+                fileSriP12InputEl.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                // El resultado es un DataURL tipo data:application/x-pkcs12;base64,.....
+                window.tempSriP12Base64 = evt.target.result;
+                if (sriP12StatusEl) {
+                    sriP12StatusEl.innerHTML = `✅ <strong style="color: #4ade80;">Firma seleccionada localmente: ${file.name}</strong>. Recuerda guardar la configuración.`;
+                }
+                showToast("🔑 Archivo de firma .p12 cargado en memoria (se guardará al actualizar configuración).");
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
     // Eventos de carátula predeterminada (para todos los beats)
     const btnUploadDefaultArtworkEl = document.getElementById('btn-upload-default-artwork');
     const fileDefaultArtworkInputEl = document.getElementById('cfg-default-beat-artwork-file');
@@ -2505,7 +2731,7 @@ function setupEventListeners() {
         }
 
         // Mostrar/ocultar sidebar según el tab activo
-        if (tabId === 'tab-history' || tabId === 'tab-dashboard' || tabId === 'tab-admin' || tabId === 'tab-beats' || tabId === 'tab-sales') {
+        if (tabId === 'tab-history' || tabId === 'tab-dashboard' || tabId === 'tab-admin' || tabId === 'tab-beats' || tabId === 'tab-sales' || tabId === 'tab-whitelist') {
             sidebarEl && sidebarEl.classList.add('sidebar-hidden');
         } else {
             sidebarEl && sidebarEl.classList.remove('sidebar-hidden');
@@ -2524,6 +2750,11 @@ function setupEventListeners() {
         }
         if (tabId === 'tab-sales') {
             loadSalesData();
+        }
+        if (tabId === 'tab-whitelist') {
+            if (typeof window.loadWhitelistData === 'function') {
+                window.loadWhitelistData();
+            }
         }
     };
 
@@ -3108,6 +3339,17 @@ window.safeGetItem = safeGetItem;
 window.showAppView = function(viewName, params = null, pushState = true) {
     console.log("🚦 Cambiando a vista:", viewName, "con parámetros:", params);
     
+    // Toggle class active de administración en el body para el chatbot
+    if (viewName === 'home' && window.currentUser) {
+        document.body.classList.add('admin-active');
+    } else {
+        document.body.classList.remove('admin-active');
+    }
+    
+    // Resetear modos globales por defecto para evitar fugas visuales (como el carrito de compras)
+    window.stateManager.setState('isGlobalCatalogMode', false);
+    window.stateManager.setState('isPublicStoreMode', false);
+    
     // 1. Ocultar todos los contenedores principales
     const landing = document.getElementById('landing-page');
     if (landing) landing.style.display = 'none';
@@ -3142,8 +3384,8 @@ window.showAppView = function(viewName, params = null, pushState = true) {
         if (player) player.style.display = 'none';
     } 
     else if (viewName === 'catalog') {
-        window.isGlobalCatalogMode = true;
-        window.isPublicStoreMode = false;
+        window.stateManager.setState('isGlobalCatalogMode', true);
+        window.stateManager.setState('isPublicStoreMode', false);
         
         if (globalCatalog) globalCatalog.style.display = 'block';
         
@@ -3156,8 +3398,8 @@ window.showAppView = function(viewName, params = null, pushState = true) {
         }
     } 
     else if (viewName === 'store') {
-        window.isGlobalCatalogMode = false;
-        window.isPublicStoreMode = true;
+        window.stateManager.setState('isGlobalCatalogMode', false);
+        window.stateManager.setState('isPublicStoreMode', true);
         
         if (publicStore) publicStore.style.display = 'block';
         
@@ -3172,20 +3414,29 @@ window.showAppView = function(viewName, params = null, pushState = true) {
         }
     }
     else if (viewName === 'download') {
-        window.isGlobalCatalogMode = false;
-        window.isPublicStoreMode = false;
+        window.stateManager.setState('isGlobalCatalogMode', false);
+        window.stateManager.setState('isPublicStoreMode', false);
         
         if (buyerDownload) buyerDownload.style.display = 'block';
         
         const paymentId = params?.paymentId;
+        const downloadToken = params?.downloadToken || '';
         if (paymentId) {
             if (pushState) {
-                history.pushState({ view: 'download', paymentId: paymentId }, '', '?download=' + encodeURIComponent(paymentId));
+                const qs = downloadToken
+                    ? `?download=${encodeURIComponent(paymentId)}&token=${encodeURIComponent(downloadToken)}`
+                    : `?download=${encodeURIComponent(paymentId)}`;
+                history.pushState({ view: 'download', paymentId }, '', qs);
             }
             if (typeof window.loadBuyerDownloadPage === 'function') {
-                window.loadBuyerDownloadPage(paymentId);
+                window.loadBuyerDownloadPage(paymentId, downloadToken);
             }
         }
+    }
+    
+    // Actualizar la interfaz del carrito
+    if (typeof window.updateCartUI === 'function') {
+        window.updateCartUI();
     }
 };
 
@@ -3193,12 +3444,16 @@ window.showAppView = function(viewName, params = null, pushState = true) {
 document.getElementById('btn-sales-refresh')?.addEventListener('click', loadSalesData);
 
 function handleInitialRouting() {
+    if (typeof window.checkPayphoneSubscriptionRedirectResult === 'function') {
+        window.checkPayphoneSubscriptionRedirectResult();
+    }
     checkPayphoneRedirectResult();
     const urlParams = new URLSearchParams(window.location.search);
     const downloadId = urlParams.get('download') || urlParams.get('order');
+    const downloadToken = urlParams.get('token') || '';
     const producerAka = urlParams.get('p') || urlParams.get('producer');
     if (downloadId) {
-        window.showAppView('download', { paymentId: downloadId }, false);
+        window.showAppView('download', { paymentId: downloadId, downloadToken }, false);
     } else if (producerAka) {
         window.showAppView('store', { producer: producerAka }, false);
     } else if (urlParams.has('catalogo') || window.location.hash === '#catalogo') {
@@ -3212,9 +3467,10 @@ function handleInitialRouting() {
 window.addEventListener('popstate', (event) => {
     const urlParams = new URLSearchParams(window.location.search);
     const downloadId = urlParams.get('download') || urlParams.get('order');
+    const downloadToken = urlParams.get('token') || '';
     const producerAka = urlParams.get('p') || urlParams.get('producer');
     if (downloadId) {
-        window.showAppView('download', { paymentId: downloadId }, false);
+        window.showAppView('download', { paymentId: downloadId, downloadToken }, false);
     } else if (producerAka) {
         window.showAppView('store', { producer: producerAka }, false);
     } else if (urlParams.has('catalogo')) {
@@ -3296,6 +3552,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         });
+    }
+
+    // Inicializar chatbot virtual
+    if (typeof window.initChatbot === 'function') {
+        window.initChatbot();
     }
 });
 

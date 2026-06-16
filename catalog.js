@@ -26,7 +26,7 @@ window.globalBeats = window.globalBeats || [];
 window.filteredGlobalBeats = window.filteredGlobalBeats || [];
 window.globalProducersConfig = window.globalProducersConfig || {};
 window.lastGlobalBeatDoc = window.lastGlobalBeatDoc || null;
-window.isGlobalCatalogMode = window.isGlobalCatalogMode || false;
+window.isGlobalCatalogMode = window.stateManager.getState('isGlobalCatalogMode');
 
 // Variables para el control de subidas de archivos
 let activeUploadTarget = null;
@@ -1159,7 +1159,7 @@ export async function saveTabBeat() {
 // =======================================================
 // GLOBAL CATALOG IMPLEMENTATION (MARKETPLACE)
 // =======================================================
-window.isGlobalCatalogMode = false;
+window.stateManager.setState('isGlobalCatalogMode', false);
 window.globalProducersConfig = {};
 window.globalBeats = [];
 window.filteredGlobalBeats = [];
@@ -1168,8 +1168,8 @@ const PAGE_SIZE = 12;
 
 export async function initGlobalCatalog() {
     console.log("🌍 Cargando Catálogo Global de BEATSS (Paginado)...");
-    window.isGlobalCatalogMode = true;
-    window.isPublicStoreMode = false;
+    window.stateManager.setState('isGlobalCatalogMode', true);
+    window.stateManager.setState('isPublicStoreMode', false);
 
     // Ocultar otras pantallas
     document.getElementById('login-modal').style.display = 'none';

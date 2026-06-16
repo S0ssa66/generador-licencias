@@ -71,6 +71,27 @@ export const LICENSE_CONFIGS = {
     }
 };
 
+export const SUBSCRIPTION_CONFIGS = {
+    creator: {
+        id: "creator",
+        name: "Plan Creador",
+        price: 9.99,
+        period: "Mensual",
+        downloadsLimit: 5,
+        licenseType: "basic",
+        desc: "Acceso a 5 descargas mensuales bajo Licencia Básica. Ideal para nuevos artistas."
+    },
+    pro_artist: {
+        id: "pro_artist",
+        name: "Plan Artista Pro",
+        price: 19.99,
+        period: "Mensual",
+        downloadsLimit: 15,
+        licenseType: "premium",
+        desc: "Acceso a 15 descargas mensuales bajo Licencia Premium. Ideal para cantantes activos."
+    }
+};
+
 export const SEED_LICENSES = [
     {
         refCode: "BSGUEST_0413063001733767700_1750860020567910",
@@ -516,5 +537,76 @@ Credits of the resulting composition will always be listed in the following mann
 
 ---
 *End of Co-production Agreement — BEATSS.*`
+    },
+    {
+        id: "contrato_suscripcion",
+        name: "Contrato de Suscripción Recurrente",
+        markdown: `# {{producer_aka}}: Contrato de Suscripción y Licenciamiento de Beats
+## Términos del Acuerdo de Suscripción Musical Recurrente
+
+---
+
+### Información General
+* **Referencia de Suscripción:** SUB-{{ref_code}}
+* **Fecha de Inicio:** {{effective_date}}
+* **Plan de Suscripción:** {{license_type}}
+* **Tarifa Recurrente:** \${{license_value}} USD {{license_value_letters}} al mes.
+
+---
+
+### Partes Contratantes
+1. **El Productor:** {{producer_name}} (AKA: **{{producer_aka}}**), con identificación Nro. {{producer_id}}.
+2. **El Suscriptor (Artista):** {{buyer_name}}, con identificación Nro. {{buyer_id}}.
+
+---
+
+## Cláusulas de la Suscripción
+
+### 1. Objeto del Acuerdo
+El Artista se suscribe al Plan {{license_type}} para descargar un máximo de instrumentales por periodo de facturación, bajo las condiciones de la Licencia Básica o Premium según corresponda al plan contratado.
+
+### 2. Validez y Cobro Recurrente
+Este contrato es válido únicamente mientras la suscripción mensual de \${{license_value}} USD se encuentre activa y al día en su pago. La falta de pago de una mensualidad suspende de forma inmediata el derecho del Artista de seguir explotando comercialmente las obras descargadas hasta que se regularice el cobro.
+
+### 3. Límites de Descargas y Uso
+Las canciones derivadas que el Artista grabe con los beats descargados durante la suscripción activa mantendrán sus derechos de distribución en plataformas digitales (Spotify, YouTube, etc.) siempre que la suscripción continúe vigente o se adquieran de por vida.
+
+### 4. Propiedad Intelectual y Splits
+Los beats siguen siendo propiedad exclusiva del Productor. Se establece un split de regalías de composición y publishing del 50% para el Artista y 50% para el Productor.
+
+---
+*Fin del Contrato de Suscripción — BEATSS.*`,
+        markdown_en: `# {{producer_aka}}: Subscription and Beat Licensing Agreement
+## Terms of the Recurring Musical Subscription Agreement
+
+---
+
+### General Information
+* **Subscription Reference:** SUB-{{ref_code}}
+* **Effective Date:** {{effective_date}}
+* **Subscription Plan:** {{license_type}}
+* **Recurring Fee:** \${{license_value}} USD per month.
+
+---
+
+### Parties
+1. **The Producer:** {{producer_name}} (AKA: **{{producer_aka}}**), with ID/Passport No. {{producer_id}}.
+2. **The Subscriber (Artist):** {{buyer_name}}, with ID No. {{buyer_id}}.
+
+---
+
+## Subscription Clauses
+
+### 1. Object of the Agreement
+The Artist subscribes to the {{license_type}} Plan to download beats under the terms of the Basic or Premium License according to the selected plan.
+
+### 2. Validity and Recurring Fee
+This contract is valid only while the monthly payment of \${{license_value}} USD is active and paid. Failure to pay will suspend the Artist's commercial exploitation rights immediately.
+
+### 3. Royalties and Splits
+The beats remain the exclusive property of the Producer. Composition and publishing royalties are split 50% for the Artist and 50% for the Producer.
+
+---
+*End of Subscription Agreement — BEATSS.*`
     }
 ];

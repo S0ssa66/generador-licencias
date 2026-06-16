@@ -3,10 +3,14 @@
 
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import crypto from 'crypto';
 
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://generador-licencias.vercel.app';
-const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY || process.env.FIREBASE_PRIVATE_KEY || 'default_fallback_secret';
+const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY;
+if (!SIGNING_SECRET) {
+    console.error('FATAL: La variable de entorno DOWNLOAD_SIGNING_KEY no está configurada.');
+}
 
 function getSignedProxyUrl(rawUrl, host, paymentId, fileType) {
     if (!rawUrl) return '';
@@ -30,12 +34,31 @@ function getSignedProxyUrl(rawUrl, host, paymentId, fileType) {
     
     if (!fileId) return rawUrl;
     
-    const expires = Math.floor(Date.now() / 1000) + 86400 * 7; // 7 días
+    // WAV y Stems expiran en 24 horas, MP3 en 7 días
+    const duration = (fileType === 'wav' || fileType === 'stems') ? 86400 : 86400 * 7;
+    const expires = Math.floor(Date.now() / 1000) + duration;
     const dataToSign = `${fileId}:${expires}:${paymentId || ''}:${fileType || ''}`;
     const signature = crypto.createHmac('sha256', SIGNING_SECRET).update(dataToSign).digest('hex');
     
     const baseUrl = host ? `https://${host}` : ALLOWED_ORIGIN;
     return `${baseUrl}/api/proxy-audio?id=${fileId}&expires=${expires}&paymentId=${paymentId || ''}&fileType=${fileType || ''}&signature=${signature}`;
+}
+
+// Verifica si una firma de acceso es válida para el paymentId dado
+// La firma fue generada por getSignedProxyUrl, que incluye un fileId específico.
+// Para el endpoint de descarga, verificamos la presencia de una firma válida vía el paymentId.
+function verifyAccessSignature(paymentId, accessToken) {
+    if (!accessToken || !SIGNING_SECRET || !paymentId) return false;
+    // El token de acceso para la página de descargas es: HMAC(paymentId:download, secret)
+    const expected = crypto.createHmac('sha256', SIGNING_SECRET)
+        .update(`${paymentId}:download`)
+        .digest('hex');
+    try {
+        if (crypto.timingSafeEqual(Buffer.from(accessToken, 'hex'), Buffer.from(expected, 'hex'))) {
+            return true;
+        }
+    } catch (e) {}
+    return false;
 }
 
 function initFirebaseAdmin() {
@@ -50,17 +73,48 @@ function initFirebaseAdmin() {
 }
 
 export default async function handler(req, res) {
-    // CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // CORS - restringido al dominio propio
+    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'GET') return res.status(405).json({ error: 'Método no permitido' });
 
     const paymentId = req.query.id;
+    const accessToken = req.query.token; // Token de acceso firmado para la página de descargas
+
     if (!paymentId) {
         return res.status(400).json({ error: 'Falta el ID del pago.' });
+    }
+
+    // Verificar acceso: firma válida de descarga O token de sesión Firebase (admin/productor)
+    let isAuthorized = false;
+
+    // Opción 1: token de acceso firmado (compradores que llegan desde el email de confirmación)
+    if (verifyAccessSignature(paymentId, accessToken)) {
+        isAuthorized = true;
+    }
+
+    // Opción 2: token de sesión Firebase (admin o productor autenticado)
+    if (!isAuthorized) {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const idToken = authHeader.split('Bearer ')[1];
+            try {
+                initFirebaseAdmin();
+                const decoded = await getAuth().verifyIdToken(idToken);
+                if (decoded && decoded.uid) {
+                    isAuthorized = true;
+                }
+            } catch (e) {
+                console.warn('Token inválido en get-order-downloads:', e.message);
+            }
+        }
+    }
+
+    if (!isAuthorized) {
+        return res.status(401).json({ error: 'No autorizado. Se requiere un enlace de descarga válido o una sesión activa.' });
     }
 
     try {
@@ -140,6 +194,6 @@ export default async function handler(req, res) {
 
     } catch (err) {
         console.error('Error al obtener datos de descargas:', err);
-        return res.status(500).json({ error: 'Error interno del servidor.', details: err.message });
+        return res.status(500).json({ error: 'Error interno del servidor.' });
     }
 }

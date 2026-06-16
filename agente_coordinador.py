@@ -88,6 +88,8 @@ Tienes disponibles los siguientes subagentes especialistas:
 19. `growth_hacker`: Embudos de conversión, email marketing y adquisición de tráfico de artistas.
 20. `rights_manager`: Reclamaciones de copyright, disputas de Content ID y whitelisting de YouTube.
 21. `branding_specialist`: Marca personal de Sossa, relaciones públicas, outreach y redes sociales.
+22. `sri_tax_advisor`: Asesoría tributaria del SRI (Ecuador), facturación electrónica, firma .p12 (XAdES-BES) y RIDE PDF.
+
 
 Dado el requerimiento del usuario, debes decidir a quién(es) delegar y qué preguntarles. Puedes delegar a uno o más subagentes en paralelo.
 Responde estrictamente en formato JSON con la siguiente estructura:
@@ -109,31 +111,42 @@ Eres el agente especialista `{rol}` de la plataforma BEATSS.
 Tu system prompt específico es:
 {prompt_especifico}
 
+--- MEMORIA A LARGO PLAZO ---
+Esta es tu memoria de ejecuciones y decisiones previas (recuperada del disco):
+{memoria_persistente}
+-----------------------------
+
 Tienes acceso a herramientas locales para interactuar con la base de código. Puedes usar estas herramientas de forma iterativa antes de dar tu respuesta final:
 1. `list_dir(path)`: Lista los contenidos de un directorio.
 2. `read_file(path)`: Lee el contenido completo de un archivo de texto.
 3. `read_file_lines(path, start_line, end_line)`: Lee únicamente un rango específico de líneas (1-indexed, inclusive) de un archivo. ¡Úsala preferentemente para archivos grandes para ahorrar tokens!
-4. `write_file(path, content)`: Escribe o modifica un archivo de texto (requiere confirmación del usuario).
+4. `search_grep(pattern)`: Busca un patrón de texto de forma global en todos los archivos del proyecto. ¡Úsala para ubicar funciones, variables o lógica en segundos!
+5. `write_file(path, content)`: Escribe o modifica un archivo de texto (requiere confirmación del usuario).
 
 Para usar una herramienta, debes responder con un objeto JSON válido con la siguiente estructura:
 {{
   "pensamiento": "Tu razonamiento detallado sobre qué información necesitas de la base de código o qué acción vas a tomar.",
   "tool_use": {{
-    "tool": "list_dir" | "read_file" | "read_file_lines" | "write_file",
-    "path": "ruta_relativa_del_archivo_o_directorio",
+    "tool": "list_dir" | "read_file" | "read_file_lines" | "search_grep" | "write_file",
+    "path": "ruta_relativa_del_archivo_o_directorio" (para list_dir, read_file, read_file_lines, write_file),
+    "pattern": "patrón_de_búsqueda" (solo si la tool es search_grep),
     "start_line": numero_linea_inicio (solo si tool es read_file_lines),
     "end_line": numero_linea_fin (solo si tool es read_file_lines),
     "content": "Contenido completo a escribir (solo si tool es write_file)"
   }}
 }}
 
-Cuando tengas toda la información necesaria y no requieras usar más herramientas, responde con tu solución final usando esta estructura:
+Cuando tengas toda la información necesaria y no requieras usar más herramientas, responde con tu solución final.
+Si consideras que has hecho o descubierto algo relevante sobre el proyecto que necesitas recordar para tus futuras ejecuciones de este rol, describe brevemente esa información en "actualizar_memoria" (máximo 3-4 líneas). Esta información se inyectará en tu prompt en ejecuciones futuras.
+
+Estructura de respuesta final:
 {{
   "pensamiento": "Razonamiento final sobre la solución basada en el análisis.",
   "tool_use": {{
     "tool": "none"
   }},
-  "respuesta": "Tu respuesta técnica detallada y solución final para el Director."
+  "respuesta": "Tu respuesta técnica detallada y solución final para el Director.",
+  "actualizar_memoria": "Lo que deseas recordar para futuras consultas de este rol (opcional, máximo 3-4 líneas)."
 }}
 
 IMPORTANTE: Responde estrictamente en formato JSON. No incluyas explicaciones de texto fuera del JSON. Si solicitas usar una herramienta, el sistema ejecutará la acción y te proporcionará la OBSERVACIÓN de retorno en el siguiente turno.
@@ -271,6 +284,14 @@ Tus prioridades:
 1. Definir la estética, tono de comunicación y narrativa (storytelling) para las redes sociales oficiales.
 2. Redactar plantillas de acercamiento persuasivas (outreach) para proponer coproducciones.
 3. Diseñar estrategias de lanzamientos discográficos liderados por el productor.
+""",
+    "sri_tax_advisor": """
+Eres el Agente Especialista en Facturación Electrónica y Asesoría Tributaria del SRI de BEATSS. Tu misión es estructurar, auditar y resolver problemas de facturación, firma de XMLs (XAdES-BES) con certificados .p12 y la transmisión de facturas al SRI.
+Tus prioridades:
+1. Validar e implementar reglas de facturación electrónica del SRI (Ecuador).
+2. Auditar la generación del XML v2.1.0 y la firma digital XAdES-BES.
+3. Diagnosticar problemas de red SOAP, rechazos del SRI y validación de secuenciales.
+4. Asegurar que las representaciones impresas (RIDE PDF) sean legibles, estéticas y normativas.
 """
 }
 
@@ -279,6 +300,10 @@ Eres el Agente Principal (Director de Proyecto) de BEATSS.
 Has consultado a tus subagentes especializados y has recibido sus respuestas y cambios realizados.
 Ahora debes presentarle una respuesta final consolidada, profesional y amigable al usuario en español.
 Explica detalladamente lo que hicieron o propusieron los subagentes para resolver su requerimiento.
+
+--- HISTORIAL DE LA CONVERSACIÓN DE LA SESIÓN ---
+{historial_conversacion}
+------------------------------------------------
 
 Requerimiento del usuario: {user_query}
 
@@ -309,14 +334,15 @@ AGENT_COLORS = {
     "token_optimizer": C_BLUE,
     "growth_hacker": C_MAGENTA,
     "rights_manager": C_RED,
-    "branding_specialist": C_CYAN
+    "branding_specialist": C_CYAN,
+    "sri_tax_advisor": C_BLUE
 }
 
 def GET_COLOR_FOR_ROL(rol):
     return AGENT_COLORS.get(rol.lower().strip(), C_WHITE)
 
 def call_gemini(system_instruction, user_content, response_json=False):
-    """Realiza una petición HTTP directa al API de Gemini."""
+    """Realiza una petición HTTP directa al API de Gemini con reintentos automáticos ante límite de cuota (429)."""
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
     
     generation_config = {
@@ -345,17 +371,45 @@ def call_gemini(system_instruction, user_content, response_json=False):
         "Content-Type": "application/json"
     }
     
-    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-    try:
-        with urllib.request.urlopen(req) as response:
-            res_data = json.loads(response.read().decode("utf-8"))
-            return res_data["candidates"][0]["content"]["parts"][0]["text"]
-    except urllib.error.HTTPError as e:
-        print(f"\n{C_RED}❌ Error del API de Gemini: {e.read().decode('utf-8')}{C_RESET}")
-        return None
-    except Exception as e:
-        print(f"\n{C_RED}❌ Error de red: {str(e)}{C_RESET}")
-        return None
+    max_retries = 5
+    backoff_factor = 2
+    initial_delay = 5  # segundos
+    
+    for attempt in range(max_retries):
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                return res_data["candidates"][0]["content"]["parts"][0]["text"]
+        except urllib.error.HTTPError as e:
+            error_code = e.code
+            error_body = e.read().decode('utf-8')
+            
+            if error_code in [429, 503, 500, 502, 504]:
+                delay = initial_delay * (backoff_factor ** attempt)
+                # Intentar extraer el tiempo sugerido de espera del mensaje si existe
+                try:
+                    err_json = json.loads(error_body)
+                    msg = err_json.get("error", {}).get("message", "")
+                    if "retry in" in msg.lower():
+                        # Ejemplo: "Please retry in 30.347492713s."
+                        suggested_time = float(msg.lower().split("retry in")[1].strip().split("s")[0])
+                        delay = max(delay, suggested_time + 1)
+                except Exception:
+                    pass
+                
+                print(f"\n{C_YELLOW}⚠️ Error temporal del API de Gemini ({error_code}). Reintentando en {delay:.1f} segundos (intento {attempt + 1}/{max_retries})...{C_RESET}")
+                time.sleep(delay)
+                continue
+            else:
+                print(f"\n{C_RED}❌ Error del API de Gemini: {error_body}{C_RESET}")
+                return None
+        except Exception as e:
+            print(f"\n{C_RED}❌ Error de red: {str(e)}{C_RESET}")
+            return None
+            
+    print(f"\n{C_RED}❌ Se superó el número máximo de reintentos tras errores de Gemini.{C_RESET}")
+    return None
 
 def clean_and_parse_json(text):
     """Extrae y parsea un objeto JSON de una respuesta de texto."""
@@ -423,10 +477,13 @@ def run_tool_read_file(path):
         return f"Error: '{path}' es un directorio. Usa list_dir en su lugar."
         
     try:
+        file_size = os.path.getsize(safe_path)
+        # Límite de 20KB para forzar lectura parcial en archivos grandes
+        if file_size > 20480:
+            return f"Error: El archivo '{path}' es demasiado grande ({file_size / 1024:.1f} KB). Por cuestiones de eficiencia de tokens y límites de la API (como el Error 429), la lectura completa de archivos mayores a 20 KB está deshabilitada. Por favor, utiliza la herramienta 'read_file_lines' indicando un rango de líneas específico (ej. start_line=1, end_line=150) para examinar este archivo en partes."
+            
         with open(safe_path, "r", encoding="utf-8", errors="replace") as f:
-            content = f.read(100000) # Límite de 100KB para el contexto
-            if len(content) == 100000:
-                content += "\n... [Contenido truncado por tamaño] ..."
+            content = f.read()
             return content
     except Exception as e:
         return f"Error al leer el archivo: {str(e)}"
@@ -527,20 +584,154 @@ def run_tool_write_file(rol, path, content):
         return f"Error al escribir el archivo: {str(e)}"
 
 def format_conversation_for_llm(history):
-    """Convierte el historial de turnos en una cadena de texto plana."""
+    """Convierte el historial de turnos en una cadena de texto plana, optimizando el contexto de archivos antiguos."""
     formatted = ""
-    for turn in history:
+    last_user_index = -1
+    
+    # Encontrar el índice del último mensaje del usuario/herramienta
+    for i in range(len(history) - 1, -1, -1):
+        if history[i]["role"] == "user":
+            last_user_index = i
+            break
+            
+    for idx, turn in enumerate(history):
         role = turn["role"]
         content = turn["content"]
+        
         if role == "user":
+            # Si es una observación de lectura de archivo antigua (no es el último mensaje del usuario)
+            if idx != last_user_index and ("OBSERVACIÓN de read_file" in content or "OBSERVACIÓN de read_file_lines" in content):
+                # Extraer la primera línea para mostrar qué archivo se leyó
+                file_info = "Lectura de archivo"
+                for line in content.split("\n"):
+                    if "OBSERVACIÓN de" in line:
+                        file_info = line.strip()
+                        break
+                content = f"{file_info}\n[Contenido largo del archivo omitido para ahorrar tokens en turnos históricos]"
+                
             formatted += f"\n[Usuario / Observación de Herramienta]:\n{content}\n"
         elif role == "model":
             formatted += f"\n[Tu respuesta JSON anterior]:\n{content}\n"
     return formatted
 
+# Rutas de persistencia de memoria
+SESSION_MEMORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "session_memory.json")
+SUBAGENT_MEMORIES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "subagent_memories.json")
+
+def load_session_memory():
+    """Carga el historial de conversación guardado."""
+    if os.path.exists(SESSION_MEMORY_FILE):
+        try:
+            with open(SESSION_MEMORY_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def save_session_memory(memory):
+    """Guarda el historial de conversación, limitándolo a las últimas 30 interacciones."""
+    try:
+        with open(SESSION_MEMORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(memory[-30:], f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error al guardar memoria de sesión: {e}")
+
+def summarize_history_if_needed(history):
+    """
+    Si el historial supera los 8 turnos, genera una memoria sintetizada de los turnos antiguos 
+    para mantener el contexto histórico sin saturar la ventana de tokens.
+    """
+    if len(history) <= 8:
+        return ""
+        
+    print(f"\n{C_GRAY}[Token Optimizer] 🧠 Optimizando contexto: Sumarizando turnos antiguos de la sesión...{C_RESET}")
+    
+    # Formatear la parte antigua a resumir (excluyendo los últimos 4 turnos)
+    part_to_summarize = history[:-4]
+    text_to_summarize = ""
+    for turno in part_to_summarize:
+        text_to_summarize += f"Usuario: {turno.get('usuario', '')}\nBEATSS: {turno.get('asistente', '')}\n\n"
+        
+    system_prompt = """
+    Eres el Agente Token Optimizer de BEATSS. Tu única tarea es escribir un resumen ultra-condensado (máximo 4 líneas)
+    que capture las decisiones clave, archivos modificados y el progreso de la conversación histórica que se te proporciona.
+    Sé muy directo y conciso. Evita introducciones o comentarios adicionales. Responde en español.
+    """
+    
+    summary = call_gemini(system_prompt, text_to_summarize, response_json=False)
+    if summary:
+        return f"--- RESUMEN DE LA SESIÓN ANTERIOR (MEMORIA HISTÓRICA) ---\n{summary.strip()}\n--------------------------------------------------------\n\n"
+    return ""
+
+def load_subagent_memories():
+    """Carga las memorias a largo plazo de todos los subagentes."""
+    if os.path.exists(SUBAGENT_MEMORIES_FILE):
+        try:
+            with open(SUBAGENT_MEMORIES_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_subagent_memory(rol, memory_text):
+    """Guarda o actualiza la memoria de un subagente específico."""
+    try:
+        memories = load_subagent_memories()
+        memories[rol.lower().strip()] = memory_text
+        with open(SUBAGENT_MEMORIES_FILE, "w", encoding="utf-8") as f:
+            json.dump(memories, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error al guardar memoria del subagente {rol}: {e}")
+
+def get_subagent_memory(rol):
+    """Obtiene la memoria guardada de un subagente."""
+    memories = load_subagent_memories()
+    return memories.get(rol.lower().strip(), "No tienes registros previos en tu memoria a largo plazo.")
+
+def run_tool_search_grep(pattern):
+    """Busca un patrón de texto en todos los archivos del proyecto de forma rápida y segura."""
+    if not pattern:
+        return "Error: Debes proporcionar un patrón de búsqueda."
+    
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    matches = []
+    max_matches = 30
+    
+    for root, dirs, files in os.walk(base_dir):
+        # Excluir carpetas de desarrollo ruidosas
+        dirs[:] = [d for d in dirs if d not in [".git", "node_modules", ".venv", ".vercel", "dist"]]
+        
+        for file in files:
+            # Excluir binarios y archivos de datos irrelevantes
+            if file.endswith((".png", ".jpg", ".jpeg", ".gif", ".pdf", ".zip", ".tar", ".gz", ".db", ".sqlite", ".DS_Store", "session_memory.json", "subagent_memories.json")):
+                continue
+                
+            full_path = os.path.join(root, file)
+            rel_path = os.path.relpath(full_path, base_dir)
+            
+            try:
+                with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+                    for line_num, line in enumerate(f, 1):
+                        if pattern.lower() in line.lower():
+                            matches.append(f"{rel_path}:{line_num}: {line.strip()}")
+                            if len(matches) >= max_matches:
+                                return f"[Se muestran las primeras {max_matches} coincidencias para '{pattern}']:\n" + "\n".join(matches) + "\n... (más coincidencias encontradas)"
+            except Exception:
+                continue
+                
+    if not matches:
+        return f"No se encontraron coincidencias para '{pattern}' en el proyecto."
+        
+    return f"[Coincidencias encontradas para '{pattern}']:\n" + "\n".join(matches)
+
 def execute_subagent_react_loop(rol, prompt_especifico, consulta):
     """Ejecuta el loop ReAct (Reasoning + Acting) para que el subagente use herramientas locales."""
-    system_instruction = SUBAGENT_BASE_PROMPT.format(rol=rol, prompt_especifico=prompt_especifico)
+    memoria_persistente = get_subagent_memory(rol)
+    system_instruction = SUBAGENT_BASE_PROMPT.format(
+        rol=rol, 
+        prompt_especifico=prompt_especifico,
+        memoria_persistente=memoria_persistente
+    )
     
     conversation_history = [
         {"role": "user", "content": consulta}
@@ -571,11 +762,21 @@ def execute_subagent_react_loop(rol, prompt_especifico, consulta):
         print(f"{color}[Agente {rol}] 🧠 Pensamiento: {C_GRAY}{pensamiento}{C_RESET}")
         
         if tool_name == "none" or not tool_name:
+            # Guardar/actualizar la memoria persistente del agente si solicita recordar algo nuevo
+            nueva_memoria = agent_decision.get("actualizar_memoria")
+            if nueva_memoria:
+                print(f"{color}[Agente {rol}] 💾 Recordando: {C_GRAY}{nueva_memoria}{C_RESET}")
+                save_subagent_memory(rol, nueva_memoria)
+            
             # El agente ya terminó su análisis y devuelve su respuesta
             return agent_decision.get("respuesta", "Operación completada.")
             
         # Ejecutar herramienta
-        print(f"{color}[Agente {rol}] 🛠  Herramienta: {C_BOLD}{tool_name}{C_RESET} ➔ {C_CYAN}{tool_path}{C_RESET}")
+        if tool_name == "search_grep":
+            pattern = tool_use.get("pattern", "")
+            print(f"{color}[Agente {rol}] 🛠  Herramienta: {C_BOLD}{tool_name}{C_RESET} ➔ Buscando: '{pattern}'{C_RESET}")
+        else:
+            print(f"{color}[Agente {rol}] 🛠  Herramienta: {C_BOLD}{tool_name}{C_RESET} ➔ {C_CYAN}{tool_path}{C_RESET}")
         
         observation = ""
         if tool_name == "read_file":
@@ -584,6 +785,9 @@ def execute_subagent_react_loop(rol, prompt_especifico, consulta):
             start_line = tool_use.get("start_line", 1)
             end_line = tool_use.get("end_line", 100)
             observation = run_tool_read_file_lines(tool_path, start_line, end_line)
+        elif tool_name == "search_grep":
+            pattern = tool_use.get("pattern", "")
+            observation = run_tool_search_grep(pattern)
         elif tool_name == "list_dir":
             observation = run_tool_list_dir(tool_path)
         elif tool_name == "write_file":
@@ -597,13 +801,114 @@ def execute_subagent_react_loop(rol, prompt_especifico, consulta):
         
     return f"Se alcanzó el límite de iteraciones (ReAct) del Agente de {rol} sin solución definitiva."
 
+def run_agent_pipeline(user_query, progress_callback=None):
+    """
+    Ejecuta todo el pipeline de enrutamiento, delegación, ejecución ReAct y síntesis.
+    Permite un progress_callback(mensaje_progreso) para actualizar el estado externamente.
+    """
+    def log_progress(msg):
+        if progress_callback:
+            progress_callback(msg)
+        else:
+            print(msg)
+
+    # 1. Cargar historial de conversación de la sesión
+    historial = load_session_memory()
+    memoria_historica_str = summarize_history_if_needed(historial)
+    
+    historial_str = ""
+    if historial:
+        historial_str = memoria_historica_str
+        historial_str += "--- HISTORIAL RECIENTE DEL CHAT (MEMORIA DE SESIÓN) ---\n"
+        # Mantener de forma explícita solo los últimos 4 turnos para no saturar y delegar el resto al resumen
+        ultimos_turnos = historial[-4:]
+        for turno in ultimos_turnos:
+            historial_str += f"Usuario: {turno.get('usuario', '')}\nBEATSS: {turno.get('asistente', '')}\n\n"
+        historial_str += "------------------------------------------------------\n\n"
+        
+    user_input_con_historial = f"{historial_str}Consulta actual: {user_query}"
+    
+    log_progress("[Agente Enrutador] Clasificando requerimiento...")
+    
+    # 2. Enrutador
+    router_text = call_gemini(ROUTER_AGENT_PROMPT, user_input_con_historial, response_json=True)
+    if not router_text:
+        return "Error al clasificar la consulta (Enrutador sin respuesta)."
+        
+    router_decision = clean_and_parse_json(router_text)
+    if not router_decision:
+        router_decision = {"routing_decision": "DELEGATE", "pensamiento": "Fallo al parsear JSON del enrutador. Delegando por seguridad."}
+        
+    if router_decision.get("routing_decision") == "DIRECT":
+        resp_directa = router_decision.get("respuesta_directa", "Hola. ¿En qué puedo ayudarte hoy?")
+        # Guardar en memoria de sesión
+        historial.append({"usuario": user_query, "asistente": resp_directa})
+        save_session_memory(historial)
+        return resp_directa
+        
+    log_progress("[Agente Principal] Analizando requerimiento y decidiendo delegación...")
+    
+    # 3. Agente Principal
+    decision_text = call_gemini(MAIN_AGENT_PROMPT, user_input_con_historial, response_json=True)
+    if not decision_text:
+        return "Error al analizar la consulta (Director sin respuesta)."
+        
+    decision = clean_and_parse_json(decision_text)
+    if not decision:
+        return "Error: Respuesta inválida del Agente Principal al decidir delegaciones."
+        
+    delegados = decision.get("delegados", [])
+    respuestas_subagentes = []
+    
+    # 4. Procesar delegaciones
+    if delegados:
+        for idx, delg in enumerate(delegados, 1):
+            rol = delg.get("rol", "").lower().strip()
+            consulta = delg.get("consulta")
+            
+            if rol not in SUBAGENT_PROMPTS:
+                log_progress(f"⚠️ Subagente '{rol}' no encontrado en el sistema.")
+                continue
+                
+            log_progress(f"[Agente Principal] Delegando tarea ({idx}/{len(delegados)}) al Agente de {rol.upper()}...")
+            
+            # Ejecutar ReAct loop para el subagente
+            resp_sub = execute_subagent_react_loop(rol.upper(), SUBAGENT_PROMPTS[rol], consulta)
+            
+            if resp_sub:
+                respuestas_subagentes.append(f"--- RESPUESTA DEL AGENTE DE {rol.upper()} ---\n{resp_sub}\n")
+            else:
+                log_progress(f"❌ Sin respuesta del Agente de {rol.upper()}.")
+    else:
+        log_progress("[Agente Principal] No se requirió delegar a subagentes especialistas.")
+        
+    log_progress("[Agente Principal] Consolidando y sintetizando respuesta final...")
+    
+    # 5. Sintetizar respuesta
+    subagents_data = "\n".join(respuestas_subagentes) if respuestas_subagentes else "Ningún subagente fue consultado."
+    synthesis_content = SYNTHESIS_PROMPT.format(
+        historial_conversacion=historial_str if historial_str else "Sin historial de conversación previo en esta sesión.",
+        user_query=user_query, 
+        subagent_responses=subagents_data
+    )
+    
+    final_response = call_gemini("Eres el Agente Principal de BEATSS.", synthesis_content, response_json=False)
+    
+    if final_response:
+        # Guardar en memoria de sesión
+        historial.append({"usuario": user_query, "asistente": final_response})
+        save_session_memory(historial)
+        return final_response
+    else:
+        return "Error al consolidar la respuesta final."
+
 def main():
     print(f"\n{C_CYAN}{C_BOLD}================================================================{C_RESET}")
     print(f"{C_CYAN}{C_BOLD}   BEATSS - SISTEMA DE ORQUESTACIÓN MULTI-AGENTE AUTÓNOMO      {C_RESET}")
     print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}")
-    print(f"{C_GRAY}Gemini API conectada exitosamente (con soporte de 18 subagentes y herramientas).{C_RESET}")
-    print(f"Escribe tus requerimientos. Los agentes podrán leer y proponer cambios de código.")
-    print(f"Escribe {C_RED}'salir'{C_RESET} para terminar.\n")
+    print(f"{C_GRAY}Gemini API conectada (soporte de 21 subagentes, memorias y search_grep).{C_RESET}")
+    print(f"Escribe tus requerimientos. Los agentes recordarán el historial de conversación.")
+    print(f"Comandos especiales: {C_GREEN}'limpiar'{C_RESET} (reinicia memorias de sesión y subagentes) o {C_RED}'salir'{C_RESET}.\n")
 
     while True:
         try:
@@ -612,93 +917,33 @@ def main():
                 print(f"\n{C_CYAN}¡Hasta luego!{C_RESET}")
                 break
             
+            if user_input.strip().lower() in ["limpiar", "reset", "clear"]:
+                if os.path.exists(SESSION_MEMORY_FILE):
+                    os.remove(SESSION_MEMORY_FILE)
+                if os.path.exists(SUBAGENT_MEMORIES_FILE):
+                    os.remove(SUBAGENT_MEMORIES_FILE)
+                print(f"\n{C_GREEN}✓ Memorias del Agent OS (sesión y subagentes) reiniciadas correctamente.{C_RESET}\n")
+                continue
+            
             if not user_input.strip():
                 continue
             
-            print(f"\n{C_CYAN}{C_BOLD}🔍 [Agente Enrutador] Clasificando requerimiento...{C_RESET}")
+            # Callback para mostrar los avances en la interfaz CLI
+            def cli_progress_callback(msg):
+                print(f"{C_CYAN}➔ {msg}{C_RESET}")
+                
+            final_response = run_agent_pipeline(user_input, cli_progress_callback)
             
-            # 0. Llamar al Agente Enrutador
-            router_text = call_gemini(ROUTER_AGENT_PROMPT, user_input, response_json=True)
-            if not router_text:
-                continue
-            
-            router_decision = clean_and_parse_json(router_text)
-            if not router_decision:
-                router_decision = {"routing_decision": "DELEGATE", "pensamiento": "Fallo al parsear JSON del enrutador. Delegando por seguridad."}
-            
-            print(f"{C_CYAN}🧠 Pensamiento del Enrutador: {C_GRAY}{router_decision.get('pensamiento', 'Ninguno')}{C_RESET}")
-            print(f"{C_CYAN}🎯 Decisión de Enrutamiento: {C_GREEN if router_decision.get('routing_decision') == 'DIRECT' else C_YELLOW}{router_decision.get('routing_decision')}{C_RESET}")
-            
-            if router_decision.get("routing_decision") == "DIRECT":
-                resp_directa = router_decision.get("respuesta_directa", "Hola. ¿En qué puedo ayudarte hoy?")
-                print(f"\n{C_CYAN}{C_BOLD}================================================================{C_RESET}")
-                print(f"{C_CYAN}{C_BOLD}   RESPUESTA DIRECTA (BEATSS)                                  {C_RESET}")
-                print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}")
-                print(f"{C_WHITE}{resp_directa}{C_RESET}")
-                print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}\n")
-                continue
-
-            print(f"\n{C_CYAN}{C_BOLD}🔍 [Agente Principal] Analizando requerimiento...{C_RESET}")
-            
-            # 1. Llamar al Agente Principal para determinar delegación
-            decision_text = call_gemini(MAIN_AGENT_PROMPT, user_input, response_json=True)
-            if not decision_text:
-                continue
-            
-            decision = clean_and_parse_json(decision_text)
-            if not decision:
-                print(f"{C_RED}⚠️ Error al parsear decisión del Agente Principal. Respuesta cruda:{C_RESET}")
-                print(decision_text)
-                continue
-            
-            print(f"{C_CYAN}🧠 Pensamiento: {C_GRAY}{decision.get('pensamiento', 'Ninguno')}{C_RESET}")
-            
-            delegados = decision.get("delegados", [])
-            respuestas_subagentes = []
-            
-            # 2. Procesar cada subagente delegado en su ReAct loop
-            if delegados:
-                for delg in delegados:
-                    rol = delg.get("rol", "").lower().strip()
-                    consulta = delg.get("consulta")
-                    
-                    if rol not in SUBAGENT_PROMPTS:
-                        print(f"⚠️ Subagente '{rol}' no encontrado en el sistema.")
-                        continue
-                    
-                    color_rol = GET_COLOR_FOR_ROL(rol)
-                    print(f"\n{color_rol}{C_BOLD}🤝 [Delegando a Agente de {rol.upper()}]...{C_RESET}")
-                    print(f"{color_rol}↳ Consulta: {C_GRAY}{consulta}{C_RESET}")
-                    
-                    # Ejecutar ReAct loop para el subagente
-                    resp_sub = execute_subagent_react_loop(rol.upper(), SUBAGENT_PROMPTS[rol], consulta)
-                    
-                    if resp_sub:
-                        print(f"{color_rol}✓ Respuesta final del Agente {rol.upper()} recibida.{C_RESET}")
-                        respuestas_subagentes.append(f"--- RESPUESTA DEL AGENTE DE {rol.upper()} ---\n{resp_sub}\n")
-                    else:
-                        print(f"{C_RED}❌ Sin respuesta del Agente de {rol.upper()}.{C_RESET}")
-            else:
-                print(f"{C_CYAN}ℹ️ El requerimiento se responderá de forma directa.{C_RESET}")
-            
-            # 3. Sintetizar respuesta final (aquí no exigimos JSON para permitir texto libre en markdown)
-            print(f"\n{C_CYAN}{C_BOLD}✍️ [Agente Principal] Consolidando respuesta final...{C_RESET}")
-            
-            subagents_data = "\n".join(respuestas_subagentes) if respuestas_subagentes else "Ningún subagente fue consultado."
-            synthesis_content = SYNTHESIS_PROMPT.format(user_query=user_input, subagent_responses=subagents_data)
-            
-            final_response = call_gemini("Eres el Agente Principal de BEATSS.", synthesis_content, response_json=False)
-            
-            if final_response:
-                print(f"\n{C_CYAN}{C_BOLD}================================================================{C_RESET}")
-                print(f"{C_CYAN}{C_BOLD}   RESPUESTA DEL DIRECTOR DE PROYECTO (BEATSS)                 {C_RESET}")
-                print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}")
-                print(f"{C_WHITE}{final_response}{C_RESET}")
-                print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}\n")
+            print(f"\n{C_CYAN}{C_BOLD}================================================================{C_RESET}")
+            print(f"{C_CYAN}{C_BOLD}   RESPUESTA DEL DIRECTOR DE PROYECTO (BEATSS)                 {C_RESET}")
+            print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}")
+            print(f"{C_WHITE}{final_response}{C_RESET}")
+            print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}\n")
             
         except (KeyboardInterrupt, EOFError):
             print(f"\n\n{C_CYAN}Programa finalizado. ¡Hasta luego!{C_RESET}")
             break
+
 
 if __name__ == "__main__":
     main()

@@ -96,6 +96,30 @@ body.light-theme.theme-sossa {
     --border-focus: #a855f7;
 }
 
+/* Theme overrides for Mr. Micua (Electric Cyan/Blue) */
+body.theme-mrmicua {
+    --accent: #00d2ff;
+    --accent-gradient: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);
+    --accent-hover: #00bce6;
+    --border-focus: #00d2ff;
+}
+body.theme-mrmicua .btn-primary {
+    box-shadow: 0 4px 12px rgba(0, 210, 255, 0.25);
+}
+body.theme-mrmicua .btn-primary:hover {
+    box-shadow: 0 6px 16px rgba(0, 210, 255, 0.35);
+}
+body.light-theme.theme-mrmicua {
+    --border-focus: #00d2ff;
+}
+
+body.theme-mrmicua, body.contract-theme-cyan {
+    --contract-accent: #00a8cc;
+    --contract-quote-bg: rgba(0, 168, 204, 0.04);
+    --contract-badge-bg: rgba(0, 168, 204, 0.08);
+    --contract-badge-border: rgba(0, 168, 204, 0.18);
+}
+
 /* Temas dinámicos de contrato (Sossa / Monarco / Personalizados) */
 body.theme-sossa, body.contract-theme-purple {
     --contract-accent: #7c3aed;
@@ -543,6 +567,12 @@ body {
 body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     border-color: rgba(230, 0, 0, 0.3);
 }
+body.theme-sossa #btn-send-email, body.theme-sossa #btn-docusign {
+    border-color: rgba(168, 85, 247, 0.3);
+}
+body.theme-mrmicua #btn-send-email, body.theme-mrmicua #btn-docusign {
+    border-color: rgba(0, 210, 255, 0.3);
+}
 #btn-send-email:hover, #btn-docusign:hover {
     background-color: var(--accent);
     color: #fff !important;
@@ -764,6 +794,62 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     line-height: 1.6;
     text-align: justify;
     position: relative;
+}
+
+.paper.paper-serif {
+    font-family: 'Georgia', 'Times New Roman', Times, serif;
+    font-size: 13.5px;
+}
+
+.paper.paper-cream {
+    background-color: #faf6ee !important; /* marfil/crema suave */
+    border: 1px solid #e2d9c2;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+    color: #38342c;
+}
+
+.paper.paper-cream h1, 
+.paper.paper-cream h2, 
+.paper.paper-cream h3, 
+.paper.paper-cream h4, 
+.paper.paper-cream strong {
+    color: #1a160f !important;
+}
+
+.paper.paper-cream .digital-seal {
+    background-color: #faf6ee;
+    border-color: #cda851;
+    color: #a47d25;
+    outline-color: rgba(205, 168, 81, 0.4);
+}
+
+/* Modificaciones específicas para anular el color crema durante la exportación a PDF */
+.printing-pdf .paper.paper-cream,
+.paper.paper-cream.printing-pdf {
+    background-color: #ffffff !important;
+    border: 1px solid var(--contract-badge-border) !important;
+    color: #2c2c2e !important;
+}
+
+.printing-pdf .paper.paper-cream h1, 
+.printing-pdf .paper.paper-cream h2, 
+.printing-pdf .paper.paper-cream h3, 
+.printing-pdf .paper.paper-cream h4, 
+.printing-pdf .paper.paper-cream strong,
+.paper.paper-cream.printing-pdf h1, 
+.paper.paper-cream.printing-pdf h2, 
+.paper.paper-cream.printing-pdf h3, 
+.paper.paper-cream.printing-pdf h4, 
+.paper.paper-cream.printing-pdf strong {
+    color: #111112 !important;
+}
+
+.printing-pdf .paper.paper-cream .digital-seal,
+.paper.paper-cream.printing-pdf .digital-seal {
+    background-color: #f8f9fa !important;
+    border-color: var(--contract-accent) !important;
+    color: var(--contract-accent) !important;
+    outline-color: var(--contract-accent) !important;
 }
 
 /* Formateo de Contrato en Papel (Modo Blanco en pantalla por defecto) */
@@ -1406,10 +1492,67 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
     color: #00c882;
 }
 
+/* Nuevo Layout de Dos Columnas para el Historial */
+.history-main-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 0 32px 32px 32px;
+}
+
+@media (min-width: 1024px) {
+    .history-main-layout {
+        grid-template-columns: 65% 35%;
+        align-items: start;
+    }
+}
+
+.history-left-col {
+    min-width: 0; /* Para evitar desbordamiento en pantallas pequeñas */
+}
+
+.history-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 .history-list-wrapper {
-    flex: 1;
-    overflow-y: auto;
-    padding: 32px;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: var(--shadow-sm);
+    overflow-x: auto;
+}
+
+/* Tarjeta Premium del Gráfico */
+.chart-card-premium {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.chart-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.chart-card-title {
+    font-family: var(--font-title);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
 }
 
 .history-table {
@@ -1419,7 +1562,7 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 }
 
 .history-table th, .history-table td {
-    padding: 14px 16px;
+    padding: 10px 12px; /* Más compacto */
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -3717,7 +3860,517 @@ body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
 }
 
 #support-info-modal summary::-webkit-details-marker {
+    display: none !important; /* Safari and Chrome */
+}
+
+/* ==========================================================================
+   PANEL DE CONTABILIDAD CONSOLIDADA (SOSSA ADMIN) - MEJORAS PREMIUM
+   ========================================================================== */
+.admin-analytics-grid {
+    display: grid;
+    grid-template-columns: 2.2fr 1fr;
+    gap: 24px;
+    margin-top: 24px;
+}
+
+@media (max-width: 1024px) {
+    .admin-analytics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.producer-analytics-card {
+    background: rgba(26, 30, 39, 0.45) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 14px !important;
+    padding: 18px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.producer-analytics-card:hover {
+    transform: translateY(-3px) !important;
+    border-color: rgba(0, 204, 255, 0.35) !important;
+    box-shadow: 0 8px 24px rgba(0, 204, 255, 0.08) !important;
+}
+
+.producer-analytics-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(0, 204, 255, 0.4), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.producer-analytics-card:hover::before {
+    opacity: 1;
+}
+
+.breakdown-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.breakdown-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+
+.breakdown-label {
+    color: #cbd5e0;
+    font-weight: 500;
+}
+
+.breakdown-value {
+    font-family: monospace;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.admin-progress-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 100px;
+    overflow: hidden;
+    position: relative;
+}
+
+.admin-progress-bar {
+    height: 100%;
+    border-radius: 100px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   WIDGET DE CHATBOT NEÓN GLASSMORPHIC (Asistente BEATSS)
+   ========================================================================== */
+.chatbot-fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed 0%, #0066ff 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 32px rgba(124, 58, 237, 0.4);
+    z-index: 10000;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.chatbot-fab:hover {
+    transform: scale(1.08) rotate(5deg);
+    box-shadow: 0 12px 40px rgba(124, 58, 237, 0.6), 0 0 15px rgba(0, 102, 255, 0.5);
+}
+
+.chatbot-fab:active {
+    transform: scale(0.95);
+}
+
+.chatbot-fab i, .chatbot-fab svg {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s ease;
+}
+
+.chatbot-window {
+    position: fixed;
+    bottom: 96px;
+    right: 24px;
+    width: 380px;
+    max-width: calc(100vw - 48px);
+    height: 520px;
+    max-height: calc(100vh - 140px);
+    background: rgba(12, 14, 22, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: chatbotSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: bottom right;
+}
+
+@keyframes chatbotSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.chatbot-header {
+    padding: 16px 20px;
+    background: linear-gradient(90deg, rgba(124, 58, 237, 0.15), rgba(0, 102, 255, 0.15));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chatbot-header-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.chatbot-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(124, 58, 237, 0.2);
+    border: 1px solid rgba(124, 58, 237, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.avatar-icon {
+    width: 18px;
+    height: 18px;
+    color: #7c3aed;
+}
+
+.avatar-status {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 10px;
+    height: 10px;
+    background-color: #10b981;
+    border: 2px solid #0c0e16;
+    border-radius: 50%;
+}
+
+.chatbot-header h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    font-family: var(--font-sans), 'Outfit', sans-serif;
+}
+
+.chatbot-status {
+    font-size: 11px;
+    color: #a0aec0;
+    margin: 2px 0 0 0;
+}
+
+.chatbot-close-btn {
+    background: none;
+    border: none;
+    color: #a0aec0;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.chatbot-close-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.chatbot-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+.chatbot-messages::-webkit-scrollbar {
+    width: 4px;
+}
+
+.chatbot-messages::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+}
+
+.chatbot-msg {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13.5px;
+    line-height: 1.45;
+    word-break: break-word;
+    font-family: var(--font-sans), 'Inter', sans-serif;
+}
+
+.chatbot-msg-bot {
+    align-self: flex-start;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: #e2e8f0;
+    border-bottom-left-radius: 4px;
+}
+
+.chatbot-msg-bot strong {
+    color: #00ccff;
+    font-weight: 600;
+}
+
+.chatbot-msg-user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(0, 102, 255, 0.2) 100%);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
+}
+
+.chatbot-quick-replies {
+    padding: 10px 20px;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    flex-shrink: 0;
+    scrollbar-width: none;
+}
+
+.chatbot-quick-replies::-webkit-scrollbar {
+    display: none;
+}
+
+.chatbot-qr-btn {
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #cbd5e0;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chatbot-qr-btn:hover {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: rgba(124, 58, 237, 0.4);
+    color: #fff;
+}
+
+.chatbot-input-container {
+    padding: 14px 20px 20px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.chatbot-input-container input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: #fff;
+    font-size: 13.5px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.chatbot-input-container input:focus {
+    border-color: rgba(124, 58, 237, 0.5);
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+}
+
+.chatbot-input-container button {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #7c3aed 0%, #0066ff 100%);
+    border: none;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.chatbot-input-container button:hover {
+    transform: scale(1.05);
+}
+
+/* Typing Indicator Animation */
+.chatbot-typing {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 12px 16px !important;
+}
+
+.chatbot-typing .dot {
+    width: 6px;
+    height: 6px;
+    background-color: #a0aec0;
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.3s infinite ease-in-out;
+}
+
+.chatbot-typing .dot:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.chatbot-typing .dot:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+@keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-4px); }
+}
+
+/* Ocultar Chatbot cuando el panel administrativo está activo */
+body.admin-active #beatss-chatbot-container {
     display: none !important;
+}
+
+/* ==========================================================================
+   MEZCLADOR DE STEMS (WEB AUDIO API)
+   ========================================================================== */
+#store-mixer-panel {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+#player-btn-mixer.active-mixer {
+    background: var(--accent, #00ccff) !important;
+    border-color: var(--accent, #00ccff) !important;
+    color: #000 !important;
+    box-shadow: 0 0 12px rgba(0, 204, 255, 0.4);
+}
+
+.mute-active {
+    color: #ef4444 !important;
+    transform: scale(0.95);
+    opacity: 0.8;
+}
+
+/* ==========================================================================
+   FACTURACIÓN SRI (BADGES & ACTIONS)
+   ========================================================================== */
+.sri-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.sri-badge.autorizado {
+    background-color: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.sri-badge.pendiente {
+    background-color: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.sri-badge.fallido {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.sri-badge.no-emitida {
+    background-color: rgba(156, 163, 175, 0.1);
+    color: #9ca3af;
+    border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+.sri-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+}
+
+.sri-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.btn-sri-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary, #a0aec0);
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    height: 22px;
+}
+
+.btn-sri-action:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.btn-sri-action.btn-sri-retry {
+    background: rgba(124, 58, 237, 0.1);
+    border-color: rgba(124, 58, 237, 0.2);
+    color: #c084fc;
+}
+
+.btn-sri-action.btn-sri-retry:hover {
+    background: rgba(124, 58, 237, 0.2);
+    border-color: rgba(124, 58, 237, 0.4);
+    color: #e9d5ff;
+}
+
+.btn-sri-action i, .btn-sri-action svg {
+    width: 12px;
+    height: 12px;
+    margin-right: 4px;
 }
 
 

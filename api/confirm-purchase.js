@@ -6,7 +6,18 @@ import { getFirestore } from 'firebase-admin/firestore';
 import crypto from 'crypto';
 
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://generador-licencias.vercel.app';
-const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY || process.env.FIREBASE_PRIVATE_KEY || 'default_fallback_secret';
+const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY;
+if (!SIGNING_SECRET) {
+    console.error('FATAL: La variable de entorno DOWNLOAD_SIGNING_KEY no está configurada.');
+}
+
+// Genera un token de acceso firmado para la página de descargas del comprador
+function generateDownloadToken(paymentId) {
+    if (!SIGNING_SECRET) return '';
+    return crypto.createHmac('sha256', SIGNING_SECRET)
+        .update(`${paymentId}:download`)
+        .digest('hex');
+}
 
 function getSignedProxyUrl(rawUrl, host, paymentId, fileType) {
     if (!rawUrl) return '';
@@ -111,6 +122,7 @@ export default async function handler(req, res) {
         buyerDni,
         buyerCity,
         buyerCountry,
+        youtubeWhitelist = '',
         items,
         discountPercent = 0,
         couponCode = ''
@@ -206,6 +218,7 @@ export default async function handler(req, res) {
                 buyerDni: buyerDni || '',
                 buyerCity: buyerCity || '',
                 buyerCountry: buyerCountry || '',
+                youtubeWhitelist: youtubeWhitelist || '',
                 method: 'paypal',
                 reference: orderId,
                 receiptUrl: '',
@@ -227,10 +240,14 @@ export default async function handler(req, res) {
             const wav = getSignedProxyUrl(rawWav, req.headers.host, paymentRef.id, 'wav');
             const stems = getSignedProxyUrl(rawStems, req.headers.host, paymentRef.id, 'stems');
 
+            // Generar token de acceso para la página de descargas (sin necesidad de login)
+            const downloadToken = generateDownloadToken(paymentRef.id);
+            const downloadUrl = `${ALLOWED_ORIGIN}/?download=${paymentRef.id}&token=${downloadToken}`;
+
             let linksHtml = `
             <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #edf2f7; border-radius: 8px; background-color: #f8fafc;">
                 <h4 style="margin: 0 0 10px 0; color: #2d3748;">Instrumental: <strong>${item.beatName}</strong> (${typeLabels[item.licenseType] || item.licenseType})</h4>
-                <a href="${ALLOWED_ORIGIN}/?download=${paymentRef.id}" style="display: inline-block; padding: 10px 20px; background-color: #0055ee; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: bold; border: 1px solid #0044cc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">📥 Acceder a Descargas e Historial</a>
+                <a href="${downloadUrl}" style="display: inline-block; padding: 10px 20px; background-color: #0055ee; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: bold; border: 1px solid #0044cc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">📥 Acceder a Descargas e Historial</a>
             </div>
             `;
 
@@ -306,9 +323,9 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('❌ Error en confirm-purchase:', error);
+        // No exponer detalles internos al cliente en producción
         return res.status(500).json({
-            error: 'Error interno al confirmar la compra',
-            details: error.message
+            error: 'Error interno al confirmar la compra. Por favor contacta al soporte.'
         });
     }
 }

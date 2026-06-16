@@ -322,6 +322,7 @@ export const UI_TRANSLATIONS = {
         tab_dashboard: "Dashboard de Ventas",
         tab_sales: "Pedidos de Beats",
         tab_admin: "Contabilidad General",
+        tab_whitelist: "Whitelisting Content ID",
 
         // Previsualización Panel
         preview_print_view: "Vista de Impresión",
@@ -334,12 +335,14 @@ export const UI_TRANSLATIONS = {
         btn_personalize_tooltip: "Personalizar textos de las plantillas",
 
         // History Tab
+        history_chart_title: "Ingresos Mensuales",
         history_th_ref: "Referencia",
         history_th_date: "Fecha",
         history_th_beat: "Beat",
         history_th_buyer: "Comprador",
         history_th_type: "Tipo",
         history_th_value: "Valor",
+        history_th_sri: "Facturación SRI",
         history_th_actions: "Acciones",
         history_search_placeholder: "Buscar por beat, comprador o referencia...",
         history_add_manual: "Añadir Manual",
@@ -526,6 +529,7 @@ export const UI_TRANSLATIONS = {
         support_tab_copyright: "Guía de Derechos",
         support_tab_license: "Acuerdo de Licencia",
         support_tab_terms: "Términos y Privacidad",
+        support_tab_chatbot: "Asistente Virtual",
         support_faq_q1: "¿Cuál es la diferencia entre una licencia No Exclusiva y una Exclusiva?",
         support_faq_a1: "Las licencias <strong>No Exclusivas</strong> (Básica, Premium, Premium Plus e Ilimitada) te otorgan el derecho de usar el beat para crear tu propia canción bajo ciertos límites de reproducción y tiempo. El productor retiene la propiedad total del beat y puede seguir licenciándolo a otros artistas.<br><br>La licencia <strong>Exclusiva</strong> te otorga la propiedad comercial total del beat. Ningún otro artista podrá adquirirlo en el futuro, y tu derecho de uso es perpetuo e ilimitado.",
         support_faq_q2: "¿Qué formatos de archivo recibiré con mi compra?",
@@ -781,6 +785,7 @@ export const UI_TRANSLATIONS = {
         tab_dashboard: "Sales Dashboard",
         tab_sales: "Beats Orders",
         tab_admin: "General Accounting",
+        tab_whitelist: "Content ID Whitelisting",
 
         // Previsualización Panel
         preview_print_view: "Print View",
@@ -793,12 +798,14 @@ export const UI_TRANSLATIONS = {
         btn_personalize_tooltip: "Customize template texts",
 
         // History Tab
+        history_chart_title: "Monthly Revenue",
         history_th_ref: "Reference",
         history_th_date: "Date",
         history_th_beat: "Beat",
         history_th_buyer: "Buyer",
         history_th_type: "Type",
         history_th_value: "Value",
+        history_th_sri: "SRI Invoicing",
         history_th_actions: "Actions",
         history_search_placeholder: "Search by beat, buyer or reference...",
         history_add_manual: "Add Manual",
@@ -985,6 +992,7 @@ export const UI_TRANSLATIONS = {
         support_tab_copyright: "Copyright Guide",
         support_tab_license: "License Agreement",
         support_tab_terms: "Terms & Privacy",
+        support_tab_chatbot: "Virtual Assistant",
         support_faq_q1: "What is the difference between a Non-Exclusive and an Exclusive license?",
         support_faq_a1: "<strong>Non-Exclusive</strong> licenses (Basic, Premium, Premium Plus, and Unlimited) grant you commercial usage rights with reproduction and time limits. The producer retains ownership and can keep selling the beat.<br><br>An <strong>Exclusive</strong> license grants you full commercial ownership of the beat; no other artist can purchase it in the future, and your usage rights are perpetual and unlimited.",
         support_faq_q2: "What file formats will I receive with my purchase?",
