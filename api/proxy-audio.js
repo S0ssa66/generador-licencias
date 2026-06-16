@@ -175,27 +175,21 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Error de autenticación con el servicio de almacenamiento.' });
     }
 
-    // 4. Si aún no está autorizado, verificar en Google Drive si es un archivo de preview público (MP3/Arte)
+    // 4. Si aún no está autorizado, verificar en Firestore si es un archivo de preview público (MP3 o Imagen)
     if (!isAuthorized) {
         try {
-            const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=name,mimeType`, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
-            });
-            if (metaRes.ok) {
-                const meta = await metaRes.json();
-                const name = (meta.name || '').toLowerCase();
-                
-                // Permitir libre streaming de previews (.mp3 de preview) y carátulas (.jpg, .png)
-                // Bloquear cualquier archivo ZIP, WAV de alta calidad, o archivos sin extensión típica de preview
-                const isPreviewMp3 = name.endsWith('.mp3') && !name.includes('wav') && !name.includes('zip') && !name.includes('master');
-                const isImage = name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.webp');
-                
-                if (isPreviewMp3 || isImage) {
+            initFirebaseAdmin();
+            const db = getFirestore();
+            const beatsSnap = await db.collectionGroup('beats').get();
+            for (const docSnap of beatsSnap.docs) {
+                const beatData = docSnap.data();
+                if (beatData.mp3?.includes(fileId) || beatData.image?.includes(fileId)) {
                     isAuthorized = true;
+                    break;
                 }
             }
-        } catch (metaErr) {
-            console.error('Error al recuperar metadatos del archivo:', metaErr.message);
+        } catch (dbErr) {
+            console.error('Error al buscar el archivo de preview en Firestore:', dbErr.message);
         }
     }
 

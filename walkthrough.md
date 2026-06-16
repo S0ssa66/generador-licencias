@@ -62,5 +62,24 @@ Hemos implementado exitosamente el conjunto de mejoras y nuevas características
 
 ---
 
+## Corrección Visual y de Color de la Firma (Duplicados y PDF)
+
+### 8. ✍️ Sincronización de Firmas y Corrección de Color
+*   **Problema:** Al descargar el PDF de la licencia, la firma del productor Joao David Dominguez (Sossa) se renderizaba como texto de color violeta (`#7c3aed`) en lugar de mostrar la firma manuscrita de tinta negra (`firma-sossa.png`) que se ve en la previsualización del navegador.
+*   **Origen del Error:**
+    1. **Discrepancia en las Claves del Payload:** La interfaz frontend en `editor.js` enviaba la firma base64 bajo la propiedad `producerSignatureBase64`, pero el backend `pdf_generator.py` intentaba leer la propiedad `signature`. Debido a este mapeo incorrecto, el generador siempre asumía que la firma base64 estaba vacía.
+    2. **Mapeo Incorrecto de Cédula/RUT:** El generador de PDF leía la propiedad `producerId` (el ID interno/username del usuario, p.ej. `"sossa"`) para el campo de Cédula/RUT en lugar de `producerIdNum`, escribiendo "Identificación/RUT: sossa" en el pie de firmas.
+    3. **Ausencia de Fallback en PDF:** Si la firma base64 no estaba en la configuración de la base de datos, el editor cargaba la imagen por defecto `/firma-sossa.png` o `/firma-cgmonarco.png`, pero el generador de PDF caía por defecto a escribir el nombre del productor en texto violeta itálico.
+*   **Soluciones Aplicadas en [pdf_generator.py](file:///Users/sossa/IA/generador-licencias/pdf_generator.py):**
+    1. Se corrigió el mapeo de claves para aceptar `producerSignatureBase64`, `buyerSignatureBase64` y `producerIdNum` del payload.
+    2. Se implementó una lógica de fallback idéntica a la del frontend: si la firma base64 está vacía, el servidor busca localmente en `public/firma-sossa.png` o `public/firma-cgmonarco.png` según corresponda, la copia a un archivo temporal para evitar que el proceso de limpieza la elimine del servidor, y la dibuja como imagen.
+    3. Se modificó el color de la firma itálica (en caso de caer a texto si no existe ninguna imagen en lo absoluto) a un tono oscuro neutro (`#1c1c1e`) que combina perfectamente con el diseño del contrato, eliminando el color violeta discordante.
+
+---
+
 ## 💡 Próximos Pasos Recomendados
-1.  **Verificación**: Ingresa al panel de administración como administrador Sossa, abre la ventana de "Modificar Plan Manual" para cualquier productor, y valida que el botón "Aplicar Plan" guarde los cambios y actualice el plan exitosamente, y que los botones "Cancelar" y "x" funcionen correctamente.
+1.  **Verificación**:
+    *   Ingresa al panel de administración como administrador Sossa, abre la ventana de "Modificar Plan Manual" para cualquier productor, y valida que el botón "Aplicar Plan" guarde los cambios y actualice el plan exitosamente, y que los botones "Cancelar" y "x" funcionen correctamente.
+    *   Genera un contrato de prueba en local (o después de desplegar) y descárgalo.
+    *   Confirma que la firma manuscrita se dibuje perfectamente alineada sobre la línea de firmas y con el fondo transparente correcto (sin recuadros blancos ni texto de color violeta).
+    *   Verifica que la Cédula/RUT del productor se escriba con el número correspondiente (p.ej. `0803743111`) en lugar del identificador de texto.

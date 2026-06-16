@@ -217,7 +217,7 @@ export function renderCartItems() {
             <div class="cart-item-row" style="display: flex; gap: 12px; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; box-sizing: border-box; width: 100%;">
                 <img src="${artwork}" style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover; background: #222;" alt="Artwork">
                 <div style="flex: 1; text-align: left; overflow: hidden;">
-                    <div style="font-weight: 700; color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.beatName}</div>
+                    <div style="font-weight: 700; color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${window.sanitizeHtml ? window.sanitizeHtml(item.beatName) : String(item.beatName).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
                     <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
                         <select onchange="window.updateCartItemLicense(${index}, this.value)" style="background: #12141c; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 2px 6px; font-size: 11px; outline: none; cursor: pointer;">
                             ${optionsHtml}

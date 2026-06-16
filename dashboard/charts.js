@@ -383,7 +383,10 @@ async function updateDashboardView() {
     if (isLocalhost) {
         try {
             const user = window.currentUser || 'sossa';
-            const response = await fetch(`/api/admin/sales-analytics?period=${periodVal}&user=${user}`);
+            const headers = window.getLocalHeaders ? await window.getLocalHeaders() : {};
+            const response = await fetch(`/api/admin/sales-analytics?period=${periodVal}&user=${user}`, {
+                headers: headers
+            });
             if (response.ok) {
                 const data = await response.json();
                 if (!data.error) {

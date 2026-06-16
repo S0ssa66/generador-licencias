@@ -36,6 +36,10 @@ import './editor.js';
 import './dashboard.js';
 import './chatbot.js';
 
+const sanitizeHtml = window.sanitizeHtml || function(str) {
+    return str == null ? '' : String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+};
+
 // Alias locales para funciones en otros módulos asignadas al objeto global window
 const checkDocuSignOAuth = (...args) => window.checkDocuSignOAuth(...args);
 const loadTemplates = (...args) => window.loadTemplates(...args);
@@ -669,9 +673,45 @@ function safeGetItem(key) {
     }
 }
 
+// Obtener cabeceras con token de autenticación para peticiones al servidor local
+async function getLocalHeaders() {
+    let token = window.localAuthToken;
+    if (!token) {
+        token = localStorage.getItem('local_auth_token');
+    }
+    if (!token) {
+        try {
+            const localServerUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? '/api/local-token'
+                : 'http://localhost:8000/api/local-token';
+            const res = await fetch(localServerUrl);
+            if (res.ok) {
+                const data = await res.json();
+                token = data.token;
+                if (token) {
+                    window.localAuthToken = token;
+                    localStorage.setItem('local_auth_token', token);
+                }
+            }
+        } catch (e) {
+            console.warn("No se pudo obtener el token local automáticamente:", e);
+        }
+    }
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+window.getLocalHeaders = getLocalHeaders;
+
 // Guardar copia de seguridad en el archivo físico del servidor local (Mac)
 async function saveToLocalServer() {
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') return;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isProducer = ['masterjuego25@gmail.com', 'sossabeatz1@gmail.com', 'beatscgmonarco@gmail.com', 'mistermicua@gmail.com'].some(email => 
+        auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() === email
+    );
+    if (!isLocal && !isProducer) return;
     try {
         let legacyUser = 'sossa';
         if (auth.currentUser && auth.currentUser.email) {
@@ -700,9 +740,14 @@ async function saveToLocalServer() {
         backupData[`${legacyUser}_contacts`] = contactsVal;
         backupData[`${legacyUser}_beats`] = beatsVal;
 
-        const res = await fetch(`/api/save-local?user=${legacyUser}`, {
+        const localApiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? `/api/save-local?user=${legacyUser}`
+            : `http://localhost:8000/api/save-local?user=${legacyUser}`;
+            
+        const headers = await getLocalHeaders();
+        const res = await fetch(localApiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(backupData)
         });
         if (res.ok) {
@@ -719,7 +764,11 @@ async function saveToLocalServer() {
 // EL ARCHIVO LOCAL SIEMPRE TIENE PRIORIDAD SOBRE GOOGLE DRIVE
 window._localServerLoaded = false;
 async function loadFromLocalServer() {
-    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') return;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isProducer = ['masterjuego25@gmail.com', 'sossabeatz1@gmail.com', 'beatscgmonarco@gmail.com', 'mistermicua@gmail.com'].some(email => 
+        auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() === email
+    );
+    if (!isLocal && !isProducer) return;
     try {
         let legacyUser = 'sossa';
         if (auth.currentUser && auth.currentUser.email) {
@@ -731,7 +780,12 @@ async function loadFromLocalServer() {
             }
         }
 
-        const res = await fetch(`/api/load-local?user=${legacyUser}`);
+        const localApiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? `/api/load-local?user=${legacyUser}`
+            : `http://localhost:8000/api/load-local?user=${legacyUser}`;
+            
+        const headers = await getLocalHeaders();
+        const res = await fetch(localApiUrl, { headers: headers });
         if (res.ok) {
             const backupData = await res.json();
 
@@ -794,8 +848,12 @@ function safeSetItem(key, value) {
         if ([`${window.currentUser}_producer_config`, `${window.currentUser}_license_history`, `${window.currentUser}_contacts`, `${window.currentUser}_beats`].includes(key)) {
             // Respaldar en Google Drive en segundo plano si hay sesión
             autoBackupGoogleDrive();
-            // Guardar en el archivo físico de la Mac en segundo plano si estamos en localhost
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            // Guardar en el archivo físico de la Mac en segundo plano si estamos en localhost o somos productor admin
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const isProducer = ['masterjuego25@gmail.com', 'sossabeatz1@gmail.com', 'beatscgmonarco@gmail.com', 'mistermicua@gmail.com'].some(email => 
+                auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() === email
+            );
+            if (isLocal || isProducer) {
                 saveToLocalServer();
             }
         }
@@ -850,8 +908,12 @@ async function initApp(user) {
     checkDocuSignOAuth();
     initDefaultDate();
     
-    // Si estamos en localhost, cargar del servidor local antes de cargar en memoria
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Cargar del servidor local si estamos en localhost, o si el usuario es administrador y estamos en producción
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const isProducer = ['masterjuego25@gmail.com', 'sossabeatz1@gmail.com', 'beatscgmonarco@gmail.com', 'mistermicua@gmail.com'].some(email => 
+        auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() === email
+    );
+    if (isLocal || isProducer) {
         await loadFromLocalServer();
     }
     
@@ -897,7 +959,7 @@ async function initApp(user) {
     const driveWarning = document.getElementById('drive-folder-warning');
     if (driveWarning) {
         const folderName = `${producerConfig.aka || producerConfig.name || 'BEATSS'} Licencias`;
-        driveWarning.innerHTML = `🔒 Los contratos PDF se guardarán automáticamente en tu Drive en la carpeta <strong>${folderName}/Contratos</strong>.`;
+        driveWarning.innerHTML = `🔒 Los contratos PDF se guardarán automáticamente en tu Drive en la carpeta <strong>${sanitizeHtml(folderName)}/Contratos</strong>.`;
     }
 
     // Mostrar pestaña de administración si es Sossa Admin
@@ -953,7 +1015,7 @@ async function loadProducerConfig() {
         
         if (publicData) {
             // Migración automática de campos privados si están en el documento público
-            const privateKeys = ['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey', 'paypalClientSecret'];
+            const privateKeys = ['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey', 'paypalClientSecret', 'audioTagBase64'];
             let migrationNeeded = false;
             const migratedPrivate = { ...(privateData || {}) };
             const cleanPublic = { ...publicData };
@@ -1443,7 +1505,7 @@ async function saveProducerConfig() {
     const privateDocRef = doc(db, "users", window.currentUser, "private_config", "producer");
     
     // Separar datos públicos y privados
-    const privateKeys = ['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey', 'paypalClientSecret', 'sriP12Password', 'sriP12Base64'];
+    const privateKeys = ['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey', 'paypalClientSecret', 'sriP12Password', 'sriP12Base64', 'audioTagBase64'];
     const publicConfig = { ...producerConfig };
     const privateConfig = {};
     
@@ -1498,7 +1560,7 @@ function renderCouponsSettings() {
         
         item.innerHTML = `
             <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 12px; font-weight: 700; color: #fff; background: rgba(0, 204, 255, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px dashed rgba(0, 204, 255, 0.3); text-transform: uppercase;">${coupon.code}</span>
+                <span style="font-size: 12px; font-weight: 700; color: #fff; background: rgba(0, 204, 255, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px dashed rgba(0, 204, 255, 0.3); text-transform: uppercase;">${sanitizeHtml(coupon.code)}</span>
                 <span style="font-size: 12px; font-weight: 600; color: #10b981;">-${coupon.discount}%</span>
             </div>
             <button type="button" class="btn-icon-only" onclick="removeCoupon(${index})" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; width: 28px; height: 28px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2);">

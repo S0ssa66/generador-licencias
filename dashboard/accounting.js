@@ -687,8 +687,13 @@ function setupObsidianEvents() {
         }
 
         try {
-            const response = await fetch('/api/organize-obsidian', {
-                method: 'POST'
+            const localApiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? '/api/organize-obsidian'
+                : 'http://localhost:8000/api/organize-obsidian';
+            const headers = window.getLocalHeaders ? await window.getLocalHeaders() : {};
+            const response = await fetch(localApiUrl, {
+                method: 'POST',
+                headers: headers
             });
             const data = await response.json();
 

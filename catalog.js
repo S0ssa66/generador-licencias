@@ -20,6 +20,10 @@ import {
     getDownloadURL
 } from "./firebase.js";
 
+const sanitizeHtml = window.sanitizeHtml || function(str) {
+    return str == null ? '' : String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+};
+
 // Initialize global states on window
 window.localBeats = window.localBeats || [];
 window.globalBeats = window.globalBeats || [];
@@ -379,7 +383,7 @@ export function renderBeatsList() {
                     ${artworkImg}
                 </div>
                 <div>
-                    <div style="font-weight: 500; font-size: 14px; color: #fff; display: flex; align-items: center;">${beat.name} ${linksBadge}</div>
+                    <div style="font-weight: 500; font-size: 14px; color: #fff; display: flex; align-items: center;">${sanitizeHtml(beat.name)} ${linksBadge}</div>
                     ${detailsHtml}
                 </div>
             </div>
@@ -987,13 +991,13 @@ export function renderBeatsGrid() {
 
         const finalArtworkUrl = typeof window.getBeatArtwork === 'function' ? window.getBeatArtwork(beat) : '';
         const artworkHtml = finalArtworkUrl
-            ? `<img src="${finalArtworkUrl}" class="tab-beat-artwork" alt="${beat.name}">`
+            ? `<img src="${finalArtworkUrl}" class="tab-beat-artwork" alt="${sanitizeHtml(beat.name)}">`
             : `<div class="tab-beat-artwork-placeholder"><i data-lucide="music" style="width: 24px; height: 24px;"></i></div>`;
 
         let tagsHtml = '';
         if (beat.tags) {
             tagsHtml = beat.tags.split(',')
-                .map(t => `<span class="tab-beat-tag">#${t.trim()}</span>`)
+                .map(t => `<span class="tab-beat-tag">#${sanitizeHtml(t.trim())}</span>`)
                 .join('');
         }
 
@@ -1009,7 +1013,7 @@ export function renderBeatsGrid() {
                 </button>
             </div>
             <div class="tab-beat-info">
-                <div class="tab-beat-title" onclick="selectBeatForContract('${beat.id}')">${beat.name}</div>
+                <div class="tab-beat-title" onclick="selectBeatForContract('${beat.id}')">${sanitizeHtml(beat.name)}</div>
                 <div class="tab-beat-meta">
                     ${beat.bpm ? `<span>${beat.bpm} BPM</span>` : ''}
                     ${beat.key ? `<span>• ${beat.key}</span>` : ''}
@@ -1492,10 +1496,10 @@ export function renderGlobalBeats(beats) {
                     </div>
                 </div>
                 <div style="padding: 16px 4px 4px 4px; display: flex; flex-direction: column; flex: 1; gap: 12px; position: relative; z-index: 5;">
-                    <h3 style="font-size: 18px; font-weight: 700; color: #fff; margin: 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: 2.5em;" title="${beat.name || 'Beat'}">${beat.name || 'Beat'}</h3>
+                    <h3 style="font-size: 18px; font-weight: 700; color: #fff; margin: 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; min-height: 2.5em;" title="${sanitizeHtml(beat.name) || 'Beat'}">${sanitizeHtml(beat.name) || 'Beat'}</h3>
                     <div style="color: #8a91a6; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px;">
                         <i data-lucide="user" style="width: 14px; height: 14px; color: #8b5cf6;"></i> 
-                        <span style="color: #e2e8f0; cursor: pointer; text-decoration: underline;" onclick="window.showAppView('store', { producer: '${(config.aka || config.name || '').replace(/'/g, "\\'")}' })">${producerName}</span> ${eliteBadge}
+                        <span style="color: #e2e8f0; cursor: pointer; text-decoration: underline;" onclick="window.showAppView('store', { producer: decodeURIComponent('${encodeURIComponent(config.aka || config.name || '')}') })">${sanitizeHtml(producerName)}</span> ${eliteBadge}
                     </div>
                     <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
                         <span class="minimal-tag">${beat.bpm || '--'} BPM</span>

@@ -256,7 +256,7 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
     
     sig_data = []
     
-    producer_signature = data_fields.get('signature', '')
+    producer_signature = data_fields.get('producerSignatureBase64') or data_fields.get('signature') or ''
     producer_img_path = None
     if producer_signature:
         try:
@@ -268,8 +268,27 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
                 producer_img_path = temp_sig.name
         except Exception as e:
             print(f"Warning: Failed to decode producer signature: {e}")
+    else:
+        # Fallback to local files if it matches sossa or monarco
+        producer_id = data_fields.get('producerId', 'sossa').lower()
+        aka = data_fields.get('aka', 'SOSSA').lower()
+        local_path = None
+        if 'monarco' in aka or producer_id == 'cgmonarco':
+            local_path = os.path.join(os.path.dirname(__file__), 'public', 'firma-cgmonarco.png')
+        elif 'sossa' in aka or producer_id == 'sossa':
+            local_path = os.path.join(os.path.dirname(__file__), 'public', 'firma-sossa.png')
             
-    buyer_signature = data_fields.get('buyerSignature', '')
+        if local_path and os.path.exists(local_path):
+            try:
+                with open(local_path, 'rb') as f:
+                    sig_data_bytes = f.read()
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_sig:
+                    temp_sig.write(sig_data_bytes)
+                    producer_img_path = temp_sig.name
+            except Exception as e:
+                print(f"Warning: Failed to copy local signature: {e}")
+            
+    buyer_signature = data_fields.get('buyerSignatureBase64') or data_fields.get('buyerSignature') or ''
     buyer_img_path = None
     needs_buyer = data_fields.get('needsBuyerSignature', True)
     if needs_buyer and buyer_signature:
@@ -283,52 +302,84 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
         except Exception as e:
             print(f"Warning: Failed to decode buyer signature: {e}")
             
-    prod_col = []
+    # Reestructuración de firmas en tabla de múltiples filas para alineación garantizada
+    row_images = []
+    # Productor
     if producer_img_path:
         try:
-            prod_col.append(Image(producer_img_path, width=120, height=45))
-        except Exception as e:
-            prod_col.append(Paragraph("<font name='Times-Bold' size=16 color='#8b5cf6'><i>" + data_fields.get('aka', 'Sossa') + "</i></font>", styles['SignatureValueStyle']))
+            row_images.append(Image(producer_img_path, width=120, height=45))
+        except Exception:
+            row_images.append(Paragraph("<font name='Times-Italic' size=14 color='#1c1c1e'><i>" + data_fields.get('producerName', 'Joao David Dominguez') + "</i></font>", styles['SignatureValueStyle']))
     else:
-        prod_col.append(Spacer(1, 30))
-        
-    prod_col.append(Spacer(1, 5))
-    prod_col.append(Paragraph("_____________________________", styles['SignatureValueStyle']))
-    prod_col.append(Spacer(1, 3))
-    prod_col.append(Paragraph(data_fields.get('producerRole', 'El Licenciante (Productor)'), styles['SignatureLabelStyle']))
-    prod_col.append(Paragraph(data_fields.get('producerName', 'Joao David Dominguez'), styles['SignatureValueStyle']))
-    prod_col.append(Paragraph(f"Identificación/RUT: {data_fields.get('producerId', '0803743111')}", styles['SignatureValueStyle']))
-    prod_col.append(Paragraph(f"AKA: {data_fields.get('aka', 'Sossa')}", styles['SignatureValueStyle']))
-    
-    buyer_col = []
+        row_images.append(Paragraph("<font name='Times-Italic' size=14 color='#1c1c1e'><i>" + data_fields.get('producerName', 'Joao David Dominguez') + "</i></font>", styles['SignatureValueStyle']))
+
+    # Comprador
     if needs_buyer:
         if buyer_img_path:
             try:
-                buyer_col.append(Image(buyer_img_path, width=120, height=45))
-            except Exception as e:
-                buyer_col.append(Paragraph("<font name='Times-Bold' size=16 color='#2b6cb0'><i>" + data_fields.get('buyerName', 'Comprador') + "</i></font>", styles['SignatureValueStyle']))
+                row_images.append(Image(buyer_img_path, width=120, height=45))
+            except Exception:
+                row_images.append(Spacer(1, 45))
         else:
-            buyer_col.append(Spacer(1, 30))
-            
-        buyer_col.append(Spacer(1, 5))
-        buyer_col.append(Paragraph("_____________________________", styles['SignatureValueStyle']))
-        buyer_col.append(Spacer(1, 3))
-        buyer_col.append(Paragraph(data_fields.get('buyerRole', 'El Licenciatario (Usuario)'), styles['SignatureLabelStyle']))
-        buyer_col.append(Paragraph(data_fields.get('buyerName', 'Jair Yepez'), styles['SignatureValueStyle']))
-        buyer_col.append(Paragraph(f"Identificación/RUT: {data_fields.get('buyerId', '0803743111')}", styles['SignatureValueStyle']))
-        buyer_col.append(Paragraph("Firma vía DocuSign / Electrónica", styles['SignatureValueStyle']))
-        
-    if needs_buyer:
-        sig_data.append([prod_col, buyer_col])
-        sig_table = Table(sig_data, colWidths=[252, 252])
+            row_images.append(Spacer(1, 45))
     else:
-        sig_data.append([prod_col, ''])
-        sig_table = Table(sig_data, colWidths=[252, 252])
-        
+        row_images.append('')
+
+    # Fila 1: Línea de firma
+    row_lines = []
+    row_lines.append(Paragraph("_____________________________", styles['SignatureValueStyle']))
+    if needs_buyer:
+        row_lines.append(Paragraph("_____________________________", styles['SignatureValueStyle']))
+    else:
+        row_lines.append('')
+
+    # Fila 2: Rol
+    row_roles = []
+    row_roles.append(Paragraph(data_fields.get('producerRole', 'El Licenciante (Productor)'), styles['SignatureLabelStyle']))
+    if needs_buyer:
+        row_roles.append(Paragraph(data_fields.get('buyerRole', 'El Licenciatario (Usuario)'), styles['SignatureLabelStyle']))
+    else:
+        row_roles.append('')
+
+    # Fila 3: Nombre
+    row_names = []
+    row_names.append(Paragraph(data_fields.get('producerName', 'Joao David Dominguez'), styles['SignatureValueStyle']))
+    if needs_buyer:
+        row_names.append(Paragraph(data_fields.get('buyerName', 'Jair Yepez'), styles['SignatureValueStyle']))
+    else:
+        row_names.append('')
+
+    # Fila 4: Identificación
+    row_ids = []
+    row_ids.append(Paragraph(f"Identificación/RUT: {data_fields.get('producerIdNum') or data_fields.get('producerId', '0803743111')}", styles['SignatureValueStyle']))
+    if needs_buyer:
+        row_ids.append(Paragraph(f"Identificación/RUT: {data_fields.get('buyerId', '0803743111')}", styles['SignatureValueStyle']))
+    else:
+        row_ids.append('')
+
+    # Fila 5: Metadata adicional (AKA o DocuSign)
+    row_metas = []
+    row_metas.append(Paragraph(f"AKA: {data_fields.get('aka', 'Sossa')}", styles['SignatureValueStyle']))
+    if needs_buyer:
+        row_metas.append(Paragraph("Firma vía DocuSign / Electrónica", styles['SignatureValueStyle']))
+    else:
+        row_metas.append('')
+
+    sig_data = [
+        row_images,
+        row_lines,
+        row_roles,
+        row_names,
+        row_ids,
+        row_metas
+    ]
+
+    sig_table = Table(sig_data, colWidths=[252, 252])
     sig_table.setStyle(TableStyle([
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 1),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1),
     ]))
     
     story.append(KeepTogether([sig_table]))

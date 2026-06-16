@@ -699,7 +699,7 @@ function compileContract() {
                         ? `<img src="/firma-cgmonarco.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
                         : (isSossa
                             ? `<img src="/firma-sossa.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
-                            : `<div class="signature-placeholder" style="font-family:'Brush Script MT', cursive; font-size:24px; color:var(--accent); text-align:center; padding-top:15px; border-bottom:1px solid #718096; width:150px; margin:0 auto;">${producerConfig.name}</div>`
+                            : `<div class="signature-placeholder" style="font-family:'Brush Script MT', cursive; font-size:28px; color:var(--accent); text-align:center; padding-top:5px; width:150px; margin:0 auto;">${producerConfig.name}</div>`
                           )
                       )
                 }
@@ -3228,25 +3228,45 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
 
     let signatureLeftHtml = `
         <div class="signature-block">
-            <div class="signature-line-container">
-                ${producerConfig.signatureBase64 ? `<img src="${producerConfig.signatureBase64}" class="signature-img" style="max-height: 70px; margin: 0 auto;">` : ''}
+            <div class="signature-img-wrap">
+                ${producerConfig.signatureBase64
+                    ? `<img src="${producerConfig.signatureBase64}" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                    : (producerConfig.signature
+                        ? `<img src="${producerConfig.signature}" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                        : (isMonarco
+                            ? `<img src="/firma-cgmonarco.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                            : (isSossa
+                                ? `<img src="/firma-sossa.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                                : `<div class="signature-placeholder" style="font-family:'Brush Script MT', cursive; font-size:28px; color:var(--accent); text-align:center; padding-top:5px; width:150px; margin:0 auto;">${producerConfig.name}</div>`
+                              )
+                          )
+                      )
+                }
             </div>
-            <div class="signature-name">${signatureNameL}</div>
+            <div class="signature-line"></div>
             <div class="signature-role">${signatureRoleL}</div>
-            <div class="signature-meta">${signatureAkaL}</div>
-            <div class="signature-meta">${signatureIdL}</div>
+            <div class="signature-name">${signatureNameL}</div>
+            <div class="signature-aka">${signatureIdL}</div>
+            <div class="signature-aka">${signatureAkaL}</div>
         </div>
     `;
 
     let signatureRightHtml = '';
     if (needsBuyerSignature) {
+        const buyerSig = orderData.buyerSignature || orderData.buyerSignatureBase64 || '';
         signatureRightHtml = `
             <div class="signature-block">
-                <div class="signature-line-container"></div>
-                <div class="signature-name">${signatureNameR}</div>
+                <div class="signature-img-wrap">
+                    ${buyerSig 
+                        ? `<img src="${buyerSig}" alt="Firma Comprador" class="signature-img">` 
+                        : '<!-- Espacio en blanco reservado para alineación de firmas -->'
+                    }
+                </div>
+                <div class="signature-line"></div>
                 <div class="signature-role">${signatureRoleR}</div>
-                <div class="signature-meta">${signatureAkaR}</div>
-                <div class="signature-meta">${signatureIdR}</div>
+                <div class="signature-name">${signatureNameR}</div>
+                <div class="signature-aka">${signatureIdR}</div>
+                <div class="signature-aka">${orderData.buyerSignatureDocusign || t.buyerSignatureDocusign || 'Firma vía DocuSign'}</div>
             </div>
         `;
     } else {

@@ -11,12 +11,29 @@ service cloud.firestore {
                request.auth.token.email_verified == true));
     }
 
-    // Función auxiliar para validar datos de contacto públicos
+    // Función auxiliar para validar datos de contacto públicos (leads)
     function isValidContact() {
       let data = request.resource.data;
-      return data.email is string && data.email.size() < 100 &&
+      return data.keys().hasOnly(['name', 'email', 'id', 'phone', 'city', 'country', 'updatedAt', 'source']) &&
+             data.email is string && data.email.size() < 100 &&
              data.name is string && data.name.size() < 100 &&
-             (!('phone' in data) || (data.phone is string && data.phone.size() < 30));
+             (!('id' in data) || (data.id is string && data.id.size() < 50)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() < 30)) &&
+             (!('city' in data) || (data.city is string && data.city.size() < 50)) &&
+             (!('country' in data) || (data.country is string && data.country.size() < 50)) &&
+             (!('source' in data) || (data.source is string && data.source.size() < 50)) &&
+             (!('updatedAt' in data) || (data.updatedAt is number));
+    }
+
+    // Función auxiliar para validar datos de whitelist para evitar abuso de almacenamiento
+    function isValidWhitelistEntry() {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['channelUrl', 'artistName', 'songName', 'licenseRef', 'createdAt']) &&
+             data.channelUrl is string && data.channelUrl.size() < 150 &&
+             data.artistName is string && data.artistName.size() < 100 &&
+             data.songName is string && data.songName.size() < 150 &&
+             data.licenseRef is string && data.licenseRef.size() < 100 &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() < 50));
     }
 
     // Regla para la contabilidad consolidada de Sossa Admin (Collection Group query)
@@ -66,9 +83,15 @@ service cloud.firestore {
 
     // Reglas para la cola de tareas asíncronas (tasks)
     match /tasks/{taskId} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && 
+                       request.resource.data.userId == request.auth.uid &&
+                       (!('estado' in request.resource.data) || request.resource.data.estado == 'pending');
       allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
-      allow update: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if request.auth != null && (
+                       isAdmin() || 
+                       (resource.data.userId == request.auth.uid && 
+                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'resultado', 'progreso', 'tipo', 'consulta']))
+                    );
       allow delete: if isAdmin();
     }
 
@@ -131,8 +154,11 @@ service cloud.firestore {
       }
 
       match /whitelist/{whitelistId} {
-        allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
-        allow create: if exists(/databases/$(database)/documents/users/$(userId)/licencias/$(request.resource.data.licenseRef));
+        allow read, delete: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+        allow create: if (((request.auth != null && request.auth.uid == userId) || isAdmin()) ||
+                          exists(/databases/$(database)/documents/users/$(userId)/licencias/$(request.resource.data.licenseRef))) &&
+                         isValidWhitelistEntry();
+        allow update: if false;
       }
 
       match /contacts/{contactId} {

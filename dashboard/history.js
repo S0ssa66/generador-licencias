@@ -289,7 +289,10 @@ function updateHistoryTable() {
             // Botón RIDE PDF
             const btnRide = document.createElement('a');
             btnRide.className = 'btn-sri-action';
-            btnRide.href = `/api/payments/download-ride?paymentId=${lic.id || lic.refCode || lic.reference}&user=${legacyUser}`;
+            const rideUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? `/api/payments/download-ride?paymentId=${lic.id || lic.refCode || lic.reference}&user=${legacyUser}`
+                : `http://localhost:8000/api/payments/download-ride?paymentId=${lic.id || lic.refCode || lic.reference}&user=${legacyUser}`;
+            btnRide.href = rideUrl;
             btnRide.target = '_blank';
             btnRide.title = currentLang === 'es' ? 'Descargar RIDE PDF' : 'Download RIDE PDF';
             btnRide.innerHTML = `<i data-lucide="file-text"></i> PDF`;
@@ -298,7 +301,10 @@ function updateHistoryTable() {
             // Botón XML
             const btnXml = document.createElement('a');
             btnXml.className = 'btn-sri-action';
-            btnXml.href = `/api/payments/download-xml?paymentId=${lic.id || lic.refCode || lic.reference}&user=${legacyUser}`;
+            const xmlUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? `/api/payments/download-xml?paymentId=${lic.id || lic.refCode || lic.reference}&user=${legacyUser}`
+                : `http://localhost:8000/api/payments/download-xml?paymentId=${lic.id || lic.refCode || lic.reference}&user=${legacyUser}`;
+            btnXml.href = xmlUrl;
             btnXml.target = '_blank';
             btnXml.title = currentLang === 'es' ? 'Descargar XML Autorizado' : 'Download Authorized XML';
             btnXml.innerHTML = `<i data-lucide="code"></i> XML`;
@@ -448,9 +454,16 @@ function setupHistoryRowEvents() {
             showToast(initMsg);
             
             try {
-                const response = await fetch('/api/payments/retry-sri', {
+                const localApiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                    ? '/api/payments/retry-sri'
+                    : 'http://localhost:8000/api/payments/retry-sri';
+                const localHeaders = window.getLocalHeaders ? await window.getLocalHeaders() : {};
+                const response = await fetch(localApiUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        ...localHeaders
+                    },
                     body: JSON.stringify({ paymentId, producerId })
                 });
                 
@@ -505,7 +518,11 @@ async function reloadHistoryFromLocalServer() {
     try {
         const legacyUser = getLegacyUser();
         const user = window.currentUser || legacyUser;
-        const res = await fetch(`/api/load-local?user=${legacyUser}`);
+        const localApiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? `/api/load-local?user=${legacyUser}`
+            : `http://localhost:8000/api/load-local?user=${legacyUser}`;
+        const headers = window.getLocalHeaders ? await window.getLocalHeaders() : {};
+        const res = await fetch(localApiUrl, { headers: headers });
         if (res.ok) {
             const backupData = await res.json();
             const historyStr = backupData[`${user}_license_history`] || backupData[`${legacyUser}_license_history`] || '[]';

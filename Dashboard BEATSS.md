@@ -33,6 +33,7 @@ El funcionamiento, roles y estructura de integración con Obsidian de los 21 sub
 ### 🔒 50. Seguridad de Datos
 Análisis de vulnerabilidades y seguridad del backend.
 *   **[[generador-licencias/docs/50_Seguridad/firebase_security_audit|Firebase Security Audit (MD)]]**
+*   **[[generador-licencias/docs/50_Seguridad/reporte_auditoria_seguridad|Reporte Auditoria Seguridad (MD)]]**
 *   **[[generador-licencias/docs/50_Seguridad/reporte_seguridad|Reporte Seguridad (MD)]]**
 
 

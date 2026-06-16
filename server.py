@@ -480,6 +480,30 @@ def get_gdrive_direct_link(gdrive_url):
         return f"https://docs.google.com/uc?export=download&id={file_id}"
     return gdrive_url
 
+def fetch_firestore_document(doc_path, token):
+    """Obtiene un documento específico en Firestore usando REST API."""
+    url = f"https://firestore.googleapis.com/v1/projects/licencias-musicales/databases/(default)/documents/{doc_path}"
+    headers = {"Authorization": f"Bearer {token}"}
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            fields = res_data.get("fields", {})
+            parsed_doc = {}
+            for key, val in fields.items():
+                if "stringValue" in val:
+                    parsed_doc[key] = val["stringValue"]
+                elif "integerValue" in val:
+                    parsed_doc[key] = int(val["integerValue"])
+                elif "doubleValue" in val:
+                    parsed_doc[key] = float(val["doubleValue"])
+                elif "booleanValue" in val:
+                    parsed_doc[key] = val["booleanValue"]
+            return parsed_doc
+    except Exception as e:
+        print(f"[-] Error al obtener documento Firestore {doc_path}: {e}")
+        return None
+
 def process_watermark_audio(beat_id, user):
     """
     Obtiene la configuración del productor, verifica si tiene marca de agua,
@@ -506,6 +530,25 @@ def process_watermark_audio(beat_id, user):
             producer_config = {}
 
     audio_tag_b64 = producer_config.get("audioTagBase64", "")
+    if not audio_tag_b64:
+        # Fallback: intentar descargar de Firestore private_config
+        uid = None
+        for key in db_data.keys():
+            if key.endswith('_producer_config'):
+                possible_uid = key.replace('_producer_config', '')
+                if possible_uid not in ['sossa', 'cgmonarco', 'mrmicua', 'producer']:
+                    uid = possible_uid
+                    break
+        if uid:
+            token = get_admin_token()
+            if token:
+                print(f"[*] Descargando marca de agua desde Firestore private_config para UID {uid}...")
+                private_config = fetch_firestore_document(f"users/{uid}/private_config/producer", token)
+                if private_config:
+                    audio_tag_b64 = private_config.get("audioTagBase64", "")
+                    if audio_tag_b64:
+                        producer_config["audioTagBase64"] = audio_tag_b64
+
     if not audio_tag_b64:
         beats_key = f"{user}_beats"
         beats_str = db_data.get(beats_key, "[]")
@@ -606,6 +649,39 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         serve_dir = dist_dir if os.path.exists(dist_dir) else DIRECTORY
         super().__init__(*args, directory=serve_dir, **kwargs)
 
+    def check_local_auth(self):
+        """Verifica que la petición incluya un token de autorización local válido."""
+        local_token = os.environ.get('LOCAL_AUTH_TOKEN')
+        if not local_token:
+            # Si no está configurado, denegamos por seguridad
+            return False
+            
+        auth_header = self.headers.get('Authorization')
+        if not auth_header:
+            return False
+            
+        if not auth_header.startswith('Bearer '):
+            return False
+            
+        token = auth_header.split('Bearer ')[1].strip()
+        return token == local_token
+
+    def send_cors_headers(self):
+        allowed_origins = [
+            'http://localhost:8000',
+            'http://localhost:5173',
+            'http://localhost:3000',
+            'http://127.0.0.1:8000',
+            'http://127.0.0.1:5173',
+            'http://127.0.0.1:3000',
+            'https://generador-licencias.vercel.app'
+        ]
+        origin = self.headers.get('Origin')
+        if origin in allowed_origins:
+            self.send_header('Access-Control-Allow-Origin', origin)
+        else:
+            self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+
     def end_headers(self):
         # Cabeceras de seguridad HTTP globales
         self.send_header('X-Frame-Options', 'DENY')
@@ -632,7 +708,50 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
-        if parsed.path == '/api/load-local':
+        if parsed.path == '/api/local-token':
+            # Check Origin/Referer to ensure it's a local address
+            origin = self.headers.get('Origin')
+            referer = self.headers.get('Referer')
+            
+            is_local_origin = False
+            local_origins = [
+                'http://localhost:8000', 'http://localhost:5173', 'http://localhost:3000',
+                'http://127.0.0.1:8000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'
+            ]
+            
+            # If there is no Origin (same origin request from localhost), allow
+            if not origin:
+                if referer and any(x in referer for x in ['localhost:', '127.0.0.1:']):
+                    is_local_origin = True
+                elif not referer:
+                    # Direct browser access or same origin without referer
+                    is_local_origin = True
+            elif origin in local_origins:
+                is_local_origin = True
+                
+            if is_local_origin:
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
+                self.end_headers()
+                token = os.environ.get('LOCAL_AUTH_TOKEN', '')
+                self.wfile.write(json.dumps({"token": token}).encode('utf-8'))
+            else:
+                self.send_response(403)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Forbidden: Token retrieval only allowed from localhost"}')
+            return
+            
+        elif parsed.path == '/api/load-local':
+            if not self.check_local_auth():
+                self.send_response(401)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Unauthorized: Invalid or missing local auth token"}')
+                return
+                
             qs = parse_qs(parsed.query)
             user = qs.get('user', ['sossa'])[0]
             # Solo permitir sossa, cgmonarco y mrmicua por seguridad
@@ -641,14 +760,14 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             if os.path.exists(filepath):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.send_cors_headers()
                 self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
                 self.end_headers()
                 with open(filepath, 'rb') as f:
                     self.wfile.write(f.read())
             else:
                 self.send_response(404)
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(b'{"error": "No local backup found"}')
         elif parsed.path == '/api/preview-beat':
@@ -1103,6 +1222,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
         elif parsed.path == '/api/admin/sales-analytics':
+            if not self.check_local_auth():
+                self.send_response(401)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Unauthorized: Invalid or missing local auth token"}')
+                return
+                
             qs = parse_qs(parsed.query)
             user = qs.get('user', ['sossa'])[0]
             if user not in ['sossa', 'cgmonarco', 'mrmicua']: user = 'sossa'
@@ -1126,12 +1252,23 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         elif parsed.path == '/api/payments/config':
             try:
                 config = get_admin_config()
+                # Filtrar paypalClientSecret por seguridad
+                public_config = {
+                    "paypalClientId": config.get("paypalClientId", ""),
+                    "payphoneClientId": config.get("payphoneClientId", ""),
+                    "payphoneAppId": config.get("payphoneAppId", ""),
+                    "deunaPhone": config.get("deunaPhone", ""),
+                    "deunaName": config.get("deunaName", ""),
+                    "bankPichinchaAcc": config.get("bankPichinchaAcc", ""),
+                    "bankPichinchaName": config.get("bankPichinchaName", ""),
+                    "bankPichinchaDni": config.get("bankPichinchaDni", "")
+                }
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
                 self.end_headers()
-                self.wfile.write(json.dumps(config, ensure_ascii=False).encode('utf-8'))
+                self.wfile.write(json.dumps(public_config, ensure_ascii=False).encode('utf-8'))
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
@@ -1146,6 +1283,26 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+        
+        # Rutas locales sensibles que requieren autenticación
+        protected_paths = [
+            '/api/save-local',
+            '/api/save-pdf',
+            '/api/run-task',
+            '/api/organize-obsidian',
+            '/api/payments/retry-sri',
+            '/api/admin/backup-firestore'
+        ]
+        
+        req_path = parsed.path
+        if req_path in protected_paths:
+            if not self.check_local_auth():
+                self.send_response(401)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Unauthorized: Invalid or missing local auth token"}')
+                return
+                
         if parsed.path == '/api/save-local':
             qs = parse_qs(parsed.query)
             user = qs.get('user', ['sossa'])[0]
@@ -1157,7 +1314,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             if content_length > MAX_PAYLOAD_BYTES:
                 self.send_response(413)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write('{"error": "Payload demasiado grande (maximo 50 MB)"}'.encode('utf-8'))
                 return
@@ -1174,14 +1331,14 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(b'{"status": "success", "message": "Backup local guardado correctamente"}')
                 print(f"💾 Archivo de respaldo físico actualizado en: {filepath}")
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 err_response = {"error": str(e)}
                 self.wfile.write(json.dumps(err_response).encode('utf-8'))
@@ -1193,7 +1350,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             if content_length > MAX_PAYLOAD_BYTES:
                 self.send_response(413)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write('{"error": "Payload demasiado grande (maximo 50 MB)"}'.encode('utf-8'))
                 return
@@ -1209,7 +1366,6 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 
                 # Sanitizar el nombre del archivo para prevenir path traversal
                 # Solo permitir caracteres alfanuméricos, espacios, guiones y puntos
-                import re
                 safe_filename = re.sub(r'[^a-zA-Z0-9 \-_\.\u00c0-\u024f]', '_', os.path.basename(filename))
                 if not safe_filename.lower().endswith('.pdf'):
                     safe_filename += '.pdf'
@@ -1237,14 +1393,14 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(b'{"status": "success", "message": "PDF guardado en Documentos/Licencias"}')
                 print(f"📄 PDF de licencia guardado en: {filepath}")
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.send_cors_headers()
                 self.end_headers()
                 err_response = {"error": str(e)}
                 self.wfile.write(json.dumps(err_response).encode('utf-8'))
@@ -1268,14 +1424,14 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(b'{"status": "success", "message": "Task processing started in background"}')
                 print(f"⚙️ Procesamiento asíncrono iniciado para la tarea: {task_id}")
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.send_cors_headers()
                 self.end_headers()
                 err_response = {"error": str(e)}
                 self.wfile.write(json.dumps(err_response).encode('utf-8'))
@@ -1288,14 +1444,14 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(b'{"status": "success", "message": "Obsidian vault organized successfully"}')
                 print("[+] Obsidian vault organized successfully on request")
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+                self.send_cors_headers()
                 self.end_headers()
                 err_response = {"error": str(e)}
                 self.wfile.write(json.dumps(err_response).encode('utf-8'))
@@ -1938,7 +2094,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 if payment_entry and payment_entry.get('sriEstado') == 'AUTORIZADO':
                     self.send_response(400)
                     self.send_header('Content-Type', 'application/json')
-                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_cors_headers()
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "La factura correspondiente a este pago ya se encuentra AUTORIZADA."}).encode('utf-8'))
                     return
@@ -1951,7 +2107,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({
                     "status": "success",
@@ -1963,7 +2119,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ Error al reemitir factura SRI: {str(e)}")
@@ -1973,9 +2129,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
+        self.send_cors_headers()
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         self.end_headers()
 
     # Silenciar logs repetitivos si se desea, o mantenerlos para debug simple
@@ -2025,6 +2181,20 @@ def load_dotenv():
 if __name__ == '__main__':
     load_dotenv()
     
+    # Asegurar que LOCAL_AUTH_TOKEN esté configurado en .env
+    local_token = os.environ.get('LOCAL_AUTH_TOKEN')
+    if not local_token:
+        import secrets
+        generated_token = secrets.token_hex(24)
+        env_path = os.path.join(DIRECTORY, '.env')
+        try:
+            with open(env_path, 'a', encoding='utf-8') as f:
+                f.write(f"\nLOCAL_AUTH_TOKEN=\"{generated_token}\"\n")
+            os.environ['LOCAL_AUTH_TOKEN'] = generated_token
+            print(f"[+] LOCAL_AUTH_TOKEN autogenerado y configurado en .env.")
+        except Exception as e:
+            print(f"[-] Error al guardar LOCAL_AUTH_TOKEN autogenerado en .env: {e}", file=sys.stderr)
+
     # Validación de seguridad de variables críticas
     if not os.environ.get('GEMINI_API_KEY'):
         print("[-] ERROR CRÍTICO: La variable de entorno GEMINI_API_KEY no está configurada en .env ni en el entorno del sistema.", file=sys.stderr)
@@ -2041,13 +2211,13 @@ if __name__ == '__main__':
             
     print(f"[*] Iniciando servidor personalizado de Sossa Licencias...")
     print(f"[*] Directorio raíz: {DIRECTORY}")
-    print(f"[*] Escuchando en http://localhost:{port}")
+    print(f"[*] Escuchando en http://127.0.0.1:{port}")
     
     # Lanzar el organizador de Obsidian en segundo plano
     obsidian_thread = threading.Thread(target=run_obsidian_organizer_background, daemon=True)
     obsidian_thread.start()
     
-    server_address = ('', port)
+    server_address = ('127.0.0.1', port)
     httpd = http.server.HTTPServer(server_address, CustomHandler)
     try:
         httpd.serve_forever()

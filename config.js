@@ -264,10 +264,7 @@ Este acuerdo se rige de forma exclusiva por las leyes de la República del Ecuad
 Las partes acuerdan que el presente contrato puede ser formalizado de manera física, digital o mediante firmas escaneadas intercambiadas por medios electrónicos.
 No obstante, en caso de no mediar una firma manuscrita, el Licenciatario declara haber leído este documento y manifiesta su **aceptación tácita, consentimiento legal y ratificación absoluta** de todos y cada uno de los términos aquí descritos mediante la ejecución del pago de la Tarifa de Licencia (\${{license_value}} USD) y la recepción conforme de los archivos musicales del Beat.
 
-Como medida de seguridad e integridad contractual, este documento incorpora el logotipo oficial de **{{producer_aka}}** en marca de agua y un código de referencia único Invoice # **{{ref_code}}**. La remoción, ocultamiento o alteración digital de cualquiera de estos elementos de seguridad anula de forma automática e inmediata la validez de la presente licencia y los derechos de explotación sobre el Beat.
-
----
-*Fin del Contrato de Licencia Comercial {{license_type}} — {{producer_aka}} {{current_year}}.*`,
+Como medida de seguridad e integridad contractual, este documento incorpora el logotipo oficial de **{{producer_aka}}** en marca de agua y un código de referencia único Invoice # **{{ref_code}}**. La remoción, ocultamiento o alteración digital de cualquiera de estos elementos de seguridad anula de forma automática e inmediata la validez de la presente licencia y los derechos de explotación sobre el Beat.`,
         markdown_en: `# {{producer_aka}}: {{license_type}} Music License Agreement
 ## {{license_exclusivity}} License Agreement for the Exploitation of the Work "{{beat_name}}"
 
@@ -349,10 +346,7 @@ This agreement is governed exclusively by the laws of the Republic of Ecuador. F
 The parties agree that this contract may be executed physically, digitally, or via scanned signatures exchanged by electronic means.
 However, in the absence of a handwritten signature, the Licensee declares to have read this document and expresses their **tacit acceptance, legal consent, and absolute ratification** of each and every one of the terms described herein by executing the payment of the License Fee (\${{license_value}} USD) and the conforming receipt of the Beat musical files.
 
-As a measure of security and contractual integrity, this document incorporates the official logo of **{{producer_aka}}** as a watermark and a unique reference code Invoice # **{{ref_code}}**. The removal, concealment, or digital alteration of any of these security elements automatically and immediately nullifies the validity of this license and the exploitation rights over the Beat.
-
----
-*End of Commercial License Agreement {{license_type}} — {{producer_aka}} {{current_year}}.*`
+As a measure of security and contractual integrity, this document incorporates the official logo of **{{producer_aka}}** as a watermark and a unique reference code Invoice # **{{ref_code}}**.`
     },
     {
         id: "split_sheet",
@@ -398,10 +392,7 @@ El Licenciatario se obliga a configurar esta división (*splits*) de manera form
 
 ## 3. Créditos Obligatorios
 En cualquier medio digital, físico o red social, se otorgará el crédito de coproducción de la siguiente manera obligatoria:
-> **{{clause_credits}}**
-
----
-*Fin del Acuerdo de Splits — BEATSS.*`,
+> **{{clause_credits}}**`,
         markdown_en: `# {{producer_aka}}: Split Sheet Agreement (Royalty Distribution)
 ## Declaration and Assignment of Splits for the Co-written Song over the Instrumental "{{beat_name}}"
 
@@ -443,10 +434,7 @@ The Licensee agrees to formally set up this division (*splits*) directly on thei
 
 ## 3. Mandatory Credit
 In any digital, physical medium or social network, co-production credit must be granted in the following mandatory format:
-> **{{clause_credits}}**
-
----
-*End of Split Sheet Agreement — BEATSS.*`
+> **{{clause_credits}}**`
     },
     {
         id: "coproduccion",
@@ -490,10 +478,7 @@ El Coproductor otorga mandato exclusivo al Productor Principal para que este adm
 
 ### 5. Acreditación de Coproducción
 Los créditos de la composición resultante se listarán siempre de la siguiente manera:
-> **{{clause_credits}}**
-
----
-*Fin del Contrato de Coproducción — BEATSS.*`,
+> **{{clause_credits}}**`,
         markdown_en: `# {{producer_aka}}: Co-production and Musical Collaboration Agreement
 ## Co-production Agreement for the Work "{{beat_name}}"
 
@@ -533,10 +518,7 @@ The Co-producer grants exclusive authority to the Principal Producer to administ
 
 ### 5. Co-production Credit
 Credits of the resulting composition will always be listed in the following manner:
-> **{{clause_credits}}**
-
----
-*End of Co-production Agreement — BEATSS.*`
+> **{{clause_credits}}**`
     },
     {
         id: "contrato_suscripcion",
@@ -572,10 +554,7 @@ Este contrato es válido únicamente mientras la suscripción mensual de \${{lic
 Las canciones derivadas que el Artista grabe con los beats descargados durante la suscripción activa mantendrán sus derechos de distribución en plataformas digitales (Spotify, YouTube, etc.) siempre que la suscripción continúe vigente o se adquieran de por vida.
 
 ### 4. Propiedad Intelectual y Splits
-Los beats siguen siendo propiedad exclusiva del Productor. Se establece un split de regalías de composición y publishing del 50% para el Artista y 50% para el Productor.
-
----
-*Fin del Contrato de Suscripción — BEATSS.*`,
+Los beats siguen siendo propiedad exclusiva del Productor. Se establece un split de regalías de composición y publishing del 50% para el Artista y 50% para el Productor.`,
         markdown_en: `# {{producer_aka}}: Subscription and Beat Licensing Agreement
 ## Terms of the Recurring Musical Subscription Agreement
 
@@ -604,9 +583,6 @@ The Artist subscribes to the {{license_type}} Plan to download beats under the t
 This contract is valid only while the monthly payment of \${{license_value}} USD is active and paid. Failure to pay will suspend the Artist's commercial exploitation rights immediately.
 
 ### 3. Royalties and Splits
-The beats remain the exclusive property of the Producer. Composition and publishing royalties are split 50% for the Artist and 50% for the Producer.
-
----
-*End of Subscription Agreement — BEATSS.*`
+The beats remain the exclusive property of the Producer. Composition and publishing royalties are split 50% for the Artist and 50% for the Producer.`
     }
 ];
