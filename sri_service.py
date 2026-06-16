@@ -8,6 +8,84 @@ import sri_invoicing
 import sri_ride
 from server_utils import get_admin_token, resolve_backup_file
 
+def validar_cedula_ruc_ecuador(dni):
+    """
+    Valida si un número de identificación cumple con el formato y algoritmos del SRI
+    (Cédula de identidad, RUC de persona natural, RUC de persona jurídica o RUC público).
+    """
+    if not dni or not isinstance(dni, str):
+        return False
+    
+    dni = dni.strip()
+    if dni == '9999999999999':
+        return False
+        
+    if len(dni) not in [10, 13]:
+        return False
+        
+    try:
+        # Extraer los dígitos
+        digits = [int(x) for x in dni]
+        
+        # Validar provincia (primeros 2 dígitos entre 01 y 24, o 30)
+        prov = digits[0] * 10 + digits[1]
+        if (prov < 1 or prov > 24) and prov != 30:
+            return False
+            
+        third_digit = digits[2]
+        
+        # 1. Cédula o RUC de persona natural (tercer dígito < 6)
+        if third_digit < 6:
+            coefs = [2, 1, 2, 1, 2, 1, 2, 1, 2]
+            suma = 0
+            for i in range(9):
+                val = digits[i] * coefs[i]
+                if val >= 10:
+                    val -= 9
+                suma += val
+            verificador = (10 - (suma % 10)) % 10
+            if verificador != digits[9]:
+                return False
+                
+        # 2. RUC de personas jurídicas o extranjeros no residentes (tercer dígito = 9)
+        elif third_digit == 9:
+            if len(dni) != 13:
+                return False
+            coefs = [4, 3, 2, 7, 6, 5, 4, 3, 2]
+            suma = 0
+            for i in range(9):
+                suma += digits[i] * coefs[i]
+            verificador = (11 - (suma % 11)) % 11
+            if verificador == 11:
+                verificador = 0
+            if verificador != digits[9]:
+                return False
+                
+        # 3. RUC de entidades públicas (tercer dígito = 6)
+        elif third_digit == 6:
+            if len(dni) != 13:
+                return False
+            coefs = [3, 2, 7, 6, 5, 4, 3, 2]
+            suma = 0
+            for i in range(8):
+                suma += digits[i] * coefs[i]
+            verificador = (11 - (suma % 11)) % 11
+            if verificador == 11:
+                verificador = 0
+            if verificador != digits[8]:
+                return False
+        else:
+            return False
+            
+        # Para RUC de 13 dígitos, validar que el establecimiento final no sea 000
+        if len(dni) == 13:
+            if dni[10:] == '000':
+                return False
+                
+        return True
+    except Exception:
+        return False
+
 def actualizar_secuencial_sri(producer_id, nuevo_secuencial, token=None):
     """
     Actualiza el secuencial del SRI para el productor en Firestore y en el respaldo local.
@@ -388,22 +466,34 @@ def emitir_factura_sri_background(reference_id, producer_id):
         secuencial=secuencial_str
     )
     
-    # 5. Mapear identificación del comprador
-    buyer_dni = comprador_info.get('buyerDni', '')
+    # 5. Mapear identificación del comprador con validación y fallback inteligente
+    buyer_dni = comprador_info.get('buyerDni', '').strip() if comprador_info else ''
+    buyer_name = comprador_info.get('buyerName', 'CONSUMIDOR FINAL') if comprador_info else 'CONSUMIDOR FINAL'
     buyer_dni_type = '07'
-    if len(buyer_dni) == 10:
-        buyer_dni_type = '05'
-    elif len(buyer_dni) == 13 and buyer_dni != '9999999999999':
-        buyer_dni_type = '04'
-    elif len(buyer_dni) > 0 and buyer_dni != '9999999999999':
-        buyer_dni_type = '06'
+    
+    if validar_cedula_ruc_ecuador(buyer_dni):
+        if len(buyer_dni) == 10:
+            buyer_dni_type = '05'
+        elif len(buyer_dni) == 13:
+            buyer_dni_type = '04'
+    else:
+        # Si no es un DNI ecuatoriano válido, y no se trata de pasaporte con formato decente, fallback a Consumidor Final
+        # Para pasaporte (tipo 06), permitimos longitud > 0 pero aplicamos validación de seguridad
+        if buyer_dni and len(buyer_dni) >= 5 and buyer_dni != '9999999999999':
+            # Asumimos que es pasaporte o DNI extranjero y no lo alteramos, asignándole tipo 06 (Pasaporte)
+            buyer_dni_type = '06'
+        else:
+            print(f"[!] [SRI] Identificación de comprador inválida o extranjera ('{buyer_dni}'). Se aplica fallback automático a Consumidor Final.")
+            buyer_dni = '9999999999999'
+            buyer_dni_type = '07'
+            buyer_name = 'CONSUMIDOR FINAL'
         
     comprador = {
         'tipoIdentificacionComprador': buyer_dni_type,
-        'razonSocialComprador': comprador_info.get('buyerName', 'CONSUMIDOR FINAL'),
-        'identificacionComprador': buyer_dni if buyer_dni else '9999999999999',
-        'dirComprador': comprador_info.get('buyerCity', 'Quito'),
-        'emailComprador': comprador_info.get('buyerEmail', ''),
+        'razonSocialComprador': buyer_name,
+        'identificacionComprador': buyer_dni,
+        'dirComprador': comprador_info.get('buyerCity', 'Quito') if comprador_info else 'Quito',
+        'emailComprador': comprador_info.get('buyerEmail', '') if comprador_info else '',
         'formaPago': '20'
     }
     
@@ -447,17 +537,30 @@ def emitir_factura_sri_background(reference_id, producer_id):
         
     xml_firmado_b64 = base64.b64encode(xml_firmado.encode('utf-8')).decode('utf-8')
     
-    # 8. Enviar al WS de Recepción del SRI
+    # 8. Enviar al WS de Recepción del SRI (con reintentos para mitigar caídas)
     ws_recepcion = sri_invoicing.WS_RECEPCION_PRUEBAS if ambiente == '1' else sri_invoicing.WS_RECEPCION_PROD
     ws_autorizacion = sri_invoicing.WS_AUTORIZACION_PRUEBAS if ambiente == '1' else sri_invoicing.WS_AUTORIZACION_PROD
     
-    try:
-        print(f"[+] [SRI] Enviando comprobante al Web Service de Recepción ({ambiente})...")
-        res_recepcion_soap = sri_invoicing.enviar_sri_soap(xml_firmado_b64, ws_recepcion)
-        res_recepcion = sri_invoicing.parsear_respuesta_recepcion(res_recepcion_soap)
-    except Exception as e:
-        print(f"[-] [SRI] Error al enviar al servicio de Recepción: {e}")
-        actualizar_estado_factura_db(payment_id, producer_id, "ERROR_CONEXION_RECEPCION", error_msg=str(e), token=token, ref_code=reference_id)
+    max_intentos = 3
+    res_recepcion = None
+    ultimo_error_recepcion = None
+    
+    for intento in range(1, max_intentos + 1):
+        try:
+            print(f"[+] [SRI] Enviando comprobante al Web Service de Recepción ({ambiente}) - Intento {intento}/{max_intentos}...")
+            res_recepcion_soap = sri_invoicing.enviar_sri_soap(xml_firmado_b64, ws_recepcion)
+            res_recepcion = sri_invoicing.parsear_respuesta_recepcion(res_recepcion_soap)
+            ultimo_error_recepcion = None
+            break
+        except Exception as e:
+            ultimo_error_recepcion = e
+            print(f"[!] [SRI] Fallo en intento {intento}/{max_intentos} de Recepción: {e}")
+            if intento < max_intentos:
+                time.sleep(3)
+                
+    if ultimo_error_recepcion:
+        print(f"[-] [SRI] Todos los {max_intentos} intentos al servicio de Recepción fallaron.")
+        actualizar_estado_factura_db(payment_id, producer_id, "ERROR_CONEXION_RECEPCION", error_msg=str(ultimo_error_recepcion), token=token, ref_code=reference_id)
         return
         
     estado_recepcion = res_recepcion.get('estado')
@@ -471,13 +574,26 @@ def emitir_factura_sri_background(reference_id, producer_id):
     print(f"[+] [SRI] Factura RECIBIDA por SRI. Esperando 3 segundos para consultar autorización...")
     time.sleep(3)
     
-    # 9. Consultar la autorización
-    try:
-        res_autorizacion_soap = sri_invoicing.consultar_sri_autorizacion(clave_acceso, ws_autorizacion)
-        res_autorizacion = sri_invoicing.parsear_respuesta_autorizacion(res_autorizacion_soap)
-    except Exception as e:
-        print(f"[-] [SRI] Error al conectar al servicio de Autorización: {e}")
-        actualizar_estado_factura_db(payment_id, producer_id, "ERROR_CONEXION_AUTORIZACION", error_msg=str(e), token=token, ref_code=reference_id)
+    # 9. Consultar la autorización (con reintentos)
+    res_autorizacion = None
+    ultimo_error_autorizacion = None
+    
+    for intento in range(1, max_intentos + 1):
+        try:
+            print(f"[+] [SRI] Consultando autorización ({clave_acceso}) - Intento {intento}/{max_intentos}...")
+            res_autorizacion_soap = sri_invoicing.consultar_sri_autorizacion(clave_acceso, ws_autorizacion)
+            res_autorizacion = sri_invoicing.parsear_respuesta_autorizacion(res_autorizacion_soap)
+            ultimo_error_autorizacion = None
+            break
+        except Exception as e:
+            ultimo_error_autorizacion = e
+            print(f"[!] [SRI] Fallo en intento {intento}/{max_intentos} de Autorización: {e}")
+            if intento < max_intentos:
+                time.sleep(3)
+                
+    if ultimo_error_autorizacion:
+        print(f"[-] [SRI] Todos los {max_intentos} intentos al servicio de Autorización fallaron.")
+        actualizar_estado_factura_db(payment_id, producer_id, "ERROR_CONEXION_AUTORIZACION", error_msg=str(ultimo_error_autorizacion), token=token, ref_code=reference_id)
         return
         
     autorizaciones = res_autorizacion.get('autorizaciones', [])
