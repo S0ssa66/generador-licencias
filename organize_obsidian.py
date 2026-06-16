@@ -2,6 +2,7 @@
 import os
 import shutil
 import re
+import time
 
 VAULT_DIR = "/Users/sossa/IA"
 PROJECT_DIR = os.path.join(VAULT_DIR, "generador-licencias")
@@ -9,17 +10,63 @@ DOCS_DIR = os.path.join(PROJECT_DIR, "docs")
 DASHBOARD_PATH = os.path.join(PROJECT_DIR, "Dashboard BEATSS.md")
 
 CATEGORIES = {
-    "10_Pagos": ["stripe", "ebay", "pago", "order", "receipt", "invoice", "financiera", "fee"],
-    "20_Soporte": ["ayuda", "soporte", "faq", "guide", "educacion"],
-    "30_Contratos": ["contrato", "licencia", "permiso", "autorizacion", "signature", "firma", "release"],
-    "40_Subagentes": ["agent", "subagent", "coordinador", "expert"],
-    "50_Seguridad": ["security", "audit", "rules", "vulnerabilidad", "firewall", "auth"]
+    "10_Pagos": ["stripe", "ebay", "pago", "order", "receipt", "invoice", "financiera", "fee", "payphone", "deuna", "kushki", "pagoplux", "transferencia", "sri", "ruc", "cedula", "factura", "xml", "p12", "firma", "billing", "taxes", "impuestos", "rimpe"],
+    "20_Soporte": ["ayuda", "soporte", "faq", "guide", "educacion", "client", "customer", "ticket", "claim", "contentid", "disputa", "reclamacion"],
+    "30_Contratos": ["contrato", "licencia", "permiso", "autorizacion", "signature", "firma", "release", "terms", "condiciones", "privacidad", "acuerdo", "split", "sheet", "master"],
+    "40_Subagentes": ["agent", "subagent", "coordinador", "expert", "prompt", "system", "orchestrator", "coordination", "multiagent", "ai"],
+    "50_Seguridad": ["security", "audit", "rules", "vulnerabilidad", "firewall", "auth", "password", "key", "token", "secret", "cors", "encryption", "ssl", "credentials"],
+    "90_Otros": []
 }
 
 def clean_name(name):
     # Convert file name to human readable name
     name = re.sub(r'[\-_]', ' ', name)
     return name.title()
+
+def get_file_metadata(filepath):
+    """Calcula el tamaño del archivo formateado y la fecha de última modificación."""
+    try:
+        stat = os.stat(filepath)
+        size_kb = stat.st_size / 1024
+        if size_kb < 1024:
+            size_str = f"{size_kb:.1f} KB"
+        else:
+            size_str = f"{size_kb/1024:.1f} MB"
+        mtime = time.strftime('%Y-%m-%d %H:%M', time.localtime(stat.st_mtime))
+        return f"{size_str}, modificado: {mtime}"
+    except Exception:
+        return ""
+
+def get_markdown_summary(filepath):
+    """Extrae el resumen del bloque frontmatter YAML o el primer párrafo de contenido de un archivo MD/TXT."""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Intentar extraer desde frontmatter YAML
+        match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+        if match:
+            frontmatter = match.group(1)
+            desc_match = re.search(r'^(?:description|summary|desc):\s*(.*)$', frontmatter, re.MULTILINE | re.IGNORECASE)
+            if desc_match:
+                return desc_match.group(1).strip().strip('"\'')
+        
+        # Fallback: buscar el primer párrafo que no sea un encabezado, línea de frontmatter, o lista
+        lines = content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('#') or line.startswith('---') or line.startswith('*') or line.startswith('-'):
+                continue
+            # Limpiar posibles sintaxis de links de markdown/Obsidian
+            cleaned = re.sub(r'\[\[(.*?)\]\]', r'\1', line)  # Obsidian links [[Link|Texto]] o [[Link]]
+            cleaned = re.sub(r'\[(.*?)\]\(.*?\)', r'\1', cleaned)  # Markdown links [Texto](url)
+            cleaned = re.sub(r'[\*_`~]', '', cleaned)  # Eliminar formato negrita, itálica, etc.
+            
+            # Devolver truncado a 140 caracteres
+            return cleaned[:140] + '...' if len(cleaned) > 140 else cleaned
+    except Exception:
+        pass
+    return ""
 
 def organize_files():
     print("Organizing files in the Obsidian vault root...")
@@ -38,6 +85,8 @@ def organize_files():
             if ext in ['.pdf', '.md', '.txt']:
                 moved = False
                 for cat, keywords in CATEGORIES.items():
+                    if cat == "90_Otros":
+                        continue
                     if any(kw in filename_lower for kw in keywords):
                         dest_dir = os.path.join(DOCS_DIR, cat)
                         os.makedirs(dest_dir, exist_ok=True)
@@ -47,13 +96,11 @@ def organize_files():
                         moved = True
                         break
                 if not moved:
-                    # Default: if it's a PDF/MD and doesn't match any specific category keyword,
-                    # we can default it to 30_Contratos for general PDFs, or keep it in the root.
-                    if ext == '.pdf' and ('contrato' in filename_lower or 'permiso' in filename_lower or 'beatss' in filename_lower):
-                        dest_dir = os.path.join(DOCS_DIR, "30_Contratos")
-                        os.makedirs(dest_dir, exist_ok=True)
-                        shutil.move(entry_path, os.path.join(dest_dir, entry))
-                        print(f"[+] Moved default: {entry} -> docs/30_Contratos/")
+                    # Move to fallback 90_Otros
+                    dest_dir = os.path.join(DOCS_DIR, "90_Otros")
+                    os.makedirs(dest_dir, exist_ok=True)
+                    shutil.move(entry_path, os.path.join(dest_dir, entry))
+                    print(f"[+] Moved fallback: {entry} -> docs/90_Otros/")
 
 def generate_dashboard():
     print("Generating Dashboard BEATSS.md...")
@@ -67,13 +114,14 @@ Bienvenido a la Bóveda de Documentación de **BEATSS**. Este panel sirve como e
 """
 
     sections = []
-    cats = ["10_Pagos", "20_Soporte", "30_Contratos", "40_Subagentes", "50_Seguridad"]
+    cats = ["10_Pagos", "20_Soporte", "30_Contratos", "40_Subagentes", "50_Seguridad", "90_Otros"]
     cat_titles = {
-        "10_Pagos": "💳 10. Pagos y Viabilidad Financiera\nDocumentos relacionados con la integración de pasarelas de pago y la viabilidad del cobro internacional desde Ecuador.",
-        "20_Soporte": "🤝 20. Soporte y Educación al Cliente\nGuías y recursos estructurados para optimizar la experiencia de soporte de BEATSS.",
-        "30_Contratos": "📜 30. Contratos y Licenciamiento\nAnálisis de la legalidad de los contratos generados y su formato de impresión.",
-        "40_Subagentes": "🤖 40. Organización de Subagentes\nEl funcionamiento, roles y estructura de integración con Obsidian de los 21 subagentes de la plataforma.",
-        "50_Seguridad": "🔒 50. Seguridad de Datos\nAnálisis de vulnerabilidades y seguridad del backend."
+        "10_Pagos": "💳 10. Pagos, SRI y Viabilidad Financiera\nDocumentos de pasarelas de pago (PayPhone, Deuna!, Stripe), facturación electrónica del SRI y contabilidad local.",
+        "20_Soporte": "🤝 20. Soporte y Educación al Cliente\nGuías de soporte, preguntas frecuentes y asistencia sobre reclamos de Content ID.",
+        "30_Contratos": "📜 30. Contratos y Licenciamiento\nLicencias de beats, acuerdos de splits de regalías, contratos de distribución y políticas.",
+        "40_Subagentes": "🤖 40. Organización de Subagentes\nEstructuras de prompts, flujos de orquestación y funcionamiento técnico de la red de subagentes.",
+        "50_Seguridad": "🔒 50. Seguridad de Datos\nAuditorías de Firebase, configuraciones de CORS, manejo de tokens y llaves de cifrado.",
+        "90_Otros": "📂 90. Otros Documentos\nDocumentos y archivos varios clasificados automáticamente sin palabras clave específicas."
     }
 
     for cat in cats:
@@ -89,7 +137,17 @@ Bienvenido a la Bóveda de Documentación de **BEATSS**. Este panel sirve como e
             name_no_ext, ext = os.path.splitext(f)
             friendly_name = clean_name(name_no_ext)
             link_path = f"generador-licencias/docs/{cat}/{name_no_ext}"
-            links.append(f"*   **[[{link_path}|{friendly_name} ({ext[1:].upper()})]]**")
+            filepath = os.path.join(cat_dir, f)
+            
+            meta = get_file_metadata(filepath)
+            summary = ""
+            if ext in ['.md', '.txt']:
+                summary = get_markdown_summary(filepath)
+                
+            display_meta = f" *({ext[1:].upper()} - {meta})*" if meta else f" *({ext[1:].upper()})*"
+            links.append(f"*   **[[{link_path}|{friendly_name}]]**{display_meta}")
+            if summary:
+                links.append(f"    *{summary}*")
         
         if links:
             section_text += "\n".join(links) + "\n"

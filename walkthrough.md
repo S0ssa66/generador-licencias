@@ -77,9 +77,23 @@ Hemos implementado exitosamente el conjunto de mejoras y nuevas características
 
 ---
 
-## 💡 Próximos Pasos Recomendados
-1.  **Verificación**:
-    *   Ingresa al panel de administración como administrador Sossa, abre la ventana de "Modificar Plan Manual" para cualquier productor, y valida que el botón "Aplicar Plan" guarde los cambios y actualice el plan exitosamente, y que los botones "Cancelar" y "x" funcionen correctamente.
-    *   Genera un contrato de prueba en local (o después de desplegar) y descárgalo.
-    *   Confirma que la firma manuscrita se dibuje perfectamente alineada sobre la línea de firmas y con el fondo transparente correcto (sin recuadros blancos ni texto de color violeta).
-    *   Verifica que la Cédula/RUT del productor se escriba con el número correspondiente (p.ej. `0803743111`) en lugar del identificador de texto.
+## 🇪🇨 Fase A: Resiliencia y Validación en Facturación Electrónica del SRI
+*   **Archivo Modificado:** [sri_service.py](file:///Users/sossa/IA/generador-licencias/sri_service.py)
+*   **Validación de DNI y Fallback:** Implementamos `validar_cedula_ruc_ecuador(dni)` para validar matemáticamente (algoritmo de Módulo 10/11) cédulas y RUCs ecuatorianos. Si la validación falla (p.ej., DNI inválido de un extranjero), el sistema realiza un fallback automático reemplazando la identificación por `"9999999999999"` (Consumidor Final, tipo `"07"`), evitando rechazos del SRI.
+*   **Resiliencia SOAP:** Inclusión de bucle de reintento automático (hasta 3 intentos con 3 segundos de espera asíncrona) al enviar el comprobante a Recepción y consultar la Autorización ante inestabilidades del Web Service de pruebas/producción del SRI.
+
+---
+
+## 🚀 Fase B: Enriquecimiento del Dashboard de Obsidian y Categorización
+*   **Archivo Modificado:** [organize_obsidian.py](file:///Users/sossa/IA/generador-licencias/organize_obsidian.py)
+*   **Carpeta Fallback `90_Otros`:** Para mantener la raíz de la bóveda `/Users/sossa/IA` 100% limpia, cualquier archivo `.pdf`, `.md` o `.txt` no clasificado se mueve automáticamente a `docs/90_Otros/` y se lista bajo una sección dedicada en el Dashboard.
+*   **Resúmenes Automáticos:** El script lee archivos `.md` y `.txt` y extrae su descripción desde el bloque frontmatter YAML (campo `description` o `summary`) o, en su defecto, extrae el primer párrafo legible truncado a 140 caracteres.
+*   **Metadatos de Archivo:** Se muestra dinámicamente el tamaño formateado (KB/MB) y la fecha de última modificación de todos los archivos al lado del enlace.
+*   **Palabras Clave Ampliadas:** Se incorporaron términos locales de cobro (`payphone`, `deuna`, `pagoplux`, `sri`, `ruc`, `cedula`, `factura`, `p12`), contratos (`split`, `sheet`, `master`) y multiagentes.
+
+---
+
+## 🧪 Pruebas y Validación Realizadas
+1.  **Facturación SRI:** El script de prueba `test_deuna_payment_flow.py` confirmó que un DNI inválido activa con éxito el fallback a Consumidor Final, firmando y transmitiendo el XML al SRI mediante reintentos SOAP sin errores de conexión.
+2.  **Organizador de Obsidian:** Ejecución manual exitosa que clasificó y movió archivos no mapeados (como `README.md` y `test.pdf`) a `docs/90_Otros/` y actualizó el archivo `Dashboard BEATSS.md` mostrando metadatos y resúmenes impecables.
+3.  **Daemon en Segundo Plano:** El servidor local fue reiniciado en `127.0.0.1:8000` y el daemon de Obsidian se inició correctamente para escanear de manera automática cada 5 minutos.
