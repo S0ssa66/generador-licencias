@@ -83,12 +83,12 @@ Los subagentes están organizados en **6 Categorías Funcionales**.
     *   Creando listas de chequeo interactivas en Markdown con los casos de prueba obligatorios antes de cada build (v.g. comprobar cupones de descuento, cálculo de comisiones de checkout, firma digital).
     *   Enlazando reportes de bugs directamente con las notas de código involucradas (`[[Bug #12 - Error de descarga]]` ➔ `[[checkout.js]]`), haciendo rastreable el ciclo de vida del fallo.
 
-### `security_ops` (Ciberseguridad y Auditorías)
-*   **Ámbito de Obsidian:** Bitácora de análisis de amenazas y cambios de firestore.rules.
+### `security_ops` (Seguridad, Vulnerabilidades y Auditorías)
+*   **Ámbito de Obsidian:** Registro de mitigación de vulnerabilidades (SAST/SCA), bitácoras de dependencias vulnerables y control de firestore.rules.
 *   **Cómo lo usaría:** 
-    *   Diseñando diagramas de arquitectura de seguridad en formato Mermaid directo en las notas para mapear accesos de datos.
-    *   Manteniendo una lista de comprobación de auditoría (Vulnerabilidades mitigadas, políticas de contraseñas, sanitización de inputs).
-    *   Escribiendo notas históricas sobre cada cambio en `[[firestore.rules]]` para rastrear qué reglas de lectura/escritura se endurecieron y por qué.
+    *   Manteniendo un log centralizado `[[Log de Vulnerabilidades]]` que documente vulnerabilidades detectadas en dependencias, su severidad (CVSS) y el estado de su resolución.
+    *   Diseñando diagramas Mermaid de flujos de autenticación y autorización para auditorías visuales rápidas.
+    *   Escribiendo notas históricas de control de cambios sobre el endurecimiento preventivo de `[[firestore.rules]]`.
 
 ### `token_optimizer` (Eficiencia de Tokens y Contexto)
 *   **Ámbito de Obsidian:** Auditoría de densidad de información en notas y optimización de prompts del orquestador.
