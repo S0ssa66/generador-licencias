@@ -1280,11 +1280,13 @@ body.theme-mrmicua #btn-send-email, body.theme-mrmicua #btn-docusign {
     object-fit: contain;
     mix-blend-mode: multiply;
     background-color: transparent;
+    transform: translateY(12px); /* Shift down to overlap the signature line realistically */
+    filter: contrast(1.8) brightness(0.6); /* Make the grey signature lines darker and sharper */
 }
 
 .signature-line {
     width: 100%;
-    border-top: 1px solid var(--contract-badge-border);
+    border-top: 1px solid #c7c7cc; /* Professional neutral grey line */
     margin-top: 5px;
     margin-bottom: 10px;
 }
