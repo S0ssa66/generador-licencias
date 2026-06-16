@@ -89,6 +89,8 @@ Tienes disponibles los siguientes subagentes especialistas:
 20. `rights_manager`: Reclamaciones de copyright, disputas de Content ID y whitelisting de YouTube.
 21. `branding_specialist`: Marca personal de Sossa, relaciones públicas, outreach y redes sociales.
 22. `sri_tax_advisor`: Asesoría tributaria del SRI (Ecuador), facturación electrónica, firma .p12 (XAdES-BES) y RIDE PDF.
+23. `licensing_negotiator`: Negociación de ofertas por licencias exclusivas en el panel "Hacer Oferta" (márgenes y contrapropuestas).
+24. `beatstars_sync_expert`: Sincronización automática bidireccional de catálogos y licencias con la API y cuenta de Beatstars.
 
 
 Dado el requerimiento del usuario, debes decidir a quién(es) delegar y qué preguntarles. Puedes delegar a uno o más subagentes en paralelo.
@@ -292,6 +294,20 @@ Tus prioridades:
 2. Auditar la generación del XML v2.1.0 y la firma digital XAdES-BES.
 3. Diagnosticar problemas de red SOAP, rechazos del SRI y validación de secuenciales.
 4. Asegurar que las representaciones impresas (RIDE PDF) sean legibles, estéticas y normativas.
+""",
+    "licensing_negotiator": """
+Eres el Agente Negociador de Licencias Exclusivas de BEATSS. Evalúas contraofertas de licencias exclusivas en el panel "Hacer Oferta" calculando márgenes de ganancia mínimos, comisiones de pasarela e historial comercial, y sugieres contrapropuestas.
+Tus prioridades:
+1. Analizar ofertas de compra enviadas por artistas en el panel "Hacer Oferta".
+2. Calcular márgenes de ganancia mínimos aceptables y comisiones bancarias.
+3. Generar contrapropuestas persuasivas y profesionales para cerrar la negociación de forma automática.
+""",
+    "beatstars_sync_expert": """
+Eres el Agente de Sincronización Beatstars de BEATSS. Mantienes la consistencia bidireccional en tiempo real entre BEATSS y Beatstars (precios, licencias activas, archivos, tags).
+Tus prioridades:
+1. Importar y parsear metadatos de nuevos beats subidos a Beatstars.
+2. Sincronizar precios, descuentos y estados de licencias (especialmente el estado "Vendido" de licencias exclusivas).
+3. Monitorear inconsistencias en los catálogos y resolver duplicidades.
 """
 }
 
@@ -335,7 +351,9 @@ AGENT_COLORS = {
     "growth_hacker": C_MAGENTA,
     "rights_manager": C_RED,
     "branding_specialist": C_CYAN,
-    "sri_tax_advisor": C_BLUE
+    "sri_tax_advisor": C_BLUE,
+    "licensing_negotiator": C_YELLOW,
+    "beatstars_sync_expert": C_GREEN
 }
 
 def GET_COLOR_FOR_ROL(rol):

@@ -57,6 +57,12 @@ Los subagentes están organizados en **6 Categorías Funcionales**.
     *   Documentando el flujo de los scripts de importación de CSVs de Beatstars.
     *   Registrando incidencias en los respaldos JSON de Firestore para evitar corrupciones de datos en las migraciones de cuentas.
 
+### `beatstars_sync_expert` (Sincronización de Catálogo)
+*   **Ámbito de Obsidian:** Registros de discrepancias de sincronización, mapeo de IDs de Beats en Beatstars vs. BEATSS, y logs de tareas programadas.
+*   **Cómo lo usaría:**
+    *   Manteniendo la nota `[[Mapeo de Catálogo Beatstars]]` para rastrear qué beats se encuentran activos, pausados o vendidos en ambas plataformas.
+    *   Documentando la resolución de conflictos cuando un beat se vende como exclusivo en BEATSS y requiere una desactivación rápida en Beatstars.
+
 ---
 
 ## 🎨 3. Diseño Creativo y UI/UX (Creative UI/UX & Design)
@@ -161,3 +167,9 @@ Los subagentes están organizados en **6 Categorías Funcionales**.
     *   Supervisando y actualizando el panel central `[[Dashboard BEATSS]]`.
     *   Manteniendo estructurada la base de conocimientos y aplicando la taxonomía de carpetas para evitar la entropía de archivos.
     *   Creando y distribuyendo plantillas Markdown de notas técnicas para los demás subagentes.
+
+### `licensing_negotiator` (Negociador de Licencias)
+*   **Ámbito de Obsidian:** Historial de ofertas de exclusivas recibidas, tablas de valoración y plantillas de contrapropuestas.
+*   **Cómo lo usaría:**
+    *   Manteniendo la nota `[[Bitácora de Negociaciones Exclusivas]]` para registrar las ofertas aceptadas, rechazadas y las tasas promedio de contrapropuestas.
+    *   Documentando las reglas de valoración de beats en la nota `[[Fórmula de Valoración Exclusiva]]` para tener un punto de referencia dinámico sobre el precio de reserva.
