@@ -29,7 +29,7 @@ export const PRODUCER_DEFAULTS = {
         pro: "BMI",
         ipi: "01170943066",
         publisher: "Songtrust",
-        address: "Esmeraldas - Ecuador",
+        address: "Quito - Ecuador",
         birthdate: "2001-07-06",
         dsClientId: "",
         dsAccountId: "",
