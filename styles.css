@@ -4378,4 +4378,182 @@ body.admin-active #beatss-chatbot-container {
     margin-right: 4px;
 }
 
+/* ==========================================================================
+   MOBILE & RESPONSIVE REFINEMENTS (FASE B)
+   ========================================================================== */
+
+/* Safeguard to prevent modals from overflowing on narrow screens */
+.modal {
+    max-width: 95% !important;
+}
+
+/* Modal layout single column collapse for mobile */
+@media (max-width: 768px) {
+    .modal-body-wrapper {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+}
+
+/* Chatbot FAB & Window dynamic positioning when player is active */
+body.player-active .chatbot-fab {
+    bottom: 110px !important;
+}
+body.player-active .chatbot-window {
+    bottom: 180px !important;
+}
+
+/* Mobile refinements for player-active status */
+@media (max-width: 768px) {
+    body.player-active .chatbot-fab {
+        bottom: 100px !important;
+    }
+    body.player-active .chatbot-window {
+        bottom: 165px !important;
+    }
+}
+
+/* Mobile responsive styles for the floating player card */
+@media (max-width: 768px) {
+    #store-audio-player {
+        padding: 8px 14px !important;
+        margin: 10px 12px 16px 12px !important;
+        width: calc(100% - 24px) !important;
+        border-radius: 16px !important;
+        height: 72px !important;
+    }
+    
+    #store-audio-player > div {
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 8px !important;
+        height: 100% !important;
+        position: relative !important;
+    }
+    
+    /* Beat info column layout styling */
+    #store-audio-player > div > div:nth-child(1) {
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+        width: auto !important;
+        gap: 10px !important;
+    }
+    
+    #player-artwork {
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 6px !important;
+    }
+    
+    #player-title {
+        font-size: 13px !important;
+        max-width: 140px !important;
+        text-align: left !important;
+    }
+    
+    #player-info {
+        font-size: 10.5px !important;
+        text-align: left !important;
+    }
+    
+    /* Controls and progress block styling: only display play button */
+    #store-audio-player > div > div:nth-child(2) {
+        min-width: 0 !important;
+        flex: 0 0 auto !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* Hide previous and next buttons */
+    #player-btn-prev, 
+    #player-btn-next {
+        display: none !important;
+    }
+    
+    /* Hide the text times for progress */
+    #player-time-current, 
+    #player-time-duration {
+        display: none !important;
+    }
+    
+    /* Reposition progress container as a thin line at the absolute top of the player card */
+    #store-audio-player > div > div:nth-child(2) > div:nth-child(2) {
+        position: absolute !important;
+        top: -8px !important; /* aligns to the absolute top edge of the card */
+        left: -14px !important;
+        right: -14px !important;
+        width: calc(100% + 28px) !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        height: 3px !important;
+        box-sizing: border-box !important;
+    }
+    
+    #player-progress-container {
+        width: 100% !important;
+        height: 3px !important;
+        border-radius: 16px 16px 0 0 !important;
+        margin: 0 !important;
+    }
+    
+    #player-progress-bar div {
+        display: none !important; /* Hide progress handler circle on mobile to keep it clean */
+    }
+    
+    /* Volume and Action block styling */
+    #store-audio-player > div > div:nth-child(3) {
+        min-width: 0 !important;
+        flex: 0 0 auto !important;
+        width: auto !important;
+        justify-content: flex-end !important;
+        gap: 8px !important;
+    }
+    
+    /* Hide volume controls on mobile devices */
+    #store-audio-player > div > div:nth-child(3) > div:nth-child(1) {
+        display: none !important;
+    }
+    
+    /* Compact size for mixer and buy buttons */
+    #player-btn-mixer {
+        width: 32px !important;
+        height: 32px !important;
+        padding: 4px !important;
+        border-radius: 6px !important;
+    }
+    
+    #player-btn-buy {
+        height: 34px !important;
+        padding: 0 12px !important;
+        font-size: 11px !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Make Stems Mixer Panel fit nicely on mobile screens */
+    #store-mixer-panel {
+        bottom: 92px !important;
+        right: 12px !important;
+        left: 12px !important;
+        width: calc(100% - 24px) !important;
+        border-radius: 12px !important;
+        padding: 14px !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* Make Chatbot Window fit nicely on mobile screens */
+    .chatbot-window {
+        bottom: 92px !important;
+        right: 12px !important;
+        left: 12px !important;
+        width: calc(100% - 24px) !important;
+        max-width: none !important;
+        height: 460px !important;
+        border-radius: 16px !important;
+    }
+}
+
 

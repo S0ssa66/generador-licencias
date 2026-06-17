@@ -257,6 +257,7 @@ export function toggleStorePlay(beatId) {
             : '';
         document.getElementById('player-artwork').src = artworkUrl;
         player.style.display = 'block';
+        document.body.classList.add('player-active');
 
         window.currentStoreAudio.addEventListener('timeupdate', updatePlayerProgress);
 
