@@ -116,3 +116,12 @@ Hemos implementado exitosamente el conjunto de mejoras y nuevas características
 *   **Pruebas de Compilación:**
     *   Ejecución de `npm run build` con éxito rotundo (0 errores, compilado en 159ms).
 
+---
+
+## 🇪🇨 Ajuste de la Dirección Matriz del Emisor (SRI y Licencias)
+*   **Archivos Modificados:** [producerDefaults.js](file:///Users/sossa/IA/generador-licencias/producerDefaults.js)
+*   **Ajuste de Dirección de Casa a Oficina/Ciudad:**
+    *   Se actualizó el campo `sriDirMatriz` del productor Joao David Dominguez (Sossa) a `"Quito - Ecuador"` en la base de datos de producción (Firestore) y en la configuración de sincronización local del disco (`sossa_backup_sincronizado.json`).
+    *   Se modificó el valor por defecto para el address de `'sossa'` en `producerDefaults.js` a `"Quito - Ecuador"` para evitar regresiones.
+    *   Se compiló el frontend (`npm run build`) para generar los nuevos bundles y se reinició el servidor de desarrollo local en segundo plano.
+
