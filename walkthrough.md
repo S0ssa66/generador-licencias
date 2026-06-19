@@ -22,6 +22,29 @@ Hemos implementado exitosamente el conjunto de mejoras y nuevas características
 *   **Pre-agregación en Servidor:** Creamos la ruta `GET /api/admin/sales-analytics` en [server.py](file:///Users/sossa/IA/generador-licencias/server.py) para procesar el histórico de licencias locales, calcular KPIs principales (Ingresos, Licencias, Beats) y agrupar las tendencias mensuales y tipos de licencias más vendidas.
 *   **Renderizado Dinámico:** Adaptamos [dashboard/charts.js](file:///Users/sossa/IA/generador-licencias/dashboard/charts.js) para consumir este endpoint local y renderizar gráficos SVG interactivos y fluidos en el panel de control del productor.
 
+### 5. 🗂️ Modularización y Desacoplamiento de Prompts
+Para optimizar el consumo de tokens de la base de código y prevenir errores 429, dividimos el archivo monolítico `agente_coordinador.py` (~1,000 líneas) en un árbol de dependencias ordenado:
+
+*   **Carpeta `prompts/`**:
+    *   Externalizamos todos los system prompts (`router_agent.txt`, `main_agent.txt`, `subagent_base.txt`, `synthesis.txt`).
+    *   Creamos `prompts/subagents/` con los prompts individuales para cada uno de los 24 subagentes.
+*   [llm_utils.py](file:///Users/sossa/IA/generador-licencias/llm_utils.py): Encapsula llamadas de API, parses de JSON, configuración de API key, y la lógica de reintentos con **esperas exponenciales inteligentes** ante errores 429 de límite de tasa.
+*   [prompt_manager.py](file:///Users/sossa/IA/generador-licencias/prompt_manager.py): Carga dinámicamente los archivos de la carpeta `prompts/` con cadenas fallback de respaldo integradas (a prueba de fallos).
+*   [memory_manager.py](file:///Users/sossa/IA/generador-licencias/memory_manager.py): Maneja el guardado de sesión e introduce **compresión y sumarización automática** cuando el chat excede de 8 turnos.
+*   [agent_manager.py](file:///Users/sossa/IA/generador-licencias/agent_manager.py): Centraliza las herramientas del sistema de archivos, el loop de control ReAct, y el pipeline principal de coordinación de agentes.
+*   [agente_coordinador.py](file:///Users/sossa/IA/generador-licencias/agente_coordinador.py): Rediseñado como un puente minimalista de 70 líneas que invoca la lógica modular y expone el CLI interactivo de terminal.
+
+### 6. 🌐 Modularización Completa del Servidor `server.py`
+Para solucionar de raíz los timeouts de los agentes y reducir drásticamente el consumo de tokens al cargar el servidor monolítico de 2,261 líneas, lo hemos dividido en un diseño modular limpio basado en **Mixins**:
+
+*   **[server.py](file:///Users/sossa/IA/generador-licencias/server.py)**: Reducido a solo **202 líneas**. Actúa como orquestador y punto de entrada delgado. Importa y hereda los métodos de ruta (`do_GET` y `do_POST`) mediante Mixins de clases.
+*   **[handlers_get.py](file:///Users/sossa/IA/generador-licencias/handlers_get.py)**: Contiene la clase `HandlerGetMixin` con toda la lógica de rutas HTTP GET (local-token, load-local, preview-beat, download-ride, download-xml, etc.).
+*   **[handlers_post.py](file:///Users/sossa/IA/generador-licencias/handlers_post.py)**: Contiene la clase `HandlerPostMixin` con toda la lógica de rutas HTTP POST (save-local, save-pdf, run-task, webhook Deuna!, activate-pro, etc.).
+*   **[firestore_ops.py](file:///Users/sossa/IA/generador-licencias/firestore_ops.py)**: Colección de funciones REST reutilizables para leer y escribir tareas/documentos en Firestore.
+*   **[admin_config.py](file:///Users/sossa/IA/generador-licencias/admin_config.py)**: Maneja la carga de configuración del administrador y el almacenamiento de hashes criptográficos de licencias.
+*   **[analytics.py](file:///Users/sossa/IA/generador-licencias/analytics.py)**: Lógica pura de cálculo de analíticas de ventas por periodos.
+*   **[audio_utils.py](file:///Users/sossa/IA/generador-licencias/audio_utils.py)**: Lógica de procesamiento de audio en caliente (marca de agua/mezcla ffmpeg) y conversión de enlaces de Google Drive.
+
 ## Correcciones Adicionales (Bug de Sincronización Local)
 
 ### 5. 🔄 Mapeo Correcto de UIDs en server.py
