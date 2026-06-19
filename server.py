@@ -687,6 +687,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('X-Frame-Options', 'DENY')
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('X-XSS-Protection', '1; mode=block')
+        self.send_header('Referrer-Policy', 'strict-origin-when-cross-origin')
+        self.send_header('Permissions-Policy', 'geolocation=(), camera=(), microphone=(), payment=()')
         csp_header = (
             "default-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://*.google.com; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://*.google.com https://cdn.tailwindcss.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
@@ -698,6 +700,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         )
         self.send_header('Content-Security-Policy', csp_header)
         super().end_headers()
+
 
     def translate_path(self, path):
         parsed = urlparse(path)
@@ -1252,27 +1255,28 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         elif parsed.path == '/api/payments/config':
             try:
                 config = get_admin_config()
-                # Filtrar paypalClientSecret por seguridad
+                # SEGURIDAD: Solo exponer datos necesarios para el flujo de pago del frontend.
+                # Datos bancarios sensibles (cuenta, cédula) se omiten intencionalmente de este
+                # endpoint público. Se transmiten únicamente al confirmar el pago server-side.
                 public_config = {
                     "paypalClientId": config.get("paypalClientId", ""),
                     "payphoneClientId": config.get("payphoneClientId", ""),
                     "payphoneAppId": config.get("payphoneAppId", ""),
                     "deunaPhone": config.get("deunaPhone", ""),
                     "deunaName": config.get("deunaName", ""),
-                    "bankPichinchaAcc": config.get("bankPichinchaAcc", ""),
-                    "bankPichinchaName": config.get("bankPichinchaName", ""),
-                    "bankPichinchaDni": config.get("bankPichinchaDni", "")
+                    "bankPichinchaName": config.get("bankPichinchaName", "")
+                    # bankPichinchaAcc y bankPichinchaDni excluidos: datos PII sensibles
                 }
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
                 self.end_headers()
                 self.wfile.write(json.dumps(public_config, ensure_ascii=False).encode('utf-8'))
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ Error al servir configuración de pagos: {str(e)}")
@@ -1477,7 +1481,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 
                 res_payload = {
@@ -1490,7 +1494,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ Error al generar QR Deuna: {str(e)}")
@@ -1543,7 +1547,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 if success:
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
-                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_cors_headers()
                     self.end_headers()
                     self.wfile.write(json.dumps({"status": "success", "message": f"Pago {purchase_id} confirmado exitosamente"}).encode('utf-8'))
                 else:
@@ -1551,7 +1555,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ Error en webhook/confirmación de Deuna: {str(e)}")
@@ -1602,7 +1606,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 
                 res_payload = {
@@ -1616,7 +1620,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ Error al respaldar Firestore: {str(e)}")
@@ -1669,7 +1673,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/pdf')
                 self.send_header('Content-Disposition', f'attachment; filename="{safe_filename}"')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.send_header('Access-Control-Expose-Headers', 'Content-Disposition, X-Crypto-Hash')
                 self.send_header('X-Crypto-Hash', crypto_hash)
                 self.end_headers()
@@ -1679,7 +1683,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ Error al generar PDF Criptográfico: {str(e)}")
@@ -1704,7 +1708,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     if activation_success:
                         self.send_response(200)
                         self.send_header('Content-Type', 'application/json')
-                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_cors_headers()
                         self.end_headers()
                         self.wfile.write(json.dumps({
                             "success": True, 
@@ -1735,7 +1739,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 if activation_success:
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
-                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_cors_headers()
                     self.end_headers()
                     self.wfile.write(json.dumps({
                         "success": True, 
@@ -1749,7 +1753,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": False, "error": str(e)}).encode('utf-8'))
                 print(f"❌ Error en /api/activate-pro: {str(e)}")
@@ -1775,7 +1779,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     if success:
                         self.send_response(200)
                         self.send_header('Content-Type', 'application/json')
-                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.send_cors_headers()
                         self.end_headers()
                         self.wfile.write(json.dumps({
                             "status": "success", 
@@ -1837,7 +1841,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 if success:
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
-                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.send_cors_headers()
                     self.end_headers()
                     self.wfile.write(json.dumps({
                         "status": "success", 
@@ -1850,7 +1854,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ Error al confirmar suscripción PayPhone: {str(e)}")
@@ -2055,7 +2059,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({
                     "status": "success",
@@ -2067,7 +2071,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_cors_headers()
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ Error al confirmar pago de PayPhone: {str(e)}")

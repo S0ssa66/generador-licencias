@@ -3,12 +3,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Función auxiliar para verificar si el usuario es el administrador de Sossa (soporta Custom Claims y fallback de email)
+    // Función auxiliar para verificar si el usuario es administrador.
+    // SEGURIDAD: Solo se acepta el Custom Claim 'admin:true' asignado vía Firebase Admin SDK.
+    // El fallback por email ha sido eliminado: cualquier email puede ser replicado en otro
+    // proveedor de identidad. El claim solo puede ser establecido desde el servidor con privilegios.
     function isAdmin() {
-      return request.auth != null && 
-             (request.auth.token.admin == true || 
-              (request.auth.token.email.lower() == 'masterjuego25@gmail.com' &&
-               request.auth.token.email_verified == true));
+      return request.auth != null && request.auth.token.admin == true;
     }
 
     // Función auxiliar para validar datos de contacto públicos (leads)
