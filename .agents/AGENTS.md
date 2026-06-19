@@ -22,3 +22,13 @@ Estas reglas definen el contexto operativo y las decisiones de diseño aprobadas
 ## ⚙️ 3. Configuración y Credenciales del Productor
 *   **Productor Principal:** Sossa (`sossabeatz1@gmail.com`).
 *   **Resguardos de Seguridad (Firestore):** Las credenciales de APIs, claves de firmas electrónicas (`.p12` / `.pfx`) y contraseñas asociadas se almacenan estrictamente bajo la subcolección privada `/users/{uid}/private_config/producer`. Nunca deben exponerse en la configuración pública `/users/{uid}/config/producer`.
+
+---
+
+## 🧠 4. Memoria de Contexto (Obsidian)
+*   **Lectura Obligatoria:** Al iniciar cualquier sesión o después de una compactación de historial, el agente **debe leer de forma obligatoria** los siguientes archivos de la raíz del proyecto para recuperar el hilo del desarrollo y las configuraciones de inmediato:
+    1.  [Memoria del Proyecto.md](file:///Users/sossa/IA/generador-licencias/Memoria%20del%20Proyecto.md): Para entender la configuración de pasarelas de pago activa (Stripe inactivo, PayPhone/Deuna activos), la dirección SRI ("Quito - Ecuador") y las notas de la última sesión.
+    2.  [task.md](file:///Users/sossa/IA/generador-licencias/task.md): Para verificar el estado de las tareas (pendientes, en progreso y completadas).
+    3.  [Dashboard BEATSS.md](file:///Users/sossa/IA/generador-licencias/Dashboard%20BEATSS.md): Para conocer la estructura general de archivos y documentación del proyecto.
+
+
