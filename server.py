@@ -1499,15 +1499,46 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             try:
                 payload = json.loads(post_data.decode('utf-8'))
+                print(f"[+] Recibido webhook de Deuna!: {json.dumps(payload)}")
+                
                 purchase_id = payload.get('purchaseId')
-                status = payload.get('status', 'completed')
+                status = payload.get('status')
+                
+                # Intentar extraer del campo description o reference (para Deuna! Negocios real)
+                # Formato esperado: "BEATSS-purchaseId"
+                description = payload.get('description') or payload.get('reference') or payload.get('detail') or payload.get('memo')
+                
+                # Si viene anidado en 'data' (común en webhooks de Deuna! Negocios)
+                if not description and isinstance(payload.get('data'), dict):
+                    data_obj = payload.get('data')
+                    description = data_obj.get('description') or data_obj.get('reference') or data_obj.get('detail')
+                    if not status:
+                        status = data_obj.get('status') or data_obj.get('state')
+                
+                if not status:
+                    status = 'completed' # Fallback para simulación
+                
+                if description and 'BEATSS-' in str(description):
+                    desc_str = str(description)
+                    match = re.search(r'BEATSS-([a-zA-Z0-9_-]+)', desc_str)
+                    if match:
+                        purchase_id = match.group(1)
+                        print(f"[+] Extraído purchase_id '{purchase_id}' del campo de descripción: {desc_str}")
                 
                 if not purchase_id:
-                    raise ValueError("Falta parámetro 'purchaseId'")
+                    raise ValueError("Falta parámetro 'purchaseId' o no se pudo extraer de la descripción")
+                
+                # Normalizar estados de éxito comunes (completed, paid, success, approved, done, processed)
+                is_completed = False
+                status_lower = str(status).lower()
+                if status_lower in ['completed', 'approved', 'paid', 'success', 'done', 'processed']:
+                    is_completed = True
                 
                 success = False
-                if status == 'completed':
+                if is_completed:
                     success = confirm_payment_in_firestore(purchase_id)
+                else:
+                    print(f"[-] Webhook recibido pero estado '{status}' no indica éxito.")
                 
                 if success:
                     self.send_response(200)
@@ -1516,7 +1547,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(json.dumps({"status": "success", "message": f"Pago {purchase_id} confirmado exitosamente"}).encode('utf-8'))
                 else:
-                    raise RuntimeError("Error al confirmar el pago en Firestore (verifique credenciales gcloud en la consola)")
+                    raise RuntimeError("Error al confirmar el pago en Firestore")
             except Exception as e:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')

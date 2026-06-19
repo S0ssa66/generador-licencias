@@ -9,6 +9,8 @@ Bienvenido a la Bóveda de Documentación de **BEATSS**. Este panel sirve como e
 ### 💳 10. Pagos, SRI y Viabilidad Financiera
 Documentos de pasarelas de pago (PayPhone, Deuna!, Stripe), facturación electrónica del SRI y contabilidad local.
 *   **[[generador-licencias/docs/10_Pagos/Order details _ eBay|Order Details   Ebay]]** *(PDF - 121.1 KB, modificado: 2026-04-20 19:42)*
+*   **[[generador-licencias/docs/10_Pagos/guia_configuracion_deuna_negocios|Guia Configuracion Deuna Negocios]]** *(MD - 4.5 KB, modificado: 2026-06-18 20:43)*
+    *Guía de configuración paso a paso para integrar el webhook de Deuna! Negocios con BEATSS para el procesamiento y confirmación de pagos en tiempo real.*
 *   **[[generador-licencias/docs/10_Pagos/opciones_pago_con_ruc_ecuador|Opciones Pago Con Ruc Ecuador]]** *(MD - 6.8 KB, modificado: 2026-06-14 22:34)*
     *Con la formalización tributaria mediante el Registro Único de Contribuyentes (RUC) en Ecuador, se desbloquean herramientas avanzadas de proc...*
 *   **[[generador-licencias/docs/10_Pagos/viabilidad_stripe_ecuador_llc|Viabilidad Stripe Ecuador Llc]]** *(MD - 7.8 KB, modificado: 2026-06-14 22:34)*
