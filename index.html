@@ -3241,9 +3241,10 @@
                 return;
             }
 
-            // 2. Show simulation buttons if local
+            // 2. Show simulation buttons if local or admin
             const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            if (isLocal) {
+            const isAdmin = window.currentUser === 'paXbnNbHMMPC31X3hf0oTUx4bbr2';
+            if (isLocal || isAdmin) {
                 const paypalSim = document.getElementById('simulate-paypal-btn');
                 if (paypalSim) paypalSim.style.display = 'block';
                 const payphoneSim = document.getElementById('simulate-payphone-btn');
@@ -3435,13 +3436,14 @@
             const email = window.currentUserEmail || 'sossamusic@gmail.com';
             const tier = window.selectedPaymentPlan;
             const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const isAdmin = uid === 'paXbnNbHMMPC31X3hf0oTUx4bbr2';
 
             if (!uid) {
                 alert('Inicia sesión antes de simular el pago');
                 return;
             }
-            if (!isLocal) {
-                alert('La simulación de pago solo está disponible en entorno local.');
+            if (!isLocal && !isAdmin) {
+                alert('La simulación de pago solo está disponible en entorno local o para el administrador.');
                 return;
             }
 
@@ -3487,13 +3489,14 @@
             const email = window.currentUserEmail || 'sossamusic@gmail.com';
             const tier = window.selectedPaymentPlan;
             const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const isAdmin = uid === 'paXbnNbHMMPC31X3hf0oTUx4bbr2';
 
             if (!uid) {
                 alert('Inicia sesión antes de simular el pago');
                 return;
             }
-            if (!isLocal) {
-                alert('La simulación de pago solo está disponible en entorno local.');
+            if (!isLocal && !isAdmin) {
+                alert('La simulación de pago solo está disponible en entorno local o para el administrador.');
                 return;
             }
 

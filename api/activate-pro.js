@@ -21,12 +21,13 @@ function initFirebaseAdmin() {
 }
 
 // Obtener token de acceso de PayPal
-async function getPayPalAccessToken() {
+async function getPayPalAccessToken(isSandbox) {
     const clientId = process.env.PAYPAL_CLIENT_ID;
     const secret = process.env.PAYPAL_CLIENT_SECRET;
     const credentials = Buffer.from(`${clientId}:${secret}`).toString('base64');
+    const baseUrl = isSandbox ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com';
 
-    const response = await fetch('https://api-m.paypal.com/v1/oauth2/token', {
+    const response = await fetch(`${baseUrl}/v1/oauth2/token`, {
         method: 'POST',
         headers: {
             'Authorization': `Basic ${credentials}`,
@@ -41,12 +42,24 @@ async function getPayPalAccessToken() {
 }
 
 // Verificar el order con la API de PayPal
-async function verifyPayPalOrder(orderId) {
-    const accessToken = await getPayPalAccessToken();
-    const response = await fetch(`https://api-m.paypal.com/v2/checkout/orders/${orderId}`, {
+async function verifyPayPalOrder(orderId, isSandbox) {
+    const accessToken = await getPayPalAccessToken(isSandbox);
+    const baseUrl = isSandbox ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com';
+    const response = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
     });
     if (!response.ok) throw new Error('No se pudo verificar el order de PayPal');
+    return await response.json();
+}
+
+// Verificar la suscripción con la API de PayPal
+async function verifyPayPalSubscription(subscriptionId, isSandbox) {
+    const accessToken = await getPayPalAccessToken(isSandbox);
+    const baseUrl = isSandbox ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com';
+    const response = await fetch(`${baseUrl}/v1/billing/subscriptions/${subscriptionId}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (!response.ok) throw new Error('No se pudo verificar la suscripción de PayPal');
     return await response.json();
 }
 
@@ -64,10 +77,13 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Método no permitido' });
     }
 
-    const { orderId, uid, email } = req.body;
+    const { orderId, subscriptionId, uid, email } = req.body;
 
-    if (!orderId || !uid) {
-        return res.status(400).json({ error: 'Faltan parámetros: orderId y uid son obligatorios' });
+    if (!orderId && !subscriptionId) {
+        return res.status(400).json({ error: 'Faltan parámetros: orderId o subscriptionId son requeridos' });
+    }
+    if (!uid) {
+        return res.status(400).json({ error: 'Falta el parámetro uid' });
     }
 
     // Validar formato de UID
@@ -96,20 +112,69 @@ export default async function handler(req, res) {
     }
     // ------------------------------------------------
 
+    // Determinar modo Sandbox
+    const clientId = process.env.PAYPAL_CLIENT_ID || '';
+    const isSandbox = process.env.PAYPAL_MODE === 'sandbox' || clientId.startsWith('sb-') || clientId.includes('sandbox');
+
     try {
-        // 1. Verificar el pago con PayPal
-        const order = await verifyPayPalOrder(orderId);
+        const isMock = (orderId && orderId.startsWith('PAYPAL-SUB-MOCK-')) || 
+                       (subscriptionId && subscriptionId.startsWith('PAYPAL-SUB-MOCK-'));
 
-        if (order.status !== 'COMPLETED') {
-            return res.status(400).json({ error: `El pago no está completado. Estado: ${order.status}` });
-        }
+        let planToActivate = req.body.plan || 'pro';
+        let payerEmail = email || '';
+        let transactionId = orderId || subscriptionId;
 
-        const amount = parseFloat(order.purchase_units?.[0]?.amount?.value || 0);
-        let planToActivate = 'pro';
-        if (amount >= 29.00) {
-            planToActivate = 'elite';
-        } else if (amount < 9.00) {
-            return res.status(400).json({ error: `Monto inválido: $${amount}` });
+        if (isMock) {
+            const ADMIN_UID = 'paXbnNbHMMPC31X3hf0oTUx4bbr2';
+            const isProd = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+            if (isProd && uid !== ADMIN_UID) {
+                return res.status(403).json({ error: 'La simulación no está permitida en producción para este usuario.' });
+            }
+            console.log(`[+] Simulando pago de PayPal en producción para plan ${planToActivate} del usuario ${uid}`);
+        } else {
+            // Inicializar Firebase Admin
+            initFirebaseAdmin();
+            const db = getFirestore();
+
+            if (subscriptionId) {
+                // 1. Verificar la suscripción con PayPal
+                const sub = await verifyPayPalSubscription(subscriptionId, isSandbox);
+
+                if (sub.status !== 'ACTIVE' && sub.status !== 'APPROVED') {
+                    return res.status(400).json({ error: `La suscripción no está activa. Estado: ${sub.status}` });
+                }
+
+                const paypalPlanId = sub.plan_id;
+                payerEmail = sub.subscriber?.email_address || email || '';
+
+                // Obtener IDs de plan del administrador
+                const ADMIN_UID = 'paXbnNbHMMPC31X3hf0oTUx4bbr2';
+                const adminDoc = await db.collection('users').doc(ADMIN_UID).collection('config').doc('producer').get();
+                const adminConfig = adminDoc.exists ? adminDoc.data() : {};
+
+                if (paypalPlanId === adminConfig.paypalPlanIdElite) {
+                    planToActivate = 'elite';
+                } else if (paypalPlanId === adminConfig.paypalPlanIdPro) {
+                    planToActivate = 'pro';
+                } else {
+                    planToActivate = req.body.plan || 'pro';
+                }
+            } else {
+                // 1. Verificar el pago con PayPal (Legacy Order Flow)
+                const order = await verifyPayPalOrder(orderId, isSandbox);
+
+                if (order.status !== 'COMPLETED') {
+                    return res.status(400).json({ error: `El pago no está completado. Estado: ${order.status}` });
+                }
+
+                const amount = parseFloat(order.purchase_units?.[0]?.amount?.value || 0);
+                if (amount >= 29.00) {
+                    planToActivate = 'elite';
+                } else if (amount < 9.00) {
+                    return res.status(400).json({ error: `Monto inválido: $${amount}` });
+                }
+                payerEmail = email || order.payer?.email_address || '';
+            }
         }
 
         // Calcular fecha de expiración (30 días desde hoy)
@@ -117,7 +182,7 @@ export default async function handler(req, res) {
         const expirationDate = new Date(activationDate);
         expirationDate.setDate(expirationDate.getDate() + 30);
 
-        // 2. Inicializar Firebase Admin y actualizar Firestore
+        // 2. Actualizar Firestore
         initFirebaseAdmin();
         const db = getFirestore();
 
@@ -128,8 +193,8 @@ export default async function handler(req, res) {
             planActivatedAt: activationDate.toISOString(),
             planExpirationDate: expirationDate.toISOString(),
             expirationPro: expirationDate.toISOString(),
-            planPayPalOrderId: orderId,
-            planPayerEmail: email || order.payer?.email_address || '',
+            planPayPalOrderId: transactionId,
+            planPayerEmail: payerEmail,
         }, { merge: true });
 
         // También guardar en el documento raíz del usuario para fácil consulta
@@ -141,12 +206,12 @@ export default async function handler(req, res) {
             expirationPro: expirationDate.toISOString(),
         }, { merge: true });
 
-        console.log(`✅ Plan ${planToActivate} activado para uid: ${uid}, email: ${email}, order: ${orderId}`);
+        console.log(`✅ Plan ${planToActivate} activado para uid: ${uid}, email: ${payerEmail}, transaction: ${transactionId}`);
 
         return res.status(200).json({
             success: true,
             plan: planToActivate,
-            message: `¡Plan ${planToActivate} activado exitosamente!`
+            message: `¡Suscripción ${planToActivate.toUpperCase()} activada exitosamente!`
         });
 
     } catch (error) {
