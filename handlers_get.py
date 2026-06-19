@@ -568,6 +568,8 @@ class HandlerGetMixin:
                 # endpoint público. Se transmiten únicamente al confirmar el pago server-side.
                 public_config = {
                     "paypalClientId": config.get("paypalClientId", ""),
+                    "paypalPlanIdPro": config.get("paypalPlanIdPro", ""),
+                    "paypalPlanIdElite": config.get("paypalPlanIdElite", ""),
                     "payphoneClientId": config.get("payphoneClientId", ""),
                     "payphoneAppId": config.get("payphoneAppId", ""),
                     "deunaPhone": config.get("deunaPhone", ""),

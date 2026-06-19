@@ -2767,6 +2767,16 @@
                           <input type="password" id="cfg-paypal-client-secret" placeholder="Client Secret (Opcional)">
                       </div>
                   </div>
+                  <div class="input-row admin-only-field" style="margin-top: 6px; display: none;">
+                      <div class="input-group">
+                          <label for="cfg-paypal-plan-id-pro">PayPal Plan ID Pro (Suscripción)</label>
+                          <input type="text" id="cfg-paypal-plan-id-pro" placeholder="Plan ID Pro (Opcional)">
+                      </div>
+                      <div class="input-group">
+                          <label for="cfg-paypal-plan-id-elite">PayPal Plan ID Elite (Suscripción)</label>
+                          <input type="text" id="cfg-paypal-plan-id-elite" placeholder="Plan ID Elite (Opcional)">
+                      </div>
+                  </div>
 
                   <div style="font-weight: 600; font-size: 11px; color: var(--text-primary); margin-top: 8px; margin-bottom: 4px;">PayPhone (Ecuador):</div>
                   <div class="input-row">
@@ -3264,7 +3274,7 @@
             }
             const script = document.createElement('script');
             script.id = 'paypal-sdk-script';
-            script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=capture`;
+            script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&vault=true&intent=subscription`;
             script.setAttribute('data-client-id', clientId);
             script.onload = callback;
             document.head.appendChild(script);
@@ -3295,35 +3305,32 @@
             }
 
             const tier = window.selectedPaymentPlan;
-            const price = tier === 'elite' ? '30.00' : '10.00';
-            const description = tier === 'elite' 
-                ? 'BEATSS Plan Elite - Producción y Coproducción Ilimitada' 
-                : 'BEATSS Plan Pro - Licencias Musicales Ilimitadas';
+            const planId = tier === 'elite' 
+                ? window.adminPaymentConfig.paypalPlanIdElite 
+                : window.adminPaymentConfig.paypalPlanIdPro;
+
+            if (!planId) {
+                container.innerHTML = '<div style="color: #fc8181; font-size: 11px; text-align: center; padding: 8px;">Error: ID de Plan PayPal no configurado por el Administrador.</div>';
+                return;
+            }
 
             paypal.Buttons({
                 style: {
                     layout: 'vertical',
                     color: 'gold',
                     shape: 'rect',
-                    label: 'pay',
+                    label: 'subscribe',
                     height: 48
                 },
-                createOrder: function(data, actions) {
-                    return actions.order.create({
-                        purchase_units: [{
-                            description: description,
-                            amount: {
-                                currency_code: 'USD',
-                                value: price
-                            }
-                        }]
+                createSubscription: function(data, actions) {
+                    return actions.subscription.create({
+                        plan_id: planId
                     });
                 },
                 onApprove: async function(data, actions) {
-                    const orderData = await actions.order.capture();
-                    const orderId = orderData.id;
+                    const subscriptionId = data.subscriptionID;
                     const uid = window.currentUser || null;
-                    const email = orderData.payer?.email_address || window.currentUserEmail || '';
+                    const email = window.currentUserEmail || '';
 
                     try {
                         const idToken = window.getFirebaseIdToken ? await window.getFirebaseIdToken() : '';
@@ -3333,7 +3340,7 @@
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${idToken}`
                             },
-                            body: JSON.stringify({ orderId, uid, email, plan: tier })
+                            body: JSON.stringify({ subscriptionId, uid, email, plan: tier })
                         });
                         const result = await response.json();
 
@@ -3343,7 +3350,7 @@
                             const toast = document.createElement('div');
                             toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#0055ee,#00aacc);color:#fff;padding:18px 32px;border-radius:14px;font-weight:700;font-size:16px;z-index:99999;box-shadow:0 12px 32px rgba(0,102,255,0.4);text-align:center;max-width:90vw;';
                             const planLabel = result.plan === 'elite' ? 'Elite 👑' : 'Pro';
-                            toast.innerHTML = `🎉 <strong>¡Plan ${planLabel} Activado!</strong><br><span style="font-weight:400;font-size:13px;">Recarga la página para disfrutar tus beneficios.</span>`;
+                            toast.innerHTML = `🎉 <strong>¡Suscripción ${planLabel} Activada!</strong><br><span style="font-weight:400;font-size:13px;">Recarga la página para disfrutar tus beneficios.</span>`;
                             document.body.appendChild(toast);
                             setTimeout(() => {
                                 toast.remove();
@@ -3356,7 +3363,7 @@
                         document.getElementById('payment-modal').style.display = 'none';
                         const toast = document.createElement('div');
                         toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#000;padding:18px 32px;border-radius:14px;font-weight:700;font-size:14px;z-index:99999;box-shadow:0 12px 32px rgba(0,0,0,0.3);text-align:center;max-width:90vw;';
-                        toast.innerHTML = `✅ <strong>Pago recibido ($${orderData.purchase_units?.[0]?.amount?.value})</strong><br><span style="font-weight:400;font-size:12px;">Envía el comprobante a sossamusic@gmail.com — ID: ${orderId}</span>`;
+                        toast.innerHTML = `✅ <strong>Suscripción iniciada</strong><br><span style="font-weight:400;font-size:12px;">Envía tu ID de suscripción a sossamusic@gmail.com — ID: ${subscriptionId}</span>`;
                         document.body.appendChild(toast);
                         setTimeout(() => toast.remove(), 8000);
                     }

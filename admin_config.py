@@ -24,6 +24,8 @@ def get_admin_config():
                     return {
                         "paypalClientId": config_data.get("paypalClientId", "AaZODyYne1mAl_ujEEAr5tP2hRcm2ii_1QSzAhexfXKMdue-aVQRX_kbPLUgmpm1ZimxFSWpejImUU1-"),
                         "paypalClientSecret": config_data.get("paypalClientSecret", ""),
+                        "paypalPlanIdPro": config_data.get("paypalPlanIdPro", ""),
+                        "paypalPlanIdElite": config_data.get("paypalPlanIdElite", ""),
                         "payphoneClientId": config_data.get("payphoneClientId", ""),
                         "payphoneAppId": config_data.get("payphoneAppId", ""),
                         "deunaPhone": config_data.get("deunaPhone", "+593961201184"),
@@ -38,6 +40,8 @@ def get_admin_config():
     return {
         "paypalClientId": "AaZODyYne1mAl_ujEEAr5tP2hRcm2ii_1QSzAhexfXKMdue-aVQRX_kbPLUgmpm1ZimxFSWpejImUU1-",
         "paypalClientSecret": "",
+        "paypalPlanIdPro": "",
+        "paypalPlanIdElite": "",
         "payphoneClientId": "",
         "payphoneAppId": "",
         "deunaPhone": "+593961201184",

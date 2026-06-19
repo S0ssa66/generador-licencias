@@ -1150,6 +1150,12 @@ async function loadProducerConfig() {
     document.getElementById('cfg-paypal-email').value = producerConfig.paypalEmail || "";
     document.getElementById('cfg-paypal-client-id').value = producerConfig.paypalClientId || "";
     document.getElementById('cfg-paypal-client-secret').value = producerConfig.paypalClientSecret || "";
+    if (document.getElementById('cfg-paypal-plan-id-pro')) {
+        document.getElementById('cfg-paypal-plan-id-pro').value = producerConfig.paypalPlanIdPro || "";
+    }
+    if (document.getElementById('cfg-paypal-plan-id-elite')) {
+        document.getElementById('cfg-paypal-plan-id-elite').value = producerConfig.paypalPlanIdElite || "";
+    }
     document.getElementById('cfg-payphone-phone').value = producerConfig.payphonePhone || "";
     document.getElementById('cfg-payphone-client-id').value = producerConfig.payphoneClientId || "";
     document.getElementById('cfg-payphone-appid').value = producerConfig.payphoneAppId || "";
@@ -1291,7 +1297,9 @@ async function loadProducerConfig() {
     // Toggle de campos de admin
     const adminFields = document.querySelectorAll('.admin-only-field');
     adminFields.forEach(el => {
-        el.style.display = window.currentUserIsAdmin ? 'block' : 'none';
+        const isGrid = el.classList.contains('input-row');
+        const isFlex = el.classList.contains('input-group');
+        el.style.display = window.currentUserIsAdmin ? (isGrid ? 'grid' : (isFlex ? 'flex' : 'block')) : 'none';
     });
 
     if (window.currentUserIsAdmin) {
@@ -1475,6 +1483,12 @@ async function saveProducerConfig() {
     producerConfig.paypalEmail = document.getElementById('cfg-paypal-email').value.trim();
     producerConfig.paypalClientId = document.getElementById('cfg-paypal-client-id').value.trim();
     producerConfig.paypalClientSecret = document.getElementById('cfg-paypal-client-secret').value.trim();
+    if (document.getElementById('cfg-paypal-plan-id-pro')) {
+        producerConfig.paypalPlanIdPro = document.getElementById('cfg-paypal-plan-id-pro').value.trim();
+    }
+    if (document.getElementById('cfg-paypal-plan-id-elite')) {
+        producerConfig.paypalPlanIdElite = document.getElementById('cfg-paypal-plan-id-elite').value.trim();
+    }
     producerConfig.payphonePhone = document.getElementById('cfg-payphone-phone').value.trim();
     producerConfig.payphoneClientId = document.getElementById('cfg-payphone-client-id').value.trim();
     producerConfig.payphoneAppId = document.getElementById('cfg-payphone-appid').value.trim();

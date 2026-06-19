@@ -144,6 +144,67 @@ def verify_paypal_order(order_id, client_id, client_secret):
     return False, None, None
 
 
+def verify_paypal_subscription(subscription_id, client_id, client_secret):
+    """
+    Verifica una suscripción de PayPal conectándose a la API.
+    Prueba primero el entorno 'live' y luego 'sandbox' si hay algún fallo.
+    Retorna (success, plan_id) o (False, None).
+    """
+    import base64
+    
+    environments = [
+        {"name": "live", "url": "https://api-m.paypal.com"},
+        {"name": "sandbox", "url": "https://api-m.sandbox.paypal.com"}
+    ]
+    
+    auth_header = base64.b64encode(f"{client_id}:{client_secret}".encode('utf-8')).decode('utf-8')
+    
+    for env in environments:
+        try:
+            # 1. Obtener token de acceso
+            token_url = f"{env['url']}/v1/oauth2/token"
+            token_headers = {
+                "Authorization": f"Basic {auth_header}",
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+            token_data = "grant_type=client_credentials".encode('utf-8')
+            
+            token_req = urllib.request.Request(token_url, data=token_data, headers=token_headers, method="POST")
+            with urllib.request.urlopen(token_req) as response:
+                token_res = json.loads(response.read().decode('utf-8'))
+                access_token = token_res.get("access_token")
+                
+            if not access_token:
+                continue
+                
+            # 2. Consultar detalles de la suscripción
+            sub_url = f"{env['url']}/v1/billing/subscriptions/{subscription_id}"
+            sub_headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+            sub_req = urllib.request.Request(sub_url, headers=sub_headers, method="GET")
+            with urllib.request.urlopen(sub_req) as response:
+                sub_res = json.loads(response.read().decode('utf-8'))
+                
+            status = sub_res.get("status")
+            if status not in ["ACTIVE", "APPROVED"]:
+                print(f"[-] Suscripción de PayPal {subscription_id} no activa en {env['name']}. Estado: {status}")
+                continue
+                
+            paypal_plan_id = sub_res.get("plan_id")
+            return True, paypal_plan_id
+            
+        except urllib.error.HTTPError as he:
+            print(f"[-] Intento de suscripción en PayPal {env['name']} falló con código {he.code}")
+            continue
+        except Exception as e:
+            print(f"[-] Error en PayPal {env['name']}: {e}")
+            continue
+            
+    return False, None
+
+
 def update_user_plan_in_firestore(uid, plan, email=None):
     """
     Actualiza el plan del usuario a 'pro' o 'elite' en Firestore y 

@@ -16,7 +16,7 @@ from firestore_ops import update_firestore_task, get_firestore_task, fetch_fires
 from admin_config import get_admin_config, save_license_hash_in_firestore, save_license_hash_in_local_backup
 from pdf_generator import generate_pdf_from_contract
 from sri_service import emitir_factura_sri_background, actualizar_secuencial_sri, actualizar_estado_factura_db
-from payment_verifier import verify_paypal_order, update_user_plan_in_firestore, confirm_payment_in_firestore
+from payment_verifier import verify_paypal_order, verify_paypal_subscription, update_user_plan_in_firestore, confirm_payment_in_firestore
 from organize_obsidian import organize_files, generate_dashboard
 import agente_coordinador
 import sri_invoicing
@@ -471,14 +471,24 @@ class HandlerPostMixin:
             try:
                 payload = json.loads(post_data.decode('utf-8'))
                 order_id = payload.get('orderId')
+                subscription_id = payload.get('subscriptionId')
                 uid = payload.get('uid')
                 email = payload.get('email', '')
                 
-                if not order_id or not uid:
-                    raise ValueError("Faltan parámetros 'orderId' o 'uid'")
+                # Normalizar si nos mandan de simulación
+                is_mock = False
+                if order_id and order_id.startswith('PAYPAL-SUB-MOCK-'):
+                    is_mock = True
+                elif subscription_id and subscription_id.startswith('PAYPAL-SUB-MOCK-'):
+                    is_mock = True
+                
+                if not order_id and not subscription_id:
+                    raise ValueError("Faltan parámetros 'orderId' o 'subscriptionId'")
+                if not uid:
+                    raise ValueError("Falta el parámetro 'uid'")
                 
                 # Si es un ID de simulación mock, omitir la verificación real
-                if order_id.startswith('PAYPAL-SUB-MOCK-'):
+                if is_mock:
                     plan = payload.get('plan', 'pro')
                     print(f"[+] Simulando pago exitoso de PayPal para plan {plan} del usuario {uid}")
                     activation_success = update_user_plan_in_firestore(uid, plan, email)
@@ -504,11 +514,29 @@ class HandlerPostMixin:
                 if not paypal_client_id or not paypal_client_secret:
                     raise ValueError("El administrador de la plataforma no tiene configuradas sus credenciales de PayPal.")
                 
-                # Verificar orden en PayPal
-                success, plan, amount = verify_paypal_order(order_id, paypal_client_id, paypal_client_secret)
-                
-                if not success:
-                    raise RuntimeError("No se pudo verificar el pago en PayPal o no ha sido completado.")
+                if subscription_id:
+                    # Verificar suscripción de PayPal
+                    success, paypal_plan_id = verify_paypal_subscription(subscription_id, paypal_client_id, paypal_client_secret)
+                    if not success:
+                        raise RuntimeError("No se pudo verificar la suscripción de PayPal o no está activa.")
+                        
+                    # Determinar el plan según el plan_id devuelto por PayPal
+                    plan_id_pro = admin_config.get('paypalPlanIdPro')
+                    plan_id_elite = admin_config.get('paypalPlanIdElite')
+                    
+                    if paypal_plan_id == plan_id_elite:
+                        plan = "elite"
+                    elif paypal_plan_id == plan_id_pro:
+                        plan = "pro"
+                    else:
+                        # Fallback por si no coincide exactamente con los guardados, usar el del payload
+                        plan = payload.get('plan', 'pro')
+                    amount = 30.0 if plan == 'elite' else 10.0
+                else:
+                    # Verificar orden en PayPal (flujo legacy checkout)
+                    success, plan, amount = verify_paypal_order(order_id, paypal_client_id, paypal_client_secret)
+                    if not success:
+                        raise RuntimeError("No se pudo verificar el pago en PayPal o no ha sido completado.")
                 
                 # Activar el plan en Firestore y local
                 activation_success = update_user_plan_in_firestore(uid, plan, email)
