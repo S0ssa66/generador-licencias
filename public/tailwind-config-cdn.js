@@ -60,10 +60,10 @@ tailwind.config = {
             },
             spacing: {
                 "base": "8px",
-                "container-max": "1440px",
+                "container-max": "var(--container-max-width)",
                 "margin-mobile": "16px",
-                "gutter": "24px",
-                "margin-desktop": "48px"
+                "gutter": "var(--gutter-width)",
+                "margin-desktop": "var(--margin-desktop-width)"
             },
             fontFamily: {
                 "sans": ["Outfit", "Inter", "sans-serif"],
@@ -77,14 +77,14 @@ tailwind.config = {
                 "label-caps": ["Montserrat", "sans-serif"]
             },
             fontSize: {
-                "headline-lg-mobile": ["24px", { "lineHeight": "1.2", "fontWeight": "700" }],
-                "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
-                "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
-                "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
-                "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800" }],
-                "data-mono": ["14px", { "lineHeight": "1.4", "fontWeight": "500" }],
-                "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
-                "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600" }]
+                "headline-lg-mobile": ["1.5rem", { "lineHeight": "1.2", "fontWeight": "700" }],
+                "body-lg": ["1.125rem", { "lineHeight": "1.6", "fontWeight": "400" }],
+                "headline-md": ["1.5rem", { "lineHeight": "1.3", "fontWeight": "600" }],
+                "headline-lg": ["2rem", { "lineHeight": "1.2", "fontWeight": "700" }],
+                "display-lg": ["3rem", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                "data-mono": ["0.875rem", { "lineHeight": "1.4", "fontWeight": "500" }],
+                "body-md": ["1rem", { "lineHeight": "1.5", "fontWeight": "400" }],
+                "label-caps": ["0.75rem", { "lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600" }]
             }
         }
     }

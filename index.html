@@ -36,6 +36,39 @@
     <script src="/tailwind-config-cdn.js"></script>
 
     <style>
+        :root {
+            --container-max-width: 1440px;
+            --gutter-width: 24px;
+            --margin-desktop-width: 48px;
+            --hero-title-size: 5rem; /* 80px */
+        }
+
+        /* 2K Screens / Large displays */
+        @media (min-width: 1920px) {
+            html {
+                font-size: 18px;
+            }
+            :root {
+                --container-max-width: 1720px;
+                --gutter-width: 32px;
+                --margin-desktop-width: 64px;
+                --hero-title-size: 6.25rem; /* 100px */
+            }
+        }
+
+        /* 4K Screens / Ultra-large displays */
+        @media (min-width: 2560px) {
+            html {
+                font-size: 20px;
+            }
+            :root {
+                --container-max-width: 2100px;
+                --gutter-width: 40px;
+                --margin-desktop-width: 80px;
+                --hero-title-size: 7.5rem; /* 120px */
+            }
+        }
+
         @keyframes pulse-glow {
             0%, 100% { transform: scale(1); opacity: 0.15; }
             50% { transform: scale(1.15); opacity: 0.35; }
@@ -170,9 +203,9 @@
                     <div class="lg:col-span-7 space-y-8 py-12">
                         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-electric-purple/10 border border-electric-purple/20">
                             <span class="w-2 h-2 rounded-full bg-electric-purple animate-pulse"></span>
-                            <span data-i18n="badge_elite_producers" class="font-label-caps text-[10px] uppercase tracking-widest text-electric-purple">Plataforma para Productores de Elite</span>
+                            <span data-i18n="badge_elite_producers" class="font-label-caps text-[0.625rem] uppercase tracking-widest text-electric-purple">Plataforma para Productores de Elite</span>
                         </div>
-                        <h1 class="font-display-lg text-display-lg md:text-[80px] leading-tight text-white font-black">
+                        <h1 class="font-display-lg text-display-lg md:text-[var(--hero-title-size,5rem)] leading-tight text-white font-black">
                             <span data-i18n="hero_title_1">CREA Y FIRMA TUS</span> <br/>
                             <span data-i18n="hero_title_2" class="outline-text">LICENCIAS DE BEATS</span> <br/>
                             <span data-i18n="hero_title_3">EN SEGUNDOS.</span>
@@ -195,7 +228,7 @@
                             <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60"></div>
                             <div class="absolute bottom-4 left-4 right-4 p-4 md:p-5 glass-card rounded-xl border-l-4 border-electric-purple translate-y-4 group-hover:translate-y-0 transition-transform">
                                 <p data-i18n="featured_artist" class="font-label-caps text-electric-purple text-xs mb-1">FEATURED ARTIST</p>
-                                <h3 class="font-headline-md text-on-surface">Sossa</h3>
+                                <h3 class="font-headline-md text-headline-md text-on-surface">Sossa</h3>
                                 <p data-i18n="featured_desc" class="text-on-surface-variant text-sm">Productor de Elite • +1M Streams</p>
                             </div>
                         </div>
