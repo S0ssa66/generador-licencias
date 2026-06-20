@@ -79,7 +79,7 @@ Para asegurar que el diseño de BEATSS no se vea pequeño en monitores de alta r
     *   En lugar de saltar entre breakpoints discretos, la tipografía base de la página escala de forma continua y fluida según el ancho de pantalla utilizando la fórmula: `html { font-size: clamp(16px, 0.8vw + 3px, 22px); }`.
     *   Esto inicia el escalado dinámico a partir de pantallas de `1625px` de ancho y escala de manera fluida el tamaño base hasta un tope máximo de `22px` en monitores Ultra-HD.
 *   **Unidades Relativas en la Configuración (`tailwind-config-cdn.js`):**
-    *   Todos los espaciados principales (el ancho del contenedor `container-max` a `110rem` / 1760px, márgenes a `3rem`, y gutters a `1.5rem`) fueron migrados directamente a unidades `rem` en la configuración de Tailwind.
+    *   Todos los espaciados principales (el ancho del contenedor `container-max` a `125rem` / 2000px, márgenes a `3rem`, y gutters a `1.5rem`) fueron migrados directamente a unidades `rem` en la configuración de Tailwind.
     *   Como resultado, todo el sitio (márgenes, rellenos, anchos y espaciados entre elementos) escala fluidamente y en perfecta proporción junto con la tipografía.
 *   **Hero Headline con Tipografía Fluida:**
     *   Se implementó la fórmula `md:text-[clamp(5rem,5.5vw,9rem)]` para el título principal del Hero en [index.html](file:///Users/sossa/IA/generador-licencias/index.html). El título escala de forma completamente fluida y continua de **80px** a más de **140px** en pantallas de alta resolución.
