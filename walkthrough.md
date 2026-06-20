@@ -85,6 +85,10 @@ Para asegurar que el diseño de BEATSS no se vea pequeño en monitores de alta r
     *   Se implementó la fórmula `md:text-[clamp(5rem,5.5vw,9rem)]` para el título principal del Hero en [index.html](file:///Users/sossa/IA/generador-licencias/index.html). El título escala de forma completamente fluida y continua de **80px** a más de **140px** en pantallas de alta resolución.
     *   Se redistribuyeron las columnas del hero a `8:4` para darle más espacio horizontal al titular en monitores ultra-anchos.
 
+### 6. Corrección del Botón "Explorar Catálogo" y Enlace "Marketplace"
+*   Se detectó que el botón **"EXPLORAR CATÁLOGO"** en el hero y el enlace **"Marketplace"** en la barra de navegación no tenían controladores de eventos (estaban inactivos).
+*   Se corrigió en [index.html](file:///Users/sossa/IA/generador-licencias/index.html) agregando los controladores `onclick` correspondientes para llamar a la función `window.showAppView('catalog')` de forma segura, previniendo el comportamiento de salto predeterminado del enlace. Ahora redirigen de inmediato al catálogo global de Beats del sitio.
+
 > [!NOTE]
 > La nueva foto de Mr. Micua se cargó y actualizó satisfactoriamente tanto en el disco como en el servicio Firebase Firestore remoto. Con la implementación del root scaling fluido y la tipografía adaptativa mediante `clamp()`, todo el sitio se ve impecable y perfectamente proporcionado a lo largo de cualquier resolución, y los botones de PayPal operan adecuadamente.
 
