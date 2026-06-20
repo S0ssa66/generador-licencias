@@ -60,7 +60,7 @@ tailwind.config = {
             },
             spacing: {
                 "base": "0.5rem",
-                "container-max": "90rem",
+                "container-max": "110rem",
                 "margin-mobile": "1rem",
                 "gutter": "1.5rem",
                 "margin-desktop": "3rem"
