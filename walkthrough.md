@@ -73,6 +73,21 @@ Para solucionar de raíz los timeouts de los agentes y reducir drásticamente el
 *   **Ajuste en Landing Page**: Se configuró `style="object-position: center 10%;"` en el elemento `<img>` de su tarjeta en [index.html](file:///Users/sossa/IA/generador-licencias/index.html). Esto desplaza verticalmente el encuadre para mostrar su rostro y gorra con un margen estético adecuado.
 *   **Ajuste en Sidebar Logo**: Se aplicó la misma propiedad `object-position: center 10%;` en el código JavaScript de [main.js](file:///Users/sossa/IA/generador-licencias/main.js) (línea 879) para que su cara se encuadre a la perfección dentro del avatar circular del sidebar al iniciar sesión.
 
+### 5. Soporte y Auto-Escalado para Pantallas 2K y 4K
+Para asegurar que el diseño de BEATSS no se vea pequeño en monitores de alta resolución (como pantallas 2K y 4K), se implementó un sistema de auto-escalado fluido:
+*   **Root Scaling Fluido (`index.html`):**
+    *   En lugar de saltar entre breakpoints discretos, la tipografía base de la página escala de forma continua y fluida según el ancho de pantalla utilizando la fórmula: `html { font-size: clamp(16px, 0.8vw + 3px, 22px); }`.
+    *   Esto inicia el escalado dinámico a partir de pantallas de `1625px` de ancho y escala de manera fluida el tamaño base hasta un tope máximo de `22px` en monitores Ultra-HD.
+*   **Unidades Relativas en la Configuración (`tailwind-config-cdn.js`):**
+    *   Todos los espaciados principales (el ancho del contenedor `container-max` a `90rem` / 1440px, márgenes a `3rem`, y gutters a `1.5rem`) fueron migrados directamente a unidades `rem` en la configuración de Tailwind.
+    *   Como resultado, todo el sitio (márgenes, rellenos, anchos y espaciados entre elementos) escala fluidamente y en perfecta proporción junto con la tipografía.
+*   **Hero Headline con Tipografía Fluida:**
+    *   Se implementó la fórmula `md:text-[clamp(5rem,5.5vw,9rem)]` para el título principal del Hero en [index.html](file:///Users/sossa/IA/generador-licencias/index.html). El título escala de forma completamente fluida y continua de **80px** a más de **140px** en pantallas de alta resolución.
+    *   Se redistribuyeron las columnas del hero a `8:4` para darle más espacio horizontal al titular en monitores ultra-anchos.
+
+> [!NOTE]
+> La nueva foto de Mr. Micua se cargó y actualizó satisfactoriamente tanto en el disco como en el servicio Firebase Firestore remoto. Con la implementación del root scaling fluido y la tipografía adaptativa mediante `clamp()`, todo el sitio se ve impecable y perfectamente proporcionado a lo largo de cualquier resolución, y los botones de PayPal operan adecuadamente.
+
 ---
 
 ## Corrección del Botón de Modificación de Plan Manual
