@@ -59,11 +59,11 @@ tailwind.config = {
                 "on-primary-fixed-variant": "#5516be"
             },
             spacing: {
-                "base": "8px",
-                "container-max": "var(--container-max-width)",
-                "margin-mobile": "16px",
-                "gutter": "var(--gutter-width)",
-                "margin-desktop": "var(--margin-desktop-width)"
+                "base": "0.5rem",
+                "container-max": "90rem",
+                "margin-mobile": "1rem",
+                "gutter": "1.5rem",
+                "margin-desktop": "3rem"
             },
             fontFamily: {
                 "sans": ["Outfit", "Inter", "sans-serif"],

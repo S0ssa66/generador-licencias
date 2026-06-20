@@ -36,37 +36,8 @@
     <script src="/tailwind-config-cdn.js"></script>
 
     <style>
-        :root {
-            --container-max-width: 1440px;
-            --gutter-width: 24px;
-            --margin-desktop-width: 48px;
-            --hero-title-size: 5.5rem; /* 88px */
-        }
-
-        /* 2K Screens / Large displays */
-        @media (min-width: 1920px) {
-            html {
-                font-size: 18px;
-            }
-            :root {
-                --container-max-width: 1720px;
-                --gutter-width: 32px;
-                --margin-desktop-width: 64px;
-                --hero-title-size: 7rem; /* 126px */
-            }
-        }
-
-        /* 4K Screens / Ultra-large displays */
-        @media (min-width: 2560px) {
-            html {
-                font-size: 20px;
-            }
-            :root {
-                --container-max-width: 2100px;
-                --gutter-width: 40px;
-                --margin-desktop-width: 80px;
-                --hero-title-size: 8.5rem; /* 170px */
-            }
+        html {
+            font-size: clamp(16px, 0.8vw + 3px, 22px);
         }
 
         @keyframes pulse-glow {
@@ -205,7 +176,7 @@
                             <span class="w-2 h-2 rounded-full bg-electric-purple animate-pulse"></span>
                             <span data-i18n="badge_elite_producers" class="font-label-caps text-[0.625rem] uppercase tracking-widest text-electric-purple">Plataforma para Productores de Elite</span>
                         </div>
-                        <h1 class="font-display-lg text-display-lg md:text-[var(--hero-title-size,5rem)] leading-tight text-white font-black">
+                        <h1 class="font-display-lg text-display-lg md:text-[clamp(5rem,5.5vw,9rem)] leading-tight text-white font-black">
                             <span data-i18n="hero_title_1">CREA Y FIRMA TUS</span> <br/>
                             <span data-i18n="hero_title_2" class="outline-text">LICENCIAS DE BEATS</span> <br/>
                             <span data-i18n="hero_title_3">EN SEGUNDOS.</span>
