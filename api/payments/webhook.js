@@ -21,9 +21,15 @@ function initFirebaseAdmin() {
 // ─── Verificar firma del webhook de PayPal ───────────────────────────────────
 async function verifyPayPalWebhookSignature(req, rawBody) {
     const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+    const isProduction = process.env.PAYPAL_MODE === 'production' || process.env.PAYPAL_MODE === 'live';
+
     if (!webhookId) {
-        console.warn('⚠️  PAYPAL_WEBHOOK_ID no configurado — omitiendo verificación de firma');
-        return true; // En dev sin webhook registrado, permitir
+        if (isProduction) {
+            console.error('❌ Error de seguridad: PAYPAL_WEBHOOK_ID no configurado en producción. Firma requerida.');
+            return false;
+        }
+        console.warn('⚠️  PAYPAL_WEBHOOK_ID no configurado — omitiendo verificación de firma (modo Sandbox/Dev)');
+        return true; 
     }
 
     const clientId = process.env.PAYPAL_CLIENT_ID;
@@ -126,8 +132,12 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Firma inválida' });
         }
     } catch (sigError) {
-        console.error('Error al verificar firma:', sigError.message);
-        // No bloquear si la verificación falla por error transitorio
+        console.error('❌ Error al verificar firma:', sigError.message);
+        const isProduction = process.env.PAYPAL_MODE === 'production' || process.env.PAYPAL_MODE === 'live';
+        if (isProduction) {
+            return res.status(401).json({ error: 'Firma inválida o error en verificación' });
+        }
+        // En sandbox/desarrollo permitimos continuar para facilitar las pruebas locales
     }
 
     const eventType = event?.event_type;

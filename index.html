@@ -3720,7 +3720,7 @@
     <div id="global-catalog-view" style="display: none;" class="h-screen overflow-y-auto bg-[radial-gradient(circle_at_50%_0%,_#1A1D26_0%,_#0B0E14_100%)] text-on-surface font-body-md">
         <!-- Header del Catálogo Global -->
         <header class="sticky top-0 z-50 bg-[#0B0E14]/80 backdrop-blur-md border-b border-white/5 py-5 px-6">
-            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="flex items-center gap-3 cursor-pointer" id="catalog-logo-home" onclick="window.showAppView('home')">
                     <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #8b5cf6;">
                         <path d="M12 2v20M17 5v14M7 9v6M22 8v8M2 11v2"></path>
@@ -3742,7 +3742,7 @@
         </header>
 
         <!-- Contenido Principal -->
-        <main class="max-w-7xl mx-auto px-6 py-10 flex flex-col gap-8">
+        <main class="max-w-container-max mx-auto px-6 py-10 flex flex-col gap-8">
             <!-- Hero Banner (Minimalista Premium) -->
             <div class="relative overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-xl p-10 text-center shadow-lg">
                 <!-- Acentos de brillo de fondo -->
@@ -3925,7 +3925,7 @@
         </header>
 
         <!-- Filtros y Grid de Beats -->
-        <main class="store-container max-w-7xl mx-auto px-6 py-10">
+        <main class="store-container max-w-container-max mx-auto px-6 py-10">
             <!-- Pestañas de Navegación del Storefront -->
             <div class="flex justify-center gap-4 mb-8">
                 <button id="store-tab-beats" class="px-6 py-2.5 rounded-full font-bold text-sm bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 transition-all hover:bg-[var(--accent)]/25 focus:outline-none flex items-center gap-2" onclick="window.switchStoreTab('beats')">

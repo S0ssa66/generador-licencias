@@ -175,21 +175,59 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Error de autenticación con el servicio de almacenamiento.' });
     }
 
-    // 4. Si aún no está autorizado, verificar en Firestore si es un archivo de preview público (MP3 o Imagen)
+    // 4. Si aún no está autorizado, verificar en Firestore si es un archivo de preview público (MP3 o Artwork)
     if (!isAuthorized) {
         try {
             initFirebaseAdmin();
             const db = getFirestore();
-            const beatsSnap = await db.collectionGroup('beats').get();
-            for (const docSnap of beatsSnap.docs) {
-                const beatData = docSnap.data();
-                if (beatData.mp3?.includes(fileId) || beatData.image?.includes(fileId)) {
+
+            // Buscar usando consultas eficientes por índice de rango/prefijo en lugar de escanear toda la colección
+            const patterns = [
+                `https://drive.google.com/file/d/${fileId}`,
+                `https://drive.google.com/open?id=${fileId}`,
+                `https://docs.google.com/uc?id=${fileId}`,
+                fileId
+            ];
+
+            const queries = [];
+            for (const pattern of patterns) {
+                queries.push(
+                    db.collectionGroup('beats')
+                        .where('mp3', '>=', pattern)
+                        .where('mp3', '<=', pattern + '\uf8ff')
+                        .get()
+                );
+                queries.push(
+                    db.collectionGroup('beats')
+                        .where('artwork', '>=', pattern)
+                        .where('artwork', '<=', pattern + '\uf8ff')
+                        .get()
+                );
+            }
+
+            const results = await Promise.all(queries);
+            for (const snap of results) {
+                if (!snap.empty) {
                     isAuthorized = true;
                     break;
                 }
             }
         } catch (dbErr) {
-            console.error('Error al buscar el archivo de preview en Firestore:', dbErr.message);
+            console.warn('Fallo en búsqueda indexada de preview (posible índice de Collection Group faltante):', dbErr.message);
+            // Fallback temporal de escaneo para no romper el servicio mientras se crea el índice si es necesario
+            try {
+                const db = getFirestore();
+                const beatsSnap = await db.collectionGroup('beats').get();
+                for (const docSnap of beatsSnap.docs) {
+                    const beatData = docSnap.data();
+                    if (beatData.mp3?.includes(fileId) || beatData.artwork?.includes(fileId)) {
+                        isAuthorized = true;
+                        break;
+                    }
+                }
+            } catch (fallbackErr) {
+                console.error('Error en fallback de escaneo de preview:', fallbackErr.message);
+            }
         }
     }
 
