@@ -3462,6 +3462,44 @@ window.cancelPayPalSubscription = async function() {
         }
     }
 };
+window.paperZoom = 100;
+window.changeZoom = function(action) {
+    const paper = document.getElementById('license-paper');
+    if (!paper) return;
+
+    let newZoom = window.paperZoom || 100;
+
+    if (action === 'fit') {
+        const container = paper.parentElement;
+        if (container) {
+            // El ancho del contenedor menos un padding de seguridad
+            const availableWidth = container.clientWidth - 64;
+            const fitScale = availableWidth / 800;
+            newZoom = Math.floor(fitScale * 100);
+        }
+    } else if (typeof action === 'number') {
+        newZoom += action;
+    }
+
+    if (newZoom < 50) newZoom = 50;
+    if (newZoom > 200) newZoom = 200;
+    window.paperZoom = newZoom;
+
+    // Aplicar zoom usando la propiedad 'zoom' si es compatible, de lo contrario transform scale
+    if ('zoom' in paper.style) {
+        paper.style.zoom = `${newZoom}%`;
+    } else {
+        paper.style.transform = `scale(${newZoom / 100})`;
+        paper.style.transformOrigin = 'top center';
+        
+        // Ajustar margen para evitar espacio vacío por el escalado de transform
+        const scaledHeight = paper.offsetHeight * (newZoom / 100);
+        paper.style.marginBottom = `${scaledHeight - paper.offsetHeight + 32}px`;
+    }
+
+    const val = document.getElementById('zoom-value');
+    if (val) val.innerText = `${newZoom}%`;
+};
 
 window.showAppView = function(viewName, params = null, pushState = true) {
     console.log("🚦 Cambiando a vista:", viewName, "con parámetros:", params);
