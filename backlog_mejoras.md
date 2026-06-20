@@ -71,8 +71,8 @@ Automatizaciones para erradicar la validación manual de comprobantes y cambiar 
 
 - `[x]` **QR Dinámico para Deuna! y Pagos Locales (BusinessAnalyst)**:
   - *Descripción:* Automatizar los pagos manuales generando códigos QR dinámicos e integrando un listener asíncrono que actualiza Firestore cuando el webhook aprueba el pago.
-- `[ ]` **Suscripción Recurrente para Productores (BusinessAnalyst)**:
-  - *Descripción:* Integrar Stripe Billing o suscripciones recurrentes de PayPal para cobrar mensualmente de forma automática los planes Pro ($10/mes) o Elite ($30/mes).
+- `[x]` **Suscripción Recurrente para Productores (BusinessAnalyst)**:
+  - *Descripción:* Integrar suscripciones recurrentes de PayPal (y/o Stripe Billing) para cobrar mensualmente de forma automática los planes Pro ($10/mes) o Elite ($30/mes). (Completado con PayPal Live + Webhooks)
 - `[ ]` **Procesamiento de Pagos Centralizado (Stripe Connect)**:
   - *Descripción:* Permitir que la plataforma retenga automáticamente una comisión (v.g. 5% - 10%) en cada transacción de los productores y envíe el resto automáticamente a su cuenta de banco.
 
