@@ -616,22 +616,101 @@ function updatePlanUI() {
         }
     }
 
-    const settingsPlanName = document.getElementById('settings-plan-name');
+    const settingsPlanName  = document.getElementById('settings-plan-name');
     const settingsPlanAction = document.getElementById('settings-plan-action');
+    const subStatusBadge    = document.getElementById('sub-status-badge');
+    const subExpiryLabel    = document.getElementById('sub-expiry-label');
+    const subExpiryDate     = document.getElementById('sub-expiry-date');
+    const subProgressWrap   = document.getElementById('sub-progress-wrap');
+    const subProgressBar    = document.getElementById('sub-progress-bar');
+    const subProgressStart  = document.getElementById('sub-progress-start');
+    const subProgressEnd    = document.getElementById('sub-progress-end');
+    const subDaysRemaining  = document.getElementById('sub-days-remaining');
+
     if (settingsPlanName && settingsPlanAction) {
-        if (producerConfig && producerConfig.plan === 'elite') {
-            settingsPlanName.innerHTML = `<span style="color: #ec4899;"><i data-lucide="crown" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 4px;"></i> Plan Elite Activo</span>`;
-            settingsPlanAction.innerHTML = `<span style="font-size: 12px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Facturación Activa</span>`;
-        } else if (window.currentUserIsPro) {
-            settingsPlanName.innerHTML = `<span style="color: #a855f7;"><i data-lucide="sparkles" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 4px;"></i> Plan Pro Activo</span>`;
-            settingsPlanAction.innerHTML = `<span style="font-size: 12px; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 4px;"><i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Facturación Activa</span>`;
+        const plan       = producerConfig?.plan || 'free';
+        const status     = producerConfig?.planStatus || '';
+        const expiryStr  = producerConfig?.planExpirationDate || producerConfig?.expirationPro || '';
+        const activatedStr = producerConfig?.planActivatedAt || '';
+        const hasSub     = !!(producerConfig?.planPayPalSubscriptionId);
+        const now        = new Date();
+
+        // ── Nombre del plan ──────────────────────────────────────────────
+        if (plan === 'elite') {
+            settingsPlanName.innerHTML = `<span style="color:#ec4899;"><i data-lucide="crown" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;"></i>Elite</span>`;
+        } else if (plan === 'pro') {
+            settingsPlanName.innerHTML = `<span style="color:#a855f7;"><i data-lucide="sparkles" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;"></i>Pro</span>`;
         } else {
-            settingsPlanName.innerHTML = `Plan Inicial (Gratuito)`;
+            settingsPlanName.innerHTML = `<span style="color:#8a91a6;">Gratuito</span>`;
+        }
+
+        // ── Badge de estado ───────────────────────────────────────────────
+        if (subStatusBadge) {
+            const badgeStyles = {
+                active:    { bg: 'rgba(16,185,129,0.15)', color: '#10b981', label: '● Activa' },
+                cancelled: { bg: 'rgba(239,68,68,0.12)',  color: '#ef4444', label: '✕ Cancelada' },
+                suspended: { bg: 'rgba(245,158,11,0.12)', color: '#f59e0b', label: '⚠ Suspendida' },
+                expired:   { bg: 'rgba(100,100,100,0.15)', color: '#8a91a6', label: 'Expirada' },
+                free:      { bg: 'rgba(100,100,100,0.12)', color: '#8a91a6', label: 'Gratis' },
+            };
+            const s = (plan === 'free' || !status) ? 'free' : (status || 'active');
+            const b = badgeStyles[s] || badgeStyles.free;
+            subStatusBadge.style.background = b.bg;
+            subStatusBadge.style.color = b.color;
+            subStatusBadge.textContent = b.label;
+        }
+
+        // ── Fechas y barra de progreso ────────────────────────────────────
+        if (expiryStr && subExpiryDate) {
+            const expiry = new Date(expiryStr);
+            const diffMs = expiry - now;
+            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            const fmtDate = expiry.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+
+            if (status === 'cancelled') {
+                subExpiryLabel.textContent = 'Acceso hasta:';
+                subExpiryDate.textContent = fmtDate;
+            } else if (diffDays > 0) {
+                subExpiryLabel.textContent = hasSub ? 'Próxima renovación:' : 'Acceso hasta:';
+                subExpiryDate.textContent = fmtDate;
+            } else {
+                subExpiryLabel.textContent = 'Venció el:';
+                subExpiryDate.textContent = fmtDate;
+                subExpiryDate.style.color = '#ef4444';
+            }
+
+            // Barra de progreso del ciclo (solo si tenemos fecha de activación)
+            if (subProgressWrap && activatedStr && diffDays > 0) {
+                const activated = new Date(activatedStr);
+                const totalMs = expiry - activated;
+                const usedMs  = now - activated;
+                const pct = Math.max(0, Math.min(100, (usedMs / totalMs) * 100));
+                subProgressWrap.style.display = 'block';
+                subProgressBar.style.width = `${pct.toFixed(1)}%`;
+                subProgressStart.textContent = activated.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                subProgressEnd.textContent   = expiry.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                subDaysRemaining.textContent = diffDays > 0 ? `${diffDays} días restantes` : 'Vence hoy';
+            }
+        }
+
+        // ── Botones de acción ─────────────────────────────────────────────
+        if (plan === 'free' || !plan) {
             settingsPlanAction.innerHTML = `
-                <button type="button" class="btn btn-primary" style="height: 32px; padding: 0 16px; font-size: 12px; font-weight: 700; border-radius: 8px; background: linear-gradient(135deg, #0055ee 0%, #00aacc 100%); border: none; color: #ffffff; cursor: pointer;" onclick="closeSettingsModal(); openPaymentModal();">
-                    Mejorar a Pro
-                </button>
-            `;
+                <button type="button" class="btn btn-primary" style="height:36px;padding:0 18px;font-size:12px;font-weight:700;border-radius:10px;" onclick="closeSettingsModal(); openPaymentModal();">
+                    <i data-lucide="zap" style="width:14px;height:14px;margin-right:5px;vertical-align:middle;"></i>Mejorar a Pro
+                </button>`;
+        } else if (status === 'cancelled') {
+            // Cancelado pero con acceso hasta fecha — ofrecer reactivar
+            settingsPlanAction.innerHTML = `
+                <button type="button" class="btn btn-primary" style="height:36px;padding:0 18px;font-size:12px;font-weight:700;border-radius:10px;" onclick="closeSettingsModal(); openPaymentModal();">
+                    <i data-lucide="refresh-cw" style="width:14px;height:14px;margin-right:5px;vertical-align:middle;"></i>Reactivar
+                </button>`;
+        } else if (hasSub && status === 'active') {
+            // Suscripción activa con PayPal — mostrar botón de cancelar
+            settingsPlanAction.innerHTML = `
+                <button type="button" id="btn-cancel-subscription" style="height:36px;padding:0 16px;font-size:11px;font-weight:700;border-radius:10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);color:#ef4444;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.18)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'" onclick="cancelPayPalSubscription()">
+                    <i data-lucide="x-circle" style="width:14px;height:14px;margin-right:5px;vertical-align:middle;"></i>Cancelar suscripción
+                </button>`;
         }
     }
     
@@ -3317,6 +3396,72 @@ window.openSettingsModal = openSettingsModal;
 window.addCustomFieldRow = addCustomFieldRow;
 window.initDefaultDate = initDefaultDate;
 window.safeGetItem = safeGetItem;
+
+// ─── Cancelar Suscripción PayPal desde la UI ──────────────────────────────────
+window.cancelPayPalSubscription = async function() {
+    const uid = window.currentUser;
+    if (!uid) {
+        alert('Debes iniciar sesión para realizar esta acción.');
+        return;
+    }
+
+    const confirmed = window.confirm(
+        '¿Estás seguro de que quieres cancelar tu suscripción?\n\n' +
+        'Seguirás teniendo acceso a tu plan hasta la fecha de expiración actual. ' +
+        'Después de eso, tu plan volverá a Gratuito.'
+    );
+    if (!confirmed) return;
+
+    const btn = document.getElementById('btn-cancel-subscription');
+    if (btn) {
+        btn.textContent = 'Cancelando...';
+        btn.disabled = true;
+    }
+
+    try {
+        const idToken = window.getFirebaseIdToken ? await window.getFirebaseIdToken() : '';
+        const response = await fetch('/api/payments/cancel-subscription', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({ uid })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Actualizar el config local para reflejar la cancelación inmediatamente
+            if (window.producerConfig) {
+                window.producerConfig.planStatus = 'cancelled';
+                window.producerConfig.planCancelledAt = new Date().toISOString();
+            }
+
+            // Refrescar el panel de suscripción
+            if (typeof updateProducerUI === 'function') updateProducerUI();
+
+            // Toast de confirmación
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid rgba(239,68,68,0.3);color:#fff;padding:18px 28px;border-radius:14px;font-weight:700;font-size:15px;z-index:99999;box-shadow:0 12px 32px rgba(0,0,0,0.5);text-align:center;max-width:90vw;';
+            const accessUntil = result.accessUntil
+                ? new Date(result.accessUntil).toLocaleDateString('es-ES', { day: '2-digit', month: 'long' })
+                : '';
+            toast.innerHTML = `🚫 <strong>Suscripción cancelada</strong><br><span style="font-weight:400;font-size:12px;">Tendrás acceso hasta el ${accessUntil}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        } else {
+            throw new Error(result.error || 'Error desconocido');
+        }
+    } catch (err) {
+        console.error('Error al cancelar suscripción:', err);
+        alert(`Error al cancelar: ${err.message}`);
+        if (btn) {
+            btn.textContent = 'Cancelar suscripción';
+            btn.disabled = false;
+        }
+    }
+};
 
 window.showAppView = function(viewName, params = null, pushState = true) {
     console.log("🚦 Cambiando a vista:", viewName, "con parámetros:", params);

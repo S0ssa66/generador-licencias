@@ -186,25 +186,26 @@ export default async function handler(req, res) {
         initFirebaseAdmin();
         const db = getFirestore();
 
-        // Actualizar el documento del usuario con el plan Pro o Elite
-        const configRef = db.collection('users').doc(uid).collection('config').doc('producer');
-        await configRef.set({
+        // Campos compartidos entre config/producer y raíz del usuario
+        const sharedUpdates = {
             plan: planToActivate,
+            planStatus: 'active',
             planActivatedAt: activationDate.toISOString(),
             planExpirationDate: expirationDate.toISOString(),
             expirationPro: expirationDate.toISOString(),
-            planPayPalOrderId: transactionId,
             planPayerEmail: payerEmail,
-        }, { merge: true });
+            // Guardar subscriptionId para que el webhook identifique al usuario
+            ...(subscriptionId && { planPayPalSubscriptionId: subscriptionId }),
+            ...(orderId && { planPayPalOrderId: orderId }),
+        };
+
+        // Actualizar el documento del usuario con el plan Pro o Elite
+        const configRef = db.collection('users').doc(uid).collection('config').doc('producer');
+        await configRef.set(sharedUpdates, { merge: true });
 
         // También guardar en el documento raíz del usuario para fácil consulta
         const userRef = db.collection('users').doc(uid);
-        await userRef.set({
-            plan: planToActivate,
-            planActivatedAt: activationDate.toISOString(),
-            planExpirationDate: expirationDate.toISOString(),
-            expirationPro: expirationDate.toISOString(),
-        }, { merge: true });
+        await userRef.set(sharedUpdates, { merge: true });
 
         console.log(`✅ Plan ${planToActivate} activado para uid: ${uid}, email: ${payerEmail}, transaction: ${transactionId}`);
 

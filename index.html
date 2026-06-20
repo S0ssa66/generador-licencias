@@ -2424,13 +2424,37 @@
                 </button>
             </div>
             <div class="modal-body">
-                  <!-- Info de Plan -->
-                  <div id="settings-plan-info" style="margin-bottom: 24px; padding: 16px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; display: flex; align-items: center; justify-content: space-between;">
-                      <div>
-                          <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #8a91a6; letter-spacing: 0.5px;">Tu Plan de Suscripción</div>
-                          <div id="settings-plan-name" style="font-size: 15px; font-weight: 700; color: #ffffff; margin-top: 4px; display: flex; align-items: center; gap: 4px;">Cargando plan...</div>
+                  <!-- ── Panel de Suscripción ── -->
+                  <div id="settings-plan-info" style="margin-bottom: 24px; padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px;">
+                      <!-- Cabecera -->
+                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #8a91a6; letter-spacing: 0.8px;">Tu Suscripción</div>
+                          <div id="sub-status-badge" style="font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(100,100,100,0.2); color: #8a91a6;">Cargando...</div>
                       </div>
-                      <div id="settings-plan-action"></div>
+
+                      <!-- Plan + fechas -->
+                      <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                          <div id="settings-plan-name" style="font-size: 22px; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 6px;">···</div>
+                          <div style="flex: 1; min-width: 160px;">
+                              <div id="sub-expiry-label" style="font-size: 11px; color: #8a91a6; font-weight: 500;"></div>
+                              <div id="sub-expiry-date" style="font-size: 13px; color: #cbd5e0; font-weight: 600; margin-top: 2px;"></div>
+                          </div>
+                      </div>
+
+                      <!-- Barra de progreso del ciclo -->
+                      <div id="sub-progress-wrap" style="margin-top: 14px; display: none;">
+                          <div style="display: flex; justify-content: space-between; font-size: 10px; color: #8a91a6; margin-bottom: 4px;">
+                              <span id="sub-progress-start"></span>
+                              <span id="sub-progress-end"></span>
+                          </div>
+                          <div style="height: 5px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden;">
+                              <div id="sub-progress-bar" style="height: 100%; border-radius: 99px; background: linear-gradient(90deg, #00ccff, #0055ee); transition: width 0.5s;"></div>
+                          </div>
+                          <div id="sub-days-remaining" style="font-size: 11px; color: #8a91a6; margin-top: 5px; text-align: right;"></div>
+                      </div>
+
+                      <!-- Acciones -->
+                      <div id="settings-plan-action" style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap;"></div>
                   </div>
 
                   <!-- Canjear Código VIP -->
