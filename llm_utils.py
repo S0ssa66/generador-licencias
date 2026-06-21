@@ -129,15 +129,15 @@ class OllamaProvider(LLMProvider):
                 models = data.get("models", [])
                 if models:
                     model_names = [m["name"] for m in models]
-                    # Buscar si está deepseek-coder en el nombre
-                    for name in model_names:
-                        if "deepseek-coder" in name:
-                            print(f"[*] [Ollama] Modelo preferido detectado: {name}")
-                            return name
                     # Buscar si está gemma4
                     for name in model_names:
                         if "gemma4" in name:
                             print(f"[*] [Ollama] Modelo gemma4 detectado: {name}")
+                            return name
+                    # Buscar si está deepseek-coder en el nombre
+                    for name in model_names:
+                        if "deepseek-coder" in name:
+                            print(f"[*] [Ollama] Modelo preferido detectado: {name}")
                             return name
                     # Si no, usar el primero disponible
                     model = model_names[0]
