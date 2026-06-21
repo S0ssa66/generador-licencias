@@ -33,6 +33,19 @@
     --font-serif: 'Playfair Display', Georgia, Cambria, serif;
     --font-mono: 'JetBrains Mono', 'Courier New', Courier, monospace;
     
+    /* Variables de opacidad y sombras dinámicas */
+    --accent-rgb: 139, 92, 246;
+    --shadow-accent: rgba(139, 92, 246, 0.25);
+    --shadow-accent-hover: rgba(139, 92, 246, 0.35);
+    --accent-alpha-08: rgba(139, 92, 246, 0.08);
+    --accent-alpha-10: rgba(139, 92, 246, 0.1);
+    --accent-alpha-15: rgba(139, 92, 246, 0.15);
+    --accent-alpha-20: rgba(139, 92, 246, 0.2);
+    --accent-alpha-30: rgba(139, 92, 246, 0.3);
+    --accent-alpha-40: rgba(139, 92, 246, 0.4);
+    --bg-card-glass: rgba(22, 25, 34, 0.7);
+    --shadow-neon: 0 0 15px rgba(139, 92, 246, 0.4), 0 0 5px rgba(139, 92, 246, 0.2);
+
     /* Variables de diseño del contrato PDF */
     --contract-accent: #1e293b;
     --contract-quote-bg: rgba(30, 41, 59, 0.04);
@@ -60,6 +73,7 @@ body.light-theme {
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.15);
+    --bg-card-glass: rgba(255, 255, 255, 0.7);
 }
 
 /* Theme overrides for CG Monarco (Red) */
@@ -68,12 +82,22 @@ body.theme-cgmonarco {
     --accent-gradient: linear-gradient(135deg, #e60000 0%, #ff4b4b 100%);
     --accent-hover: #ff1a1a;
     --border-focus: #e60000;
+    --accent-rgb: 230, 0, 0;
+    --shadow-accent: rgba(230, 0, 0, 0.25);
+    --shadow-accent-hover: rgba(230, 0, 0, 0.35);
+    --accent-alpha-08: rgba(230, 0, 0, 0.08);
+    --accent-alpha-10: rgba(230, 0, 0, 0.1);
+    --accent-alpha-15: rgba(230, 0, 0, 0.15);
+    --accent-alpha-20: rgba(230, 0, 0, 0.2);
+    --accent-alpha-30: rgba(230, 0, 0, 0.3);
+    --accent-alpha-40: rgba(230, 0, 0, 0.4);
+    --shadow-neon: 0 0 15px rgba(230, 0, 0, 0.4), 0 0 5px rgba(230, 0, 0, 0.2);
 }
 body.theme-cgmonarco .btn-primary {
-    box-shadow: 0 4px 12px rgba(230, 0, 0, 0.25);
+    box-shadow: 0 4px 12px var(--shadow-accent);
 }
 body.theme-cgmonarco .btn-primary:hover {
-    box-shadow: 0 6px 16px rgba(230, 0, 0, 0.35);
+    box-shadow: 0 6px 16px var(--shadow-accent-hover);
 }
 body.light-theme.theme-cgmonarco {
     --border-focus: #e60000;
@@ -85,12 +109,22 @@ body.theme-sossa {
     --accent-gradient: linear-gradient(135deg, #a855f7 0%, #c084fc 100%);
     --accent-hover: #9333ea;
     --border-focus: #a855f7;
+    --accent-rgb: 168, 85, 247;
+    --shadow-accent: rgba(168, 85, 247, 0.25);
+    --shadow-accent-hover: rgba(168, 85, 247, 0.35);
+    --accent-alpha-08: rgba(168, 85, 247, 0.08);
+    --accent-alpha-10: rgba(168, 85, 247, 0.1);
+    --accent-alpha-15: rgba(168, 85, 247, 0.15);
+    --accent-alpha-20: rgba(168, 85, 247, 0.2);
+    --accent-alpha-30: rgba(168, 85, 247, 0.3);
+    --accent-alpha-40: rgba(168, 85, 247, 0.4);
+    --shadow-neon: 0 0 15px rgba(168, 85, 247, 0.4), 0 0 5px rgba(168, 85, 247, 0.2);
 }
 body.theme-sossa .btn-primary {
-    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
+    box-shadow: 0 4px 12px var(--shadow-accent);
 }
 body.theme-sossa .btn-primary:hover {
-    box-shadow: 0 6px 16px rgba(168, 85, 247, 0.35);
+    box-shadow: 0 6px 16px var(--shadow-accent-hover);
 }
 body.light-theme.theme-sossa {
     --border-focus: #a855f7;
@@ -102,12 +136,22 @@ body.theme-mrmicua {
     --accent-gradient: linear-gradient(135deg, #00d2ff 0%, #0072ff 100%);
     --accent-hover: #00bce6;
     --border-focus: #00d2ff;
+    --accent-rgb: 0, 210, 255;
+    --shadow-accent: rgba(0, 210, 255, 0.25);
+    --shadow-accent-hover: rgba(0, 210, 255, 0.35);
+    --accent-alpha-08: rgba(0, 210, 255, 0.08);
+    --accent-alpha-10: rgba(0, 210, 255, 0.1);
+    --accent-alpha-15: rgba(0, 210, 255, 0.15);
+    --accent-alpha-20: rgba(0, 210, 255, 0.2);
+    --accent-alpha-30: rgba(0, 210, 255, 0.3);
+    --accent-alpha-40: rgba(0, 210, 255, 0.4);
+    --shadow-neon: 0 0 15px rgba(0, 210, 255, 0.4), 0 0 5px rgba(0, 210, 255, 0.2);
 }
 body.theme-mrmicua .btn-primary {
-    box-shadow: 0 4px 12px rgba(0, 210, 255, 0.25);
+    box-shadow: 0 4px 12px var(--shadow-accent);
 }
 body.theme-mrmicua .btn-primary:hover {
-    box-shadow: 0 6px 16px rgba(0, 210, 255, 0.35);
+    box-shadow: 0 6px 16px var(--shadow-accent-hover);
 }
 body.light-theme.theme-mrmicua {
     --border-focus: #00d2ff;
@@ -237,7 +281,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(230, 0, 0, 0.3);
+    box-shadow: 0 4px 12px var(--shadow-accent);
 }
 
 .logo-icon i, .logo-icon svg {
@@ -331,8 +375,8 @@ body {
 
 .license-btn.active {
     border-color: var(--border-focus);
-    background: rgba(230, 0, 0, 0.08);
-    box-shadow: 0 0 12px rgba(230, 0, 0, 0.15);
+    background: var(--accent-alpha-08);
+    box-shadow: 0 0 12px var(--accent-alpha-15);
 }
 
 .license-btn .lic-name {
@@ -343,7 +387,7 @@ body {
 }
 
 .license-btn.active .lic-name {
-    color: #ff6666;
+    color: var(--accent);
 }
 
 .license-btn .lic-desc {
@@ -410,7 +454,7 @@ body {
 .input-group input:focus,
 .input-group select:focus {
     border-color: var(--border-focus);
-    box-shadow: 0 0 8px rgba(230, 0, 0, 0.2);
+    box-shadow: 0 0 8px var(--accent-alpha-20);
     background-color: rgba(30, 30, 36, 0.8);
 }
 
@@ -539,13 +583,13 @@ body {
 .btn-primary {
     background: var(--accent-gradient);
     color: #fff;
-    box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25);
+    box-shadow: 0 4px 12px var(--shadow-accent);
 }
 
 .btn-primary:hover {
     background: var(--accent-hover);
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(0, 102, 255, 0.35);
+    box-shadow: 0 6px 16px var(--shadow-accent-hover);
 }
 
 .btn-secondary {
@@ -561,17 +605,8 @@ body {
 
 /* Custom styled action buttons matching brand/theme */
 #btn-send-email, #btn-docusign {
-    border-color: rgba(0, 102, 255, 0.3);
+    border-color: var(--accent-alpha-30);
     color: var(--accent);
-}
-body.theme-cgmonarco #btn-send-email, body.theme-cgmonarco #btn-docusign {
-    border-color: rgba(230, 0, 0, 0.3);
-}
-body.theme-sossa #btn-send-email, body.theme-sossa #btn-docusign {
-    border-color: rgba(168, 85, 247, 0.3);
-}
-body.theme-mrmicua #btn-send-email, body.theme-mrmicua #btn-docusign {
-    border-color: rgba(0, 210, 255, 0.3);
 }
 #btn-send-email:hover, #btn-docusign:hover {
     background-color: var(--accent);
@@ -708,8 +743,8 @@ body.theme-mrmicua #btn-send-email, body.theme-mrmicua #btn-docusign {
 }
 
 .tab-btn.active .badge {
-    background-color: rgba(230, 0, 0, 0.2);
-    color: #ff6666;
+    background-color: var(--accent-alpha-20);
+    color: var(--accent);
 }
 
 /* Pestaña: Contenido */
@@ -1433,14 +1468,14 @@ body.theme-mrmicua #btn-send-email, body.theme-mrmicua #btn-docusign {
 .stat-card:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
-    border-color: rgba(230, 0, 0, 0.4);
+    border-color: var(--accent);
 }
 
 .stat-icon {
     width: 44px;
     height: 44px;
     border-radius: 10px;
-    background: rgba(230, 0, 0, 0.1);
+    background: var(--accent-alpha-10);
     color: var(--accent);
     display: flex;
     align-items: center;
@@ -1621,9 +1656,9 @@ body.theme-mrmicua #btn-send-email, body.theme-mrmicua #btn-docusign {
 }
 
 .history-table td .type-badge.premium {
-    background-color: rgba(230, 0, 0, 0.15);
-    color: #ff6666;
-    border: 1px solid rgba(230, 0, 0, 0.2);
+    background-color: var(--accent-alpha-15);
+    color: var(--accent);
+    border: 1px solid var(--accent-alpha-20);
 }
 
 .history-table td .type-badge.premium_plus {
@@ -1721,7 +1756,9 @@ body.theme-mrmicua #btn-send-email, body.theme-mrmicua #btn-docusign {
 }
 
 .modal-overlay .modal-content {
-    background-color: var(--bg-card);
+    background-color: var(--bg-card-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     width: 560px;
@@ -1773,7 +1810,9 @@ body.theme-mrmicua #btn-send-email, body.theme-mrmicua #btn-docusign {
 }
 
 .modal {
-    background-color: var(--bg-card);
+    background-color: var(--bg-card-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     width: 460px;
@@ -2577,8 +2616,8 @@ body.theme-mrmicua #btn-send-email, body.theme-mrmicua #btn-docusign {
 
 .beat-card-premium:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
-    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25), var(--shadow-neon);
+    border-color: var(--accent);
 }
 
 .beat-cover-wrapper {
@@ -2634,14 +2673,14 @@ body.theme-mrmicua #btn-send-email, body.theme-mrmicua #btn-docusign {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(230, 0, 0, 0.4);
+    box-shadow: 0 4px 12px var(--shadow-accent-strong);
     transform: scale(0.9);
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s;
 }
 
 .play-btn-circle:hover {
     transform: scale(1.05);
-    background-color: #ff3333;
+    background-color: var(--accent-hover);
 }
 
 .beat-badge-row {

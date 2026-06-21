@@ -22,7 +22,7 @@ function renderMonthlySalesChart(licenses) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const monthLabel = d.toLocaleString('es', { month: 'short' });
+            const monthLabel = d.toLocaleString(currentLang === 'es' ? 'es-ES' : 'en-US', { month: 'short' });
             monthsData.push({
                 prefix: `${yyyy}-${mm}`,
                 label: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
@@ -43,121 +43,139 @@ function renderMonthlySalesChart(licenses) {
         });
     }
 
-
-    // Calcular dimensiones del gráfico
-    const width = 500;
-    const height = 220;
-    const paddingLeft = 45;
-    const paddingRight = 20;
-    const paddingTop = 20;
-    const paddingBottom = 30;
-
-    // Calcular valores Y max
-    const maxVal = Math.max(...monthsData.map(d => d.revenue), 10);
-    const yMax = Math.ceil(maxVal / 10) * 10; // Redondear hacia arriba
-
-    // Generar líneas de cuadrícula y etiquetas Y
-    let yGridHtml = '';
-    const yTicks = 4;
-    for (let i = 0; i <= yTicks; i++) {
-        const yVal = (yMax / yTicks) * i;
-        const yPos = height - paddingBottom - ((height - paddingTop - paddingBottom) / yTicks) * i;
-        yGridHtml += `
-            <line class="chart-grid-line" x1="${paddingLeft}" y1="${yPos}" x2="${width - paddingRight}" y2="${yPos}" />
-            <text class="chart-axis-text" x="${paddingLeft - 8}" y="${yPos + 4}" text-anchor="end">$${yVal.toFixed(0)}</text>
-        `;
+    // Limpiar contenedor e insertar un canvas
+    container.innerHTML = '<canvas id="monthly-sales-chart" style="width: 100%; height: 100%; max-height: 220px;"></canvas>';
+    
+    if (monthlySalesChartInstance) {
+        monthlySalesChartInstance.destroy();
+        monthlySalesChartInstance = null;
     }
 
-    // Calcular puntos de datos
-    const points = [];
-    const chartWidth = width - paddingLeft - paddingRight;
-    const chartHeight = height - paddingTop - paddingBottom;
+    const ctx = document.getElementById('monthly-sales-chart').getContext('2d');
+    
+    // Obtener color primario del tema para la línea
+    const accentColor = getComputedStyle(document.body).getPropertyValue('--accent').trim() || '#a855f7';
+    const accentAlpha10 = getComputedStyle(document.body).getPropertyValue('--accent-alpha-10').trim() || 'rgba(168, 85, 247, 0.1)';
 
-    monthsData.forEach((d, i) => {
-        const x = paddingLeft + (chartWidth / 5) * i;
-        const y = height - paddingBottom - (d.revenue / yMax) * chartHeight;
-        points.push({ x, y, label: d.label, revenue: d.revenue, count: d.count });
-    });
+    const labels = monthsData.map(d => d.label);
+    const revenues = monthsData.map(d => d.revenue);
+    const counts = monthsData.map(d => d.count);
 
-    // Construir trazado del área y de la línea
-    let linePathStr = '';
-    let areaPathStr = '';
+    if (typeof Chart === 'undefined') {
+        console.warn("Chart.js no está cargado aún.");
+        return;
+    }
 
-    if (points.length > 0) {
-        linePathStr = `M ${points[0].x} ${points[0].y}`;
-        areaPathStr = `M ${points[0].x} ${height - paddingBottom} L ${points[0].x} ${points[0].y}`;
-        
-        for (let i = 1; i < points.length; i++) {
-            linePathStr += ` L ${points[i].x} ${points[i].y}`;
-            areaPathStr += ` L ${points[i].x} ${points[i].y}`;
+    monthlySalesChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: currentLang === 'es' ? 'Ingresos ($)' : 'Revenue ($)',
+                data: revenues,
+                borderColor: accentColor,
+                backgroundColor: accentAlpha10,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: accentColor,
+                pointBorderColor: '#151b27',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(15, 19, 32, 0.95)',
+                    titleColor: '#fff',
+                    titleFont: {
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold'
+                    },
+                    bodyColor: '#cbd5e0',
+                    bodyFont: {
+                        family: 'Outfit, sans-serif'
+                    },
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                    borderWidth: 1,
+                    padding: 10,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            const index = context.dataIndex;
+                            const rev = context.raw;
+                            const count = counts[index];
+                            return [
+                                `${currentLang === 'es' ? 'Ingresos' : 'Revenue'}: $${rev.toFixed(2)}`,
+                                `${currentLang === 'es' ? 'Licencias' : 'Licenses'}: ${count}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#a0aec0',
+                        font: {
+                            family: 'Outfit, sans-serif',
+                            size: 11
+                        }
+                    }
+                },
+                y: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.05)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#a0aec0',
+                        font: {
+                            family: 'Outfit, sans-serif',
+                            size: 11
+                        },
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    },
+                    beginAtZero: true
+                }
+            }
         }
-        areaPathStr += ` L ${points[points.length - 1].x} ${height - paddingBottom} Z`;
-    }
-
-    // Dibujar X axis labels
-    let xLabelsHtml = '';
-    points.forEach(p => {
-        xLabelsHtml += `
-            <text class="chart-axis-text" x="${p.x}" y="${height - 10}" text-anchor="middle">${p.label}</text>
-        `;
     });
-
-    // Dibujar los círculos interactivos
-    let dotsHtml = '';
-    points.forEach((p, idx) => {
-        dotsHtml += `
-            <circle class="chart-dot" cx="${p.cx || p.x}" cy="${p.cy || p.y}" r="5" 
-                    data-month="${p.label}" data-revenue="${p.revenue}" data-count="${p.count}"
-                    onmouseover="showChartTooltip(event)" onmouseout="hideChartTooltip()" />
-        `;
-    });
-
-    // Renderizar el SVG completo
-    container.innerHTML = `
-        <svg viewBox="0 0 ${width} ${height}" style="width: 100%; height: 100%;">
-            <defs>
-                <linearGradient id="chart-gradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.4"/>
-                    <stop offset="100%" stop-color="var(--accent)" stop-opacity="0.0"/>
-                </linearGradient>
-            </defs>
-            
-            <!-- Cuadrícula e Ejes -->
-            ${yGridHtml}
-            <line class="chart-axis-line" x1="${paddingLeft}" y1="${height - paddingBottom}" x2="${width - paddingRight}" y2="${height - paddingBottom}" />
-            
-            <!-- Área y Línea -->
-            <path class="chart-area" d="${areaPathStr}" />
-            <path class="chart-line" d="${linePathStr}" />
-            
-            <!-- Textos y Círculos -->
-            ${xLabelsHtml}
-            ${dotsHtml}
-        </svg>
-        <div class="chart-tooltip-bubble" id="sales-chart-tooltip"></div>
-    `;
 }
 
 function renderLicenseTypesChart(licenses) {
     const container = document.getElementById('license-types-chart-container');
     if (!container) return;
 
-    if (licenses.length === 0) {
+    if (!Array.isArray(licenses) || licenses.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; color: #718096;">
+            <div style="text-align: center; color: #718096; padding: 20px;">
                 <i data-lucide="pie-chart" style="width: 48px; height: 48px; stroke-width: 1.5; color: #4a5568; margin-bottom: 8px;"></i>
-                <div style="font-size: 13px;">Sin datos para clasificar</div>
+                <div style="font-size: 13px;">${currentLang === 'es' ? 'Sin datos para clasificar' : 'No data to classify'}</div>
             </div>
         `;
+        safeCreateIcons();
         return;
     }
 
     let segments = [];
-    let totalCount = 0;
-
     if (Array.isArray(licenses) && licenses.length > 0 && licenses[0].pct !== undefined) {
         segments = licenses;
-        totalCount = segments.reduce((sum, s) => sum + s.count, 0);
     } else {
         // Contar tipos de licencia
         const typesCount = {};
@@ -185,73 +203,101 @@ function renderLicenseTypesChart(licenses) {
                 color: colors[type] || "#718096"
             };
         });
-        totalCount = licenses.length;
     }
 
-
-    // Dibujar Donut SVG
-    let svgHtml = '';
-    let accumulatedAngle = 0;
-    const r = 50;
-    const cx = 80;
-    const cy = 100;
-    const strokeWidth = 14;
-    const circ = 2 * Math.PI * r; // ~314.16
-
-    segments.forEach(seg => {
-        const dashArray = `${circ}`;
-        const dashOffset = circ - (seg.pct / 100) * circ;
-        const rotate = (accumulatedAngle * 3.6) - 90; // Convertir a grados y girar 90
-        
-        svgHtml += `
-            <circle cx="${cx}" cy="${cy}" r="${r}" 
-                    fill="none" 
-                    stroke="${seg.color}" 
-                    stroke-width="${strokeWidth}" 
-                    stroke-dasharray="${dashArray}" 
-                    stroke-dashoffset="${dashOffset}"
-                    transform="rotate(${rotate} ${cx} ${cy})"
-                    style="transition: stroke-dashoffset 0.6s ease;"
-                    data-tooltip="${seg.type}: ${seg.count} (${seg.pct.toFixed(1)}%)" />
-        `;
-        accumulatedAngle += seg.pct;
-    });
-
-    // Si solo hay un tipo, o para cerrar el fondo
-    if (segments.length === 0) {
-        svgHtml = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#2d3748" stroke-width="${strokeWidth}" />`;
-    }
-
-    // Construir la leyenda
-    let legendHtml = '<div style="display:flex; flex-direction:column; gap:10px; margin-left: 20px; flex: 1;">';
-    segments.forEach(seg => {
-        legendHtml += `
-            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #cbd5e0;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="width: 10px; height: 10px; border-radius: 50%; background-color: ${seg.color};"></span>
-                    <span style="font-weight: 500;">${seg.type}</span>
-                </div>
-                <div style="font-weight: 700; color: #fff;">
-                    ${seg.count} <span style="font-size: 11px; font-weight: 500; color: #718096; margin-left: 2px;">(${seg.pct.toFixed(0)}%)</span>
+    // Limpiar contenedor e insertar estructura para Chart.js con leyenda a la derecha
+    container.innerHTML = `
+        <div style="display: flex; width: 100%; height: 100%; min-height: 220px; align-items: center; justify-content: space-between; gap: 16px; padding: 10px;">
+            <div style="position: relative; width: 130px; height: 130px; flex-shrink: 0;">
+                <canvas id="license-types-chart" style="width: 100%; height: 100%;"></canvas>
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                    <div style="font-size: 20px; font-weight: 800; color: #fff; line-height: 1;" id="license-chart-total">0</div>
+                    <div style="font-size: 9px; font-weight: 600; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">${currentLang === 'es' ? 'Ventas' : 'Sales'}</div>
                 </div>
             </div>
-        `;
-    });
-    legendHtml += '</div>';
-
-    container.innerHTML = `
-        <div style="display: flex; width: 100%; align-items: center;">
-            <svg viewBox="0 0 160 200" style="width: 140px; height: 140px;">
-                <!-- Fondo vacío para el donut -->
-                <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1d2026" stroke-width="${strokeWidth}" />
-                ${svgHtml}
-                <!-- Texto en el centro -->
-                <text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="#fff" font-size="14" font-weight="800">${licenses.length}</text>
-                <text x="${cx}" y="${cy + 16}" text-anchor="middle" fill="#718096" font-size="8" font-weight="600" text-transform="uppercase" letter-spacing="0.5">Ventas</text>
-            </svg>
-            ${legendHtml}
+            <div id="license-chart-legend" style="display:flex; flex-direction:column; gap:8px; flex: 1; max-height: 200px; overflow-y: auto;"></div>
         </div>
     `;
+
+    const totalSales = segments.reduce((sum, s) => sum + s.count, 0);
+    const totalEl = document.getElementById('license-chart-total');
+    if (totalEl) totalEl.textContent = totalSales;
+
+    // Poblar la leyenda
+    const legendContainer = document.getElementById('license-chart-legend');
+    if (legendContainer) {
+        legendContainer.innerHTML = segments.map(seg => `
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #cbd5e0;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${seg.color}; flex-shrink: 0;"></span>
+                    <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${seg.type}</span>
+                </div>
+                <div style="font-weight: 700; color: #fff; margin-left: 8px; flex-shrink: 0;">
+                    ${seg.count} <span style="font-size: 10px; font-weight: 500; color: #718096; margin-left: 2px;">(${seg.pct.toFixed(0)}%)</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    if (licenseTypesChartInstance) {
+        licenseTypesChartInstance.destroy();
+        licenseTypesChartInstance = null;
+    }
+
+    const ctx = document.getElementById('license-types-chart').getContext('2d');
+    
+    if (typeof Chart === 'undefined') {
+        console.warn("Chart.js no está cargado aún.");
+        return;
+    }
+
+    licenseTypesChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: segments.map(s => s.type),
+            datasets: [{
+                data: segments.map(s => s.count),
+                backgroundColor: segments.map(s => s.color),
+                borderColor: '#151b27', // Fondo del card para separar segmentos
+                borderWidth: 2,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%', // Grosor del donut
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 19, 32, 0.95)',
+                    titleColor: '#fff',
+                    titleFont: {
+                        family: 'Montserrat, sans-serif',
+                        weight: 'bold'
+                    },
+                    bodyColor: '#cbd5e0',
+                    bodyFont: {
+                        family: 'Outfit, sans-serif'
+                    },
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                    borderWidth: 1,
+                    padding: 8,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const val = context.raw;
+                            const pct = ((val / totalSales) * 100).toFixed(1);
+                            return ` ${label}: ${val} (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 function renderTopBeatsChart(licenses) {
@@ -372,9 +418,16 @@ function renderTopBuyersTable(buyersData) {
     });
 }
 
-
-
 async function updateDashboardView() {
+    // 1. Cargar Chart.js de forma diferida vía CDN si no está definido
+    try {
+        if (typeof Chart === 'undefined') {
+            await loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js');
+        }
+    } catch (err) {
+        console.error("Error al cargar Chart.js desde CDN:", err);
+    }
+
     const periodVal = document.getElementById('dashboard-period')?.value || 'all';
     
     // Si estamos en localhost, consumir el endpoint de analíticas del servidor Python
@@ -395,6 +448,8 @@ async function updateDashboardView() {
                     const licensesEl = document.getElementById('db-stat-licenses');
                     const beatsEl = document.getElementById('db-stat-beats');
                     const topClientEl = document.getElementById('db-stat-top-client');
+                    const mrrEl = document.getElementById('db-stat-mrr');
+                    const ltvEl = document.getElementById('db-stat-ltv');
 
                     if (revenueEl) revenueEl.textContent = `$${parseFloat(data.totalRevenue || 0).toFixed(2)}`;
                     if (licensesEl) licensesEl.textContent = data.totalLicenses || 0;
@@ -404,6 +459,17 @@ async function updateDashboardView() {
                             ? `${data.topBuyerName} ($${parseFloat(data.topBuyerVal || 0).toFixed(2)})`
                             : 'N/A';
                         topClientEl.setAttribute('title', data.topBuyerName || 'N/A');
+                    }
+
+                    // Calcular MRR y LTV
+                    const producerPlan = (window.producerConfig?.plan || 'inicial').toLowerCase();
+                    const mrrValue = producerPlan === 'elite' ? 30 : (producerPlan === 'pro' ? 10 : 0);
+                    if (mrrEl) {
+                        mrrEl.textContent = `${currentLang === 'es' ? 'MRR Est.' : 'Est. MRR'}: $${mrrValue.toFixed(2)}`;
+                    }
+                    if (ltvEl) {
+                        const topLtv = parseFloat(data.topBuyerVal || 0);
+                        ltvEl.textContent = `${currentLang === 'es' ? 'LTV Acum.' : 'Accum. LTV'}: $${topLtv.toFixed(2)}`;
                     }
 
                     // 2. Renderizar Gráficos y Tablas
@@ -482,6 +548,8 @@ async function updateDashboardView() {
     const licensesEl = document.getElementById('db-stat-licenses');
     const beatsEl = document.getElementById('db-stat-beats');
     const topClientEl = document.getElementById('db-stat-top-client');
+    const mrrEl = document.getElementById('db-stat-mrr');
+    const ltvEl = document.getElementById('db-stat-ltv');
 
     if (revenueEl) revenueEl.textContent = `$${totalRevenue.toFixed(2)}`;
     if (licensesEl) licensesEl.textContent = filtered.length;
@@ -491,6 +559,16 @@ async function updateDashboardView() {
             ? `${topBuyerName} ($${topBuyerVal.toFixed(2)})`
             : 'N/A';
         topClientEl.setAttribute('title', topBuyerName);
+    }
+
+    // Calcular MRR y LTV sub-labels
+    const producerPlan = (window.producerConfig?.plan || 'inicial').toLowerCase();
+    const mrrValue = producerPlan === 'elite' ? 30 : (producerPlan === 'pro' ? 10 : 0);
+    if (mrrEl) {
+        mrrEl.textContent = `${currentLang === 'es' ? 'MRR Est.' : 'Est. MRR'}: $${mrrValue.toFixed(2)}`;
+    }
+    if (ltvEl) {
+        ltvEl.textContent = `${currentLang === 'es' ? 'LTV Acum.' : 'Accum. LTV'}: $${topBuyerVal.toFixed(2)}`;
     }
 
     // 4. Renderizar Gráficos y Tablas
@@ -504,43 +582,8 @@ async function updateDashboardView() {
     initTooltips();
 }
 
-
-function showChartTooltip(e) {
-    const dot = e.target;
-    const tooltip = document.getElementById('sales-chart-tooltip');
-    if (!tooltip) return;
-
-    const month = dot.getAttribute('data-month');
-    const revenue = parseFloat(dot.getAttribute('data-revenue')).toFixed(2);
-    const count = dot.getAttribute('data-count');
-
-    tooltip.innerHTML = `
-        <div style="font-weight:700; color:#fff;">${month}</div>
-        <div style="color:var(--accent); margin-top:2px;">Ventas: $${revenue}</div>
-        <div style="font-size:10px; color:#a0aec0; margin-top:2px;">${count} Licencia(s)</div>
-    `;
-
-    // Posicionar tooltip relativo al contenedor
-    const rect = dot.getBoundingClientRect();
-    const containerRect = dot.closest('.chart-container').getBoundingClientRect();
-    
-    tooltip.style.left = `${rect.left - containerRect.left + (rect.width / 2)}px`;
-    tooltip.style.top = `${rect.top - containerRect.top}px`;
-    tooltip.style.opacity = '1';
-};
-
-
-function hideChartTooltip() {
-    const tooltip = document.getElementById('sales-chart-tooltip');
-    if (tooltip) tooltip.style.opacity = '0';
-};
-
-
 // Bindings to global scope for backward compatibility
 window.updateDashboardView = updateDashboardView;
-window.showChartTooltip = showChartTooltip;
-window.hideChartTooltip = hideChartTooltip;
-
 window.renderMonthlySalesChart = renderMonthlySalesChart;
 window.renderLicenseTypesChart = renderLicenseTypesChart;
 window.renderTopBeatsChart = renderTopBeatsChart;
