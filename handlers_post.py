@@ -63,9 +63,42 @@ def process_async_task(task_id, id_token):
         update_firestore_task(task_id, id_token, "failed", progreso="Error interno al procesar la tarea.", resultado=str(e))
 
 
+# Rate limiting para webhooks de pago (máximo 10 peticiones por minuto por IP)
+_ip_rate_limits = {}
+_ip_rate_limits_lock = threading.Lock()
+
+def check_ip_rate_limit(ip, limit=10, window=60):
+    """
+    Verifica si una IP ha excedido el límite de solicitudes permitido.
+    Retorna True si está permitida, False si debe ser bloqueada.
+    """
+    global _ip_rate_limits
+    now = time.time()
+    with _ip_rate_limits_lock:
+        if ip not in _ip_rate_limits:
+            _ip_rate_limits[ip] = []
+        _ip_rate_limits[ip] = [t for t in _ip_rate_limits[ip] if now - t < window]
+        if len(_ip_rate_limits[ip]) >= limit:
+            return False
+        _ip_rate_limits[ip].append(now)
+        return True
+
+
 class HandlerPostMixin:
     def do_POST(self):
         parsed = urlparse(self.path)
+        
+        # Aplicar Rate Limiting por IP en webhooks de pago
+        if parsed.path in ['/api/payments/deuna/webhook', '/api/payments/payphone/webhook']:
+            client_ip = self.headers.get('X-Forwarded-For', self.client_address[0]).split(',')[0].strip()
+            if not check_ip_rate_limit(client_ip, limit=10, window=60):
+                print(f"[⚠️ Rate Limit Exceeded] IP {client_ip} ha excedido el límite en {parsed.path}")
+                self.send_response(429)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Too Many Requests: Rate limit exceeded. Try again in a minute."}')
+                return
         
         # Rutas locales sensibles que requieren autenticación
         protected_paths = [
@@ -853,7 +886,21 @@ class HandlerPostMixin:
                     backup_data[history_key] = json.dumps(history_list, ensure_ascii=False)
                     with open(backup_path, 'w', encoding='utf-8') as f:
                         json.dump(backup_data, f, indent=2, ensure_ascii=False)
-                    print(f"[+] Compra PayPhone guardada con éxito en respaldo local: {client_tx_id}")
+                    # Registrar canal en la lista blanca de YouTube (RightsManager)
+                    if youtube_whitelist:
+                        try:
+                            from payment_verifier import register_youtube_whitelist_in_firestore
+                            for item in items:
+                                register_youtube_whitelist_in_firestore(
+                                    producer_id=producer_id,
+                                    buyer_name=buyer_name,
+                                    beat_name=item.get('beatName', 'Beat'),
+                                    license_ref=client_tx_id,
+                                    youtube_channel=youtube_whitelist,
+                                    token=admin_token
+                                )
+                        except Exception as wle:
+                            print(f"[-] Error al registrar YouTube en whitelist para PayPhone: {wle}")
                     
                     # Disparar la facturación SRI en segundo plano
                     threading.Thread(
@@ -1149,7 +1196,9 @@ INSTRUCCIONES:
                 # Detectar proveedor
                 active_provider = llm_manager.get_provider()
                 provider_info = "Gemini Cloud"
-                if active_provider:
+                if ai_response and ai_response.startswith("**[Asistente Estático"):
+                    provider_info = "Motor Estático (Sin Conexión)"
+                elif active_provider:
                     if isinstance(active_provider, OllamaProvider):
                         provider_info = f"Ollama ({active_provider.model_name})"
                     elif isinstance(active_provider, LMStudioProvider):

@@ -296,7 +296,7 @@ def execute_subagent_react_loop(rol, prompt_especifico, consulta):
         {"role": "user", "content": consulta}
     ]
     
-    max_iterations = 6
+    max_iterations = int(os.environ.get("MAX_REACT_ITERATIONS", "6"))
     color = GET_COLOR_FOR_ROL(rol)
     
     for iteration in range(max_iterations):

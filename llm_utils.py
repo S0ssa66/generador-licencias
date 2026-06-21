@@ -311,11 +311,48 @@ class LLMManager:
 # Instanciar el manager como un singleton
 llm_manager = LLMManager()
 
+def get_static_keyword_response(user_content: str) -> str:
+    """Retorna una respuesta estática de ayuda basada en coincidencia de palabras clave."""
+    content_lower = user_content.lower()
+    if any(k in content_lower for k in ["mrr", "ltv", "métrica", "ingresos", "ventas", "ganancias", "dinero", "cobro"]):
+        return (
+            "**[Asistente Estático - Modo Offline]**\n\n"
+            "Parece que no tengo conexión activa a los servicios de IA (Gemini y Ollama local). Sin embargo, analizando tus palabras clave sobre métricas e ingresos:\n"
+            "- Tus ingresos acumulados y ventas se procesan dinámicamente desde tus respaldos de sincronización local.\n"
+            "- Las métricas clave como el **LTV Promedio** y el **MRR de la Plataforma** se calculan en tiempo real en el backend y se grafican de manera interactiva en tu Dashboard principal.\n"
+            "- Te sugiero revisar directamente la pestaña del Dashboard administrativo para ver estas tendencias."
+        )
+    elif any(k in content_lower for k in ["sri", "factura", "firma", "contingencia", "ride", "xml"]):
+        return (
+            "**[Asistente Estático - Modo Offline]**\n\n"
+            "Sin conexión a los modelos de lenguaje (Gemini / Ollama), te informo sobre la facturación del SRI:\n"
+            "- Las facturas fallidas debido a caídas del SRI se guardan automáticamente en la cola de contingencia local (base de datos SQLite `sri_contingency.db`).\n"
+            "- Hay un hilo en segundo plano ejecutándose cada 5 minutos que reintentará la transmisión de forma automática.\n"
+            "- Los PDF RIDE generados ahora contienen un código QR local que enlaza a la consulta oficial de comprobantes electrónicos del SRI."
+        )
+    elif any(k in content_lower for k in ["precio", "promoción", "oferta", "descuento", "bundle", "pro", "elite"]):
+        return (
+            "**[Asistente Estático - Modo Offline]**\n\n"
+            "No tengo acceso a los modelos de IA en este momento, pero aquí tienes una estrategia de precios básica:\n"
+            "- **Bundles (Combos):** Ofrece ofertas como 'Compra 2 Beats y obtén 1 gratis' para elevar el valor del carrito de compras.\n"
+            "- **Upgrades:** Incentiva a los compradores de licencias básicas a pasarse a planes Pro/Elite ofreciendo un descuento exclusivo por tiempo limitado.\n"
+            "- **Suscripciones:** Promociona activamente tus planes recurrentes Pro ($10/mes) y Elite ($30/mes) para generar ingresos estables."
+        )
+    else:
+        return (
+            "**[Asistente Estático - Modo Offline]**\n\n"
+            "Hola. Actualmente me encuentro sin conexión a los servicios de inteligencia artificial en la nube (Gemini) y locales (Ollama).\n"
+            "Puedo ayudarte con información del sistema si mencionas palabras clave como:\n"
+            "- **Métricas / Ventas / MRR / LTV** para analíticas.\n"
+            "- **SRI / Facturas / Contingencia** para temas tributarios.\n"
+            "- **Precios / Ofertas / Descuentos** para estrategias comerciales."
+        )
+
 def call_llm(system_instruction: str, user_content: str, response_json: bool = False, num_ctx: int | None = None) -> str | None:
     """
     Función principal para interactuar con el LLM seleccionado.
     Delega la llamada al proveedor configurado y cuenta con un sistema
-    de fallback dinámico (Local AI ➔ Gemini Cloud).
+    de fallback dinámico de 3 niveles: Local/Cloud AI -> Local/Cloud AI -> Motor de Palabras Clave.
     """
     provider = llm_manager.get_provider()
     
@@ -329,18 +366,44 @@ def call_llm(system_instruction: str, user_content: str, response_json: bool = F
         if gemini_api_key:
             provider = GeminiProvider(gemini_api_key)
         else:
-            return None
+            # Si no hay proveedor y no hay key, intentar directo Ollama local
+            try:
+                provider = OllamaProvider()
+            except Exception:
+                pass
             
-    # Intentar generar contenido con el proveedor seleccionado
-    response = provider.generate_content(system_instruction, user_content, response_json, options=options)
+    # Intentar generar contenido con el proveedor seleccionado si está disponible
+    response = None
+    if provider:
+        response = provider.generate_content(system_instruction, user_content, response_json, options=options)
     
     # Si falla y el proveedor no es Gemini (ej. Ollama o LM Studio no están levantados)
     if response is None and not isinstance(provider, GeminiProvider):
         gemini_api_key = os.getenv("GEMINI_API_KEY")
         if gemini_api_key:
             print(f"\n{C_YELLOW}⚠️ [LLM Fallback] El proveedor local falló o no está disponible. Realizando fallback automático a Gemini Cloud...{C_RESET}")
-            fallback_provider = GeminiProvider(gemini_api_key)
-            response = fallback_provider.generate_content(system_instruction, user_content, response_json, options=options)
+            try:
+                fallback_provider = GeminiProvider(gemini_api_key)
+                response = fallback_provider.generate_content(system_instruction, user_content, response_json, options=options)
+            except Exception as e:
+                print(f"{C_RED}❌ [LLM Fallback] Falló la inferencia de Gemini: {e}{C_RESET}")
+            
+    # Si falla y el proveedor es Gemini (ej. cuota agotada o 429), intentar fallback a Ollama local
+    if response is None and (isinstance(provider, GeminiProvider) or provider is None):
+        print(f"\n{C_YELLOW}⚠️ [LLM Fallback] El proveedor Gemini Cloud falló (o no estaba configurado). Realizando fallback automático a Ollama local...{C_RESET}")
+        try:
+            # Crear e intentar inferencia con el proveedor Ollama
+            ollama_provider = OllamaProvider()
+            response = ollama_provider.generate_content(system_instruction, user_content, response_json, options=options)
+            if response:
+                print(f"{C_GREEN}✅ [LLM Fallback] Inferencia exitosa mediante Ollama local ({ollama_provider.model_name}).{C_RESET}")
+        except Exception as e:
+            print(f"{C_RED}❌ [LLM Fallback] Falló la inferencia local de Ollama: {e}{C_RESET}")
+            
+    # Tercer nivel de fallback: Motor estático de coincidencia de palabras clave
+    if response is None:
+        print(f"\n{C_RED}⚠️ [LLM Fallback] Todos los proveedores de IA fallaron. Conmutando al motor estático de coincidencias de palabras clave.{C_RESET}")
+        response = get_static_keyword_response(user_content)
             
     return response
 

@@ -178,6 +178,36 @@ def get_sales_analytics(user='sossa', period='all'):
         reverse=True
     )[:5]
     
+    avg_ltv = (total_revenue / len(buyers_map)) if len(buyers_map) > 0 else 0.0
+    
+    mrr = 0.0
+    try:
+        # Escanear todos los archivos de respaldo para sumar suscripciones activas
+        for filename in os.listdir(DIRECTORY):
+            if filename.endswith('_backup_sincronizado.json'):
+                path = os.path.join(DIRECTORY, filename)
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        b_data = json.load(f)
+                    
+                    config_str = None
+                    for k, v in b_data.items():
+                        if k.endswith('_producer_config'):
+                            config_str = v
+                            break
+                            
+                    if config_str:
+                        config = json.loads(config_str) if isinstance(config_str, str) else config_str
+                        plan = str(config.get('plan', '')).lower()
+                        if plan == 'pro':
+                            mrr += 10.0
+                        elif plan == 'elite':
+                            mrr += 30.0
+                except Exception:
+                    continue
+    except Exception:
+        pass
+
     return {
         "totalRevenue": total_revenue,
         "totalLicenses": len(filtered_licenses),
@@ -187,5 +217,7 @@ def get_sales_analytics(user='sossa', period='all'):
         "monthlySales": monthly_sales,
         "licenseTypes": license_types,
         "topBeats": top_beats,
-        "topBuyers": top_buyers
+        "topBuyers": top_buyers,
+        "avgLtv": avg_ltv,
+        "mrr": mrr
     }

@@ -348,10 +348,10 @@ def emitir_factura_sri_background(reference_id, producer_id):
                         form_data = {}
                     comprador_info = {
                         'buyerName': x.get('buyerName') or 'CONSUMIDOR FINAL',
-                        'buyerEmail': x.get('buyerEmail') or form_data.get('buyerEmail', ''),
-                        'buyerDni': form_data.get('buyerId', ''),
-                        'buyerCity': form_data.get('buyerCity', 'Quito'),
-                        'buyerCountry': form_data.get('buyerCountry', 'Ecuador'),
+                        'buyerEmail': x.get('buyerEmail') or form_data.get('buyerEmail') or '',
+                        'buyerDni': form_data.get('buyerId') or '',
+                        'buyerCity': form_data.get('buyerCity') or 'Quito',
+                        'buyerCountry': form_data.get('buyerCountry') or 'Ecuador',
                         'payment_id': x.get('id')
                     }
     except Exception as e:
@@ -392,10 +392,10 @@ def emitir_factura_sri_background(reference_id, producer_id):
                     form_data_rest = fields.get('formData', {}).get('mapValue', {}).get('fields', {})
                     comprador_info = {
                         'buyerName': fields.get('buyerName', {}).get('stringValue') or 'CONSUMIDOR FINAL',
-                        'buyerEmail': fields.get('buyerEmail', {}).get('stringValue') or form_data_rest.get('buyerEmail', {}).get('stringValue', ''),
-                        'buyerDni': form_data_rest.get('buyerId', {}).get('stringValue', ''),
-                        'buyerCity': form_data_rest.get('buyerCity', {}).get('stringValue', 'Quito'),
-                        'buyerCountry': form_data_rest.get('buyerCountry', {}).get('stringValue', 'Ecuador'),
+                        'buyerEmail': fields.get('buyerEmail', {}).get('stringValue') or form_data_rest.get('buyerEmail', {}).get('stringValue') or '',
+                        'buyerDni': form_data_rest.get('buyerId', {}).get('stringValue') or '',
+                        'buyerCity': form_data_rest.get('buyerCity', {}).get('stringValue') or 'Quito',
+                        'buyerCountry': form_data_rest.get('buyerCountry', {}).get('stringValue') or 'Ecuador',
                         'payment_id': fields.get('id', {}).get('stringValue')
                     }
                     print(f"[+] [SRI] Licencia {reference_id} obtenida con éxito desde Firestore.")
@@ -492,7 +492,7 @@ def emitir_factura_sri_background(reference_id, producer_id):
         'tipoIdentificacionComprador': buyer_dni_type,
         'razonSocialComprador': buyer_name,
         'identificacionComprador': buyer_dni,
-        'dirComprador': comprador_info.get('buyerCity', 'Quito') if comprador_info else 'Quito',
+        'dirComprador': (comprador_info.get('buyerCity') or 'Quito') if comprador_info else 'Quito',
         'emailComprador': comprador_info.get('buyerEmail', '') if comprador_info else '',
         'formaPago': '20'
     }
@@ -559,8 +559,18 @@ def emitir_factura_sri_background(reference_id, producer_id):
                 time.sleep(3)
                 
     if ultimo_error_recepcion:
-        print(f"[-] [SRI] Todos los {max_intentos} intentos al servicio de Recepción fallaron.")
-        actualizar_estado_factura_db(payment_id, producer_id, "ERROR_CONEXION_RECEPCION", error_msg=str(ultimo_error_recepcion), token=token, ref_code=reference_id)
+        print(f"[-] [SRI] Todos los {max_intentos} intentos al servicio de Recepción fallaron. Encolando en contingencia local...")
+        import sri_contingency
+        sri_contingency.save_to_queue(
+            purchase_id=reference_id,
+            user_uid=producer_id,
+            xml_firmado=xml_firmado,
+            clave_acceso=clave_acceso,
+            secuencial=secuencial,
+            status='PENDING_RECEPCION',
+            error_msg=str(ultimo_error_recepcion)
+        )
+        actualizar_estado_factura_db(payment_id, producer_id, "CONTINGENCIA", error_msg=f"Error Recepcion (En cola local): {str(ultimo_error_recepcion)}", token=token, ref_code=reference_id)
         return
         
     estado_recepcion = res_recepcion.get('estado')
@@ -592,8 +602,18 @@ def emitir_factura_sri_background(reference_id, producer_id):
                 time.sleep(3)
                 
     if ultimo_error_autorizacion:
-        print(f"[-] [SRI] Todos los {max_intentos} intentos al servicio de Autorización fallaron.")
-        actualizar_estado_factura_db(payment_id, producer_id, "ERROR_CONEXION_AUTORIZACION", error_msg=str(ultimo_error_autorizacion), token=token, ref_code=reference_id)
+        print(f"[-] [SRI] Todos los {max_intentos} intentos al servicio de Autorización fallaron. Encolando en contingencia local...")
+        import sri_contingency
+        sri_contingency.save_to_queue(
+            purchase_id=reference_id,
+            user_uid=producer_id,
+            xml_firmado=xml_firmado,
+            clave_acceso=clave_acceso,
+            secuencial=secuencial,
+            status='PENDING_AUTORIZACION',
+            error_msg=str(ultimo_error_autorizacion)
+        )
+        actualizar_estado_factura_db(payment_id, producer_id, "CONTINGENCIA", error_msg=f"Error Autorizacion (En cola local): {str(ultimo_error_autorizacion)}", token=token, ref_code=reference_id)
         return
         
     autorizaciones = res_autorizacion.get('autorizaciones', [])

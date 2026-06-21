@@ -475,12 +475,12 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
     import datetime
     
     # Limpieza de valores del comprador y emisor
-    razon_social_comprador = comprador.get('razonSocialComprador', 'CONSUMIDOR FINAL')
-    identificacion_comprador = comprador.get('identificacionComprador', '9999999999999')
-    tipo_id_comprador = comprador.get('tipoIdentificacionComprador', '07')
-    email_comprador = comprador.get('emailComprador', '')
-    dir_comprador = comprador.get('dirComprador', 'Quito')
-    forma_pago = comprador.get('formaPago', '20') # 20 = Otros con utilizacion del sistema financiero
+    razon_social_comprador = comprador.get('razonSocialComprador') or 'CONSUMIDOR FINAL'
+    identificacion_comprador = comprador.get('identificacionComprador') or '9999999999999'
+    tipo_id_comprador = comprador.get('tipoIdentificacionComprador') or '07'
+    email_comprador = comprador.get('emailComprador') or ''
+    dir_comprador = comprador.get('dirComprador') or 'Quito'
+    forma_pago = comprador.get('formaPago') or '20' # 20 = Otros con utilizacion del sistema financiero
     
     fecha_emision = datetime.datetime.now().strftime("%d/%m/%Y")
     

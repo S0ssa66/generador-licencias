@@ -517,8 +517,9 @@ class HandlerGetMixin:
                 except Exception:
                     pass
             
-            # En local dev permitimos acceso libre
-            is_authorized = True
+            # Si no está autorizado por firma de descarga, permitir si es una petición autenticada del panel local
+            if not is_authorized:
+                is_authorized = self.check_local_auth()
             
             if not is_authorized:
                 self.send_response(403)

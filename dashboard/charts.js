@@ -461,15 +461,14 @@ async function updateDashboardView() {
                         topClientEl.setAttribute('title', data.topBuyerName || 'N/A');
                     }
 
-                    // Calcular MRR y LTV
-                    const producerPlan = (window.producerConfig?.plan || 'inicial').toLowerCase();
-                    const mrrValue = producerPlan === 'elite' ? 30 : (producerPlan === 'pro' ? 10 : 0);
+                    // Calcular MRR y LTV con datos dinámicos del servidor
+                    const mrrValue = data.mrr !== undefined ? parseFloat(data.mrr) : ((window.producerConfig?.plan || 'inicial').toLowerCase() === 'elite' ? 30 : ((window.producerConfig?.plan || 'inicial').toLowerCase() === 'pro' ? 10 : 0));
                     if (mrrEl) {
-                        mrrEl.textContent = `${currentLang === 'es' ? 'MRR Est.' : 'Est. MRR'}: $${mrrValue.toFixed(2)}`;
+                        mrrEl.textContent = `${currentLang === 'es' ? 'MRR Plataforma' : 'Platform MRR'}: $${mrrValue.toFixed(2)}`;
                     }
                     if (ltvEl) {
-                        const topLtv = parseFloat(data.topBuyerVal || 0);
-                        ltvEl.textContent = `${currentLang === 'es' ? 'LTV Acum.' : 'Accum. LTV'}: $${topLtv.toFixed(2)}`;
+                        const ltvValue = data.avgLtv !== undefined ? parseFloat(data.avgLtv) : parseFloat(data.topBuyerVal || 0);
+                        ltvEl.textContent = `${currentLang === 'es' ? 'LTV Promedio' : 'Average LTV'}: $${ltvValue.toFixed(2)}`;
                     }
 
                     // 2. Renderizar Gráficos y Tablas

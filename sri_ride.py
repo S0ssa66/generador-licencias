@@ -201,11 +201,32 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
     sri_emi_p = Paragraph(f"<b>EMISIÓN:</b> {emision}", style_normal)
     sri_clave_p = Paragraph(f"<b>CLAVE DE ACCESO:</b><br/>{clave_acceso}", style_normal)
     
-    # Código de barras
+    # Código de barras y QR
     try:
         barcode_drawing = createBarcodeDrawing('Code128', value=clave_acceso, barHeight=30, barWidth=0.8)
     except Exception as e:
         barcode_drawing = Paragraph(f"[Error generando código de barras: {str(e)}]", style_normal)
+        
+    try:
+        qr_url = f"https://declaraciones.sri.gob.ec/comprobantes-electronicos-internet/publico/detalleComprobante.jsf?claveAcceso={clave_acceso}"
+        qr_drawing = createBarcodeDrawing('QR', value=qr_url, width=55, height=55)
+    except Exception as e:
+        print(f"[-] [RIDE] Error al generar código QR: {e}")
+        qr_drawing = None
+        
+    if qr_drawing:
+        # Colocar el código de barras y el código QR lado a lado
+        tabla_codigos = Table([[barcode_drawing, qr_drawing]], colWidths=[185, 60])
+        tabla_codigos.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+            ('TOPPADDING', (0,0), (-1,-1), 0),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+        ]))
+        codigos_flowable = tabla_codigos
+    else:
+        codigos_flowable = barcode_drawing
         
     sri_flowables = [
         sri_ruc_p,
@@ -222,7 +243,7 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
         Spacer(1, 4),
         sri_emi_p,
         Spacer(1, 6),
-        barcode_drawing,
+        codigos_flowable,
         sri_clave_p
     ]
     

@@ -20,5 +20,9 @@ __pycache__/
 session_memory.json
 subagent_memories.json
 
-
 .env*
+
+# Databases and Backups
+*.db
+*.bak
+*.log

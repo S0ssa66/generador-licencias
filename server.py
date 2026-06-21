@@ -195,6 +195,13 @@ if __name__ == '__main__':
     obsidian_thread = threading.Thread(target=run_obsidian_organizer_background, daemon=True)
     obsidian_thread.start()
 
+    # Lanzar el worker de contingencia del SRI en segundo plano
+    try:
+        import sri_contingency
+        sri_contingency.start_contingency_worker()
+    except Exception as e:
+        print(f"[-] Error al iniciar el contingency worker del SRI: {e}", file=sys.stderr)
+
     server_address = ('127.0.0.1', port)
     httpd = http.server.HTTPServer(server_address, CustomHandler)
     try:

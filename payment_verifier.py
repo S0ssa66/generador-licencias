@@ -8,6 +8,52 @@ import threading
 from server_utils import get_admin_token, resolve_backup_file
 from sri_service import emitir_factura_sri_background
 
+def register_youtube_whitelist_in_firestore(producer_id, buyer_name, beat_name, license_ref, youtube_channel, token=None):
+    """
+    Registra automáticamente el canal de YouTube en la colección de whitelist de Firestore (RightsManager).
+    """
+    if not youtube_channel or str(youtube_channel).strip() == "":
+        return False
+        
+    if not token:
+        token = get_admin_token()
+    if not token:
+        print("[-] No se pudo obtener el token de administrador para registrar en la whitelist.")
+        return False
+        
+    url = f"https://firestore.googleapis.com/v1/projects/licencias-musicales/databases/(default)/documents/users/{producer_id}/whitelist"
+    
+    payload = {
+        "fields": {
+            "channelUrl": {"stringValue": str(youtube_channel).strip()},
+            "artistName": {"stringValue": str(buyer_name).strip() or "Comprador"},
+            "songName": {"stringValue": str(beat_name).strip() or "Beat"},
+            "licenseRef": {"stringValue": str(license_ref).strip()},
+            "createdAt": {"stringValue": datetime.datetime.utcnow().isoformat() + "Z"}
+        }
+    }
+    
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        },
+        method="POST"
+    )
+    
+    try:
+        with urllib.request.urlopen(req) as res:
+            res_data = json.loads(res.read().decode("utf-8"))
+            doc_id = res_data.get('name', '').split('/')[-1]
+            print(f"[+] [RightsManager] Canal de YouTube '{youtube_channel}' registrado en whitelist con ID {doc_id}.")
+            return True
+    except Exception as e:
+        print(f"[-] [RightsManager] Error al registrar YouTube en la whitelist de {producer_id}: {e}")
+        return False
+
+
 def confirm_payment_in_firestore(payment_id):
     """Actualiza una compra en Firestore al estado 'completed' usando el token de administrador y dispara la facturación del SRI."""
     token = get_admin_token()
@@ -30,6 +76,9 @@ def confirm_payment_in_firestore(payment_id):
     status = fields.get("status", {}).get("stringValue", "")
     producer_id = fields.get("producerId", {}).get("stringValue", "sossa")
     reference = fields.get("reference", {}).get("stringValue", payment_id)
+    buyer_name = fields.get("buyerName", {}).get("stringValue", "Comprador")
+    beat_name = fields.get("beatName", {}).get("stringValue", "Beat")
+    youtube_channel = fields.get("youtubeWhitelist", {}).get("stringValue", "")
     
     if status == "completed":
         print(f"[!] El pago {payment_id} ya estaba en estado 'completed'.")
@@ -58,6 +107,17 @@ def confirm_payment_in_firestore(payment_id):
     try:
         with urllib.request.urlopen(req_patch) as response:
             print(f"[+] Pago {payment_id} marcado exitosamente como 'completed' en Firestore.")
+            
+            # Registrar canal en la lista blanca de YouTube (RightsManager)
+            if youtube_channel:
+                register_youtube_whitelist_in_firestore(
+                    producer_id=producer_id,
+                    buyer_name=buyer_name,
+                    beat_name=beat_name,
+                    license_ref=reference,
+                    youtube_channel=youtube_channel,
+                    token=token
+                )
             
             # Disparar la facturación SRI en segundo plano
             threading.Thread(
