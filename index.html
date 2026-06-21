@@ -1988,6 +1988,72 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Fila del Copilot de Negocios Inteligente (IA Local) -->
+                <div class="grid grid-cols-1 gap-6 mt-6">
+                    <div class="bg-charcoal-deep border border-electric-purple/20 rounded-xl p-6 flex flex-col hover:border-electric-purple/40 transition-all duration-300 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-electric-purple/5 rounded-full blur-3xl pointer-events-none"></div>
+                        <h4 class="font-headline-md text-[15px] font-bold text-on-surface flex items-center justify-between mb-4 pb-2 border-b border-white/5">
+                            <span class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-electric-purple text-[18px]">psychology</span> BEATSS Copilot • Asistente Financiero
+                            </span>
+                            <span class="text-[11px] text-on-surface-variant font-normal bg-white/5 px-2.5 py-1 rounded-full border border-white/5" id="copilot-provider-status">
+                                Conectando Copilot...
+                            </span>
+                        </h4>
+                        
+                        <!-- Contenedor de Chat -->
+                        <div class="flex flex-col lg:flex-row gap-6">
+                            <!-- Ventana de mensajes del chat -->
+                            <div class="flex-1 flex flex-col bg-surface-container-lowest/30 rounded-lg border border-white/5 p-4 min-h-[300px] max-h-[300px]">
+                                <div class="flex-1 overflow-y-auto pr-2 space-y-3" id="copilot-chat-messages" style="scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.08) transparent;">
+                                    <!-- Mensaje de bienvenida inicial -->
+                                    <div class="flex items-start gap-2">
+                                        <div class="w-7 h-7 rounded-full bg-electric-purple/20 border border-electric-purple/30 flex items-center justify-center text-electric-purple mt-0.5 flex-shrink-0">
+                                            <span class="material-symbols-outlined text-[14px]">psychology</span>
+                                        </div>
+                                        <div class="bg-white/5 border border-white/5 text-on-surface text-[13px] rounded-lg px-3 py-2 max-w-[85%] leading-relaxed" id="copilot-welcome-bubble">
+                                            ¡Hola sossa! Soy tu **Copiloto de Negocios BEATSS**. He cargado y analizado tu base de datos de ventas en local de forma segura. ¿Qué te gustaría que analicemos hoy sobre tus finanzas, beats o precios?
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Formulario de Entrada -->
+                                <form id="copilot-input-form" class="mt-4 flex gap-2 border-t border-white/5 pt-3">
+                                    <input type="text" id="copilot-input" class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-[13px] outline-none focus:border-electric-purple/50 focus:ring-1 focus:ring-electric-purple/30 transition-all" placeholder="Hazle una consulta a tu copiloto financiero..." autocomplete="off">
+                                    <button type="submit" class="bg-gradient-to-r from-electric-purple to-neon-blue hover:scale-105 active:scale-95 text-white w-9 h-9 rounded-lg flex items-center justify-center transition-all flex-shrink-0">
+                                        <span class="material-symbols-outlined text-[18px]">send</span>
+                                    </button>
+                                </form>
+                            </div>
+                            
+                            <!-- Sugerencias y Guía Lateral -->
+                            <div class="w-full lg:w-72 flex flex-col justify-between gap-4">
+                                <div class="space-y-2">
+                                    <span class="font-label-caps text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider block mb-1">Consultas Sugeridas</span>
+                                    <button class="w-full text-left bg-white/5 hover:bg-electric-purple/10 border border-white/5 hover:border-electric-purple/30 text-on-surface text-xs font-medium rounded-lg p-2.5 transition-all copilot-suggestion-btn">
+                                        📈 ¿Cuál es mi rendimiento de ventas de este mes?
+                                    </button>
+                                    <button class="w-full text-left bg-white/5 hover:bg-electric-purple/10 border border-white/5 hover:border-electric-purple/30 text-on-surface text-xs font-medium rounded-lg p-2.5 transition-all copilot-suggestion-btn">
+                                        🎵 ¿Cuál es mi beat más vendido y cómo promocionarlo?
+                                    </button>
+                                    <button class="w-full text-left bg-white/5 hover:bg-electric-purple/10 border border-white/5 hover:border-electric-purple/30 text-on-surface text-xs font-medium rounded-lg p-2.5 transition-all copilot-suggestion-btn">
+                                        💳 Analiza mi distribución de métodos de pago y comisiones.
+                                    </button>
+                                    <button class="w-full text-left bg-white/5 hover:bg-electric-purple/10 border border-white/5 hover:border-electric-purple/30 text-on-surface text-xs font-medium rounded-lg p-2.5 transition-all copilot-suggestion-btn">
+                                        💡 Dame una estrategia de precios para mis licencias.
+                                    </button>
+                                </div>
+                                <div class="bg-white/5 rounded-lg border border-white/5 p-3 text-[11px] text-on-surface-variant leading-relaxed">
+                                    <span class="flex items-center gap-1 font-semibold text-white mb-1">
+                                        <span class="material-symbols-outlined text-[13px] text-elite-gold">security</span> Seguridad y Privacidad
+                                    </span>
+                                    Tus analíticas financieras se procesan utilizando tu IA en local por defecto (Ollama o LM Studio). Ningún dato confidencial de tus ventas o clientes se transmite a internet.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Tab Content: Pedidos de Beats -->

@@ -46,3 +46,4 @@ import './dashboard/csv_importer.js';
 import './dashboard/charts.js';
 import './dashboard/accounting.js';
 import './dashboard/sales.js';
+import './dashboard/copilot.js';

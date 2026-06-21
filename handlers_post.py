@@ -18,6 +18,7 @@ from pdf_generator import generate_pdf_from_contract
 from sri_service import emitir_factura_sri_background, actualizar_secuencial_sri, actualizar_estado_factura_db
 from payment_verifier import verify_paypal_order, verify_paypal_subscription, update_user_plan_in_firestore, confirm_payment_in_firestore
 from organize_obsidian import organize_files, generate_dashboard
+from llm_utils import call_gemini
 import agente_coordinador
 import sri_invoicing
 import sri_ride
@@ -963,6 +964,217 @@ class HandlerPostMixin:
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ Error al reemitir factura SRI: {str(e)}")
+        elif parsed.path == '/api/support-chat':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                payload = json.loads(post_data.decode('utf-8'))
+                message = payload.get('message', '').strip()
+                lang = payload.get('lang', 'es').strip()
+                producer_config = payload.get('producerConfig')
+                license_history = payload.get('licenseHistory')
+
+                if not message:
+                    raise ValueError("Falta el parámetro 'message' o está vacío")
+
+                # Construir el contexto en formato de texto para pasar a la directiva del sistema
+                context_parts = []
+                
+                # Configuración del productor
+                if producer_config and isinstance(producer_config, dict):
+                    prod_name = producer_config.get('producerName', 'sossa')
+                    sayco = producer_config.get('sayco', 'No registrado')
+                    paypal_email = producer_config.get('paypalEmail', 'No especificado')
+                    context_parts.append(
+                        f"Información del productor musical activo:\n"
+                        f"- Nombre del productor: {prod_name}\n"
+                        f"- Registro SAYCO / PRO: {sayco}\n"
+                        f"- Email de PayPal: {paypal_email}"
+                    )
+                else:
+                    context_parts.append("Productor: sossa")
+                
+                # Historial de licencias del usuario
+                if license_history and isinstance(license_history, list) and len(license_history) > 0:
+                    context_parts.append("Historial de licencias compradas por este usuario en BEATSS:")
+                    for idx, lic in enumerate(license_history, start=1):
+                        beat_name = lic.get('beatName', 'Desconocido')
+                        ref_code = lic.get('refCode', 'Sin código')
+                        lic_type = lic.get('licenseType', 'Básica')
+                        date = lic.get('date', 'Fecha desconocida')
+                        context_parts.append(
+                            f"  {idx}. Beat: '{beat_name}' | Licencia: {lic_type} | Código de referencia: {ref_code} | Fecha: {date}"
+                        )
+                else:
+                    context_parts.append("El usuario no tiene historial de licencias compradas en esta sesión/navegador.")
+
+                context_text = "\n".join(context_parts)
+
+                # Definir instrucciones del sistema según el idioma
+                if lang == 'en':
+                    sys_prompt = f"""Support Assistant for BEATSS (by sossa). Context: {context_text}
+Rules:
+- YouTube Claims: Dispute using: "I hold commercial exploitation rights under a license granted by sossa via BEATSS (Ref: [REF_CODE] / Beat: '[BEAT_NAME]')." Released in 24-72h.
+- Formats: Basic=MP3, Premium=MP3+WAV, Premium Plus=Stems, Unlimited=FLP, Exclusive=All.
+- Splits: Artist 50% / sossa 50% Composer.
+- Payments: Ecuador=Deuna!/Transfer; Global=PayPal/Cards.
+- Behavior: Reply in English, very concise, friendly, markdown."""
+                else:
+                    sys_prompt = f"""Soporte de BEATSS (por sossa). Contexto: {context_text}
+Reglas:
+- Content ID: Disputar con: "Tengo los derechos de explotación bajo licencia otorgada por sossa en BEATSS (Ref: [REF_CODE] / Beat: '[BEAT_NAME]')." Retiro en 24-72h.
+- Formatos: Básica=MP3, Premium=MP3+WAV, Premium Plus=Stems, Ilimitada=FLP, Exclusiva=Todos.
+- Splits: Artista 50% / sossa 50% Compositor.
+- Pagos: Ecuador=Deuna!/Transferencia; Global=PayPal/Tarjeta.
+- Conducta: Responde en Español, muy conciso, amigable, markdown."""
+
+                from llm_utils import call_llm, llm_manager, OllamaProvider, LMStudioProvider, GeminiProvider
+                
+                # Llamar al LLM seleccionado a través de la función de llm_utils con contexto optimizado de 4096
+                ai_response = call_llm(sys_prompt, message, num_ctx=4096)
+                
+                if not ai_response:
+                    raise RuntimeError("No se obtuvo respuesta del servicio de IA")
+                
+                # Detectar el proveedor de IA activo para comunicarlo al frontend
+                active_provider = llm_manager.get_provider()
+                provider_info = "Gemini Cloud"
+                if active_provider:
+                    if isinstance(active_provider, OllamaProvider):
+                        provider_info = f"Ollama ({active_provider.model_name})"
+                    elif isinstance(active_provider, LMStudioProvider):
+                        provider_info = "LM Studio"
+                    elif isinstance(active_provider, GeminiProvider):
+                        provider_info = "Gemini Cloud"
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "status": "success", 
+                    "response": ai_response,
+                    "provider": provider_info
+                }).encode('utf-8'))
+                print(f"[+] [Support Chat] Pregunta respondida usando {provider_info} ({lang})")
+
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                print(f"❌ [Support Chat] Error al responder chat de soporte: {str(e)}")
+        elif parsed.path == '/api/admin/copilot':
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                payload = json.loads(post_data.decode('utf-8'))
+                message = payload.get('message', '').strip()
+                
+                if not message:
+                    raise ValueError("Falta el parámetro 'message' o está vacío")
+
+                # Cargar el archivo de respaldo para extraer estadísticas en tiempo real
+                backup_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sossa_backup_sincronizado.json")
+                total_revenue = 0.0
+                total_licenses = 0
+                payment_methods = {}
+                license_types = {}
+                beats_sales = {}
+                buyer_ltv = {}
+                
+                if os.path.exists(backup_path):
+                    try:
+                        with open(backup_path, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                        history_str = data.get("sossa_license_history", "[]")
+                        history = json.loads(history_str)
+                        total_licenses = len(history)
+                        
+                        for item in history:
+                            val = item.get("value")
+                            try:
+                                price = float(val) if val is not None else 0.0
+                            except (ValueError, TypeError):
+                                price = 0.0
+                                
+                            total_revenue += price
+                            
+                            method = item.get("paymentMethod", "desconocido")
+                            payment_methods[method] = payment_methods.get(method, 0) + 1
+                            
+                            lic_type = item.get("type", "desconocido")
+                            license_types[lic_type] = license_types.get(lic_type, 0) + 1
+                            
+                            beat = item.get("beatName", "desconocido")
+                            beats_sales[beat] = beats_sales.get(beat, 0) + 1
+                            
+                            buyer = item.get("buyerName", "desconocido")
+                            buyer_ltv[buyer] = buyer_ltv.get(buyer, 0.0) + price
+                    except Exception as e:
+                        print(f"[-] [Copilot Backend] Error al parsear sossa_backup_sincronizado.json: {e}")
+
+                # Dar formato a las variables para inyectar en el Prompt
+                top_beats = sorted(beats_sales.items(), key=lambda x: x[1], reverse=True)[:3]
+                top_beats_str = ", ".join([f"'{b[0]}' ({b[1]} ventas)" for b in top_beats]) if top_beats else "Ninguno"
+                
+                top_buyer = sorted(buyer_ltv.items(), key=lambda x: x[1], reverse=True)[:1]
+                top_buyer_str = f"{top_buyer[0][0]} (LTV: ${top_buyer[0][1]:.2f})" if top_buyer else "Ninguno"
+                
+                methods_str = ", ".join([f"{k}: {v}" for k, v in payment_methods.items()]) if payment_methods else "Ninguno"
+                types_str = ", ".join([f"{k}: {v}" for k, v in license_types.items()]) if license_types else "Ninguno"
+
+                sys_prompt = f"""Copiloto Analítico y Estratégico de BEATSS. Asiste al productor sossa.
+DATOS DEL CATÁLOGO:
+- Ingresos: ${total_revenue:.2f} USD
+- Licencias: {total_licenses}
+- Distribución: {types_str}
+- Métodos de Pago: {methods_str}
+- Top Beats: {top_beats_str}
+- Cliente VIP: {top_buyer_str}
+INSTRUCCIONES:
+- Responde en Español.
+- Sé analítico, sugiere bundles, promociones, optimización de precios de Beats e incentivos de upgrade.
+- Formato limpio con negritas y viñetas."""
+
+                from llm_utils import call_llm, llm_manager, OllamaProvider, LMStudioProvider, GeminiProvider
+                
+                # Consultar al LLM (con fallback dinámico activado y contexto de 4096)
+                ai_response = call_llm(sys_prompt, message, num_ctx=4096)
+                
+                if not ai_response:
+                    raise RuntimeError("No se obtuvo respuesta del Copiloto de IA")
+                
+                # Detectar proveedor
+                active_provider = llm_manager.get_provider()
+                provider_info = "Gemini Cloud"
+                if active_provider:
+                    if isinstance(active_provider, OllamaProvider):
+                        provider_info = f"Ollama ({active_provider.model_name})"
+                    elif isinstance(active_provider, LMStudioProvider):
+                        provider_info = "LM Studio"
+                    elif isinstance(active_provider, GeminiProvider):
+                        provider_info = "Gemini Cloud"
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "status": "success", 
+                    "response": ai_response,
+                    "provider": provider_info
+                }).encode('utf-8'))
+                print(f"[+] [Admin Copilot] Consulta procesada usando {provider_info}")
+
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                print(f"❌ [Admin Copilot] Error en el Copiloto de administración: {str(e)}")
         else:
             self.send_response(404)
             self.end_headers()

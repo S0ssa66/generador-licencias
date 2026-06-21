@@ -73,6 +73,14 @@ def get_safe_path(path):
     """Resuelve y valida que la ruta se encuentre dentro de la bóveda de Obsidian (/Users/sossa/IA)."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     base_dir = os.path.dirname(script_dir)
+    
+    # Si empieza con "/" pero no con base_dir, tratar como relativo al proyecto quitando la barra
+    if path.startswith("/") and not path.startswith(base_dir):
+        alt_path = path.lstrip("/")
+        full_path = os.path.abspath(os.path.join(script_dir, alt_path))
+        if full_path.startswith(base_dir):
+            return full_path
+
     path = os.path.normpath(path)
     
     if os.path.isabs(path):
@@ -183,17 +191,21 @@ def run_tool_write_file(rol, path, content):
         print(f"  ... ({len(lines) - 15} líneas más) ...")
     print(f"{C_GRAY}----------------------------------------------------{C_RESET}")
     
-    while True:
-        try:
-            choice = input(f"{C_BOLD}{C_WHITE}¿Deseas permitir esta escritura en tu sistema? (s/n): {C_RESET}").strip().lower()
-            if choice == "s":
-                break
-            elif choice == "n":
-                print(f"❌ Escritura en {path} rechazada por el usuario.")
-                return "Operación de escritura cancelada por el usuario."
-        except (KeyboardInterrupt, EOFError):
-            print(f"\n❌ Cancelado.")
-            return "Operación de escritura cancelada."
+    auto_approve = os.environ.get("AUTO_APPROVE_WRITE", "false").lower() == "true"
+    if auto_approve:
+        print(f"[*] [Auto-Approve] Aprobando automáticamente la escritura solicitada por el agente.")
+    else:
+        while True:
+            try:
+                choice = input(f"{C_BOLD}{C_WHITE}¿Deseas permitir esta escritura en tu sistema? (s/n): {C_RESET}").strip().lower()
+                if choice == "s":
+                    break
+                elif choice == "n":
+                    print(f"❌ Escritura en {path} rechazada por el usuario.")
+                    return "Operación de escritura cancelada por el usuario."
+            except (KeyboardInterrupt, EOFError):
+                print(f"\n❌ Cancelado.")
+                return "Operación de escritura cancelada."
             
     try:
         os.makedirs(os.path.dirname(safe_path), exist_ok=True)
@@ -255,7 +267,8 @@ def format_conversation_for_llm(history):
         content = turn["content"]
         
         if role == "user":
-            if idx != last_user_index and ("OBSERVACIÓN de read_file" in content or "OBSERVACIÓN de read_file_lines" in content):
+            provider = os.getenv("LLM_PROVIDER", "auto").lower().strip()
+            if provider == "gemini" and idx != last_user_index and ("OBSERVACIÓN de read_file" in content or "OBSERVACIÓN de read_file_lines" in content):
                 file_info = "Lectura de archivo"
                 for line in content.split("\n"):
                     if "OBSERVACIÓN de" in line:
@@ -393,7 +406,8 @@ def run_agent_pipeline(user_query, progress_callback=None):
         
     decision = clean_and_parse_json(decision_text)
     if not decision:
-        return "Error: Respuesta inválida del Agente Principal al decidir delegaciones."
+        print(f"\n[-] [Error de Parseo JSON] Texto recibido del Agente Principal:\n{decision_text}\n")
+        return f"Error: Respuesta inválida del Agente Principal al decidir delegaciones. Texto crudo recibido: {decision_text}"
         
     delegados = decision.get("delegados", [])
     respuestas_subagentes = []

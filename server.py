@@ -171,10 +171,13 @@ if __name__ == '__main__':
             print(f"[-] Error al guardar LOCAL_AUTH_TOKEN autogenerado en .env: {e}", file=sys.stderr)
 
     # Validación de seguridad de variables críticas
-    if not os.environ.get('GEMINI_API_KEY'):
-        print("[-] ERROR CRÍTICO: La variable de entorno GEMINI_API_KEY no está configurada.", file=sys.stderr)
+    provider = os.environ.get('LLM_PROVIDER', 'auto').lower().strip()
+    if provider == 'gemini' and not os.environ.get('GEMINI_API_KEY'):
+        print("[-] ERROR CRÍTICO: La variable de entorno GEMINI_API_KEY no está configurada y se requiere para el proveedor 'gemini'.", file=sys.stderr)
         print("[-] Deteniendo el inicio del servidor por seguridad.", file=sys.stderr)
         sys.exit(1)
+    elif provider == 'auto' and not os.environ.get('GEMINI_API_KEY'):
+        print("[!] Advertencia: GEMINI_API_KEY no está configurada. El enrutador de IA intentará usar Ollama o LM Studio de forma local.")
 
     # Permitir configurar puerto por argumento
     port = PORT

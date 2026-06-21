@@ -260,12 +260,7 @@ class BEATSSChatbot {
             btn.textContent = qr.text;
             btn.addEventListener('click', () => {
                 this.appendMessage(qr.text, 'user');
-                this.triggerTyping(() => {
-                    const ansFn = chatbotData[this.lang].answers[qr.value];
-                    if (ansFn) {
-                        this.appendMessage(ansFn(), 'bot');
-                    }
-                });
+                this.askAI(qr.text);
             });
             container.appendChild(btn);
         });
@@ -287,24 +282,81 @@ class BEATSSChatbot {
         msgArea.scrollTop = msgArea.scrollHeight;
     }
 
-    triggerTyping(callback) {
+    showTyping() {
         const msgArea = document.getElementById('chatbot-messages');
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'chatbot-msg chatbot-msg-bot chatbot-typing';
-        typingIndicator.id = 'chatbot-typing-indicator';
-        typingIndicator.innerHTML = `
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-        `;
-        msgArea.appendChild(typingIndicator);
-        msgArea.scrollTop = msgArea.scrollHeight;
+        let typingIndicator = document.getElementById('chatbot-typing-indicator');
+        if (!typingIndicator) {
+            typingIndicator = document.createElement('div');
+            typingIndicator.className = 'chatbot-msg chatbot-msg-bot chatbot-typing';
+            typingIndicator.id = 'chatbot-typing-indicator';
+            typingIndicator.innerHTML = `
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            `;
+            msgArea.appendChild(typingIndicator);
+            msgArea.scrollTop = msgArea.scrollHeight;
+        }
+    }
 
-        setTimeout(() => {
-            const ind = document.getElementById('chatbot-typing-indicator');
-            if (ind) ind.remove();
-            callback();
-        }, 900);
+    hideTyping() {
+        const ind = document.getElementById('chatbot-typing-indicator');
+        if (ind) ind.remove();
+    }
+
+    async askAI(text) {
+        this.showTyping();
+        this.lang = window.currentLang || 'es';
+
+        try {
+            const producerConfig = window.producerConfig || null;
+            const licenseHistory = window.licenseHistory || null;
+
+            const response = await fetch('/api/support-chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: text,
+                    lang: this.lang,
+                    producerConfig: producerConfig,
+                    licenseHistory: licenseHistory
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            this.hideTyping();
+
+            if (data && data.status === 'success' && data.response) {
+                this.appendMessage(data.response, 'bot');
+                
+                // Actualizar dinámicamente el proveedor de IA activo en la cabecera
+                const statusEl = document.querySelector('.chatbot-status');
+                if (statusEl && data.provider) {
+                    const onlineText = this.lang === 'es' ? 'En línea' : 'Online';
+                    statusEl.textContent = `${onlineText} • ${data.provider}`;
+                }
+            } else {
+                throw new Error('Invalid response structure from backend');
+            }
+        } catch (error) {
+            console.warn('[Chatbot] AI request failed, falling back to static keyword matching:', error);
+            this.hideTyping();
+            
+            // Indicar visualmente que se encuentra en modo offline predefinido
+            const statusEl = document.querySelector('.chatbot-status');
+            if (statusEl) {
+                statusEl.textContent = this.lang === 'es' ? 'Modo Offline • Estático' : 'Offline Mode • Static';
+            }
+            
+            const fallbackResponse = this.findResponse(text);
+            this.appendMessage(fallbackResponse, 'bot');
+        }
     }
 
     handleSend() {
@@ -314,11 +366,7 @@ class BEATSSChatbot {
 
         input.value = '';
         this.appendMessage(text, 'user');
-
-        this.triggerTyping(() => {
-            const response = this.findResponse(text);
-            this.appendMessage(response, 'bot');
-        });
+        this.askAI(text);
     }
 
     findResponse(text) {
