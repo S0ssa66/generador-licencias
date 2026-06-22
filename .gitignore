@@ -26,3 +26,6 @@ subagent_memories.json
 *.db
 *.bak
 *.log
+
+# Added by ggshield
+.cache_ggshield
