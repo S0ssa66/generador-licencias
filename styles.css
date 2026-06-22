@@ -754,7 +754,7 @@ body {
     overflow: hidden;
 }
 
-#tab-admin, #tab-dashboard {
+#tab-admin, #tab-dashboard, #tab-history, #tab-sales, #tab-whitelist {
     overflow-y: auto;
     scroll-behavior: smooth;
 }
