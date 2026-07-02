@@ -1,4 +1,4 @@
-const CACHE_NAME = 'beatss-pwa-cache-v7';
+const CACHE_NAME = 'beatss-pwa-cache-v8';
 const AUDIO_CACHE_NAME = 'beatss-audio-cache-v1';
 const ALLOWED_CACHES = [CACHE_NAME, AUDIO_CACHE_NAME];
 
@@ -139,7 +139,32 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Estrategia estándar: Stale-While-Revalidate para el resto de recursos locales
+  // Estrategia Network-First para navegaciones y archivos HTML principales
+  const isNavigate = event.request.mode === 'navigate' || 
+                     url.pathname === '/' || 
+                     url.pathname === '/index.html' ||
+                     url.pathname === '/clearance.html';
+
+  if (isNavigate) {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const cacheCopy = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, cacheCopy);
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || caches.match('/index.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // Estrategia estándar: Stale-While-Revalidate para el resto de recursos locales (imágenes, fuentes, estilos)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
@@ -152,9 +177,6 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       }).catch((err) => {
         console.warn('Fallo de red para:', event.request.url, err);
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
       });
 
       return cachedResponse || fetchPromise;

@@ -201,6 +201,11 @@ export function initAuthAndApp() {
     // Función para registrar el nuevo Service Worker de la PWA
     function registerPWA() {
         if ('serviceWorker' in navigator) {
+            // Evitar registrar en entorno de desarrollo local
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.log('🚧 Modo desarrollo local detectado: omitiendo registro de Service Worker.');
+                return;
+            }
             navigator.serviceWorker.register('/sw.js').then((reg) => {
                 console.log('🚀 Service Worker de BEATSS registrado con éxito:', reg.scope);
             }).catch((err) => {
@@ -210,7 +215,7 @@ export function initAuthAndApp() {
     }
 
     // Desactivar y desregistrar todos los Service Workers antiguos para evitar problemas de caché (solo una vez)
-    if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_cleaned_v2')) {
+    if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_cleaned_v3')) {
         const swPromise = navigator.serviceWorker.getRegistrations().then((registrations) => {
             const promises = registrations.map(registration => {
                 return registration.unregister().then(() => {
@@ -227,7 +232,7 @@ export function initAuthAndApp() {
         }) : Promise.resolve();
 
         Promise.all([swPromise, cachePromise]).then(() => {
-            localStorage.setItem('beatss_sw_cleaned_v2', 'true');
+            localStorage.setItem('beatss_sw_cleaned_v3', 'true');
             window.location.reload();
         }).catch(err => {
             console.error('Error durante la limpieza del Service Worker:', err);
