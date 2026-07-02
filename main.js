@@ -3789,7 +3789,7 @@ function initFeaturedProducerRotation() {
                 es: "Productor Elite • Dancehall & Trap",
                 en: "Elite Producer • Dancehall & Trap"
             },
-            position: "center 5%",
+            position: "center 25%",
             borderColor: "border-electric-purple",
             labelColor: "text-electric-purple",
             duration: 4000
