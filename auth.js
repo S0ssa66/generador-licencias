@@ -123,23 +123,38 @@ export function setupAuthModalEvents() {
         }
     });
 
+    // Función helper para abrir el modal de autenticación con estilos forzados e inmunes a conflictos de CSS
+    window.openAuthModal = function(tabType) {
+        const modal = document.getElementById('login-modal');
+        if (!modal) {
+            console.error("❌ No se encontró el modal #login-modal");
+            return;
+        }
+        console.log("🔓 Abriendo login-modal con estilo forzado para pestaña:", tabType);
+        
+        // Forzar estilos inline en el backdrop
+        modal.style.cssText = "display: flex !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background-color: rgba(11, 14, 20, 0.85) !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; z-index: 999999 !important; align-items: center !important; justify-content: center !important; opacity: 1 !important; visibility: visible !important;";
+        
+        // Forzar estilos inline en la caja interna del modal
+        const innerModal = modal.querySelector('.modal');
+        if (innerModal) {
+            innerModal.style.cssText = "display: flex !important; flex-direction: column !important; position: relative !important; width: 400px !important; max-width: 90% !important; padding: 40px !important; border-radius: 16px !important; background-color: #121620 !important; border: 1px solid rgba(255,255,255,0.1) !important; box-shadow: 0 20px 40px rgba(0,0,0,0.6) !important; opacity: 1 !important; visibility: visible !important; color: #fff !important; align-items: center !important;";
+        }
+        
+        // Cambiar a la pestaña correspondiente
+        if (tabType === 'login') {
+            if (tabLoginBtn) tabLoginBtn.click();
+        } else {
+            if (tabRegisterBtn) tabRegisterBtn.click();
+        }
+    };
+
     // Abrir modal de login desde la Landing Page
     const landingBtnLogin = document.getElementById('landing-btn-login');
     console.log("🔍 Registrando click en landing-btn-login:", landingBtnLogin);
     landingBtnLogin?.addEventListener('click', () => {
         console.log("🎯 Clic detectado en landing-btn-login!");
-        const modal = document.getElementById('login-modal');
-        if (modal) {
-            console.log("🔓 Abriendo login-modal...");
-            modal.style.display = 'flex';
-            if (tabLoginBtn) {
-                tabLoginBtn.click();
-            } else {
-                console.error("❌ tabLoginBtn no está definido");
-            }
-        } else {
-            console.error("❌ No se encontró el modal #login-modal");
-        }
+        window.openAuthModal('login');
     });
 
     // Redirigir al catálogo/marketplace desde la Landing Page
@@ -151,20 +166,12 @@ export function setupAuthModalEvents() {
     });
 
     document.getElementById('landing-btn-start')?.addEventListener('click', () => {
-        const modal = document.getElementById('login-modal');
-        if (modal) {
-            modal.style.display = 'flex';
-            tabRegisterBtn.click();
-        }
+        window.openAuthModal('register');
     });
 
     document.querySelectorAll('.landing-btn-action-start').forEach(btn => {
         btn.addEventListener('click', () => {
-            const modal = document.getElementById('login-modal');
-            if (modal) {
-                modal.style.display = 'flex';
-                tabRegisterBtn.click();
-            }
+            window.openAuthModal('register');
         });
     });
 
@@ -290,7 +297,9 @@ export function initAuthAndApp() {
             window.isManualLoginAttempt = false;
             
             const modal = document.getElementById('login-modal');
-            if (modal) {
+            if (typeof window.openAuthModal === 'function') {
+                window.openAuthModal('login');
+            } else if (modal) {
                 modal.style.display = 'flex';
             }
             
@@ -377,7 +386,11 @@ export function initAuthAndApp() {
                     setTimeout(window.safeCreateIcons, 100);
                 }
             } else {
-                document.getElementById('login-modal').style.display = 'flex';
+                if (typeof window.openAuthModal === 'function') {
+                    window.openAuthModal('login');
+                } else {
+                    document.getElementById('login-modal').style.display = 'flex';
+                }
             }
         }
     });
