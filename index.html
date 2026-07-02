@@ -506,9 +506,9 @@
                     <h4 class="font-label-caps text-label-caps text-white" data-i18n="footer_support">Support</h4>
                     <ul class="space-y-4 text-sm text-on-surface-variant">
                         <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_help_center" onclick="window.openSupportModal('faq')">Help Center</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_contact" onclick="window.openSupportModal('faq')">Contact Support</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_api" href="#">API Docs</a></li>
-                        <li><a class="hover:text-neon-blue transition-colors" data-i18n="footer_status" href="#">System Status</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_contact" onclick="window.closeSupportModal(); window.beatssChatbot.toggleChat(true);">Contact Support</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_api" onclick="window.openSupportModal('api')">API Docs</a></li>
+                        <li><a class="hover:text-neon-blue transition-colors cursor-pointer" data-i18n="footer_status" onclick="window.openSupportModal('status')">System Status</a></li>
                     </ul>
                 </div>
             </div>
@@ -4658,6 +4658,14 @@
                     <i data-lucide="shield-check"></i>
                     <span data-i18n="support_tab_terms">Términos y Privacidad</span>
                 </button>
+                <button class="tab-btn support-tab-btn" id="btn-support-tab-api" onclick="window.switchSupportTab('api')">
+                    <i data-lucide="code-2"></i>
+                    <span data-i18n="support_tab_api">API Docs</span>
+                </button>
+                <button class="tab-btn support-tab-btn" id="btn-support-tab-status" onclick="window.switchSupportTab('status')">
+                    <i data-lucide="activity"></i>
+                    <span data-i18n="support_tab_status">Estado del Sistema</span>
+                </button>
                 <button class="tab-btn support-tab-btn" id="btn-support-tab-chatbot" onclick="window.closeSupportModal(); window.beatssChatbot.toggleChat(true);" style="border: 1px solid rgba(124, 58, 237, 0.3); background: rgba(124, 58, 237, 0.05); color: #c084fc;">
                     <i data-lucide="message-square"></i>
                     <span data-i18n="support_tab_chatbot">Asistente Virtual</span>
@@ -4740,6 +4748,22 @@
                     <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
                         <h4 class="font-bold text-white mb-4" data-i18n="support_terms_title">Términos de Servicio y Privacidad</h4>
                         <p class="text-on-surface-variant text-sm leading-relaxed" data-i18n="support_terms_text"></p>
+                    </div>
+                </div>
+                
+                <!-- Contenido API Docs -->
+                <div class="support-tab-content" id="support-content-api" style="display: none;">
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                        <h4 class="font-bold text-white mb-4" data-i18n="support_api_title">Documentación de API para Desarrolladores</h4>
+                        <div class="text-on-surface-variant text-sm leading-relaxed" data-i18n="support_api_text"></div>
+                    </div>
+                </div>
+                
+                <!-- Contenido Estado del Sistema -->
+                <div class="support-tab-content" id="support-content-status" style="display: none;">
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+                        <h4 class="font-bold text-white mb-4" data-i18n="support_status_title">Estado del Sistema y Servicios Activos</h4>
+                        <div class="text-on-surface-variant text-sm leading-relaxed" data-i18n="support_status_text"></div>
                     </div>
                 </div>
                 
