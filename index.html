@@ -119,6 +119,59 @@
             position: relative;
             z-index: 10;
         }
+        
+        /* Premium custom payment card styles */
+        .pay-card-btn {
+            position: relative;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            background: rgba(255, 255, 255, 0.02) !important;
+            padding: 14px 10px !important;
+            border-radius: 14px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            text-align: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-sizing: border-box !important;
+            user-select: none !important;
+        }
+        .pay-card-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.2) !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+        .pay-card-btn.active {
+            transform: translateY(-2px) scale(1.03);
+            border-width: 2px !important;
+        }
+        .pay-card-btn.paypal.active {
+            border-color: #0079c1 !important;
+            background: radial-gradient(circle at top left, #00457c 0%, #0d0f18 100%) !important;
+            box-shadow: 0 4px 20px rgba(0, 121, 193, 0.35) !important;
+        }
+        .pay-card-btn.payphone.active {
+            border-color: #ff6c00 !important;
+            background: radial-gradient(circle at top left, rgba(255, 108, 0, 0.15) 0%, #0d0f18 100%) !important;
+            box-shadow: 0 4px 20px rgba(255, 108, 0, 0.25) !important;
+        }
+        .pay-card-btn.deuna.active {
+            border-color: #00ffcc !important;
+            background: radial-gradient(circle at top left, rgba(0, 255, 204, 0.15) 0%, #0d0f18 100%) !important;
+            box-shadow: 0 4px 20px rgba(0, 255, 204, 0.25) !important;
+        }
+        .pay-card-btn.transfer.active {
+            border-color: var(--accent, #00ccff) !important;
+            background: radial-gradient(circle at top left, rgba(0, 204, 255, 0.15) 0%, #0d0f18 100%) !important;
+            box-shadow: 0 4px 20px rgba(0, 204, 255, 0.25) !important;
+        }
+        .pay-card-btn.offer.active {
+            border-color: #f59e0b !important;
+            background: radial-gradient(circle at top left, rgba(245, 158, 11, 0.15) 0%, #0d0f18 100%) !important;
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.25) !important;
+        }
     </style>
 </head>
 <body>
@@ -412,8 +465,18 @@
             <!-- Simple Pricing Plans -->
             <section class="py-24 px-margin-mobile md:px-margin-desktop bg-background">
                 <div class="max-w-container-max mx-auto text-center">
-                    <h2 class="font-display-lg text-display-lg mb-16 text-white font-black" data-i18n="pricing_title">PLANES PARA CADA NIVEL</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+                    <h2 class="font-display-lg text-display-lg mb-8 text-white font-black" data-i18n="pricing_title">PLANES PARA CADA NIVEL</h2>
+                    
+                    <!-- Toggle Switch -->
+                    <div class="flex justify-center mb-12">
+                        <div class="inline-flex p-1 bg-surface-container-lowest border border-white/5 rounded-full shadow-lg relative">
+                            <button id="toggle-plan-producers" class="px-6 py-2.5 rounded-full text-sm font-bold transition-all text-white bg-electric-purple" onclick="window.switchPlanCategory('producers')">Para Productores</button>
+                            <button id="toggle-plan-artists" class="px-6 py-2.5 rounded-full text-sm font-bold transition-all text-on-surface-variant hover:text-white" onclick="window.switchPlanCategory('artists')">Para Artistas</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Producers Grid -->
+                    <div id="pricing-grid-producers" class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
                         <!-- Basic -->
                         <div class="glass-card rounded-2xl p-10 flex flex-col text-left group hover:border-white/20 transition-all">
                             <h3 class="font-headline-md mb-2 text-white font-bold" data-i18n="price_starter">Plan Inicial</h3>
@@ -442,7 +505,7 @@
                                 <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span data-i18n="price_pro_b3">Split de regalías 0% com.</span></li>
                                 <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span data-i18n="price_pro_b4">Soporte prioritario 24/7</span></li>
                             </ul>
-                            <button onclick="openPaymentModal(); setTimeout(()=>switchPaymentPlan('pro'),100);" data-i18n="btn_obtain_pro" class="w-full py-4 bg-electric-purple text-on-primary rounded-lg font-black shadow-[0_0_20px_rgba(139,92,246,0.3)]">PLAN PRO</button>
+                            <button onclick="window.openPaymentModal(null, 'producers'); setTimeout(()=>window.switchPaymentPlan('pro'),100);" data-i18n="btn_obtain_pro" class="w-full py-4 bg-electric-purple text-on-primary rounded-lg font-black shadow-[0_0_20px_rgba(139,92,246,0.3)]">PLAN PRO</button>
                         </div>
                         <!-- Elite -->
                         <div class="glass-card rounded-2xl p-10 flex flex-col text-left group hover:border-elite-gold/30 transition-all">
@@ -457,7 +520,43 @@
                                 <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-sm">check</span> <span data-i18n="price_elite_b3">Integración CRM avanzada</span></li>
                                 <li class="flex items-center gap-3"><span class="material-symbols-outlined text-elite-gold text-sm">check</span> <span data-i18n="price_elite_b4">Dashboard de Analytics Pro</span></li>
                             </ul>
-                            <button onclick="openPaymentModal(); setTimeout(()=>switchPaymentPlan('elite'),100);" data-i18n="btn_obtain_elite" class="w-full py-4 bg-transparent border border-elite-gold text-elite-gold rounded-lg font-bold hover:bg-elite-gold hover:text-on-tertiary-fixed transition-all">OBTENER ELITE</button>
+                            <button onclick="window.openPaymentModal(null, 'producers'); setTimeout(()=>window.switchPaymentPlan('elite'),100);" data-i18n="btn_obtain_elite" class="w-full py-4 bg-transparent border border-elite-gold text-elite-gold rounded-lg font-bold hover:bg-elite-gold hover:text-on-tertiary-fixed transition-all">OBTENER ELITE</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Artists Grid -->
+                    <div id="pricing-grid-artists" class="grid grid-cols-1 md:grid-cols-2 gap-gutter max-w-4xl mx-auto" style="display: none;">
+                        <!-- Plan Creador -->
+                        <div class="glass-card rounded-2xl p-10 flex flex-col text-left group hover:border-white/20 transition-all">
+                            <h3 class="font-headline-md mb-2 text-white font-bold">Plan Creador</h3>
+                            <div class="flex items-baseline gap-2 mb-8 text-white">
+                                <span class="text-4xl font-black">$9.99</span>
+                                <span class="text-on-surface-variant">/ mes</span>
+                            </div>
+                            <ul class="space-y-4 mb-12 flex-1 text-on-surface-variant">
+                                <li class="flex items-center gap-3 text-white"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span>3 descargas de beats al mes</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span>Bajo Licencia Básica (Comercial)</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span>Acceso al catálogo completo</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span>Firma digital instantánea</span></li>
+                            </ul>
+                            <button onclick="window.openPaymentModal(null, 'artists'); setTimeout(()=>window.switchPaymentPlan('creator'),100);" class="w-full py-4 border border-white/10 rounded-lg font-bold group-hover:bg-white/10 transition-all text-white">SUSCRIBIRSE</button>
+                        </div>
+                        <!-- Plan Artista Pro -->
+                        <div class="glass-card rounded-2xl p-10 flex flex-col text-left border-electric-purple/40 relative overflow-hidden shadow-[0_0_50px_rgba(139,92,246,0.15)] bg-charcoal-deep">
+                            <div class="absolute top-0 right-0 px-4 py-1 bg-electric-purple text-on-primary font-label-caps text-[10px] font-bold">RECOMENDADO</div>
+                            <h3 class="font-headline-md mb-2 text-white font-bold">Plan Artista Pro</h3>
+                            <div class="flex items-baseline gap-2 mb-8 text-white">
+                                <span class="text-4xl font-black">$19.99</span>
+                                <span class="text-on-surface-variant">/ mes</span>
+                            </div>
+                            <ul class="space-y-4 mb-12 flex-1 text-on-surface-variant">
+                                <li class="flex items-center gap-3 text-white"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span>6 descargas de beats al mes</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span>Bajo Licencia Premium (WAV + MP3)</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span>Acceso al catálogo completo</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span>Contratos automáticos instantáneos</span></li>
+                                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-electric-purple text-sm">check</span> <span>Soporte prioritario</span></li>
+                            </ul>
+                            <button onclick="window.openPaymentModal(null, 'artists'); setTimeout(()=>window.switchPaymentPlan('pro_artist'),100);" class="w-full py-4 bg-electric-purple text-on-primary rounded-lg font-black shadow-[0_0_20px_rgba(139,92,246,0.3)]">SUSCRIBIRSE</button>
                         </div>
                     </div>
                 </div>
@@ -578,273 +677,371 @@
     </div>
 
     <!-- ===== MODAL MÉTODOS DE PAGO ===== -->
-    <div id="payment-modal" style="display:none; position:fixed; inset:0; z-index:10000; align-items:center; justify-content:center; background:rgba(5,7,15,0.85); backdrop-filter:blur(12px); padding:16px; overflow-y:auto;">
-        <div style="background:#0f1320; border:1px solid rgba(0,102,255,0.2); border-radius:24px; width:100%; max-width:580px; padding:32px; position:relative; box-shadow:0 30px 80px rgba(0,0,0,0.6); margin:auto; box-sizing: border-box;">
-            <!-- Close -->
-            <button onclick="closePaymentModal()" style="position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.06); border:none; color:#8a91a6; width:32px; height:32px; border-radius:50%; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">&times;</button>
+    <!-- ===== MODAL MÉTODOS DE PAGO — NUEVO DISEÑO ===== -->
+    <div id="payment-modal" style="display:none; position:fixed; inset:0; z-index:10000; align-items:flex-start; justify-content:center; background:rgba(2,4,10,0.92); backdrop-filter:blur(20px) saturate(1.4); padding:24px 16px; overflow-y:auto;">
+        
+        <style>
+        #payment-modal .pm-card-btn {
+            all: unset;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1.5px solid rgba(255,255,255,0.07);
+            background: rgba(255,255,255,0.03);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            text-align: left;
+        }
+        #payment-modal .pm-card-btn:hover { border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); }
+        #payment-modal .pm-card-btn.pm-active { border-color: #6366f1; background: rgba(99,102,241,0.1); box-shadow: 0 0 0 1px rgba(99,102,241,0.3); }
+        #payment-modal .pm-input {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255,255,255,0.04);
+            border: 1.5px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 11px 14px;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+        #payment-modal .pm-input:focus { border-color: #6366f1; }
+        #payment-modal .pm-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 5px;
+            display: block;
+        }
+        #payment-modal .pm-copy-btn {
+            all: unset;
+            cursor: pointer;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 7px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.5);
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        #payment-modal .pm-copy-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+        #payment-modal .pm-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        #payment-modal .pm-row:last-child { border-bottom: none; }
+        #payment-modal .pm-bank-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 100px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        #payment-modal .pm-submit {
+            all: unset;
+            width: 100%;
+            box-sizing: border-box;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #6366f1;
+            color: #fff;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 24px rgba(99,102,241,0.35);
+        }
+        #payment-modal .pm-submit:hover { background: #4f46e5; box-shadow: 0 6px 30px rgba(99,102,241,0.5); transform: translateY(-1px); }
+        </style>
+
+        <div style="background:#0a0b12; border:1px solid rgba(255,255,255,0.06); border-radius:20px; width:100%; max-width:560px; overflow:hidden; position:relative; margin:auto; margin-top: 12px;">
+
+            <!-- Top accent line -->
+            <div style="height:2px; background:linear-gradient(90deg, #6366f1 0%, #a78bfa 50%, #38bdf8 100%);"></div>
 
             <!-- Header -->
-            <div style="text-align:center; margin-bottom:24px;">
-                <h3 style="color:#ffffff; font-size:22px; font-weight:800; margin:0 0 6px 0; font-family:'Montserrat',sans-serif;">Mejora tu Cuenta en BEATSS</h3>
-                <p style="color:#8a91a6; font-size:13px; margin:0;">Genera licencias ilimitadas y personaliza tu marca al instante.</p>
-            </div>
-
-            <!-- Selector de Plan -->
-            <div style="display: flex; gap: 8px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 4px; margin-bottom: 20px;">
-                <button type="button" id="pay-select-pro" class="pay-plan-tab active" onclick="switchPaymentPlan('pro')" style="flex: 1; height: 44px; border-radius: 8px; border: none; background: linear-gradient(135deg, #0055ee 0%, #00aacc 100%); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; outline: none; transition: all 0.2s;">
-                    <span>Plan Pro</span>
-                    <span style="font-size: 9.5px; opacity: 0.9; font-weight: 400;">$10.00 / mes</span>
-                </button>
-                <button type="button" id="pay-select-elite" class="pay-plan-tab" onclick="switchPaymentPlan('elite')" style="flex: 1; height: 44px; border-radius: 8px; border: none; background: transparent; color: #8a91a6; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; outline: none; transition: all 0.2s;">
-                    <span>Plan Elite 👑</span>
-                    <span style="font-size: 9.5px; opacity: 0.9; font-weight: 400;">$30.00 / mes</span>
-                </button>
-            </div>
-
-            <!-- Warning Box (Plan Limits) -->
-            <div id="payment-modal-warning" style="display:none; margin-bottom: 20px; padding: 16px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 16px; color: #f87171; font-size: 13px; font-weight: 500; line-height: 1.5; text-align: left;">
-                <div style="display: flex; gap: 8px; align-items: flex-start;">
-                    <i data-lucide="alert-triangle" style="width: 18px; height: 18px; color: #ef4444; flex-shrink: 0; margin-top: 1px;"></i>
+            <div style="padding:24px 28px 0;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between;">
                     <div>
-                        <strong style="color: #ef4444;">Función Premium:</strong> 
+                        <div style="font-size:10px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:#6366f1; margin-bottom:6px;">BEATSS MEMBERSHIP</div>
+                        <h2 style="margin:0; font-size:22px; font-weight:800; color:#fff; line-height:1.2; letter-spacing:-0.5px;" id="pm-modal-title">Elige tu plan</h2>
+                        <p style="margin:6px 0 0; font-size:13px; color:rgba(255,255,255,0.35);">Licencias ilimitadas · Tu marca · Sin comisiones</p>
+                    </div>
+                    <button onclick="closePaymentModal()" style="all:unset; width:32px; height:32px; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:8px; background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.4); font-size:18px; transition:all 0.2s; flex-shrink:0; margin-top:2px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='rgba(255,255,255,0.4)'">&times;</button>
+                </div>
+
+                <!-- Warning strip -->
+                <div id="payment-modal-warning" style="display:none; margin:16px 0 0; padding:12px 14px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:10px;">
+                    <div style="display:flex; gap:8px; align-items:flex-start; font-size:12.5px; color:#f87171; line-height:1.4;">
+                        <span style="flex-shrink:0;">⚠️</span>
                         <span id="payment-modal-warning-text">Límite alcanzado</span>
                     </div>
                 </div>
-            </div>
 
-            <!-- Selector de Métodos de Pago (Tabs) -->
-            <div style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 20px; padding-bottom: 4px; overflow-x: auto;">
-                <button type="button" class="pay-method-tab active" onclick="switchPaymentMethodTab('deuna')" style="flex: 1; height: 38px; border: none; background: none; color: #00ccff; border-bottom: 2px solid #00ccff; font-weight: 700; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none; white-space: nowrap;">
-                    📱 Deuna!
-                </button>
-                <button type="button" class="pay-method-tab" onclick="switchPaymentMethodTab('transfer')" style="flex: 1; height: 38px; border: none; background: none; color: #8a91a6; font-weight: 600; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none; white-space: nowrap;">
-                    🏦 Transferencia
-                </button>
-                <button type="button" class="pay-method-tab" onclick="switchPaymentMethodTab('payphone')" style="flex: 1; height: 38px; border: none; background: none; color: #8a91a6; font-weight: 600; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none; white-space: nowrap;">
-                    📱 PayPhone
-                </button>
-                <button type="button" class="pay-method-tab" onclick="switchPaymentMethodTab('paypal')" style="flex: 1; height: 38px; border: none; background: none; color: #8a91a6; font-weight: 600; font-size: 12.5px; cursor: pointer; transition: all 0.2s; outline: none; white-space: nowrap;">
-                    💳 PayPal
-                </button>
-            </div>
-
-            <!-- PANEL 1: DEUNA! -->
-            <div id="pay-tab-deuna" class="pay-method-panel" style="display: block;">
-                <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-sizing: border-box;">
-                    <div style="display: flex; gap: 14px; align-items: center;">
-                        <!-- Mock QR Code Placeholder -->
-                        <div style="width: 100px; height: 100px; background: #ffffff; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px; flex-shrink: 0; box-shadow: 0 4px 20px rgba(0,204,255,0.15);">
-                            <svg viewBox="0 0 100 100" width="100%" height="100%" style="color: #0f1320;">
-                                <rect x="5" y="5" width="25" height="25" fill="currentColor" />
-                                <rect x="10" y="10" width="15" height="15" fill="#fff" />
-                                <rect x="13" y="13" width="9" height="9" fill="currentColor" />
-                                
-                                <rect x="70" y="5" width="25" height="25" fill="currentColor" />
-                                <rect x="75" y="10" width="15" height="15" fill="#fff" />
-                                <rect x="78" y="13" width="9" height="9" fill="currentColor" />
-                                
-                                <rect x="5" y="70" width="25" height="25" fill="currentColor" />
-                                <rect x="10" y="75" width="15" height="15" fill="#fff" />
-                                <rect x="13" y="78" width="9" height="9" fill="currentColor" />
-                                
-                                <rect x="35" y="5" width="5" height="10" fill="currentColor"/>
-                                <rect x="45" y="10" width="10" height="5" fill="currentColor"/>
-                                <rect x="60" y="5" width="5" height="20" fill="currentColor"/>
-                                <rect x="35" y="20" width="20" height="5" fill="currentColor"/>
-                                <rect x="40" y="30" width="10" height="10" fill="currentColor"/>
-                                <rect x="55" y="35" width="15" height="5" fill="currentColor"/>
-                                <rect x="5" y="35" width="15" height="5" fill="currentColor"/>
-                                <rect x="25" y="45" width="5" height="20" fill="currentColor"/>
-                                <rect x="5" y="55" width="10" height="10" fill="currentColor"/>
-                                <rect x="35" y="50" width="15" height="15" fill="currentColor"/>
-                                <rect x="55" y="50" width="30" height="5" fill="currentColor"/>
-                                <rect x="70" y="60" width="5" height="20" fill="currentColor"/>
-                                <rect x="80" y="45" width="15" height="15" fill="currentColor"/>
-                                <rect x="35" y="70" width="10" height="10" fill="currentColor"/>
-                                <rect x="50" y="75" width="15" height="15" fill="currentColor"/>
-                                <rect x="80" y="70" width="15" height="5" fill="currentColor"/>
-                                <rect x="70" y="90" width="25" height="5" fill="currentColor"/>
-                                <rect x="35" y="90" width="10" height="5" fill="currentColor"/>
-                                <rect x="15" y="35" width="10" height="10" fill="currentColor"/>
-                            </svg>
-                            <span style="color: #0f1320; font-size: 7.5px; font-weight: 800; text-transform: uppercase; margin-top: 3px; letter-spacing: 0.5px;">Escanear QR</span>
-                        </div>
-                        <div style="flex: 1; text-align: left;">
-                            <div style="color: #00ccff; font-size: 13px; font-weight: 700; margin-bottom: 4px;">DEUNA! (Pago Rápido)</div>
-                            <p style="color: #cbd5e0; font-size: 11px; line-height: 1.4; margin: 0;">Escanea el código QR de la izquierda o envía el monto correspondiente directamente al siguiente celular:</p>
-                        </div>
-                    </div>
-                    
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:10px; padding:10px 14px;">
-                        <div style="text-align: left;">
-                            <div style="color: #8a91a6; font-size: 9px; text-transform: uppercase; font-weight: 600;">Celular Deuna!</div>
-                            <span style="color: #ffffff; font-weight: 700; font-size: 14px; font-family: monospace;">+593 96 120 1184</span>
-                        </div>
-                        <button type="button" onclick="navigator.clipboard.writeText('+593961201184').then(()=>{const originalText=this.textContent;this.textContent='✓';this.style.background='#10b981';this.style.color='#fff';setTimeout(()=>{this.textContent=originalText;this.style.background='rgba(0,102,255,0.15)';this.style.color='#0088ff'},1500)})" style="background:rgba(0,102,255,0.15); border:none; color:#0088ff; cursor:pointer; border-radius:6px; padding:5px 10px; font-size:11px; font-weight: 700; transition: all 0.2s;">Copiar</button>
-                    </div>
-                    
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:10px; padding:10px 14px;">
-                        <div style="text-align: left;">
-                            <div style="color: #8a91a6; font-size: 9px; text-transform: uppercase; font-weight: 600;">Titular</div>
-                            <span style="color: #ffffff; font-weight: 600; font-size: 12.5px;">Joao Dominguez Sosa</span>
-                        </div>
-                    </div>
-
-                    <!-- Steps display -->
-                    <div style="display: flex; gap: 8px; font-size: 11px; color: #8a91a6; margin-top: 4px; text-align: left; line-height: 1.4;">
-                        <div style="flex: 1; display: flex; gap: 6px; align-items: flex-start;">
-                            <span style="background: #00ccff; color: #0f1320; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; flex-shrink: 0;">1</span>
-                            <span>Realiza el pago móvil desde tu app</span>
-                        </div>
-                        <div style="flex: 1; display: flex; gap: 6px; align-items: flex-start;">
-                            <span style="background: #00ccff; color: #0f1320; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 10px; flex-shrink: 0;">2</span>
-                            <span>Registra la referencia y captura abajo</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PANEL 2: TRANSFERENCIA BANCARIA -->
-            <div id="pay-tab-transfer" class="pay-method-panel" style="display: none;">
-                <!-- Pichincha -->
-                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,209,0,0.2); border-radius:16px; padding:18px; margin-bottom:12px; box-sizing: border-box;">
-                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-                        <div style="width:34px; height:34px; border-radius:8px; background:#FFD100; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
-                            <span style="color:#E30613; font-family:'Montserrat',sans-serif; font-weight:900; font-size:9.5px;">PICH</span>
-                        </div>
-                        <div style="text-align: left;">
-                            <div style="color:#FFD100; font-size:12.5px; font-weight:700; letter-spacing:0.5px;">BANCO PICHINCHA</div>
-                            <div style="color:#8a91a6; font-size:10.5px;">Cuenta de Ahorros</div>
-                        </div>
-                    </div>
-                    <div style="display:grid; gap:6px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
-                            <span style="color:#8a91a6; font-size:11px;">N° de Cuenta</span>
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <span style="color:#ffffff; font-weight:600; font-size:13px; font-family:monospace;">2205256268</span>
-                                <button type="button" onclick="navigator.clipboard.writeText('2205256268').then(()=>{const original=this.textContent;this.textContent='✓';setTimeout(()=>this.textContent=original,1500)})" style="background:rgba(255,209,0,0.15); border:none; color:#ffd100; cursor:pointer; border-radius:4px; padding:2px 6px; font-size:11px; font-weight:700;">⧉</button>
-                            </div>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
-                            <span style="color:#8a91a6; font-size:11px;">Titular</span>
-                            <span style="color:#ffffff; font-weight:600; font-size:12px;">Joao Dominguez Sosa</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
-                            <span style="color:#8a91a6; font-size:11px;">Cédula</span>
-                            <span style="color:#ffffff; font-weight:600; font-size:12px; font-family:monospace;">0803743111</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Guayaquil -->
-                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(0,91,170,0.25); border-radius:16px; padding:18px; margin-bottom:12px; box-sizing: border-box;">
-                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
-                        <div style="width:34px; height:34px; border-radius:8px; background:#005BAA; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
-                            <span style="color:#ffffff; font-family:'Montserrat',sans-serif; font-weight:900; font-size:9.5px;">BGY</span>
-                        </div>
-                        <div style="text-align: left;">
-                            <div style="color:#4da8ff; font-size:12.5px; font-weight:700; letter-spacing:0.5px;">BANCO GUAYAQUIL</div>
-                            <div style="color:#8a91a6; font-size:10.5px;">Cuenta de Ahorros</div>
-                        </div>
-                    </div>
-                    <div style="display:grid; gap:6px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
-                            <span style="color:#8a91a6; font-size:11px;">N° de Cuenta</span>
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <span style="color:#ffffff; font-weight:600; font-size:13px; font-family:monospace;">0023915583</span>
-                                <button type="button" onclick="navigator.clipboard.writeText('0023915583').then(()=>{const original=this.textContent;this.textContent='✓';setTimeout(()=>this.textContent=original,1500)})" style="background:rgba(0,91,170,0.2); border:none; color:#4da8ff; cursor:pointer; border-radius:4px; padding:2px 6px; font-size:11px; font-weight:700;">⧉</button>
-                            </div>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
-                            <span style="color:#8a91a6; font-size:11px;">Titular</span>
-                            <span style="color:#ffffff; font-weight:600; font-size:12px;">Joao Dominguez Sosa</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:8px 12px;">
-                            <span style="color:#8a91a6; font-size:11px;">Cédula</span>
-                            <span style="color:#ffffff; font-weight:600; font-size:12px; font-family:monospace;">0803743111</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PANEL 3: PAYPHONE -->
-            <div id="pay-tab-payphone" class="pay-method-panel" style="display: none;">
-                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(0,170,204,0.25); border-radius:16px; padding:20px; margin-bottom:16px; text-align: center; box-sizing: border-box;">
-                    <i data-lucide="smartphone" style="width: 28px; height: 28px; color: #00aacc; margin-bottom: 8px; display: inline-block;"></i>
-                    <div style="color: #ffffff; font-size: 13px; font-weight: 700; margin-bottom: 4px;">PAGO CON PAYPHONE</div>
-                    <p style="color: #cbd5e0; font-size: 11px; line-height: 1.4; margin: 0 0 16px 0;">Paga con tu saldo de PayPhone o cualquier tarjeta de crédito/débito directamente. Activación automática en segundos.</p>
-                    
-                    <div id="payphone-subscription-button-container" style="display: flex; justify-content: center; align-items: center; min-height: 48px; border-radius: 8px; overflow: hidden;"></div>
-                    
-                    <!-- Botón de Simulación Local para PayPhone -->
-                    <button type="button" id="simulate-payphone-btn" onclick="simulatePayphoneSubscription()" style="display: none; margin-top: 12px; width: 100%; height: 40px; border-radius: 8px; border: 1px dashed #00ccff; background: rgba(0,204,255,0.1); color: #00ccff; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                        ⚡ Simular Pago Exitoso (PayPhone)
+                <!-- Plan selector -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:20px 0 0;">
+                    <button type="button" id="pay-select-pro" onclick="switchPaymentPlan('pro')" style="all:unset; cursor:pointer; padding:14px 16px; border-radius:12px; border:1.5px solid #6366f1; background:rgba(99,102,241,0.12); box-sizing:border-box; transition:all 0.2s; box-shadow: 0 0 0 1px rgba(99,102,241,0.2);">
+                        <div style="font-size:11px; font-weight:700; color:#a5b4fc; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;"><span id="pay-plan-name-pro">Pro</span></div>
+                        <div style="font-size:22px; font-weight:800; color:#fff; margin-bottom:2px;"><span id="pay-plan-price-pro">$10</span><span style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.4);">/mes</span></div>
+                        <div style="font-size:11px; color:rgba(255,255,255,0.4);">Licencias ilimitadas</div>
+                    </button>
+                    <button type="button" id="pay-select-elite" onclick="switchPaymentPlan('elite')" style="all:unset; cursor:pointer; padding:14px 16px; border-radius:12px; border:1.5px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); box-sizing:border-box; transition:all 0.2s;">
+                        <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;"><span id="pay-plan-name-elite">Elite</span> 👑</div>
+                        <div style="font-size:22px; font-weight:800; color:#fff; margin-bottom:2px;"><span id="pay-plan-price-elite">$30</span><span style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.4);">/mes</span></div>
+                        <div style="font-size:11px; color:rgba(255,255,255,0.4);">Personalización total</div>
                     </button>
                 </div>
             </div>
 
-            <!-- PANEL 4: PAYPAL -->
-            <div id="pay-tab-paypal" class="pay-method-panel" style="display: none;">
-                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(0,102,255,0.25); border-radius:16px; padding:20px; margin-bottom:16px; text-align: center; box-sizing: border-box;">
-                    <i data-lucide="credit-card" style="width: 28px; height: 28px; color: #0079c1; margin-bottom: 8px; display: inline-block;"></i>
-                    <div style="color: #ffffff; font-size: 13px; font-weight: 700; margin-bottom: 4px;">PAGO INSTANTÁNEO</div>
-                    <p style="color: #cbd5e0; font-size: 11px; line-height: 1.4; margin: 0 0 16px 0;">Paga de manera segura con tu tarjeta de crédito o cuenta de PayPal. Activación automática en segundos.</p>
-                    
-                    <div id="paypal-button-container" style="border-radius:12px; overflow:hidden; min-height:44px;"></div>
+            <!-- Divider -->
+            <div style="height:1px; background:rgba(255,255,255,0.05); margin:20px 0 0;"></div>
 
-                    <!-- Botón de Simulación Local para PayPal -->
-                    <button type="button" id="simulate-paypal-btn" onclick="simulatePaypalSubscription()" style="display: none; margin-top: 12px; width: 100%; height: 40px; border-radius: 8px; border: 1px dashed #ffc439; background: rgba(255,196,57,0.1); color: #ffc439; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;">
-                        ⚡ Simular Pago Exitoso (PayPal)
-                    </button>
-                </div>
+            <!-- Payment method selector (cards, vertical) -->
+            <div style="padding:20px 28px; display:flex; flex-direction:column; gap:8px;">
+                <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Método de pago</div>
+
+                <!-- PayPal -->
+                <button type="button" class="pm-card-btn pm-active" onclick="switchPaymentMethodTab('paypal'); document.querySelectorAll('.pm-card-btn').forEach(b=>b.classList.remove('pm-active')); this.classList.add('pm-active');">
+                    <div style="width:36px; height:36px; border-radius:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <!-- PayPal SVG -->
+                        <svg viewBox="0 0 32 32" width="22" height="22">
+                            <path d="M12.9 2.5C12.4 2.5 12 2.9 11.9 3.4L8.1 27.2c-0.1 0.5 0.3 0.9 0.8 0.9h5.1c0.4 0 0.8-0.3 0.9-0.7l1.1-7.2c0.1-0.4 0.4-0.7 0.9-0.7h2.2c5.3 0 8.6-2.5 9.4-7.6 0.4-2.5-0.1-4.6-1.6-6.1C25.4 4.3 22.9 2.5 18.5 2.5H12.9z" fill="#003087"/>
+                            <path d="M16.9 9.5c-0.4 0-0.8 0.3-0.9 0.7l-1.1 7.2c-0.1 0.4-0.4 0.7-0.9 0.7H10.5c-0.5 0-0.9 0.4-0.8 0.9l1.6 10.3c0.1 0.5 0.5 0.8 1 0.8h5.1c0.4 0 0.8-0.3 0.9-0.7l1.2-7.5c0.1-0.4 0.4-0.7 0.9-0.7h2.2c5.3 0 8.6-2.5 9.4-7.6 0.4-2.5-0.1-4.6-1.6-6.1C26.9 11.3 24.4 9.5 20 9.5H16.9z" fill="#0079C1"/>
+                        </svg>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:13px; font-weight:700; color:#fff;">PayPal</div>
+                        <div style="font-size:11px; color:rgba(255,255,255,0.35);">Tarjeta de crédito o cuenta PayPal · Activación inmediata</div>
+                    </div>
+                    <div style="width:18px; height:18px; border-radius:50%; border:2px solid #6366f1; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <div id="dot-paypal" style="width:9px; height:9px; border-radius:50%; background:#6366f1;"></div>
+                    </div>
+                </button>
+
+                <!-- Deuna -->
+                <button type="button" class="pm-card-btn" onclick="switchPaymentMethodTab('deuna'); document.querySelectorAll('.pm-card-btn').forEach(b=>b.classList.remove('pm-active')); this.classList.add('pm-active');">
+                    <div style="width:36px; height:36px; border-radius:8px; background:#FFE500; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <!-- Deuna! Styled App Logo -->
+                        <span style="font-family:'Outfit','Inter',sans-serif; font-weight:900; font-size:21px; color:#0c0d14; letter-spacing:-1.5px; transform:translateY(-1px);">d!</span>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:13px; font-weight:700; color:#fff;">Deuna!</div>
+                        <div style="font-size:11px; color:rgba(255,255,255,0.35);">Pago móvil Ecuador · QR o número celular</div>
+                    </div>
+                    <div style="width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); flex-shrink:0;"></div>
+                </button>
+
+                <!-- Transferencia -->
+                <button type="button" class="pm-card-btn" onclick="switchPaymentMethodTab('transfer'); document.querySelectorAll('.pm-card-btn').forEach(b=>b.classList.remove('pm-active')); this.classList.add('pm-active');">
+                    <div style="width:36px; height:36px; border-radius:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; gap:2px; flex-shrink:0; overflow:hidden; padding:2px;">
+                        <!-- Mini Pichincha Badge -->
+                        <div style="width:14px; height:14px; border-radius:3px; background:#FFD100; display:flex; align-items:center; justify-content:center; color:#000; font-family:'Montserrat',sans-serif; font-weight:900; font-size:9px;">P</div>
+                        <!-- Mini Guayaquil Badge -->
+                        <div style="width:14px; height:14px; border-radius:3px; background:#005BAA; display:flex; align-items:center; justify-content:center; color:#fff; font-family:'Montserrat',sans-serif; font-weight:900; font-size:9px;">G</div>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:13px; font-weight:700; color:#fff;">Transferencia Bancaria</div>
+                        <div style="font-size:11px; color:rgba(255,255,255,0.35);">Pichincha · Guayaquil</div>
+                    </div>
+                    <div style="width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); flex-shrink:0;"></div>
+                </button>
+
+                <!-- PayPhone -->
+                <button type="button" class="pm-card-btn" onclick="switchPaymentMethodTab('payphone'); document.querySelectorAll('.pm-card-btn').forEach(b=>b.classList.remove('pm-active')); this.classList.add('pm-active');">
+                    <div style="width:36px; height:36px; border-radius:8px; background:#FF5A00; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <!-- Payphone stylized P logo -->
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+                            <circle cx="12" cy="12" r="10" fill="#fff" opacity="0.15"/>
+                            <path d="M9 7h4.5a3.5 3.5 0 0 1 0 7H11v4H9V7zm2 2v3h2.5a1.5 1.5 0 0 0 0-3H11z" fill="#ffffff" font-weight="900"/>
+                        </svg>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:13px; font-weight:700; color:#fff;">PayPhone</div>
+                        <div style="font-size:11px; color:rgba(255,255,255,0.35);">Tarjeta débito/crédito Ecuador</div>
+                    </div>
+                    <div style="width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,0.15); flex-shrink:0;"></div>
+                </button>
             </div>
 
-            <!-- Formulario de Envío de Comprobante -->
-            <div id="payment-receipt-form" style="border-top:1px dashed rgba(255,255,255,0.1); padding-top:20px; margin-top:20px;">
-                <h4 style="color:#ffffff; font-size:14px; font-weight:700; margin:0 0 14px 0; font-family:'Montserrat',sans-serif; display:flex; align-items:center; gap:8px;">
-                    <i data-lucide="upload-cloud" style="color:#00ccff; width:18px; height:18px;"></i> Registrar Pago Digital
-                </h4>
-                
-                <form id="frm-submit-receipt" style="display:flex; flex-direction:column; gap:12px;">
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                        <div style="display:flex; flex-direction:column; gap:6px;">
-                            <label style="color:#8a91a6; font-size:11px; font-weight:600; text-align:left;">Método Utilizado</label>
-                            <select id="receipt-method" style="background:#1e1e24; border:1px solid #2b2b35; border-radius:8px; padding:8px 10px; color:#ffffff; font-size:12px; height:38px; cursor:pointer; outline:none;">
+            <!-- PANELS — shown below selector -->
+            <div style="padding:0 28px;">
+
+                <!-- PANEL: PAYPAL -->
+                <div id="pay-tab-paypal" class="pay-method-panel" style="display:block;">
+                    <div style="padding:16px; background:rgba(0,48,135,0.15); border:1px solid rgba(0,156,222,0.2); border-radius:12px; margin-bottom:16px;">
+                        <div style="font-size:12px; color:rgba(255,255,255,0.5); line-height:1.5; margin-bottom:12px;">Paga de forma segura con tu cuenta PayPal o cualquier tarjeta. La activación es <strong style="color:#a5b4fc;">automática e inmediata</strong>.</div>
+                        <div id="paypal-button-container" style="border-radius:8px; overflow:hidden; min-height:44px;"></div>
+                        <button type="button" id="simulate-paypal-btn" onclick="simulatePaypalSubscription()" style="display:none; margin-top:10px; width:100%; height:38px; border-radius:8px; border:1px dashed rgba(255,196,57,0.4); background:rgba(255,196,57,0.06); color:#fbbf24; font-size:12px; font-weight:700; cursor:pointer;">⚡ Simular PayPal (local)</button>
+                    </div>
+                </div>
+
+                <!-- PANEL: DEUNA -->
+                <div id="pay-tab-deuna" class="pay-method-panel" style="display:none;">
+                    <div style="padding:16px; background:rgba(0,210,255,0.05); border:1px solid rgba(0,210,255,0.15); border-radius:12px; margin-bottom:16px;">
+                        <div style="display:flex; gap:14px; align-items:center; margin-bottom:14px;">
+                            <div style="width:80px; height:80px; background:#fff; border-radius:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px; flex-shrink:0;">
+                                <svg viewBox="0 0 100 100" width="100%" height="100%" style="color:#0a0b12;">
+                                    <rect x="5" y="5" width="25" height="25" fill="currentColor"/><rect x="10" y="10" width="15" height="15" fill="#fff"/><rect x="13" y="13" width="9" height="9" fill="currentColor"/>
+                                    <rect x="70" y="5" width="25" height="25" fill="currentColor"/><rect x="75" y="10" width="15" height="15" fill="#fff"/><rect x="78" y="13" width="9" height="9" fill="currentColor"/>
+                                    <rect x="5" y="70" width="25" height="25" fill="currentColor"/><rect x="10" y="75" width="15" height="15" fill="#fff"/><rect x="13" y="78" width="9" height="9" fill="currentColor"/>
+                                    <rect x="35" y="5" width="5" height="10" fill="currentColor"/><rect x="45" y="10" width="10" height="5" fill="currentColor"/><rect x="60" y="5" width="5" height="20" fill="currentColor"/><rect x="35" y="20" width="20" height="5" fill="currentColor"/><rect x="40" y="30" width="10" height="10" fill="currentColor"/><rect x="55" y="35" width="15" height="5" fill="currentColor"/><rect x="5" y="35" width="15" height="5" fill="currentColor"/><rect x="25" y="45" width="5" height="20" fill="currentColor"/><rect x="5" y="55" width="10" height="10" fill="currentColor"/><rect x="35" y="50" width="15" height="15" fill="currentColor"/><rect x="55" y="50" width="30" height="5" fill="currentColor"/><rect x="70" y="60" width="5" height="20" fill="currentColor"/><rect x="80" y="45" width="15" height="15" fill="currentColor"/>
+                                    <rect x="35" y="70" width="10" height="10" fill="currentColor"/><rect x="50" y="75" width="15" height="15" fill="currentColor"/><rect x="80" y="70" width="15" height="5" fill="currentColor"/>
+                                </svg>
+                                <span style="color:#0a0b12; font-size:6px; font-weight:800; text-transform:uppercase; margin-top:2px;">Escanear</span>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-size:12px; color:rgba(255,255,255,0.5); line-height:1.5;">Escanea el QR o envía al número:</div>
+                                <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                                    <code style="font-size:16px; font-weight:800; color:#fff; letter-spacing:1px;">+593 96 120 1184</code>
+                                    <button class="pm-copy-btn" onclick="navigator.clipboard.writeText('+593961201184').then(()=>{this.textContent='✓ Copiado';setTimeout(()=>this.textContent='Copiar',1500)})">Copiar</button>
+                                </div>
+                                <div style="font-size:11px; color:rgba(255,255,255,0.3); margin-top:4px;">Titular: Joao Dominguez Sosa</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; font-size:11.5px; color:rgba(255,255,255,0.35);">
+                            <div style="flex:1; display:flex; gap:6px;"><span style="width:18px; height:18px; border-radius:50%; background:#6366f1; color:#fff; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">1</span> Paga desde tu app móvil</div>
+                            <div style="flex:1; display:flex; gap:6px;"><span style="width:18px; height:18px; border-radius:50%; background:#6366f1; color:#fff; font-weight:800; font-size:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</span> Registra la referencia abajo</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL: TRANSFERENCIA -->
+                <div id="pay-tab-transfer" class="pay-method-panel" style="display:none;">
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+                        <!-- Pichincha -->
+                        <div style="padding:14px 16px; background:rgba(255,209,0,0.05); border:1px solid rgba(255,209,0,0.15); border-radius:12px;">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                                <div style="padding:3px 8px; background:#FFD100; border-radius:6px; font-size:9px; font-weight:900; color:#E30613;">PICHINCHA</div>
+                                <span style="font-size:11px; color:rgba(255,255,255,0.35);">Cuenta de Ahorros</span>
+                            </div>
+                            <div class="pm-row"><span style="font-size:12px; color:rgba(255,255,255,0.4);">Cuenta</span><div style="display:flex; align-items:center; gap:8px;"><code style="color:#fff; font-weight:700; font-size:13px;">2205256268</code><button class="pm-copy-btn" onclick="navigator.clipboard.writeText('2205256268').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='⧉',1400)})">⧉</button></div></div>
+                            <div class="pm-row"><span style="font-size:12px; color:rgba(255,255,255,0.4);">Titular</span><span style="font-size:13px; font-weight:600; color:#fff;">Joao Dominguez Sosa</span></div>
+                            <div class="pm-row" style="border:none; padding-bottom:0;"><span style="font-size:12px; color:rgba(255,255,255,0.4);">Cédula</span><code style="font-size:13px; font-weight:600; color:#fff;">0803743111</code></div>
+                        </div>
+                        <!-- Guayaquil -->
+                        <div style="padding:14px 16px; background:rgba(0,91,170,0.08); border:1px solid rgba(0,91,170,0.2); border-radius:12px;">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                                <div style="padding:3px 8px; background:#005BAA; border-radius:6px; font-size:9px; font-weight:900; color:#fff;">GUAYAQUIL</div>
+                                <span style="font-size:11px; color:rgba(255,255,255,0.35);">Cuenta de Ahorros</span>
+                            </div>
+                            <div class="pm-row"><span style="font-size:12px; color:rgba(255,255,255,0.4);">Cuenta</span><div style="display:flex; align-items:center; gap:8px;"><code style="color:#fff; font-weight:700; font-size:13px;">0023915583</code><button class="pm-copy-btn" onclick="navigator.clipboard.writeText('0023915583').then(()=>{this.textContent='✓';setTimeout(()=>this.textContent='⧉',1400)})">⧉</button></div></div>
+                            <div class="pm-row"><span style="font-size:12px; color:rgba(255,255,255,0.4);">Titular</span><span style="font-size:13px; font-weight:600; color:#fff;">Joao Dominguez Sosa</span></div>
+                            <div class="pm-row" style="border:none; padding-bottom:0;"><span style="font-size:12px; color:rgba(255,255,255,0.4);">Cédula</span><code style="font-size:13px; font-weight:600; color:#fff;">0803743111</code></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL: PAYPHONE -->
+                <div id="pay-tab-payphone" class="pay-method-panel" style="display:none;">
+                    <div style="padding:16px; background:rgba(0,170,204,0.06); border:1px solid rgba(0,170,204,0.15); border-radius:12px; margin-bottom:16px; text-align:center;">
+                        <div style="font-size:12px; color:rgba(255,255,255,0.5); line-height:1.5; margin-bottom:14px;">Paga con saldo PayPhone o tarjeta débito/crédito ecuatoriana. Activación inmediata.</div>
+                        <div id="payphone-subscription-button-container" style="display:flex; justify-content:center; align-items:center; min-height:48px; border-radius:8px; overflow:hidden;"></div>
+                        <button type="button" id="simulate-payphone-btn" onclick="simulatePayphoneSubscription()" style="display:none; margin-top:10px; width:100%; height:38px; border-radius:8px; border:1px dashed rgba(0,204,255,0.3); background:rgba(0,204,255,0.05); color:#22d3ee; font-size:12px; font-weight:700; cursor:pointer;">⚡ Simular PayPhone (local)</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Divider -->
+            <div style="height:1px; background:rgba(255,255,255,0.05); margin:0 0;"></div>
+
+            <!-- Receipt form -->
+            <div id="payment-receipt-form" style="padding:20px 28px 28px;">
+                <div style="font-size:11px; font-weight:700; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:1px; margin-bottom:14px;">Confirmar pago manual</div>
+                <form id="frm-submit-receipt" style="display:flex; flex-direction:column; gap:10px;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <div>
+                            <label class="pm-label">Método</label>
+                            <select id="receipt-method" class="pm-input" style="height:42px; cursor:pointer;">
+                                <option value="PayPal">PayPal</option>
                                 <option value="Deuna!">Deuna!</option>
                                 <option value="Banco Pichincha">Banco Pichincha</option>
                                 <option value="Banco Guayaquil">Banco Guayaquil</option>
-                                <option value="Otro">Otro</option>
+                                <option value="PayPhone">PayPhone</option>
                             </select>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:6px;">
-                            <label style="color:#8a91a6; font-size:11px; font-weight:600; text-align:left;">Número de Referencia</label>
-                            <input type="text" id="receipt-ref" placeholder="Ej. 123456" style="background:#1e1e24; border:1px solid #2b2b35; border-radius:8px; padding:8px 10px; color:#ffffff; font-size:12px; height:38px; box-sizing: border-box; outline:none;" required>
+                        <div>
+                            <label class="pm-label">Referencia / N° de orden</label>
+                            <input type="text" id="receipt-ref" class="pm-input" placeholder="Ej. 123456789" required>
                         </div>
                     </div>
-                    
-                    <div style="display:flex; flex-direction:column; gap:6px; text-align:left;">
-                        <label style="color:#8a91a6; font-size:11px; font-weight:600;">Comprobante de Pago (Imagen)</label>
+
+                    <!-- Upload -->
+                    <div>
+                        <label class="pm-label">Comprobante (captura de pantalla)</label>
                         <div style="display:flex; gap:10px; align-items:center;">
-                            <button type="button" id="btn-upload-receipt-img" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 14px; color:#ffffff; font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; flex-shrink:0; height:38px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                                <i data-lucide="image" style="width:16px; height:16px;"></i> Subir Captura
+                            <button type="button" id="btn-upload-receipt-img" style="all:unset; cursor:pointer; height:40px; padding:0 14px; border-radius:9px; border:1.5px dashed rgba(255,255,255,0.12); background:rgba(255,255,255,0.03); color:rgba(255,255,255,0.5); font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; transition:all 0.2s; flex-shrink:0; box-sizing:border-box;" onmouseover="this.style.borderColor='rgba(255,255,255,0.25)'; this.style.color='#fff'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)'; this.style.color='rgba(255,255,255,0.5)'">
+                                <i data-lucide="upload" style="width:14px; height:14px;"></i> Subir archivo
                             </button>
                             <input type="file" id="receipt-img-file" accept="image/*" style="display:none;">
-                            <span id="receipt-img-name" style="color:#8a91a6; font-size:11px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap; flex:1;">No se ha seleccionado archivo</span>
+                            <span id="receipt-img-name" style="font-size:12px; color:rgba(255,255,255,0.25); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Sin archivo seleccionado</span>
                         </div>
-                        <!-- Mini Preview -->
-                        <div id="receipt-preview-container" style="display:none; margin-top:8px; border:1px solid #2b2b35; border-radius:8px; padding:8px; text-align:center; background:rgba(0,0,0,0.2);">
-                            <img id="receipt-preview-img" style="max-height:120px; max-width:100%; border-radius:6px; object-fit:contain;">
+                        <div id="receipt-preview-container" style="display:none; margin-top:8px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px; text-align:center; background:rgba(0,0,0,0.2);">
+                            <img id="receipt-preview-img" style="max-height:100px; max-width:100%; border-radius:6px; object-fit:contain;">
                         </div>
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary" style="height:44px; font-size:14px; font-weight:700; border-radius:8px; margin-top:8px; display:flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, #0055ee 0%, #00aacc 100%); border:none; color:#ffffff; cursor:pointer; width:100%; box-shadow:0 4px 15px rgba(0,85,238,0.2); transition: transform 0.15s, opacity 0.15s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
-                        <i data-lucide="send"></i> Registrar Comprobante
+
+                    <!-- RUC Invoice toggle -->
+                    <details style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:10px; overflow:hidden;">
+                        <summary style="padding:12px 14px; font-size:12px; font-weight:600; color:rgba(255,255,255,0.4); cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; user-select:none;">
+                            <span style="width:16px; height:16px; border-radius:4px; border:1.5px solid rgba(255,255,255,0.2); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; font-size:10px;">📋</span>
+                            Necesito Factura Comercial (RUC Ecuador)
+                        </summary>
+                        <div style="padding:14px; border-top:1px solid rgba(255,255,255,0.05); display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:grid; grid-template-columns:1fr 1.4fr; gap:10px;">
+                                <div>
+                                    <label class="pm-label">RUC (13 dígitos)</label>
+                                    <input type="text" id="sub-invoice-ruc" class="pm-input" placeholder="0803743111001" maxlength="13">
+                                </div>
+                                <div>
+                                    <label class="pm-label">Razón Social</label>
+                                    <input type="text" id="sub-invoice-company" class="pm-input" placeholder="Nombre en el RUC">
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div>
+                                    <label class="pm-label">Dirección Fiscal</label>
+                                    <input type="text" id="sub-invoice-address" class="pm-input" placeholder="Dirección registrada">
+                                </div>
+                                <div>
+                                    <label class="pm-label">Correo de Facturación</label>
+                                    <input type="email" id="sub-invoice-email" class="pm-input" placeholder="correo@negocio.com">
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <button type="submit" class="pm-submit" style="margin-top:4px;">
+                        <i data-lucide="send" style="width:16px; height:16px;"></i>
+                        Confirmar y Enviar Comprobante
                     </button>
                 </form>
             </div>
         </div>
     </div>
     
+
     <!-- ===== MODAL PREVIEW DE COMPROBANTE ADMIN ===== -->
     <div id="admin-receipt-preview-modal" style="display:none; position:fixed; inset:0; z-index:11000; align-items:center; justify-content:center; background:rgba(5,7,15,0.9); backdrop-filter:blur(8px); padding:16px;">
         <div style="background:#0f1320; border:1px solid rgba(0,102,255,0.3); border-radius:16px; width:100%; max-width:640px; padding:24px; position:relative; text-align:center;">
@@ -1098,8 +1295,8 @@
                             <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1" data-i18n="license_premium_plus_desc">WAV+Stems • Ilimitado</span>
                         </button>
                         <button type="button" class="license-btn w-full bg-charcoal-deep border border-white/5 p-4 rounded-xl text-left hover:border-electric-purple hover:bg-surface-glass transition-all duration-200" data-type="unlimited_flp">
-                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block" data-i18n="license_unlimited_flp_name">Ilimitada + FLP</span>
-                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1" data-i18n="license_unlimited_flp_desc">Stems+FLP • Ilimitado</span>
+                            <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block" data-i18n="license_unlimited_flp_name">Ilimitada</span>
+                            <span class="lic-desc font-label-caps text-[11px] text-on-surface-variant block mt-1" data-i18n="license_unlimited_flp_desc">Stems • Ilimitado</span>
                         </button>
                         <button type="button" class="license-btn w-full bg-charcoal-deep border border-white/5 p-4 rounded-xl text-left hover:border-electric-purple hover:bg-surface-glass transition-all duration-200" data-type="exclusive">
                             <span class="lic-name font-headline-md text-[14px] font-bold text-on-surface block" data-i18n="license_exclusive_name">Exclusiva</span>
@@ -3097,7 +3294,7 @@
                             <option value="basic">Básica</option>
                             <option value="premium" selected>Premium</option>
                             <option value="premium_plus">Premium Plus</option>
-                            <option value="unlimited_flp">Ilimitada + FLP</option>
+                            <option value="unlimited_flp">Ilimitada</option>
                             <option value="exclusive">Exclusiva</option>
                         </select>
                     </div>
@@ -3427,12 +3624,18 @@
             }
 
             const tier = window.selectedPaymentPlan;
-            const planId = tier === 'elite' 
-                ? window.adminPaymentConfig.paypalPlanIdElite 
-                : window.adminPaymentConfig.paypalPlanIdPro;
+            let planId = '';
+            if (tier === 'elite') planId = window.adminPaymentConfig.paypalPlanIdElite;
+            else if (tier === 'pro') planId = window.adminPaymentConfig.paypalPlanIdPro;
+            else if (tier === 'creator') planId = window.adminPaymentConfig.paypalPlanIdCreator || 'PAYPAL-SUB-MOCK-CREATOR';
+            else if (tier === 'pro_artist') planId = window.adminPaymentConfig.paypalPlanIdProArtist || 'PAYPAL-SUB-MOCK-PROARTIST';
 
-            if (!planId) {
-                container.innerHTML = '<div style="color: #fc8181; font-size: 11px; text-align: center; padding: 8px;">Error: ID de Plan PayPal no configurado por el Administrador.</div>';
+            if (!planId || planId.startsWith('PAYPAL-SUB-MOCK-')) {
+                container.innerHTML = `
+                    <button class="btn btn-secondary" onclick="simulatePaypalSubscription('${tier}')" style="width: 100%; height: 48px; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); border: none; color: #fff; cursor: pointer;">
+                        🎟️ Simular Suscripción (${tier.toUpperCase()})
+                    </button>
+                `;
                 return;
             }
 
@@ -3509,8 +3712,11 @@
             }
 
             const tier = window.selectedPaymentPlan;
-            const priceDollars = tier === 'elite' ? 30 : 10;
-            const priceCents = priceDollars * 100;
+            let priceDollars = 10;
+            if (tier === 'elite') priceDollars = 30;
+            else if (tier === 'creator') priceDollars = 9.99;
+            else if (tier === 'pro_artist') priceDollars = 19.99;
+            const priceCents = Math.round(priceDollars * 100);
 
             if (!window.adminPaymentConfig || !window.adminPaymentConfig.payphoneClientId || !window.adminPaymentConfig.payphoneAppId) {
                 container.innerHTML = '<div style="color: #cbd5e0; font-size: 11px;">Credenciales de PayPhone no configuradas por admin.</div>';
@@ -3756,8 +3962,8 @@
 
             if (activeBtn) {
                 activeBtn.classList.add('active');
-                activeBtn.style.color = '#00ccff';
-                activeBtn.style.borderBottom = '2px solid #00ccff';
+                activeBtn.style.color = '#a855f7';
+                activeBtn.style.borderBottom = '2px solid #a855f7';
                 activeBtn.style.fontWeight = '700';
             }
 
@@ -3770,36 +3976,70 @@
             const btnPro = document.getElementById('pay-select-pro');
             const btnElite = document.getElementById('pay-select-elite');
 
-            if (plan === 'elite') {
-                btnPro.classList.remove('active');
-                btnPro.style.background = 'transparent';
-                btnPro.style.color = '#8a91a6';
-                btnPro.style.fontWeight = '600';
-
-                btnElite.classList.add('active');
-                btnElite.style.background = 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)';
-                btnElite.style.color = '#fff';
-                btnElite.style.fontWeight = '700';
+            if (plan === 'elite' || plan === 'pro_artist') {
+                // Pro inactive
+                btnPro.style.border = '1.5px solid rgba(255,255,255,0.08)';
+                btnPro.style.background = 'rgba(255,255,255,0.03)';
+                btnPro.style.boxShadow = 'none';
+                btnPro.querySelector('div:first-child').style.color = 'rgba(255,255,255,0.35)';
+                // Elite active
+                btnElite.style.border = '1.5px solid #f59e0b';
+                btnElite.style.background = 'rgba(245,158,11,0.1)';
+                btnElite.style.boxShadow = '0 0 0 1px rgba(245,158,11,0.2)';
+                btnElite.querySelector('div:first-child').style.color = '#fbbf24';
             } else {
-                btnPro.classList.add('active');
-                btnPro.style.background = 'linear-gradient(135deg, #0055ee 0%, #00aacc 100%)';
-                btnPro.style.color = '#fff';
-                btnPro.style.fontWeight = '700';
-
-                btnElite.classList.remove('active');
-                btnElite.style.background = 'transparent';
-                btnElite.style.color = '#8a91a6';
-                btnElite.style.fontWeight = '600';
+                // Pro active
+                btnPro.style.border = '1.5px solid #6366f1';
+                btnPro.style.background = 'rgba(99,102,241,0.12)';
+                btnPro.style.boxShadow = '0 0 0 1px rgba(99,102,241,0.2)';
+                btnPro.querySelector('div:first-child').style.color = '#a5b4fc';
+                // Elite inactive
+                btnElite.style.border = '1.5px solid rgba(255,255,255,0.08)';
+                btnElite.style.background = 'rgba(255,255,255,0.03)';
+                btnElite.style.boxShadow = 'none';
+                btnElite.querySelector('div:first-child').style.color = 'rgba(255,255,255,0.35)';
             }
 
             const refInput = document.getElementById('receipt-ref');
             if (refInput) {
-                refInput.placeholder = plan === 'elite' ? 'Ej. Ref Elite 123456' : 'Ej. 123456';
+                refInput.placeholder = (plan === 'elite' || plan === 'pro_artist') ? 'Ej. Ref Elite 123456' : 'Ej. 123456';
             }
 
             renderPayPalButton();
             renderPayphoneSubscriptionButton();
         }
+
+        window.simulatePaypalSubscription = async function(tier) {
+            const uid = window.currentUser || 'mock-user-id';
+            const email = window.currentUserEmail || 'artista@example.com';
+            const mockId = 'PAYPAL-SUB-MOCK-' + Date.now();
+            try {
+                if (typeof window.showToast === 'function') window.showToast("Activando suscripción...");
+                const idToken = window.getFirebaseIdToken ? await window.getFirebaseIdToken() : '';
+                const response = await fetch('/api/activate-pro', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({ subscriptionId: mockId, uid, email, plan: tier })
+                });
+                const result = await response.json();
+                document.getElementById('payment-modal').style.display = 'none';
+                if (result.success) {
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#0055ee,#00aacc);color:#fff;padding:18px 32px;border-radius:14px;font-weight:700;font-size:16px;z-index:99999;box-shadow:0 12px 32px rgba(0,102,255,0.4);text-align:center;max-width:90vw;';
+                    toast.innerHTML = `🎉 <strong>¡Suscripción ${tier.toUpperCase()} Activada!</strong><br><span style="font-weight:400;font-size:13px;">Recarga la página para disfrutar de tus beneficios.</span>`;
+                    document.body.appendChild(toast);
+                    setTimeout(() => {
+                        toast.remove();
+                        window.location.reload();
+                    }, 4000);
+                }
+            } catch (err) {
+                console.error("Error al simular suscripción:", err);
+            }
+        };
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initPaymentModalPasarelas);
@@ -4350,6 +4590,36 @@
                             <label for="store-txt-youtube-whitelist" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="store_youtube_whitelist_label">Canal de YouTube (Para Whitelist de Content ID)</label>
                             <input type="text" id="store-txt-youtube-whitelist" placeholder="https://youtube.com/@tu_canal (Opcional)" data-i18n-placeholder="store_youtube_whitelist_placeholder" style="width: 100%; box-sizing: border-box;">
                         </div>
+                        
+                        <!-- Opción de Factura de Negocio RUC -->
+                        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 14px; border-radius: 12px; margin-top: 4px; box-sizing: border-box;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="store-chk-need-invoice" onchange="document.getElementById('store-invoice-fields-container').style.display = this.checked ? 'flex' : 'none';" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent, #00ccff);">
+                                <label for="store-chk-need-invoice" style="font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; user-select: none;">Requiero Factura Autorizada (Ecuador RUC)</label>
+                            </div>
+                            <div id="store-invoice-fields-container" style="display: none; flex-direction: column; gap: 12px; margin-top: 14px; border-top: 1px dashed rgba(255, 255, 255, 0.08); padding-top: 14px; box-sizing: border-box;">
+                                <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                    <div class="input-group" style="flex: 1; min-width: 150px;">
+                                        <label for="store-invoice-ruc" style="font-size: 11.5px; font-weight: 600; color: #8a91a6;">RUC del Negocio * (13 dígitos)</label>
+                                        <input type="text" id="store-invoice-ruc" placeholder="Ej: 1792948291001" style="width: 100%; box-sizing: border-box;" maxlength="13">
+                                    </div>
+                                    <div class="input-group" style="flex: 1.5; min-width: 180px;">
+                                        <label for="store-invoice-company" style="font-size: 11.5px; font-weight: 600; color: #8a91a6;">Razón Social / Nombre Comercial *</label>
+                                        <input type="text" id="store-invoice-company" placeholder="Nombre registrado en el RUC" style="width: 100%; box-sizing: border-box;">
+                                    </div>
+                                </div>
+                                <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                    <div class="input-group" style="flex: 1; min-width: 150px;">
+                                        <label for="store-invoice-address" style="font-size: 11.5px; font-weight: 600; color: #8a91a6;">Dirección Fiscal *</label>
+                                        <input type="text" id="store-invoice-address" placeholder="Ej: Av. Amazonas N32-12" style="width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div class="input-group" style="flex: 1; min-width: 150px;">
+                                        <label for="store-invoice-email" style="font-size: 11.5px; font-weight: 600; color: #8a91a6;">Correo Electrónico de Facturación *</label>
+                                        <input type="email" id="store-invoice-email" placeholder="facturacion@negocio.com" style="width: 100%; box-sizing: border-box;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
 
@@ -4375,12 +4645,52 @@
                         </label>
                     </div>
 
-                    <div class="pay-method-tabs" style="display: flex; gap: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); margin-bottom: 16px; box-sizing: border-box; flex-wrap: wrap;">
-                        <button type="button" class="pay-tab-btn active" id="btn-pay-payphone" onclick="window.switchStorePaymentMethod('payphone')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 700; color: var(--accent, #00ccff); border-bottom: 2px solid var(--accent, #00ccff); cursor: pointer; outline: none; white-space: nowrap;">PayPhone</button>
-                        <button type="button" class="pay-tab-btn" id="btn-pay-paypal" onclick="window.switchStorePaymentMethod('paypal')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">PayPal</button>
-                        <button type="button" class="pay-tab-btn" id="btn-pay-deuna" onclick="window.switchStorePaymentMethod('deuna')" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">Deuna!</button>
-                        <button type="button" class="pay-tab-btn" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')" data-i18n="checkout_pay_transfer" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #8a91a6; border-bottom: 2px solid transparent; cursor: pointer; outline: none;">Transferencia</button>
-                        <button type="button" class="pay-tab-btn" id="btn-pay-offer" onclick="window.switchStorePaymentMethod('offer')" data-i18n="checkout_pay_offer" style="flex: 1; padding: 10px; background: none; border: none; font-size: 13px; font-weight: 600; color: #f59e0b; border-bottom: 2px solid transparent; cursor: pointer; outline: none; white-space: nowrap;">🏷️ Oferta</button>
+                    <!-- Sellos de Seguridad y Confianza -->
+                    <div style="display: flex; justify-content: space-around; align-items: center; background: rgba(0, 204, 255, 0.03); border: 1px solid rgba(0, 204, 255, 0.08); padding: 10px 14px; border-radius: 12px; margin-bottom: 18px; box-sizing: border-box; font-size: 11.5px; font-weight: 600; color: #cbd5e0; flex-wrap: wrap; gap: 8px;">
+                        <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="shield-check" style="width: 14px; height: 14px; color: var(--accent, #00ccff);"></i> 🔒 Conexión SSL Segura</span>
+                        <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="zap" style="width: 14px; height: 14px; color: #f59e0b;"></i> ⚡ Entrega Inmediata</span>
+                        <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="file-text" style="width: 14px; height: 14px; color: var(--accent, #00ccff);"></i> 📄 Firma Digital</span>
+                    </div>
+
+                    <!-- Nueva Selección de Método de Pago Premium -->
+                    <div class="pay-method-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 20px; box-sizing: border-box;">
+                        
+                        <!-- Tarjeta PayPal (Destacada y Primera) -->
+                        <button type="button" class="pay-card-btn paypal active" id="btn-pay-paypal" onclick="window.switchStorePaymentMethod('paypal')">
+                            <div style="position: absolute; top: -8px; background: linear-gradient(135deg, #0079c1, #00457c); color: #fff; font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); pointer-events: none; white-space: nowrap;">
+                                Recomendado
+                            </div>
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" style="height: 16px; pointer-events: none;" alt="PayPal">
+                            <span style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; margin-top: 2px; pointer-events: none;">Tarjeta Internac.</span>
+                        </button>
+
+                        <!-- Tarjeta PayPhone -->
+                        <button type="button" class="pay-card-btn payphone" id="btn-pay-payphone" onclick="window.switchStorePaymentMethod('payphone')">
+                            <div style="font-size: 14px; font-weight: 900; color: #ff6c00; letter-spacing: -0.5px; display: flex; align-items: center; gap: 2px; pointer-events: none;">
+                                <span style="color: #fff;">pay</span><span>phone</span>
+                            </div>
+                            <span style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; pointer-events: none;">Tarjetas Ecuador</span>
+                        </button>
+
+                        <!-- Tarjeta Deuna! -->
+                        <button type="button" class="pay-card-btn deuna" id="btn-pay-deuna" onclick="window.switchStorePaymentMethod('deuna')">
+                            <div style="font-size: 14px; font-weight: 900; color: #00ffcc; letter-spacing: -0.5px; pointer-events: none;">
+                                Deuna!
+                            </div>
+                            <span style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; pointer-events: none;">QR / Celular</span>
+                        </button>
+
+                        <!-- Tarjeta Transferencia -->
+                        <button type="button" class="pay-card-btn transfer" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')">
+                            <i data-lucide="landmark" style="width: 16px; height: 16px; color: #8a91a6; pointer-events: none;"></i>
+                            <span data-i18n="checkout_pay_transfer" style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; margin-top: 1px; pointer-events: none;">Depósito / Transf.</span>
+                        </button>
+
+                        <!-- Tarjeta Oferta -->
+                        <button type="button" class="pay-card-btn offer" id="btn-pay-offer" onclick="window.switchStorePaymentMethod('offer')" style="display: none;">
+                            <span style="font-size: 14px; pointer-events: none;">🏷️</span>
+                            <span data-i18n="checkout_pay_offer" style="font-size: 9px; color: #f59e0b; font-weight: 700; text-transform: uppercase; pointer-events: none;">Negociar</span>
+                        </button>
                     </div>
 
                     <!-- Panel Deuna -->

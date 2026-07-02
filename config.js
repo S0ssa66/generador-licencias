@@ -42,9 +42,9 @@ export const LICENSE_CONFIGS = {
         credits: '"Producido por sossa" o "Prod. por sossa"'
     },
     unlimited_flp: {
-        name: "Ilimitada (STEMS + FLP)",
+        name: "Ilimitada",
         price: 200.00,
-        formats: "MP3, WAV, Stems de la pista y Proyecto FLP",
+        formats: "MP3, WAV y Stems de la pista",
         streams: "100,000,000 (Ilimitados)",
         physical: "Ilimitadas",
         videos: "Ilimitados",
@@ -58,7 +58,7 @@ export const LICENSE_CONFIGS = {
     exclusive: {
         name: "Exclusiva",
         price: 500.00,
-        formats: "MP3, WAV y Stems (Trackouts) con archivos máster",
+        formats: "MP3, WAV, Stems (Trackouts) y Proyecto FLP",
         streams: "Ilimitados",
         physical: "Ilimitadas",
         videos: "Ilimitados",
@@ -77,18 +77,18 @@ export const SUBSCRIPTION_CONFIGS = {
         name: "Plan Creador",
         price: 9.99,
         period: "Mensual",
-        downloadsLimit: 5,
+        downloadsLimit: 3,
         licenseType: "basic",
-        desc: "Acceso a 5 descargas mensuales bajo Licencia Básica. Ideal para nuevos artistas."
+        desc: "Acceso a 3 descargas mensuales bajo Licencia Básica. Ideal para nuevos artistas."
     },
     pro_artist: {
         id: "pro_artist",
         name: "Plan Artista Pro",
         price: 19.99,
         period: "Mensual",
-        downloadsLimit: 15,
+        downloadsLimit: 6,
         licenseType: "premium",
-        desc: "Acceso a 15 descargas mensuales bajo Licencia Premium. Ideal para cantantes activos."
+        desc: "Acceso a 6 descargas mensuales bajo Licencia Premium. Ideal para cantantes activos."
     }
 };
 

@@ -81,16 +81,6 @@ export function saveCartToStorage() {
 }
 
 export function addToCart(beatId, licenseType, price, beatName, producerId, producerName, artwork) {
-    // Validar que el carrito no contenga beats de otro productor
-    if (window.cart.length > 0 && window.cart[0].producerId !== producerId) {
-        const confirmChange = confirm(`Tu carrito contiene beats de "${window.cart[0].producerName}". ¿Deseas vaciar tu carrito para agregar este beat de "${producerName}"?`);
-        if (confirmChange) {
-            window.cart = [];
-        } else {
-            return false;
-        }
-    }
-    
     const exists = window.cart.some(item => item.beatId === beatId);
     if (exists) {
         if (typeof window.showToast === 'function') window.showToast("Este beat ya está en tu carrito.", true);
@@ -113,6 +103,61 @@ export function addToCart(beatId, licenseType, price, beatName, producerId, prod
     return true;
 }
 
+export function clearPurchasedItems() {
+    if (window.cartPendingOtherProducers && window.cartPendingOtherProducers.length > 0) {
+        window.cart = window.cartPendingOtherProducers;
+        window.cartPendingOtherProducers = null;
+    } else {
+        window.cart = [];
+    }
+    saveCartToStorage();
+    window.updateCartUI();
+}
+
+window.checkoutProducerGroup = async function(producerId) {
+    const otherItems = window.cart.filter(item => item.producerId !== producerId);
+    const selectedItems = window.cart.filter(item => item.producerId === producerId);
+    
+    if (selectedItems.length === 0) return;
+    
+    window.cartPendingOtherProducers = otherItems;
+    window.cart = selectedItems;
+    saveCartToStorage();
+    
+    try {
+        if (typeof window.showToast === 'function') window.showToast("Cargando cuentas del productor...");
+        const docRef = doc(db, "users", producerId, "config", "producer");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            window.storeProducerConfig = docSnap.data();
+            if (window.storeProducerConfig && !window.storeProducerConfig.sriRuc) {
+                window.storeProducerConfig.sriRuc = "0803743111001";
+            }
+            window.storeProducerUid = producerId;
+            
+            // Set dynamic accent colors
+            const akaLower = (window.storeProducerConfig.aka || '').toLowerCase();
+            if (akaLower.includes('monarco')) {
+                document.documentElement.style.setProperty('--accent', '#ff4d4d');
+                document.documentElement.style.setProperty('--accent-rgb', '255, 77, 77');
+            } else if (akaLower.includes('sossa')) {
+                document.documentElement.style.setProperty('--accent', '#b28eff');
+                document.documentElement.style.setProperty('--accent-rgb', '178, 142, 255');
+            } else {
+                document.documentElement.style.setProperty('--accent', '#00ccff');
+                document.documentElement.style.setProperty('--accent-rgb', '0, 204, 255');
+            }
+        }
+    } catch (e) {
+        console.error("Error al cargar configuración del productor para checkout:", e);
+    }
+    
+    window.renderCartItems();
+    
+    const nextBtn = document.getElementById('checkout-next-step-btn');
+    if (nextBtn) nextBtn.click();
+};
+
 export function removeFromCart(index) {
     if (index >= 0 && index < window.cart.length) {
         const removed = window.cart.splice(index, 1);
@@ -120,7 +165,6 @@ export function removeFromCart(index) {
         window.updateCartUI();
         if (typeof window.showToast === 'function') window.showToast(`Removido: ${removed[0].beatName}`);
         
-        // Si el modal está abierto en modo carrito, refrescar el listado
         if (document.getElementById('beat-checkout-modal').style.display === 'flex' && !checkoutSelectedBeatId) {
             window.renderCartItems();
         }
@@ -130,7 +174,6 @@ export function removeFromCart(index) {
 export function updateCartItemLicense(index, newLicenseType) {
     if (index >= 0 && index < window.cart.length) {
         window.cart[index].licenseType = newLicenseType;
-        // Calcular precio de la nueva licencia
         const config = LICENSE_CONFIGS[newLicenseType];
         if (config) {
             window.cart[index].price = config.price;
@@ -138,7 +181,6 @@ export function updateCartItemLicense(index, newLicenseType) {
         saveCartToStorage();
         window.updateCartUI();
         
-        // Si el modal está abierto en modo carrito, refrescar el listado
         if (document.getElementById('beat-checkout-modal').style.display === 'flex' && !checkoutSelectedBeatId) {
             window.renderCartItems();
         }
@@ -202,47 +244,133 @@ export function renderCartItems() {
         return;
     }
     
-    container.innerHTML = window.cart.map((item, index) => {
-        const beat = findBeatById(item.beatId) || item;
-        const artwork = window.getBeatArtwork(beat) || window.getBeatArtwork(item);
+    // Agrupar por productor
+    const groups = {};
+    window.cart.forEach((item, index) => {
+        const prodId = item.producerId || 'unknown';
+        const prodName = item.producerName || 'Productor';
+        if (!groups[prodId]) {
+            groups[prodId] = {
+                name: prodName,
+                items: []
+            };
+        }
+        groups[prodId].items.push({ item, index });
+    });
+    
+    let html = '';
+    
+    Object.entries(groups).forEach(([prodId, group]) => {
+        const groupTotal = group.items.reduce((sum, entry) => sum + entry.item.price, 0);
         
-        // Generar las opciones de licencia para el select
-        const optionsHtml = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
-            const isSelected = key === item.licenseType;
-            const priceText = key === 'exclusive' ? 'Exclusiva (Min. $250)' : `$${config.price.toFixed(2)}`;
-            return `<option value="${key}" ${isSelected ? 'selected' : ''}>${config.name} - ${priceText}</option>`;
-        }).join('');
-        
-        return `
-            <div class="cart-item-row" style="display: flex; gap: 12px; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; box-sizing: border-box; width: 100%;">
-                <img src="${artwork}" style="width: 48px; height: 48px; border-radius: 6px; object-fit: cover; background: #222;" alt="Artwork">
-                <div style="flex: 1; text-align: left; overflow: hidden;">
-                    <div style="font-weight: 700; color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${window.sanitizeHtml ? window.sanitizeHtml(item.beatName) : String(item.beatName).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
-                    <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
-                        <select onchange="window.updateCartItemLicense(${index}, this.value)" style="background: #12141c; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 2px 6px; font-size: 11px; outline: none; cursor: pointer;">
-                            ${optionsHtml}
-                        </select>
+        html += `
+            <div class="cart-producer-group" style="margin-bottom: 20px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; background: rgba(255, 255, 255, 0.01); padding: 16px; box-sizing: border-box; width: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 8px;">
+                    <div style="font-weight: 800; font-size: 13px; color: var(--accent, #00ccff); text-transform: uppercase; letter-spacing: 0.5px;">
+                        👨‍🎨 Productor: ${window.sanitizeHtml ? window.sanitizeHtml(group.name) : group.name}
+                    </div>
+                    <div style="font-size: 12px; color: #8a91a6;">
+                        Subtotal: <span style="color: #fff; font-weight: 700;">$${groupTotal.toFixed(2)}</span>
                     </div>
                 </div>
-                <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
-                    <span style="font-weight: 800; color: var(--accent, #00ccff); font-size: 14px;">$${item.price.toFixed(2)}</span>
-                    <button type="button" onclick="window.removeFromCart(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Eliminar">
-                        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+        `;
+        
+        group.items.forEach(({ item, index }) => {
+            const beat = findBeatById(item.beatId) || item;
+            const artwork = window.getBeatArtwork ? window.getBeatArtwork(beat) : (item.artwork || '');
+            
+            const optionsHtml = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
+                const isSelected = key === item.licenseType;
+                const priceText = key === 'exclusive' ? 'Exclusiva (Min. $250)' : `$${config.price.toFixed(2)}`;
+                return `<option value="${key}" ${isSelected ? 'selected' : ''}>${config.name} - ${priceText}</option>`;
+            }).join('');
+            
+            html += `
+                <div class="cart-item-row" style="display: flex; gap: 12px; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 12px; box-sizing: border-box; width: 100%; margin-bottom: 8px;">
+                    <img src="${artwork}" style="width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: #222;" alt="Artwork">
+                    <div style="flex: 1; text-align: left; overflow: hidden;">
+                        <div style="font-weight: 700; color: #fff; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${window.sanitizeHtml ? window.sanitizeHtml(item.beatName) : item.beatName}</div>
+                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                            <select onchange="window.updateCartItemLicense(${index}, this.value)" style="background: #12141c; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 2px 6px; font-size: 10px; outline: none; cursor: pointer;">
+                                ${optionsHtml}
+                            </select>
+                        </div>
+                    </div>
+                    <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
+                        <span style="font-weight: 800; color: var(--accent, #00ccff); font-size: 13px;">$${item.price.toFixed(2)}</span>
+                        <button type="button" onclick="window.removeFromCart(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Eliminar">
+                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        const isMultiProducer = Object.keys(groups).length > 1;
+        if (isMultiProducer) {
+            html += `
+                <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+                    <button type="button" class="btn btn-primary" onclick="window.checkoutProducerGroup('${prodId}')" style="font-size: 11px; padding: 6px 12px; font-weight: 700; border-radius: 8px; height: 28px;">
+                        Pagar este grupo ($${groupTotal.toFixed(2)} USD)
                     </button>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }
+        
+        html += `</div>`;
+    });
     
-    // Si Lucide está cargado, renderizar iconos
+    container.innerHTML = html;
+    
     if (window.lucide) window.lucide.createIcons();
     
-    // Actualizar total
     const total = window.getCheckoutPrice();
     const totalStr = '$' + total.toFixed(2) + ' USD';
     document.getElementById('cart-total-price-display').textContent = totalStr;
     document.getElementById('deuna-total-price').textContent = totalStr;
     document.getElementById('transfer-total-price').textContent = totalStr;
+    
+    const isMultiProducer = Object.keys(groups).length > 1;
+    const checkoutNextBtn = document.getElementById('checkout-next-step-btn');
+    const multiProducerWarning = document.getElementById('checkout-multi-producer-warning');
+    
+    if (isMultiProducer) {
+        if (checkoutNextBtn) {
+            checkoutNextBtn.disabled = true;
+            checkoutNextBtn.style.opacity = '0.5';
+            checkoutNextBtn.style.cursor = 'not-allowed';
+            checkoutNextBtn.title = 'El carrito contiene beats de varios productores. Paga cada grupo individualmente.';
+        }
+        if (!multiProducerWarning) {
+            const warningDiv = document.createElement('div');
+            warningDiv.id = 'checkout-multi-producer-warning';
+            warningDiv.style.background = 'rgba(245, 158, 11, 0.1)';
+            warningDiv.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+            warningDiv.style.color = '#f59e0b';
+            warningDiv.style.borderRadius = '12px';
+            warningDiv.style.padding = '12px';
+            warningDiv.style.fontSize = '12px';
+            warningDiv.style.fontWeight = '600';
+            warningDiv.style.marginTop = '16px';
+            warningDiv.style.textAlign = 'left';
+            warningDiv.innerHTML = `
+                ⚠️ <strong>Carrito Multi-productor:</strong> Los beats pertenecen a distintos productores que reciben el dinero directamente en sus cuentas independientes. Por favor, haz clic en <strong>"Pagar este grupo"</strong> arriba para pagar a cada productor por separado.
+            `;
+            container.parentNode.insertBefore(warningDiv, container.nextSibling);
+        } else {
+            multiProducerWarning.style.display = 'block';
+        }
+    } else {
+        if (checkoutNextBtn) {
+            checkoutNextBtn.disabled = false;
+            checkoutNextBtn.style.opacity = '1';
+            checkoutNextBtn.style.cursor = 'pointer';
+            checkoutNextBtn.title = '';
+        }
+        if (multiProducerWarning) {
+            multiProducerWarning.style.display = 'none';
+        }
+    }
 }
 
 // Inicialización de Tienda Pública
@@ -302,6 +430,9 @@ export async function initPublicStore(producerAka) {
         const configData = producerDoc.data();
         window.storeProducerUid = producerUid;
         window.storeProducerConfig = configData;
+        if (window.storeProducerConfig && !window.storeProducerConfig.sriRuc) {
+            window.storeProducerConfig.sriRuc = "0803743111001";
+        }
 
         // Renderizar cabecera de la tienda
         document.getElementById('store-producer-name').textContent = configData.aka || configData.name || "Productor";
@@ -1021,20 +1152,20 @@ export function updateCheckoutStepView(step) {
                 if (receiptSec) receiptSec.style.display = 'none';
                 footerNextBtn.style.display = 'none';
             } else {
-                let defaultTab = 'payphone';
+                let defaultTab = 'paypal';
                 const currentTab = getSelectedStorePaymentMethod();
                 
                 if (currentTab === 'offer' && checkoutSelectedLicense !== 'exclusive') {
-                    if (payphoneVisible) defaultTab = 'payphone';
-                    else if (paypalVisible) defaultTab = 'paypal';
+                    if (paypalVisible) defaultTab = 'paypal';
+                    else if (payphoneVisible) defaultTab = 'payphone';
                     else if (deunaVisible) defaultTab = 'deuna';
                     else if (transferVisible) defaultTab = 'transfer';
                 } else if (currentTab === 'offer' && checkoutSelectedLicense === 'exclusive') {
                     defaultTab = 'offer';
-                } else if (payphoneVisible) {
-                    defaultTab = 'payphone';
                 } else if (paypalVisible) {
                     defaultTab = 'paypal';
+                } else if (payphoneVisible) {
+                    defaultTab = 'payphone';
                 } else if (deunaVisible) {
                     defaultTab = 'deuna';
                 } else if (transferVisible) {
@@ -1050,22 +1181,14 @@ export function updateCheckoutStepView(step) {
 }
 
 export function switchStorePaymentMethod(method) {
-    // Update active tab styles
-    document.querySelectorAll('.pay-tab-btn').forEach(btn => {
+    // Update active card styles
+    document.querySelectorAll('.pay-card-btn').forEach(btn => {
         const id = btn.id;
         const isCurrent = id === `btn-pay-${method}`;
         if (isCurrent) {
             btn.classList.add('active');
-            // Usar color ámbar para la pestaña de oferta, acento para el resto
-            const activeColor = method === 'offer' ? '#f59e0b' : 'var(--accent, #00ccff)';
-            btn.style.color = activeColor;
-            btn.style.borderBottomColor = activeColor;
-            btn.style.fontWeight = '700';
         } else {
             btn.classList.remove('active');
-            btn.style.color = '#8a91a6';
-            btn.style.borderBottomColor = 'transparent';
-            btn.style.fontWeight = '600';
         }
     });
 
@@ -1271,26 +1394,51 @@ export function renderStorePayphoneButton() {
 }
 
 export function getSelectedStorePaymentMethod() {
-    const activeTab = document.querySelector('.pay-tab-btn.active');
-    if (!activeTab) return 'transfer';
+    const activeTab = document.querySelector('.pay-card-btn.active');
+    if (!activeTab) return 'paypal';
     return activeTab.id.replace('btn-pay-', '');
 }
 
 export async function submitExclusiveOffer() {
     const beat = findBeatById(checkoutSelectedBeatId);
-    const buyerName = document.getElementById('store-buyer-name').value.trim();
-    const buyerEmail = document.getElementById('store-buyer-email').value.trim();
+    let buyerName = document.getElementById('store-buyer-name').value.trim();
+    let buyerEmail = document.getElementById('store-buyer-email').value.trim();
     const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
-    const buyerDni = document.getElementById('store-buyer-dni').value.trim();
-    const buyerCity = document.getElementById('store-buyer-city').value.trim();
+    let buyerDni = document.getElementById('store-buyer-dni').value.trim();
+    let buyerCity = document.getElementById('store-buyer-city').value.trim();
     const buyerCountry = document.getElementById('store-buyer-country').value.trim();
     const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist').value.trim();
     const offerPrice = parseFloat(document.getElementById('offer-price-input').value);
     const offerMessage = document.getElementById('offer-message-input').value.trim();
 
+    // Si requiere factura con RUC, validamos y sobrescribimos los datos del comprador
+    const needInvoice = document.getElementById('store-chk-need-invoice')?.checked;
+    if (needInvoice) {
+        const rucVal = document.getElementById('store-invoice-ruc').value.trim();
+        const companyVal = document.getElementById('store-invoice-company').value.trim();
+        const addressVal = document.getElementById('store-invoice-address').value.trim();
+        const emailVal = document.getElementById('store-invoice-email').value.trim();
+
+        if (!rucVal || !companyVal || !addressVal || !emailVal) {
+            if (typeof window.showToast === 'function') window.showToast('Por favor completa todos los campos de facturación RUC.', true);
+            window.updateCheckoutStepView(2);
+            return;
+        }
+        if (rucVal.length !== 13) {
+            if (typeof window.showToast === 'function') window.showToast('El RUC del negocio debe tener exactamente 13 dígitos.', true);
+            window.updateCheckoutStepView(2);
+            return;
+        }
+
+        buyerDni = rucVal;
+        buyerName = companyVal;
+        buyerEmail = emailVal;
+        buyerCity = addressVal; // Usar dirección fiscal
+    }
+
     if (!buyerName || !buyerEmail) {
         if (typeof window.showToast === 'function') window.showToast('Por favor completa tu Nombre y Correo Electrónico.', true);
-        updateCheckoutStepView(2);
+        window.updateCheckoutStepView(2);
         return;
     }
     if (!offerPrice || offerPrice < 250) {
@@ -1876,12 +2024,9 @@ export function renderStorePayPalButton(clientId) {
                         if (response.ok && result.success) {
                             if (typeof window.showToast === 'function') window.showToast('¡Pago verificado y licencias enviadas con éxito!');
                             
-                            // Vaciar el carrito
-                            window.cart = [];
-                            saveCartToStorage();
-                            window.updateCartUI();
-                            
+                            clearPurchasedItems();
                             document.getElementById('beat-checkout-modal').style.display = 'none';
+                            await finalizePaymentSuccess(result.paymentId || details.id, itemsToProcess);
                         } else {
                             throw new Error(result.error || 'Error al verificar el pago en el servidor');
                         }
@@ -1906,17 +2051,42 @@ export async function submitBeatPurchasePayment(method, reference = '') {
         return;
     }
 
-    const buyerName = document.getElementById('store-buyer-name').value.trim();
-    const buyerEmail = document.getElementById('store-buyer-email').value.trim();
+    let buyerName = document.getElementById('store-buyer-name').value.trim();
+    let buyerEmail = document.getElementById('store-buyer-email').value.trim();
     const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
-    const buyerDni = document.getElementById('store-buyer-dni').value.trim();
-    const buyerCity = document.getElementById('store-buyer-city').value.trim();
+    let buyerDni = document.getElementById('store-buyer-dni').value.trim();
+    let buyerCity = document.getElementById('store-buyer-city').value.trim();
     const buyerCountry = document.getElementById('store-buyer-country').value.trim();
     const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist').value.trim();
 
+    // Si requiere factura con RUC, validamos y sobrescribimos los datos del comprador
+    const needInvoice = document.getElementById('store-chk-need-invoice')?.checked;
+    if (needInvoice) {
+        const rucVal = document.getElementById('store-invoice-ruc').value.trim();
+        const companyVal = document.getElementById('store-invoice-company').value.trim();
+        const addressVal = document.getElementById('store-invoice-address').value.trim();
+        const emailVal = document.getElementById('store-invoice-email').value.trim();
+
+        if (!rucVal || !companyVal || !addressVal || !emailVal) {
+            if (typeof window.showToast === 'function') window.showToast('Por favor completa todos los campos de facturación RUC.', true);
+            window.updateCheckoutStepView(2);
+            return;
+        }
+        if (rucVal.length !== 13) {
+            if (typeof window.showToast === 'function') window.showToast('El RUC del negocio debe tener exactamente 13 dígitos.', true);
+            window.updateCheckoutStepView(2);
+            return;
+        }
+
+        buyerDni = rucVal;
+        buyerName = companyVal;
+        buyerEmail = emailVal;
+        buyerCity = addressVal; // Usar dirección fiscal en lugar de ciudad para el SRI
+    }
+
     if (!buyerName || !buyerEmail) {
         if (typeof window.showToast === 'function') window.showToast('Por favor completa todos los campos del formulario.', true);
-        updateCheckoutStepView(2);
+        window.updateCheckoutStepView(2);
         return;
     }
 
@@ -2018,11 +2188,10 @@ export async function submitBeatPurchasePayment(method, reference = '') {
 
         if (method === 'paypal') {
             if (typeof window.showToast === 'function') window.showToast('¡Pago procesado y licencias enviadas con éxito!');
-            window.cart = [];
-            saveCartToStorage();
-            window.updateCartUI();
+            clearPurchasedItems();
             storePaymentReceiptBase64 = null;
             document.getElementById('beat-checkout-modal').style.display = 'none';
+            await finalizePaymentSuccess(redirectPaymentId, itemsToProcess);
         } else if (method === 'deuna') {
             try {
                 if (nextBtn) nextBtn.innerHTML = '⏳ Generando QR de pago...';
@@ -2094,16 +2263,11 @@ export async function submitBeatPurchasePayment(method, reference = '') {
                             } catch (ae) { console.warn("Error en auto-entrega:", ae); }
                             
                             // Vaciar el carrito
-                            window.cart = [];
-                            saveCartToStorage();
-                            window.updateCartUI();
+                            clearPurchasedItems();
                             storePaymentReceiptBase64 = null;
                             
                             document.getElementById('beat-checkout-modal').style.display = 'none';
-                            
-                            if (typeof window.showAppView === 'function') {
-                                window.showAppView('download', { paymentId: redirectPaymentId, downloadToken: 'mock-token-' + redirectPaymentId });
-                            }
+                            await finalizePaymentSuccess(redirectPaymentId, itemsToProcess);
                         }
                     }
                 });
@@ -2119,16 +2283,14 @@ export async function submitBeatPurchasePayment(method, reference = '') {
             }
         } else {
             if (typeof window.showToast === 'function') window.showToast('¡Pedido registrado! Esperando aprobación del productor.');
-            window.cart = [];
-            saveCartToStorage();
-            window.updateCartUI();
+            clearPurchasedItems();
             storePaymentReceiptBase64 = null;
             document.getElementById('beat-checkout-modal').style.display = 'none';
         }
         
         // Redirigir al portal de descargas
         if (redirectPaymentId) {
-            window.showAppView('download', { paymentId: redirectPaymentId });
+            await finalizePaymentSuccess(redirectPaymentId, itemsToProcess);
         }
         if (nextBtn) {
             nextBtn.disabled = false;
@@ -2184,7 +2346,7 @@ export async function autoDeliverBeatSale(paymentId, orderData) {
                 basic: 'Básica',
                 premium: 'Premium',
                 premium_plus: 'Premium Plus',
-                unlimited_flp: 'Ilimitada + FLP',
+                unlimited_flp: 'Ilimitada',
                 exclusive: 'Exclusiva'
             };
 
@@ -2420,11 +2582,28 @@ export async function checkPayphoneRedirectResult() {
                     }
                 }
                 
+                // Si es un upgrade, ejecutar la actualización de licencia
+                if (window.checkoutUpgradeOriginalId) {
+                    try {
+                        const originalPaymentId = window.checkoutUpgradeOriginalId;
+                        const originalDocRef = doc(db, "payments", originalPaymentId);
+                        await updateDoc(originalDocRef, {
+                            licenseType: 'premium_plus',
+                            upgradePaymentId: redirectPaymentId || 'payphone-upgrade',
+                            upgradeTimestamp: new Date().toISOString()
+                        });
+                        const origSnap = await getDoc(originalDocRef);
+                        if (origSnap.exists()) {
+                            await autoDeliverBeatSale(originalPaymentId, origSnap.data());
+                        }
+                        redirectPaymentId = originalPaymentId;
+                        window.checkoutUpgradeOriginalId = null;
+                    } catch (ue) { console.error("Error actualizando upgrade en PayPhone:", ue); }
+                }
+                
                 // Clear state
                 localStorage.removeItem(pendingKey);
-                window.cart = [];
-                saveCartToStorage();
-                window.updateCartUI();
+                clearPurchasedItems();
                 
                 overlay.innerHTML = `
                     <div style="font-size: 60px; color: #4ade80; text-align: center; margin-bottom: 10px;">✓</div>
@@ -2544,7 +2723,7 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
             basic: 'Licencia Básica',
             premium: 'Licencia Premium',
             premium_plus: 'Licencia Premium Plus',
-            unlimited_flp: 'Licencia Ilimitada + FLP',
+            unlimited_flp: 'Licencia Ilimitada',
             unlimited: 'Licencia Ilimitada',
             exclusive: 'Licencia Exclusiva'
         };
@@ -2825,4 +3004,156 @@ export function switchStoreTab(tab) {
 
 window.renderEPK = renderEPK;
 window.switchStoreTab = switchStoreTab;
+
+// ─── LÓGICA DE UPSELL FLASH (POST-COMPRA) ───────────────────────────────────────
+export function showUpsellModal(beatName, currentLicense, paymentId, producerId) {
+    if (currentLicense !== 'basic' && currentLicense !== 'premium') {
+        window.showAppView('download', { paymentId: paymentId });
+        return;
+    }
+    
+    let upsellModal = document.getElementById('upsell-flash-modal');
+    if (!upsellModal) {
+        upsellModal = document.createElement('div');
+        upsellModal.id = 'upsell-flash-modal';
+        upsellModal.style.cssText = 'position:fixed; inset:0; z-index:100000; display:flex; align-items:center; justify-content:center; background:rgba(5,7,15,0.9); backdrop-filter:blur(16px); padding:16px; box-sizing:border-box;';
+        document.body.appendChild(upsellModal);
+    }
+    
+    const targetLicense = 'premium_plus';
+    const upgradePrice = currentLicense === 'basic' ? 49.00 : 29.00;
+    
+    upsellModal.innerHTML = `
+        <div style="background:#0f1320; border:2px solid #a855f7; border-radius:24px; width:100%; max-width:500px; padding:32px; position:relative; box-shadow:0 30px 80px rgba(168,85,247,0.25); text-align:center; box-sizing:border-box; color:#fff; font-family:sans-serif;">
+            <div style="font-size: 50px; margin-bottom: 12px;">⚡</div>
+            <h3 style="font-size: 24px; font-weight: 800; margin: 0 0 8px 0; background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">¡OFERTA FLASH DE UPGRADE!</h3>
+            <p style="color:#cbd5e0; font-size:14px; line-height:1.5; margin:0 0 20px 0;">
+                Felicidades por tu licencia de <strong>"${window.sanitizeHtml ? window.sanitizeHtml(beatName) : beatName}"</strong>. <br>
+                Por los próximos <strong id="upsell-timer" style="color:#ec4899; font-family:monospace;">10:00</strong> minutos, actualiza tu licencia a <strong>Premium Plus</strong> (Stems/Trackouts y reproducciones ilimitadas) por solo:
+            </p>
+            
+            <div style="background:rgba(255,255,255,0.03); border:1px dashed rgba(168,85,247,0.4); border-radius:16px; padding:20px; margin-bottom:24px;">
+                <div style="text-decoration:line-through; color:#8a91a6; font-size:14px; margin-bottom:4px;">Precio normal: $100.00 USD</div>
+                <div style="font-size:36px; font-weight:900; color:#4ade80;">$${upgradePrice.toFixed(2)} USD</div>
+                <div style="font-size:11px; color:#a855f7; font-weight:700; text-transform:uppercase; margin-top:4px; letter-spacing:0.5px;">¡Ahorras más del 50%!</div>
+            </div>
+            
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <button id="upsell-accept-btn" style="width:100%; height:48px; background:linear-gradient(135deg, #a855f7 0%, #ec4899 100%); border:none; border-radius:12px; color:#fff; font-weight:800; font-size:14px; cursor:pointer; box-shadow:0 8px 24px rgba(168,85,247,0.3); transition:all 0.2s;">
+                    ACEPTAR UPGRADE AHORA
+                </button>
+                <button id="upsell-decline-btn" style="width:100%; height:44px; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#8a91a6; font-weight:600; font-size:13px; cursor:pointer; transition:all 0.2s;">
+                    No gracias, descargar mi archivo actual
+                </button>
+            </div>
+        </div>
+    `;
+    
+    upsellModal.style.display = 'flex';
+    
+    let timeLeft = 600;
+    const timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            closeUpsellAndRedirect();
+        } else {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const timerEl = document.getElementById('upsell-timer');
+            if (timerEl) {
+                timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+        }
+    }, 1000);
+    
+    function closeUpsellAndRedirect() {
+        clearInterval(timerInterval);
+        upsellModal.style.display = 'none';
+        window.showAppView('download', { paymentId: paymentId });
+    }
+    
+    document.getElementById('upsell-decline-btn').onclick = closeUpsellAndRedirect;
+    
+    document.getElementById('upsell-accept-btn').onclick = () => {
+        clearInterval(timerInterval);
+        upsellModal.style.display = 'none';
+        window.openUpgradeCheckout(beatName, targetLicense, upgradePrice, paymentId, producerId);
+    };
+}
+
+window.openUpgradeCheckout = function(beatName, targetLicense, price, originalPaymentId, producerId) {
+    window.checkoutSelectedBeatId = null;
+    window.checkoutSelectedLicense = targetLicense;
+    
+    window.cart = [{
+        beatId: 'UPGRADE-' + originalPaymentId,
+        licenseType: targetLicense,
+        price: price,
+        beatName: `Actualización: ${beatName} (a Premium Plus)`,
+        producerId: producerId,
+        producerName: window.storeProducerConfig.aka || 'Productor',
+        artwork: ''
+    }];
+    
+    window.checkoutUpgradeOriginalId = originalPaymentId;
+    
+    saveCartToStorage();
+    window.updateCartUI();
+    
+    const modal = document.getElementById('beat-checkout-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        window.renderCartItems();
+    }
+};
+
+export function handleCheckoutCompletion(paymentId, items) {
+    if (!items || items.length === 0) {
+        window.showAppView('download', { paymentId });
+        return;
+    }
+    
+    const eligibleItem = items.find(item => item.licenseType === 'basic' || item.licenseType === 'premium');
+    
+    if (eligibleItem && !window.checkoutUpgradeOriginalId) {
+        window.showUpsellModal(eligibleItem.beatName, eligibleItem.licenseType, paymentId, window.storeProducerUid);
+    } else {
+        window.showAppView('download', { paymentId });
+    }
+}
+
+export async function finalizePaymentSuccess(redirectPaymentId, itemsToProcess) {
+    if (window.checkoutUpgradeOriginalId) {
+        try {
+            const originalPaymentId = window.checkoutUpgradeOriginalId;
+            const originalDocRef = doc(db, "payments", originalPaymentId);
+            
+            await updateDoc(originalDocRef, {
+                licenseType: 'premium_plus',
+                upgradePaymentId: redirectPaymentId || 'paypal-upgrade',
+                upgradeTimestamp: new Date().toISOString()
+            });
+            
+            const origSnap = await getDoc(originalDocRef);
+            if (origSnap.exists()) {
+                await autoDeliverBeatSale(originalPaymentId, origSnap.data());
+            }
+            
+            window.checkoutUpgradeOriginalId = null;
+            if (typeof window.showToast === 'function') window.showToast('⚡ ¡Actualización Premium Plus activada con éxito!');
+            
+            handleCheckoutCompletion(originalPaymentId, []);
+            return;
+        } catch (e) {
+            console.error("Error al procesar actualización de licencia:", e);
+        }
+    }
+    
+    handleCheckoutCompletion(redirectPaymentId, itemsToProcess);
+}
+
+window.showUpsellModal = showUpsellModal;
+window.finalizePaymentSuccess = finalizePaymentSuccess;
+window.handleCheckoutCompletion = handleCheckoutCompletion;
 

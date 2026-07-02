@@ -3,6 +3,13 @@ import { resolve } from 'path';
 
 export default defineConfig({
   server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      }
+    },
     watch: {
       ignored: [
         '**/*_backup_sincronizado.json',

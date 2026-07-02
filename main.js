@@ -495,10 +495,35 @@ Object.defineProperty(window, 'activeTemplates', {
 window.currentUserIsPro = false;
 
 // Funciones globales de apertura y cierre del modal de pago (actualización a Pro)
-window.openPaymentModal = function(warningMessage = null) {
+window.openPaymentModal = function(warningMessage = null, mode = 'producers') {
     const modal = document.getElementById('payment-modal');
     const warningDiv = document.getElementById('payment-modal-warning');
     const warningText = document.getElementById('payment-modal-warning-text');
+    
+    const namePro = document.getElementById('pay-plan-name-pro');
+    const pricePro = document.getElementById('pay-plan-price-pro');
+    const nameElite = document.getElementById('pay-plan-name-elite');
+    const priceElite = document.getElementById('pay-plan-price-elite');
+    const btnPro = document.getElementById('pay-select-pro');
+    const btnElite = document.getElementById('pay-select-elite');
+    
+    if (namePro && pricePro && nameElite && priceElite && btnPro && btnElite) {
+        if (mode === 'artists') {
+            namePro.textContent = 'Plan Creador';
+            pricePro.textContent = '$9.99 / mes';
+            nameElite.innerHTML = 'Plan Artista Pro 👑';
+            priceElite.textContent = '$19.99 / mes';
+            btnPro.setAttribute('onclick', "switchPaymentPlan('creator')");
+            btnElite.setAttribute('onclick', "switchPaymentPlan('pro_artist')");
+        } else {
+            namePro.textContent = 'Plan Pro';
+            pricePro.textContent = '$10.00 / mes';
+            nameElite.innerHTML = 'Plan Elite 👑';
+            priceElite.textContent = '$30.00 / mes';
+            btnPro.setAttribute('onclick', "switchPaymentPlan('pro')");
+            btnElite.setAttribute('onclick', "switchPaymentPlan('elite')");
+        }
+    }
     
     if (warningDiv && warningText) {
         if (warningMessage) {
@@ -508,6 +533,18 @@ window.openPaymentModal = function(warningMessage = null) {
             warningDiv.style.display = 'none';
         }
     }
+    // Prefill RUC Invoice fields in subscription form if config is available
+    const subInvoiceRuc = document.getElementById('sub-invoice-ruc');
+    if (subInvoiceRuc && window.producerConfig) {
+        subInvoiceRuc.value = window.producerConfig.sriRuc || '0803743111001';
+        const subInvoiceCompany = document.getElementById('sub-invoice-company');
+        if (subInvoiceCompany) subInvoiceCompany.value = window.producerConfig.sriRazonSocial || window.producerConfig.name || '';
+        const subInvoiceAddress = document.getElementById('sub-invoice-address');
+        if (subInvoiceAddress) subInvoiceAddress.value = window.producerConfig.sriDirMatriz || window.producerConfig.place || '';
+        const subInvoiceEmail = document.getElementById('sub-invoice-email');
+        if (subInvoiceEmail) subInvoiceEmail.value = window.producerConfig.email || '';
+    }
+
     if (modal) {
         modal.style.display = 'flex';
         modal.scrollTop = 0;
@@ -1240,7 +1277,7 @@ async function loadProducerConfig() {
     document.getElementById('cfg-payphone-appid').value = producerConfig.payphoneAppId || "";
 
     // Cargar datos de Facturación Electrónica SRI (Ecuador)
-    document.getElementById('cfg-sri-ruc').value = producerConfig.sriRuc || "";
+    document.getElementById('cfg-sri-ruc').value = producerConfig.sriRuc || "0803743111001";
     document.getElementById('cfg-sri-razon-social').value = producerConfig.sriRazonSocial || "";
     document.getElementById('cfg-sri-nombre-comercial').value = producerConfig.sriNombreComercial || "";
     document.getElementById('cfg-sri-dir-matriz').value = producerConfig.sriDirMatriz || "";
@@ -3056,6 +3093,7 @@ function setupEventListeners() {
 
                 // Importamos addDoc en la cabecera de firebase.js
                 const paymentsCol = collection(db, "payments");
+                const needInvoice = document.getElementById('sub-chk-need-invoice')?.checked;
                 const docData = {
                     userId: auth.currentUser.uid,
                     userEmail: auth.currentUser.email,
@@ -3067,6 +3105,14 @@ function setupEventListeners() {
                     receiptUrl: downloadUrl,
                     timestamp: new Date().toISOString()
                 };
+                
+                if (needInvoice) {
+                    docData.needInvoice = true;
+                    docData.invoiceRuc = document.getElementById('sub-invoice-ruc').value.trim();
+                    docData.invoiceCompany = document.getElementById('sub-invoice-company').value.trim();
+                    docData.invoiceAddress = document.getElementById('sub-invoice-address').value.trim();
+                    docData.invoiceEmail = document.getElementById('sub-invoice-email').value.trim();
+                }
                 
                 // addDoc
                 await addDoc(paymentsCol, docData);
@@ -3405,6 +3451,36 @@ window.openSettingsModal = openSettingsModal;
 window.addCustomFieldRow = addCustomFieldRow;
 window.initDefaultDate = initDefaultDate;
 window.safeGetItem = safeGetItem;
+
+export function switchPlanCategory(category) {
+    const producersGrid = document.getElementById('pricing-grid-producers');
+    const artistsGrid = document.getElementById('pricing-grid-artists');
+    const toggleProducers = document.getElementById('toggle-plan-producers');
+    const toggleArtists = document.getElementById('toggle-plan-artists');
+    
+    if (!producersGrid || !artistsGrid || !toggleProducers || !toggleArtists) return;
+    
+    if (category === 'artists') {
+        producersGrid.style.display = 'none';
+        artistsGrid.style.display = 'grid';
+        
+        toggleProducers.classList.remove('bg-electric-purple', 'text-white');
+        toggleProducers.classList.add('text-on-surface-variant', 'hover:text-white');
+        
+        toggleArtists.classList.remove('text-on-surface-variant', 'hover:text-white');
+        toggleArtists.classList.add('bg-electric-purple', 'text-white');
+    } else {
+        producersGrid.style.display = 'grid';
+        artistsGrid.style.display = 'none';
+        
+        toggleArtists.classList.remove('bg-electric-purple', 'text-white');
+        toggleArtists.classList.add('text-on-surface-variant', 'hover:text-white');
+        
+        toggleProducers.classList.remove('text-on-surface-variant', 'hover:text-white');
+        toggleProducers.classList.add('bg-electric-purple', 'text-white');
+    }
+}
+window.switchPlanCategory = switchPlanCategory;
 
 // ─── Cancelar Suscripción PayPal desde la UI ──────────────────────────────────
 window.cancelPayPalSubscription = async function() {

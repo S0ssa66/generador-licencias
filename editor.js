@@ -114,7 +114,7 @@ function generateReferenceCode(type) {
         basic: 'BAS',           // Básica
         premium: 'PREM',        // Premium
         premium_plus: 'PPLUS',  // Premium Plus
-        unlimited_flp: 'ULFLP', // Ilimitada (STEMS + FLP)
+        unlimited_flp: 'ULIM', // Ilimitada
         exclusive: 'EXCL'       // Exclusiva
     };
     
@@ -2464,7 +2464,7 @@ async function sendEmailDelivery() {
             basic: 'Básica',
             premium: 'Premium',
             premium_plus: 'Premium Plus',
-            unlimited_flp: 'Ilimitada + FLP',
+            unlimited_flp: 'Ilimitada',
             unlimited: 'Ilimitada',
             exclusive: 'Exclusiva'
         };
@@ -2848,7 +2848,7 @@ async function checkAndSendSignedDelivery() {
 
         const typeLabels = {
             basic: 'Básica', premium: 'Premium',
-            premium_plus: 'Premium Plus', unlimited_flp: 'Ilimitada + FLP',
+            premium_plus: 'Premium Plus', unlimited_flp: 'Ilimitada',
             unlimited: 'Ilimitada', exclusive: 'Exclusiva'
         };
 
