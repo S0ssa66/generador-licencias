@@ -1175,6 +1175,11 @@ export async function initGlobalCatalog() {
     window.stateManager.setState('isGlobalCatalogMode', true);
     window.stateManager.setState('isPublicStoreMode', false);
 
+    // Asegurar que los eventos del checkout (carrito, botones, etc.) estén configurados
+    if (typeof window.setupStoreCheckout === 'function') {
+        window.setupStoreCheckout();
+    }
+
     // Ocultar otras pantallas
     document.getElementById('login-modal').style.display = 'none';
     const landing = document.getElementById('landing-page');
