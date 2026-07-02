@@ -3661,7 +3661,6 @@
         function renderPayPalButton() {
             const container = document.getElementById('paypal-button-container');
             if (!container) return;
-            container.innerHTML = ''; // Limpiar botón anterior
 
             const tier = window.selectedPaymentPlan;
             let planId = '';
@@ -3671,6 +3670,15 @@
             else if (tier === 'pro_artist') planId = window.adminPaymentConfig.paypalPlanIdProArtist || 'PAYPAL-SUB-MOCK-PROARTIST';
 
             const isMockPlan = !planId || planId.startsWith('PAYPAL-SUB-MOCK-');
+
+            // Si ya está renderizado este mismo plan y tiene elementos del SDK de PayPal, no hacemos nada para evitar romper el DOM
+            if (window.paypalCurrentlyRenderedPlan === tier && container.children.length > 0 && !isMockPlan) {
+                console.log("ℹ️ Botón de PayPal ya renderizado para el plan:", tier);
+                return;
+            }
+
+            container.innerHTML = ''; // Limpiar botón anterior
+            window.paypalCurrentlyRenderedPlan = null; // Resetear plan actual en render
 
             if (isMockPlan) {
                 container.innerHTML = `
@@ -3709,9 +3717,15 @@
                     }, 7000);
                 }
                 
-                setTimeout(renderPayPalButton, 500);
+                if (window.paypalLoadRetryTimeout) {
+                    clearTimeout(window.paypalLoadRetryTimeout);
+                }
+                window.paypalLoadRetryTimeout = setTimeout(renderPayPalButton, 500);
                 return;
             }
+
+            // Registrar el plan actual en render
+            window.paypalCurrentlyRenderedPlan = tier;
 
             paypal.Buttons({
                 style: {
