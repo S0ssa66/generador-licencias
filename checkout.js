@@ -947,6 +947,26 @@ export function openBeatCheckoutModal(beatId) {
         }
         singleView.style.display = 'none';
         multiView.style.display = 'block';
+
+        // Cargar configuración del productor del primer beat del carrito
+        const firstCartItem = window.cart[0];
+        if (firstCartItem && firstCartItem.producerId) {
+            window.storeProducerUid = firstCartItem.producerId;
+            const producerDocRef = doc(db, "users", firstCartItem.producerId, "config", "producer");
+            getDoc(producerDocRef).then((docSnap) => {
+                if (docSnap.exists()) {
+                    window.storeProducerConfig = docSnap.data();
+                    console.log("🎯 storeProducerConfig cargado exitosamente para el carrito:", window.storeProducerConfig);
+                    // Actualizar displays si está en Paso 3
+                    if (checkoutCurrentStep === 3) {
+                        updateCheckoutStepView(3);
+                    }
+                }
+            }).catch((err) => {
+                console.error("Error al cargar la configuración del productor para el carrito:", err);
+            });
+        }
+
         window.renderCartItems();
     }
 
