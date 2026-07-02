@@ -1954,6 +1954,12 @@ export function renderStorePayPalButton(clientId) {
     
     if (window.paypal) {
         window.paypal.Buttons({
+            style: {
+                layout: 'vertical',
+                color: 'gold',
+                shape: 'rect',
+                height: 55
+            },
             createOrder: function(data, actions) {
                 return actions.order.create({
                     purchase_units: [{

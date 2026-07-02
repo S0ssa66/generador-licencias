@@ -917,9 +917,9 @@
 
                 <!-- PANEL: PAYPAL -->
                 <div id="pay-tab-paypal" class="pay-method-panel" style="display:block;">
-                    <div style="padding:18px; background:rgba(0,48,135,0.15); border:1px solid rgba(0,156,222,0.25); border-radius:14px; margin-bottom:20px;">
-                        <div style="font-size:14px; color:rgba(255,255,255,0.7); line-height:1.6; margin-bottom:14px;">Paga de forma segura con tu cuenta PayPal o cualquier tarjeta. La activación es <strong style="color:#a5b4fc; font-weight:700;">automática e inmediata</strong>.</div>
-                        <div id="paypal-button-container" style="border-radius:10px; overflow:hidden; min-height:48px;"></div>
+                    <div style="padding:24px; background:rgba(0,48,135,0.15); border:1px solid rgba(0,156,222,0.25); border-radius:14px; margin-bottom:20px;">
+                        <div style="font-size:15px; color:rgba(255,255,255,0.85); line-height:1.6; margin-bottom:20px; text-align:center;">Paga de forma segura con tu cuenta PayPal o cualquier tarjeta.<br>La activación es <strong style="color:#a5b4fc; font-weight:700;">automática e inmediata</strong>.</div>
+                        <div id="paypal-button-container" style="border-radius:10px; overflow:hidden; min-height:55px;"></div>
                         <button type="button" id="simulate-paypal-btn" onclick="simulatePaypalSubscription()" style="display:none; margin-top:12px; width:100%; height:42px; border-radius:10px; border:1px dashed rgba(255,196,57,0.5); background:rgba(255,196,57,0.08); color:#fbbf24; font-size:13px; font-weight:700; cursor:pointer;">⚡ Simular PayPal (local)</button>
                     </div>
                 </div>
@@ -3735,7 +3735,7 @@
                     color: 'gold',
                     shape: 'rect',
                     label: 'subscribe',
-                    height: 48
+                    height: 55
                 },
                 createSubscription: function(data, actions) {
                     return actions.subscription.create({
