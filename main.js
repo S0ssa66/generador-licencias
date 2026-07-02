@@ -510,16 +510,16 @@ window.openPaymentModal = function(warningMessage = null, mode = 'producers') {
     if (namePro && pricePro && nameElite && priceElite && btnPro && btnElite) {
         if (mode === 'artists') {
             namePro.textContent = 'Plan Creador';
-            pricePro.textContent = '$9.99 / mes';
-            nameElite.innerHTML = 'Plan Artista Pro 👑';
-            priceElite.textContent = '$19.99 / mes';
+            pricePro.innerHTML = '$9.99<span style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.4);">/mes</span>';
+            nameElite.innerHTML = 'Plan Artista Pro';
+            priceElite.innerHTML = '$19.99<span style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.4);">/mes</span>';
             btnPro.setAttribute('onclick', "switchPaymentPlan('creator')");
             btnElite.setAttribute('onclick', "switchPaymentPlan('pro_artist')");
         } else {
             namePro.textContent = 'Plan Pro';
-            pricePro.textContent = '$10.00 / mes';
-            nameElite.innerHTML = 'Plan Elite 👑';
-            priceElite.textContent = '$30.00 / mes';
+            pricePro.innerHTML = '$10.00<span style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.4);">/mes</span>';
+            nameElite.innerHTML = 'Plan Elite';
+            priceElite.innerHTML = '$30.00<span style="font-size:12px; font-weight:400; color:rgba(255,255,255,0.4);">/mes</span>';
             btnPro.setAttribute('onclick', "switchPaymentPlan('pro')");
             btnElite.setAttribute('onclick', "switchPaymentPlan('elite')");
         }
