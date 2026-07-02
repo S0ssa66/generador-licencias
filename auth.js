@@ -215,48 +215,25 @@ export function initAuthAndApp() {
         sessionStorage.removeItem('beatss_manual_login');
     }
 
-    // Función para registrar el nuevo Service Worker de la PWA
-    function registerPWA() {
-        if ('serviceWorker' in navigator) {
-            // Evitar registrar en entorno de desarrollo local
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                console.log('🚧 Modo desarrollo local detectado: omitiendo registro de Service Worker.');
-                return;
+    // Limpieza incondicional y silenciosa de Service Workers y cachés locales obsoletas para evitar problemas de sincronización de Vite
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (const registration of registrations) {
+                registration.unregister().then(() => {
+                    console.log('🗑️ Service Worker desinstalado silenciosamente.');
+                });
             }
-            navigator.serviceWorker.register('/sw.js').then((reg) => {
-                console.log('🚀 Service Worker de BEATSS registrado con éxito:', reg.scope);
-            }).catch((err) => {
-                console.error('❌ Error al registrar el Service Worker:', err);
-            });
-        }
+        }).catch(err => console.error('Error desregistrando SW:', err));
     }
 
-    // Desactivar y desregistrar todos los Service Workers antiguos para evitar problemas de caché (solo una vez)
-    if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_cleaned_v4')) {
-        const swPromise = navigator.serviceWorker.getRegistrations().then((registrations) => {
-            const promises = registrations.map(registration => {
-                return registration.unregister().then(() => {
-                    console.log('🗑️ Service Worker antiguo desregistrado.');
+    if (window.caches) {
+        caches.keys().then((keys) => {
+            keys.forEach(key => {
+                caches.delete(key).then(() => {
+                    console.log('🗑️ Caché del Service Worker purgada:', key);
                 });
             });
-            return Promise.all(promises);
-        });
-
-        const cachePromise = window.caches ? caches.keys().then((keys) => {
-            return Promise.all(keys.map(key => caches.delete(key))).then(() => {
-                console.log('🗑️ Caches de Service Worker limpiados.');
-            });
-        }) : Promise.resolve();
-
-        Promise.all([swPromise, cachePromise]).then(() => {
-            localStorage.setItem('beatss_sw_cleaned_v4', 'true');
-            window.location.reload();
-        }).catch(err => {
-            console.error('Error durante la limpieza del Service Worker:', err);
-            registerPWA();
-        });
-    } else {
-        registerPWA();
+        }).catch(err => console.error('Error limpiando cachés:', err));
     }
 
     // Capturar código de referido si viene en la URL

@@ -3,7 +3,7 @@
 <head>
     <script>
         // Purga radical de Service Workers y cachés obsoletas al iniciar para evitar bloqueos tras despliegues de producción
-        if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_cleaned_v4')) {
+        if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_retired_v1')) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for (var registration of registrations) {
                     registration.unregister().then(function() {
@@ -21,7 +21,7 @@
                     }));
                 }).catch(function(err) { console.error('Error limpiando cachés:', err); });
             }
-            localStorage.setItem('beatss_sw_cleaned_v4', 'true');
+            localStorage.setItem('beatss_sw_retired_v1', 'true');
             // Retrasar recarga un momento para asegurar que las operaciones se completaron
             setTimeout(function() {
                 window.location.reload(true);
