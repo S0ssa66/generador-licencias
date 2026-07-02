@@ -185,4 +185,23 @@ Para asegurar que el diseño de BEATSS no se vea pequeño en monitores de alta r
 * **Guía Completa:** Generamos la guía detallada [guia_seguridad_5_capas.md](file:///Users/sossa/.gemini/antigravity/brain/df1be2a6-14fb-4cb7-9153-aabae49e1cb9/guia_seguridad_5_capas.md) que documenta las configuraciones de seguridad para cada capa en entornos VPS tradicionales y su equivalencia en nuestro stack serverless actual.
 * **Bloqueos en Servidor Web (Vercel):** Modificamos el archivo de configuración [vercel.json](file:///Users/sossa/IA/generador-licencias/vercel.json) de la plataforma en producción para forzar redirecciones automáticas a `/404` en caso de intentos de lectura sobre archivos de configuración sensibles como `.env`, `firebase-adminsdk.json`, `sri_contingency.db` y archivos de compilación, emulando las reglas de denegación de Nginx para el stack serverless.
 
+---
+
+## 💳 Creación y Configuración de Planes de Suscripción en PayPal Live
+* **Archivos Modificados:** [api/activate-pro.js](file:///Users/sossa/IA/generador-licencias/api/activate-pro.js), [walkthrough.md](file:///Users/sossa/IA/generador-licencias/walkthrough.md)
+* **Creación de Planes de Suscripción:**
+    * Desarrollamos y ejecutamos un script automático (`setup_paypal_plans.cjs`) que se conecta con la API de producción de PayPal utilizando las credenciales `PAYPAL_CLIENT_ID` y `PAYPAL_CLIENT_SECRET` provistas en el archivo `.env`.
+    * Registramos con éxito el Producto de Suscripción **BEATSS Suscripción Plataforma** (`PROD-8FY67521CW867913C`).
+    * Creamos los 4 planes de suscripción mensual recurrentes reales con sus respectivos valores en USD:
+        * **Plan Creador** ($9.99/mes): `P-0BV93945LD528741XNJDIAEQ`
+        * **Plan Artista Pro** ($19.99/mes): `P-093732682A670271FNJDIAEY`
+        * **Plan Pro** ($10.00/mes): `P-82T944553X9199518NJDIAEY`
+        * **Plan Elite** ($30.00/mes): `P-9BC81936DE996453ENJDIAFA`
+* **Persistencia en Base de Datos (Firestore):**
+    * Los Plan IDs generados fueron insertados de forma segura en la colección `users/paXbnNbHMMPC31X3hf0oTUx4bbr2/config/producer` de Firestore del productor João Dominguez (sossa). Esto permite que el frontend obtenga los IDs dinámicamente y el botón de suscripción real de PayPal reemplace la interfaz de simulación.
+* **Integración en el Backend:**
+    * Actualizamos `api/activate-pro.js` para añadir soporte explícito de verificación y activación para los planes de artista (`creator` y `pro_artist`). Ahora, el backend es completamente consciente de los 4 planes y asigna el rol y el plan exactos en Firestore al recibir el evento de PayPal.
+* **Despliegue y Validación:**
+    * Compilamos y desplegamos con éxito a producción mediante GitHub Push a Vercel. La pasarela real de PayPal ya se encuentra lista y operativa en producción.
+
 
