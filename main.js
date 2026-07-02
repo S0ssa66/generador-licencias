@@ -3846,5 +3846,6 @@ function initFeaturedProducerRotation() {
         descEl.textContent = prod.desc[lang] || prod.desc['es'];
     });
 }
+// Rotation configuration completed
 
 
