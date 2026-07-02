@@ -545,6 +545,14 @@ window.openPaymentModal = function(warningMessage = null, mode = 'producers') {
         if (subInvoiceEmail) subInvoiceEmail.value = window.producerConfig.email || '';
     }
 
+    // Reiniciar al paso 1 del wizard y seleccionar PayPal por defecto
+    if (typeof window.selectPaymentMethod === 'function') {
+        window.selectPaymentMethod('paypal');
+    }
+    if (typeof window.goToPaymentStep === 'function') {
+        window.goToPaymentStep(1);
+    }
+
     if (modal) {
         modal.style.display = 'flex';
         modal.scrollTop = 0;

@@ -798,6 +798,9 @@
                     </div>
                 </div>
 
+        <!-- STEP 1: SELECT PLAN & METHOD -->
+        <div id="pm-step-1" style="display:block;">
+            <div style="padding:0 28px;">
                 <!-- Plan selector -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:24px 0 0;">
                     <button type="button" id="pay-select-pro" onclick="switchPaymentPlan('pro')" style="all:unset; cursor:pointer; padding:16px 18px; border-radius:14px; border:2px solid #6366f1; background:rgba(99,102,241,0.14); box-sizing:border-box; transition:all 0.2s; box-shadow: 0 0 0 1px rgba(99,102,241,0.25);">
@@ -821,7 +824,7 @@
                 <div style="font-size:13px; font-weight:700; color:rgba(255,255,255,0.55); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Método de pago</div>
 
                 <!-- PayPal -->
-                <button type="button" class="pm-card-btn pm-active" onclick="switchPaymentMethodTab('paypal'); document.querySelectorAll('.pm-card-btn').forEach(b=>b.classList.remove('pm-active')); this.classList.add('pm-active');" style="padding:16px 20px;">
+                <button type="button" class="pm-card-btn pm-active" onclick="selectPaymentMethod('paypal')" style="padding:16px 20px;">
                     <div style="width:40px; height:40px; border-radius:8px; background:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
                         <!-- Real PayPal Monogram SVG -->
                         <svg viewBox="0 0 24 28" width="22" height="24">
@@ -839,7 +842,7 @@
                 </button>
 
                 <!-- Deuna -->
-                <button type="button" class="pm-card-btn" onclick="switchPaymentMethodTab('deuna'); document.querySelectorAll('.pm-card-btn').forEach(b=>b.classList.remove('pm-active')); this.classList.add('pm-active');" style="padding:16px 20px;">
+                <button type="button" class="pm-card-btn" onclick="selectPaymentMethod('deuna')" style="padding:16px 20px;">
                     <div style="width:40px; height:40px; border-radius:8px; background:#FFE500; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
                         <!-- Real Deuna! brand icon -->
                         <span style="font-family:'Outfit','Inter',sans-serif; font-weight:900; font-size:25px; color:#0c0d14; letter-spacing:-1.8px; transform:translateY(-1px);">d!</span>
@@ -848,11 +851,11 @@
                         <div style="font-size:15px; font-weight:700; color:#fff;">Deuna!</div>
                         <div style="font-size:13px; color:rgba(255,255,255,0.6);">Pago móvil Ecuador · QR o número celular</div>
                     </div>
-                    <div style="width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.25); flex-shrink:0;"></div>
+                    <div style="width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; flex-shrink:0;"></div>
                 </button>
 
                 <!-- Transferencia -->
-                <button type="button" class="pm-card-btn" onclick="switchPaymentMethodTab('transfer'); document.querySelectorAll('.pm-card-btn').forEach(b=>b.classList.remove('pm-active')); this.classList.add('pm-active');" style="padding:16px 20px;">
+                <button type="button" class="pm-card-btn" onclick="selectPaymentMethod('transfer')" style="padding:16px 20px;">
                     <div style="width:40px; height:40px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; gap:3px; flex-shrink:0; overflow:hidden; padding:2px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
                         <!-- Pichincha Yellow Hexagon Shield -->
                         <svg viewBox="0 0 24 24" width="16" height="16">
@@ -869,11 +872,11 @@
                         <div style="font-size:15px; font-weight:700; color:#fff;">Transferencia Bancaria</div>
                         <div style="font-size:13px; color:rgba(255,255,255,0.6);">Pichincha · Guayaquil</div>
                     </div>
-                    <div style="width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.25); flex-shrink:0;"></div>
+                    <div style="width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; flex-shrink:0;"></div>
                 </button>
 
                 <!-- PayPhone -->
-                <button type="button" class="pm-card-btn" onclick="switchPaymentMethodTab('payphone'); document.querySelectorAll('.pm-card-btn').forEach(b=>b.classList.remove('pm-active')); this.classList.add('pm-active');" style="padding:16px 20px;">
+                <button type="button" class="pm-card-btn" onclick="selectPaymentMethod('payphone')" style="padding:16px 20px;">
                     <div style="width:40px; height:40px; border-radius:8px; background:#00AACC; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
                         <!-- Real PayPhone stylized brand P -->
                         <svg viewBox="0 0 24 24" width="24" height="24">
@@ -885,12 +888,22 @@
                         <div style="font-size:15px; font-weight:700; color:#fff;">PayPhone</div>
                         <div style="font-size:13px; color:rgba(255,255,255,0.6);">Tarjeta débito/crédito Ecuador</div>
                     </div>
-                    <div style="width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.25); flex-shrink:0;"></div>
+                    <div style="width:20px; height:20px; border-radius:50%; border:2px solid rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; flex-shrink:0;"></div>
                 </button>
             </div>
 
+            <!-- Continuar button -->
+            <div style="padding:0 28px 28px;">
+                <button type="button" onclick="goToPaymentStep(2)" class="pm-submit">
+                    Continuar <i data-lucide="arrow-right" style="width:16px; height:16px; margin-left:4px;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 2: FINALIZE PAYMENT -->
+        <div id="pm-step-2" style="display:none;">
             <!-- PANELS — shown below selector -->
-            <div style="padding:0 28px;">
+            <div style="padding:20px 28px 0;">
 
                 <!-- PANEL: PAYPAL -->
                 <div id="pay-tab-paypal" class="pay-method-panel" style="display:block;">
@@ -1046,7 +1059,15 @@
                     </button>
                 </form>
             </div>
+            
+            <!-- Back Button to return to Step 1 -->
+            <div style="padding: 10px 28px 28px; margin-top: 10px;">
+                <button type="button" onclick="goToPaymentStep(1)" style="all:unset; cursor:pointer; width:100%; height:44px; border:1px solid rgba(255,255,255,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; gap:8px; color:rgba(255,255,255,0.6); font-size:13.5px; font-weight:700; transition:all 0.2s; box-sizing:border-box;" onmouseover="this.style.background='rgba(255,255,255,0.04)'; this.style.color='#fff';" onmouseout="this.style.background='transparent'; this.style.color='rgba(255,255,255,0.6)';">
+                    <i data-lucide="arrow-left" style="width:14px; height:14px;"></i> Volver a cambiar plan o método
+                </button>
+            </div>
         </div>
+    </div>
     </div>
     
 
@@ -3576,14 +3597,6 @@
                 const payphoneSim = document.getElementById('simulate-payphone-btn');
                 if (payphoneSim) payphoneSim.style.display = 'block';
             }
-
-            // 3. Render PayPal button (will dynamically load SDK if it's a real plan)
-            renderPayPalButton();
-
-            // 4. Load PayPhone SDK and render
-            loadPayphoneSDK(() => {
-                renderPayphoneSubscriptionButton();
-            });
         }
 
         function loadAdminPayPalSDK(clientId, callback) {
@@ -3757,7 +3770,12 @@
             container.innerHTML = ''; // Limpiar anterior
 
             if (typeof PPaymentButtonBox === 'undefined') {
-                container.innerHTML = '<div style="color: #cbd5e0; font-size: 11px;">Cargando PayPhone...</div>';
+                container.innerHTML = '<div style="color: rgba(255,255,255,0.6); font-size: 13.5px; font-weight: 500; padding: 4px 0;">Cargando PayPhone...</div>';
+                if (!document.getElementById('payphone-sdk-script')) {
+                    loadPayphoneSDK(() => {
+                        renderPayphoneSubscriptionButton();
+                    });
+                }
                 setTimeout(renderPayphoneSubscriptionButton, 500);
                 return;
             }
@@ -3992,6 +4010,89 @@
             }
         }
 
+        window.selectedPaymentMethod = 'paypal';
+
+        window.selectPaymentMethod = function(method) {
+            window.selectedPaymentMethod = method;
+            
+            // Quitar clase pm-active de todos los botones de metodo de pago
+            document.querySelectorAll('#pm-step-1 .pm-card-btn').forEach(btn => {
+                btn.classList.remove('pm-active');
+                // Quitar indicador dot interno
+                const indicator = btn.querySelector('div[style*="border-radius: 50%"]');
+                if (indicator) {
+                    indicator.innerHTML = '';
+                    indicator.style.borderColor = 'rgba(255,255,255,0.25)';
+                }
+            });
+            
+            // Buscar el boton clickeado y activarlo
+            const activeBtn = Array.from(document.querySelectorAll('#pm-step-1 .pm-card-btn')).find(btn => {
+                const onclickAttr = btn.getAttribute('onclick') || '';
+                return onclickAttr.includes(`'${method}'`) || onclickAttr.includes(`"${method}"`);
+            });
+            
+            if (activeBtn) {
+                activeBtn.classList.add('pm-active');
+                const indicator = activeBtn.querySelector('div[style*="border-radius: 50%"]');
+                if (indicator) {
+                    indicator.style.borderColor = '#6366f1';
+                    indicator.innerHTML = '<div style="width:10px; height:10px; border-radius:50%; background:#6366f1;"></div>';
+                }
+            }
+        }
+
+        window.goToPaymentStep = function(step) {
+            const step1 = document.getElementById('pm-step-1');
+            const step2 = document.getElementById('pm-step-2');
+            const title = document.getElementById('pm-modal-title');
+            
+            if (!step1 || !step2) return;
+            
+            if (step === 1) {
+                step2.style.display = 'none';
+                step1.style.display = 'block';
+                if (title) title.textContent = 'Elige tu plan';
+            } else if (step === 2) {
+                step1.style.display = 'none';
+                step2.style.display = 'block';
+                
+                // Configurar titulo segun el metodo elegido
+                let methodName = 'PayPal';
+                if (window.selectedPaymentMethod === 'deuna') methodName = 'Deuna!';
+                else if (window.selectedPaymentMethod === 'transfer') methodName = 'Transferencia Bancaria';
+                else if (window.selectedPaymentMethod === 'payphone') methodName = 'PayPhone';
+                
+                if (title) title.textContent = `Pagar con ${methodName}`;
+                
+                // Mostrar panel correspondiente
+                window.switchPaymentMethodTab(window.selectedPaymentMethod);
+                
+                // Configurar visibilidad del formulario de comprobante manual
+                const receiptForm = document.getElementById('payment-receipt-form');
+                if (receiptForm) {
+                    if (window.selectedPaymentMethod === 'deuna' || window.selectedPaymentMethod === 'transfer') {
+                        receiptForm.style.display = 'block';
+                        const methodSelect = document.getElementById('receipt-method');
+                        if (methodSelect) {
+                            if (window.selectedPaymentMethod === 'deuna') methodSelect.value = 'Deuna!';
+                            else if (window.selectedPaymentMethod === 'transfer') methodSelect.value = 'Banco Pichincha';
+                        }
+                    } else {
+                        receiptForm.style.display = 'none';
+                    }
+                }
+                
+                // Si es PayPal o PayPhone, inicializar o renderizar botones correspondientes
+                if (window.selectedPaymentMethod === 'paypal') {
+                    renderPayPalButton();
+                } else if (window.selectedPaymentMethod === 'payphone') {
+                    renderPayphoneSubscriptionButton();
+                }
+            }
+            if (window.safeCreateIcons) window.safeCreateIcons();
+        }
+
         window.switchPaymentMethodTab = function(method) {
             document.querySelectorAll('.pay-method-panel').forEach(panel => {
                 panel.style.display = 'none';
@@ -3999,26 +4100,7 @@
             const activePanel = document.getElementById(`pay-tab-${method}`);
             if (activePanel) activePanel.style.display = 'block';
 
-            document.querySelectorAll('.pay-method-tab').forEach(btn => {
-                btn.classList.remove('active');
-                btn.style.color = '#8a91a6';
-                btn.style.borderBottom = 'none';
-                btn.style.fontWeight = '600';
-            });
-
-            const activeBtn = Array.from(document.querySelectorAll('.pay-method-tab')).find(btn => {
-                const onclickAttr = btn.getAttribute('onclick') || '';
-                return onclickAttr.includes(`'${method}'`) || onclickAttr.includes(`"${method}"`);
-            });
-
-            if (activeBtn) {
-                activeBtn.classList.add('active');
-                activeBtn.style.color = '#a855f7';
-                activeBtn.style.borderBottom = '2px solid #a855f7';
-                activeBtn.style.fontWeight = '700';
-            }
-
-            if (window.lucide) window.lucide.createIcons();
+            if (window.safeCreateIcons) window.safeCreateIcons();
         }
 
         window.switchPaymentPlan = function(plan) {
