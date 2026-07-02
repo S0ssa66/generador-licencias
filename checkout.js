@@ -811,15 +811,50 @@ export function openBeatCheckoutModal(beatId) {
     storePaymentReceiptBase64 = null;
     window.checkoutExclusivePrice = 500; // Reset de precio exclusivo
 
-    // Reset fields
-    document.getElementById('store-buyer-name').value = '';
-    document.getElementById('store-buyer-email').value = '';
-    document.getElementById('store-buyer-phone').value = '';
-    document.getElementById('store-buyer-dni').value = '';
-    document.getElementById('store-buyer-city').value = '';
-    document.getElementById('store-buyer-country').value = 'Ecuador';
+    // Cargar datos guardados de localStorage si existe la preferencia
+    const shouldRemember = localStorage.getItem('store_remember_data') !== 'false';
+    const savedName = shouldRemember ? (localStorage.getItem('store_buyer_name') || '') : '';
+    const savedEmail = shouldRemember ? (localStorage.getItem('store_buyer_email') || '') : '';
+    const savedPhone = shouldRemember ? (localStorage.getItem('store_buyer_phone') || '') : '';
+    const savedDni = shouldRemember ? (localStorage.getItem('store_buyer_dni') || '') : '';
+    const savedCity = shouldRemember ? (localStorage.getItem('store_buyer_city') || '') : '';
+    const savedCountry = shouldRemember ? (localStorage.getItem('store_buyer_country') || 'Ecuador') : 'Ecuador';
+    const savedYt = shouldRemember ? (localStorage.getItem('store_buyer_yt') || '') : '';
+
+    document.getElementById('store-buyer-name').value = savedName;
+    document.getElementById('store-buyer-email').value = savedEmail;
+    document.getElementById('store-buyer-phone').value = savedPhone;
+    document.getElementById('store-buyer-dni').value = savedDni;
+    document.getElementById('store-buyer-city').value = savedCity;
+    document.getElementById('store-buyer-country').value = savedCountry;
+    
     const ytField = document.getElementById('store-txt-youtube-whitelist');
-    if (ytField) ytField.value = '';
+    if (ytField) ytField.value = savedYt;
+
+    const rememberChk = document.getElementById('store-chk-remember-me');
+    if (rememberChk) rememberChk.checked = shouldRemember;
+
+    // Facturación SRI RUC
+    const savedNeedInvoice = shouldRemember ? (localStorage.getItem('store_need_invoice') === 'true') : false;
+    const savedRuc = shouldRemember ? (localStorage.getItem('store_invoice_ruc') || '') : '';
+    const savedCompany = shouldRemember ? (localStorage.getItem('store_invoice_company') || '') : '';
+    const savedAddress = shouldRemember ? (localStorage.getItem('store_invoice_address') || '') : '';
+    const savedInvoiceEmail = shouldRemember ? (localStorage.getItem('store_invoice_email') || '') : '';
+
+    const needInvoiceChk = document.getElementById('store-chk-need-invoice');
+    if (needInvoiceChk) {
+        needInvoiceChk.checked = savedNeedInvoice;
+        const invoiceFields = document.getElementById('store-invoice-fields-container');
+        if (invoiceFields) invoiceFields.style.display = savedNeedInvoice ? 'flex' : 'none';
+    }
+    const rucEl = document.getElementById('store-invoice-ruc');
+    if (rucEl) rucEl.value = savedRuc;
+    const companyEl = document.getElementById('store-invoice-company');
+    if (companyEl) companyEl.value = savedCompany;
+    const addressEl = document.getElementById('store-invoice-address');
+    if (addressEl) addressEl.value = savedAddress;
+    const invoiceEmailEl = document.getElementById('store-invoice-email');
+    if (invoiceEmailEl) invoiceEmailEl.value = savedInvoiceEmail;
 
     document.getElementById('store-receipt-file-name').textContent = 'Ningún archivo seleccionado';
     document.getElementById('store-receipt-file').value = '';
@@ -1785,6 +1820,55 @@ export function setupStoreCheckout() {
                     return;
                 }
             }
+
+            // Guardar o limpiar datos en localStorage según la preferencia del usuario
+            const rememberChk = document.getElementById('store-chk-remember-me');
+            const shouldRemember = rememberChk ? rememberChk.checked : true;
+            
+            localStorage.setItem('store_remember_data', shouldRemember ? 'true' : 'false');
+            
+            if (shouldRemember) {
+                localStorage.setItem('store_buyer_name', buyerName);
+                localStorage.setItem('store_buyer_email', buyerEmail);
+                localStorage.setItem('store_buyer_phone', document.getElementById('store-buyer-phone').value.trim());
+                localStorage.setItem('store_buyer_dni', buyerDni);
+                localStorage.setItem('store_buyer_city', document.getElementById('store-buyer-city').value.trim());
+                localStorage.setItem('store_buyer_country', document.getElementById('store-buyer-country').value.trim());
+                
+                const ytField = document.getElementById('store-txt-youtube-whitelist');
+                if (ytField) localStorage.setItem('store_buyer_yt', ytField.value.trim());
+
+                // Guardar datos SRI RUC si está activado
+                const needInvoiceChk = document.getElementById('store-chk-need-invoice');
+                const needInvoice = needInvoiceChk ? needInvoiceChk.checked : false;
+                localStorage.setItem('store_need_invoice', needInvoice ? 'true' : 'false');
+                if (needInvoice) {
+                    localStorage.setItem('store_invoice_ruc', document.getElementById('store-invoice-ruc').value.trim());
+                    localStorage.setItem('store_invoice_company', document.getElementById('store-invoice-company').value.trim());
+                    localStorage.setItem('store_invoice_address', document.getElementById('store-invoice-address').value.trim());
+                    localStorage.setItem('store_invoice_email', document.getElementById('store-invoice-email').value.trim());
+                } else {
+                    localStorage.removeItem('store_invoice_ruc');
+                    localStorage.removeItem('store_invoice_company');
+                    localStorage.removeItem('store_invoice_address');
+                    localStorage.removeItem('store_invoice_email');
+                }
+            } else {
+                // Eliminar todos los datos personales guardados si no se desea recordar
+                localStorage.removeItem('store_buyer_name');
+                localStorage.removeItem('store_buyer_email');
+                localStorage.removeItem('store_buyer_phone');
+                localStorage.removeItem('store_buyer_dni');
+                localStorage.removeItem('store_buyer_city');
+                localStorage.removeItem('store_buyer_country');
+                localStorage.removeItem('store_buyer_yt');
+                localStorage.removeItem('store_need_invoice');
+                localStorage.removeItem('store_invoice_ruc');
+                localStorage.removeItem('store_invoice_company');
+                localStorage.removeItem('store_invoice_address');
+                localStorage.removeItem('store_invoice_email');
+            }
+
             updateCheckoutStepView(3);
         } else if (checkoutCurrentStep === 3) {
             const method = getSelectedStorePaymentMethod();
