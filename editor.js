@@ -1141,7 +1141,7 @@ async function handleZipSelect(e) {
 
         // Cargar ZIP usando la librería JSZip
         if (typeof JSZip === 'undefined') {
-            throw new Error('Librería JSZip no cargada. Revisa tu conexión a internet.');
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
         }
 
         const zip = await JSZip.loadAsync(file);

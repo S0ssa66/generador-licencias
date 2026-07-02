@@ -1,3 +1,9 @@
+---
+tipo: backlog_mejoras
+proyecto: BEATSS
+estado: activo
+ultima_revision: 2026-07-02
+---
 # Backlog de Mejoras Recomendadas para BEATSS
 
 Este backlog consolida todas las recomendaciones técnicas y de negocio sugeridas por nuestro escuadrón de agentes especialistas (**SecurityOps**, **LegalAdvisor**, **Designer**, **SeoOptimizer**, **BusinessAnalyst** y **DevOps**).

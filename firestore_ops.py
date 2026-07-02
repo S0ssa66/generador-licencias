@@ -64,17 +64,39 @@ def get_firestore_task(task_id, id_token):
         return None
 
 def fetch_firestore_collection(collection_path, token):
-
-    """Obtiene todos los documentos de una colección específica en Firestore usando REST API."""
-    url = f"https://firestore.googleapis.com/v1/projects/licencias-musicales/databases/(default)/documents/{collection_path}"
-    headers = {"Authorization": f"Bearer {token}"}
-    req = urllib.request.Request(url, headers=headers, method="GET")
-    try:
-        with urllib.request.urlopen(req) as response:
-            res_data = json.loads(response.read().decode("utf-8"))
-            return res_data.get("documents", [])
-    except Exception as e:
-        return []
+    """Obtiene todos los documentos de una colección específica en Firestore de forma paginada usando REST API."""
+    documents = []
+    page_token = None
+    
+    # Límite de seguridad para evitar loops infinitos
+    max_pages = 50
+    pages_fetched = 0
+    
+    base_url = f"https://firestore.googleapis.com/v1/projects/licencias-musicales/databases/(default)/documents/{collection_path}"
+    
+    while pages_fetched < max_pages:
+        url = base_url
+        if page_token:
+            url += f"&pageToken={page_token}" if "?" in url else f"?pageToken={page_token}"
+            
+        headers = {"Authorization": f"Bearer {token}"}
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(req) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                docs = res_data.get("documents", [])
+                documents.extend(docs)
+                
+                page_token = res_data.get("nextPageToken")
+                if not page_token:
+                    break
+        except Exception as e:
+            print(f"[-] Error al descargar colección paginada {collection_path}: {e}")
+            break
+            
+        pages_fetched += 1
+        
+    return documents
 
 def fetch_firestore_document(doc_path, token):
     """Obtiene un documento específico en Firestore usando REST API."""

@@ -2269,7 +2269,8 @@ async function loadHistory() {
     if (window.currentUserIsPro) {
         try {
             const colRef = collection(db, "users", window.currentUser, "licencias");
-            const querySnapshot = await getDocs(colRef);
+            const q = query(colRef, orderBy("date", "desc"), limit(150));
+            const querySnapshot = await getDocs(q);
             querySnapshot.forEach((docSnap) => {
                 savedList.push(docSnap.data());
             });

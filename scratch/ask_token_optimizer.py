@@ -12,14 +12,15 @@ except ImportError:
     pass
 
 try:
-    from agente_coordinador import SUBAGENT_PROMPTS, execute_subagent_react_loop
+    from agent_manager import execute_subagent_react_loop
+    from prompt_manager import get_subagent_prompt
 except ImportError as e:
-    print("Error al importar de agente_coordinador:", e)
+    print("Error al importar de los módulos de agentes:", e)
     sys.exit(1)
 
 def run():
     rol = "token_optimizer"
-    prompt = SUBAGENT_PROMPTS.get(rol)
+    prompt = get_subagent_prompt(rol)
     if not prompt:
         print(f"Error: No se encontró el prompt para el rol {rol}")
         sys.exit(1)
