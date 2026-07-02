@@ -156,6 +156,10 @@ export default async function handler(req, res) {
                     planToActivate = 'elite';
                 } else if (paypalPlanId === adminConfig.paypalPlanIdPro) {
                     planToActivate = 'pro';
+                } else if (paypalPlanId === adminConfig.paypalPlanIdCreator) {
+                    planToActivate = 'creator';
+                } else if (paypalPlanId === adminConfig.paypalPlanIdProArtist) {
+                    planToActivate = 'pro_artist';
                 } else {
                     planToActivate = req.body.plan || 'pro';
                 }
