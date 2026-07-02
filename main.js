@@ -3763,20 +3763,20 @@ function initFeaturedProducerRotation() {
             name: "CG Monarco",
             img: "producer_monarco.jpg?v=4",
             desc: {
-                es: "Productor Platinum • Trap & Reggaeton",
-                en: "Platinum Producer • Trap & Reggaeton"
+                es: "Productor Elite • Trap & Reggaeton",
+                en: "Elite Producer • Trap & Reggaeton"
             },
             position: "center 65%",
-            borderColor: "border-neon-blue",
-            labelColor: "text-neon-blue",
+            borderColor: "border-elite-gold",
+            labelColor: "text-elite-gold",
             duration: 4000 // Others appear for 4 seconds
         },
         {
             name: "Mr. Micua",
             img: "producer_mrmicua.jpg?v=3",
             desc: {
-                es: "Productor Platinum • Dancehall & Trap",
-                en: "Platinum Producer • Dancehall & Trap"
+                es: "Productor Elite • Dancehall & Trap",
+                en: "Elite Producer • Dancehall & Trap"
             },
             position: "center 20%",
             borderColor: "border-elite-gold",
@@ -3787,12 +3787,12 @@ function initFeaturedProducerRotation() {
             name: "Sauce Beats",
             img: "producer_sauce.jpg",
             desc: {
-                es: "Productor Platinum • Dancehall & Trap",
-                en: "Platinum Producer • Dancehall & Trap"
+                es: "Productor Elite • Dancehall & Trap",
+                en: "Elite Producer • Dancehall & Trap"
             },
             position: "center 25%",
-            borderColor: "border-neon-blue",
-            labelColor: "text-neon-blue",
+            borderColor: "border-elite-gold",
+            labelColor: "text-elite-gold",
             duration: 4000
         }
     ];
