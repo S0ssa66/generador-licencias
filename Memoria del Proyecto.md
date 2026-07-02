@@ -24,7 +24,11 @@ Esta nota actúa como la memoria persistente de desarrollo de BEATSS. Tanto tú 
 ---
 
 ## ⚙️ 3. Configuración del Entorno de Desarrollo
-*   **Servidor Local:** Corriendo en `http://localhost:8000` (`server.py`).
+*   **Servidor Local:** Corriendo en `http://localhost:8000` (`server.py`) o `http://localhost:5173` (`npm run dev`).
+*   **Google Auth (Firebase Auth):**
+    *   `localhost` está autorizado por defecto en Firebase Console para desarrollo local (permite probar Google Login en cualquier puerto como `:5173` o `:8000`).
+    *   `beatss.app` está plenamente autorizado para el entorno de producción.
+    *   Las URLs dinámicas de previsualización de Vercel (`*-vercel.app`) están bloqueadas por las restricciones de origen dinámico de Google.
 *   **Frontend Assets:** Compilados mediante Vite (`npm run build`) en la carpeta `/dist/` y servidos por el servidor Python.
 *   **Base de Datos:** Firestore (Firebase).
 
