@@ -746,7 +746,7 @@ function compileContract() {
             </div>
         `;
     } else {
-        const formattedDate = new Date(effectiveDate + 'T12:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-ES', {
+        const formattedDate = new Date(effectiveDate + 'T12:00:00').toLocaleDateString(currentLang === 'en' ? 'en-US' : 'es-ES', {
             year: 'numeric', month: 'long', day: 'numeric'
         });
         signatureSectionHtml = `
