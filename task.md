@@ -17,3 +17,7 @@
 - [x] Paso 15: Implementar el loop ReAct interactivo con confirmación de escritura en consola
 - [x] Paso 16: Probar y verificar la ejecución del script con consultas locales
 - [x] Paso 17: Agregar subagente de tráfico y ventas (growth_hacker) a la base de código y documentación
+- [x] Paso 18: Crear y registrar Producto y 4 Planes Mensuales en PayPal Live (Creador, Artista Pro, Pro, Elite)
+- [x] Paso 19: Persistir los Plan IDs resultantes en Firestore para el administrador sossa
+- [x] Paso 20: Actualizar `api/activate-pro.js` en producción para mapear los planes de artistas (`creator`, `pro_artist`)
+- [x] Paso 21: Compilar y desplegar los cambios en producción en Vercel y refrescar caché del Service Worker
