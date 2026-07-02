@@ -3577,12 +3577,8 @@
                 if (payphoneSim) payphoneSim.style.display = 'block';
             }
 
-            // 3. Load PayPal SDK and render
-            if (window.adminPaymentConfig.paypalClientId) {
-                loadAdminPayPalSDK(window.adminPaymentConfig.paypalClientId, () => {
-                    renderPayPalButton();
-                });
-            }
+            // 3. Render PayPal button (will dynamically load SDK if it's a real plan)
+            renderPayPalButton();
 
             // 4. Load PayPhone SDK and render
             loadPayphoneSDK(() => {
@@ -3644,6 +3640,24 @@
             if (!container) return;
             container.innerHTML = ''; // Limpiar botón anterior
 
+            const tier = window.selectedPaymentPlan;
+            let planId = '';
+            if (tier === 'elite') planId = window.adminPaymentConfig.paypalPlanIdElite;
+            else if (tier === 'pro') planId = window.adminPaymentConfig.paypalPlanIdPro;
+            else if (tier === 'creator') planId = window.adminPaymentConfig.paypalPlanIdCreator || 'PAYPAL-SUB-MOCK-CREATOR';
+            else if (tier === 'pro_artist') planId = window.adminPaymentConfig.paypalPlanIdProArtist || 'PAYPAL-SUB-MOCK-PROARTIST';
+
+            const isMockPlan = !planId || planId.startsWith('PAYPAL-SUB-MOCK-');
+
+            if (isMockPlan) {
+                container.innerHTML = `
+                    <button class="btn btn-secondary" onclick="simulatePaypalSubscription('${tier}')" style="width: 100%; height: 48px; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border: none; color: #fff; cursor: pointer; font-size:13.5px;">
+                        🎟️ Simular Suscripción (${tier.toUpperCase()})
+                    </button>
+                `;
+                return;
+            }
+
             if (window.paypalLoadError) {
                 container.innerHTML = `
                     <div style="padding: 10px; background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #f87171; font-size: 13px; line-height: 1.5; font-weight: 500;">
@@ -3656,6 +3670,13 @@
             if (typeof paypal === 'undefined') {
                 container.innerHTML = '<div style="color: rgba(255,255,255,0.6); font-size: 13.5px; font-weight: 500; padding: 4px 0;">Cargando portal de PayPal...</div>';
                 
+                // Cargar dinámicamente si no se ha intentado antes
+                if (window.adminPaymentConfig.paypalClientId && !document.getElementById('paypal-sdk-script')) {
+                    loadAdminPayPalSDK(window.adminPaymentConfig.paypalClientId, () => {
+                        renderPayPalButton();
+                    });
+                }
+
                 if (!window.paypalLoadTimer) {
                     window.paypalLoadTimer = setTimeout(() => {
                         if (typeof paypal === 'undefined') {
@@ -3666,22 +3687,6 @@
                 }
                 
                 setTimeout(renderPayPalButton, 500);
-                return;
-            }
-
-            const tier = window.selectedPaymentPlan;
-            let planId = '';
-            if (tier === 'elite') planId = window.adminPaymentConfig.paypalPlanIdElite;
-            else if (tier === 'pro') planId = window.adminPaymentConfig.paypalPlanIdPro;
-            else if (tier === 'creator') planId = window.adminPaymentConfig.paypalPlanIdCreator || 'PAYPAL-SUB-MOCK-CREATOR';
-            else if (tier === 'pro_artist') planId = window.adminPaymentConfig.paypalPlanIdProArtist || 'PAYPAL-SUB-MOCK-PROARTIST';
-
-            if (!planId || planId.startsWith('PAYPAL-SUB-MOCK-')) {
-                container.innerHTML = `
-                    <button class="btn btn-secondary" onclick="simulatePaypalSubscription('${tier}')" style="width: 100%; height: 48px; border-radius: 8px; font-weight: 700; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border: none; color: #fff; cursor: pointer; font-size:13.5px;">
-                        🎟️ Simular Suscripción (${tier.toUpperCase()})
-                    </button>
-                `;
                 return;
             }
 
