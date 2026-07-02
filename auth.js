@@ -124,11 +124,21 @@ export function setupAuthModalEvents() {
     });
 
     // Abrir modal de login desde la Landing Page
-    document.getElementById('landing-btn-login')?.addEventListener('click', () => {
+    const landingBtnLogin = document.getElementById('landing-btn-login');
+    console.log("🔍 Registrando click en landing-btn-login:", landingBtnLogin);
+    landingBtnLogin?.addEventListener('click', () => {
+        console.log("🎯 Clic detectado en landing-btn-login!");
         const modal = document.getElementById('login-modal');
         if (modal) {
+            console.log("🔓 Abriendo login-modal...");
             modal.style.display = 'flex';
-            tabLoginBtn.click();
+            if (tabLoginBtn) {
+                tabLoginBtn.click();
+            } else {
+                console.error("❌ tabLoginBtn no está definido");
+            }
+        } else {
+            console.error("❌ No se encontró el modal #login-modal");
         }
     });
 
