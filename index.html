@@ -825,12 +825,8 @@
 
                 <!-- PayPal -->
                 <button type="button" class="pm-card-btn pm-active" onclick="selectPaymentMethod('paypal')" style="padding:16px 20px;">
-                    <div style="width:40px; height:40px; border-radius:8px; background:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
-                        <!-- Real PayPal Monogram SVG -->
-                        <svg viewBox="0 0 24 28" width="22" height="24">
-                            <path d="M5.5 0h8.3c3.4 0 6.1 1.4 7.2 4.9.9 2.9.2 5.6-1.5 7.6-1.7 2-4.4 3-7.7 3H9.2c-.5 0-.8.4-.9.9l-2 12.1c-.1.5-.5.9-1 .9H.3c-.6 0-1-.5-.9-1.1L3.9 1.1c.1-.6.6-1.1 1.2-1.1z" fill="#003087"/>
-                            <path d="M9.6 7.4h6.3c3.4 0 6.1 1.4 7.2 4.9.9 2.9.2 5.6-1.5 7.6-1.7 2-4.4 3-7.7 3H11.2c-.5 0-.8.4-.9.9l-1.6 9.8c-.1.5-.5.9-1 .9H2.7c-.6 0-1-.5-.9-1.1L5.9 8.5c.1-.6.6-1.1 1.2-1.1" fill="#0079c1"/>
-                        </svg>
+                    <div style="width:40px; height:40px; border-radius:8px; background:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15); overflow:hidden;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/PayPal_logo.svg/200px-PayPal_logo.svg.png" style="width:24px; height:24px; object-fit:contain;" alt="PayPal">
                     </div>
                     <div style="flex:1; margin-left:6px;">
                         <div style="font-size:15px; font-weight:700; color:#fff;">PayPal</div>
@@ -843,9 +839,8 @@
 
                 <!-- Deuna -->
                 <button type="button" class="pm-card-btn" onclick="selectPaymentMethod('deuna')" style="padding:16px 20px;">
-                    <div style="width:40px; height:40px; border-radius:8px; background:#FFE500; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
-                        <!-- Real Deuna! brand icon -->
-                        <span style="font-family:'Outfit','Inter',sans-serif; font-weight:900; font-size:25px; color:#0c0d14; letter-spacing:-1.8px; transform:translateY(-1px);">d!</span>
+                    <div style="width:40px; height:40px; border-radius:8px; background:#FFE500; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15); overflow:hidden;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Deuna%21_icono.svg/200px-Deuna%21_icono.svg.png" style="width:100%; height:100%; object-fit:cover;" alt="Deuna!">
                     </div>
                     <div style="flex:1; margin-left:6px;">
                         <div style="font-size:15px; font-weight:700; color:#fff;">Deuna!</div>
@@ -856,17 +851,9 @@
 
                 <!-- Transferencia -->
                 <button type="button" class="pm-card-btn" onclick="selectPaymentMethod('transfer')" style="padding:16px 20px;">
-                    <div style="width:40px; height:40px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; gap:3px; flex-shrink:0; overflow:hidden; padding:2px; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
-                        <!-- Pichincha Yellow Hexagon Shield -->
-                        <svg viewBox="0 0 24 24" width="16" height="16">
-                            <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" fill="#FFD100"/>
-                            <path d="M12 6l2.5 3.5H11L12 6zm0 12l2.5-3.5H11l1 3.5zm-6-6l3.5 2.5V11L6 12zm12 0l-3.5 2.5V11l3.5 1z" fill="#0f1322"/>
-                        </svg>
-                        <!-- Guayaquil Intersecting Circles -->
-                        <svg viewBox="0 0 24 24" width="16" height="16">
-                            <circle cx="9" cy="12" r="7" fill="#005BAA" opacity="0.95"/>
-                            <circle cx="15" cy="12" r="7" fill="#E30613" opacity="0.8"/>
-                        </svg>
+                    <div style="width:40px; height:40px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; gap:2px; flex-shrink:0; overflow:hidden; padding:2px; box-shadow:0 2px 6px rgba(0,0,0,0.15); box-sizing:border-box;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b4/Banco_Pichincha_logo_2018.svg/100px-Banco_Pichincha_logo_2018.svg.png" style="width:16px; height:16px; object-fit:contain; background:#0f1322; border-radius:2px;" alt="Pichincha">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Banco_Guayaquil_%282020%29.svg/100px-Banco_Guayaquil_%282020%29.svg.png" style="width:16px; height:16px; object-fit:contain; background:#fff; border-radius:2px;" alt="Guayaquil">
                     </div>
                     <div style="flex:1; margin-left:6px;">
                         <div style="font-size:15px; font-weight:700; color:#fff;">Transferencia Bancaria</div>
@@ -877,12 +864,8 @@
 
                 <!-- PayPhone -->
                 <button type="button" class="pm-card-btn" onclick="selectPaymentMethod('payphone')" style="padding:16px 20px;">
-                    <div style="width:40px; height:40px; border-radius:8px; background:#00AACC; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15);">
-                        <!-- Real PayPhone stylized brand P -->
-                        <svg viewBox="0 0 24 24" width="24" height="24">
-                            <path d="M7.5 15.5V8.5h4c1.7 0 3 1.3 3 3s-1.3 3-3 3H9.5v2.5H7.5zm2-4.5h2c.6 0 1-.4 1-1s-.4-1-1-1h-2v2z" fill="#fff"/>
-                            <circle cx="15.5" cy="8.5" r="1.5" fill="#FFF"/>
-                        </svg>
+                    <div style="width:40px; height:40px; border-radius:8px; background:#00AACC; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15); overflow:hidden;">
+                        <img src="https://raw.githubusercontent.com/PayPhone-Wallet/payphone-testnet-app/main/icon_128.png" style="width:100%; height:100%; object-fit:cover;" alt="PayPhone">
                     </div>
                     <div style="flex:1; margin-left:6px;">
                         <div style="font-size:15px; font-weight:700; color:#fff;">PayPhone</div>
