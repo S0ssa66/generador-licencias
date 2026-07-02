@@ -3765,7 +3765,7 @@ function initFeaturedProducerRotation() {
                 es: "Productor Platinum • Trap & Reggaeton",
                 en: "Platinum Producer • Trap & Reggaeton"
             },
-            position: "center 35%",
+            position: "center 15%",
             borderColor: "border-neon-blue",
             labelColor: "text-neon-blue",
             duration: 4000 // Others appear for 4 seconds
