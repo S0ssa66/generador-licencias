@@ -1,12 +1,8 @@
-const CACHE_NAME = 'beatss-pwa-cache-v8';
+const CACHE_NAME = 'beatss-pwa-cache-v9';
 const AUDIO_CACHE_NAME = 'beatss-audio-cache-v1';
 const ALLOWED_CACHES = [CACHE_NAME, AUDIO_CACHE_NAME];
 
 const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/clearance.html',
-  '/styles.css',
   '/logo-sossa.png',
   '/manifest.json'
 ];

@@ -215,7 +215,7 @@ export function initAuthAndApp() {
     }
 
     // Desactivar y desregistrar todos los Service Workers antiguos para evitar problemas de caché (solo una vez)
-    if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_cleaned_v3')) {
+    if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_cleaned_v4')) {
         const swPromise = navigator.serviceWorker.getRegistrations().then((registrations) => {
             const promises = registrations.map(registration => {
                 return registration.unregister().then(() => {
@@ -232,7 +232,7 @@ export function initAuthAndApp() {
         }) : Promise.resolve();
 
         Promise.all([swPromise, cachePromise]).then(() => {
-            localStorage.setItem('beatss_sw_cleaned_v3', 'true');
+            localStorage.setItem('beatss_sw_cleaned_v4', 'true');
             window.location.reload();
         }).catch(err => {
             console.error('Error durante la limpieza del Service Worker:', err);
