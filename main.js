@@ -3786,12 +3786,12 @@ function initFeaturedProducerRotation() {
             name: "Sauce Beats",
             img: "producer_sauce.jpg",
             desc: {
-                es: "Productor Elite • Dancehall & Trap",
-                en: "Elite Producer • Dancehall & Trap"
+                es: "Productor Platinum • Dancehall & Trap",
+                en: "Platinum Producer • Dancehall & Trap"
             },
             position: "center 25%",
-            borderColor: "border-electric-purple",
-            labelColor: "text-electric-purple",
+            borderColor: "border-neon-blue",
+            labelColor: "text-neon-blue",
             duration: 4000
         }
     ];
