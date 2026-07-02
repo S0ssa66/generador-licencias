@@ -3731,6 +3731,120 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.initChatbot === 'function') {
         window.initChatbot();
     }
+
+    // Inicializar la rotación de productores destacados
+    initFeaturedProducerRotation();
 });
+
+function initFeaturedProducerRotation() {
+    const imgEl = document.getElementById('featured-producer-img');
+    const cardEl = document.getElementById('featured-producer-card');
+    const nameEl = document.getElementById('featured-producer-name');
+    const descEl = document.getElementById('featured-producer-desc');
+    const artistLabelEl = document.getElementById('featured-producer-label');
+
+    if (!imgEl || !cardEl || !nameEl || !descEl) return;
+
+    const FEATURED_PRODUCERS = [
+        {
+            name: "Sossa",
+            img: "producer_sossa.webp",
+            desc: {
+                es: "Productor de Elite • +1M Streams",
+                en: "Elite Producer • +1M Streams"
+            },
+            position: "center 5%",
+            borderColor: "border-electric-purple",
+            labelColor: "text-electric-purple",
+            duration: 8000 // Sossa appears for 8 seconds
+        },
+        {
+            name: "CG Monarco",
+            img: "producer_monarco.jpg",
+            desc: {
+                es: "Productor Platinum • Trap & Reggaeton",
+                en: "Platinum Producer • Trap & Reggaeton"
+            },
+            position: "center center",
+            borderColor: "border-neon-blue",
+            labelColor: "text-neon-blue",
+            duration: 4000 // Others appear for 4 seconds
+        },
+        {
+            name: "Mr. Micua",
+            img: "producer_mrmicua.jpg",
+            desc: {
+                es: "Productor Platinum • Dancehall & Trap",
+                en: "Platinum Producer • Dancehall & Trap"
+            },
+            position: "center 10%",
+            borderColor: "border-elite-gold",
+            labelColor: "text-elite-gold",
+            duration: 4000
+        },
+        {
+            name: "Sauce Beats",
+            img: "producer_sauce.jpg",
+            desc: {
+                es: "Productor Elite • Dancehall & Trap",
+                en: "Elite Producer • Dancehall & Trap"
+            },
+            position: "center 5%",
+            borderColor: "border-electric-purple",
+            labelColor: "text-electric-purple",
+            duration: 4000
+        }
+    ];
+
+    let currentIndex = 0;
+    let timeoutId = null;
+
+    function showProducer(index) {
+        const prod = FEATURED_PRODUCERS[index];
+        const lang = window.currentLang || 'es';
+
+        // 1. Transición suave de salida
+        imgEl.style.opacity = '0.1';
+        cardEl.style.opacity = '0.1';
+
+        setTimeout(() => {
+            // 2. Cambiar contenidos
+            imgEl.src = prod.img;
+            imgEl.style.objectPosition = prod.position;
+            nameEl.textContent = prod.name;
+            descEl.textContent = prod.desc[lang] || prod.desc['es'];
+
+            // Actualizar clases de bordes
+            cardEl.classList.remove('border-electric-purple', 'border-neon-blue', 'border-elite-gold');
+            cardEl.classList.add(prod.borderColor);
+
+            // Actualizar color de la etiqueta de arriba
+            if (artistLabelEl) {
+                artistLabelEl.classList.remove('text-electric-purple', 'text-neon-blue', 'text-elite-gold');
+                artistLabelEl.classList.add(prod.labelColor);
+            }
+
+            // 3. Transición suave de entrada
+            imgEl.style.opacity = '1';
+            cardEl.style.opacity = '1';
+        }, 300);
+
+        // Programar la siguiente rotación
+        timeoutId = setTimeout(() => {
+            currentIndex = (currentIndex + 1) % FEATURED_PRODUCERS.length;
+            showProducer(currentIndex);
+        }, prod.duration);
+    }
+
+    // Iniciar
+    showProducer(0);
+
+    // Traducir descripción si cambia el idioma
+    window.addEventListener('languageChanged', () => {
+        const prod = FEATURED_PRODUCERS[currentIndex];
+        const lang = window.currentLang || 'es';
+        descEl.textContent = prod.desc[lang] || prod.desc['es'];
+    });
+}
 
 

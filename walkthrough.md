@@ -179,4 +179,10 @@ Para asegurar que el diseño de BEATSS no se vea pequeño en monitores de alta r
 *   **Despliegue a Producción:**
     *   Se ejecutó un despliegue exitoso a producción en Vercel, habilitando la versión corregida con zoom y pasarela de suscripción PayPal funcional en [generador-licencias.vercel.app](https://generador-licencias.vercel.app).
 
+---
+
+## 🔒 Configuración de Seguridad de 5 Capas
+* **Guía Completa:** Generamos la guía detallada [guia_seguridad_5_capas.md](file:///Users/sossa/.gemini/antigravity/brain/df1be2a6-14fb-4cb7-9153-aabae49e1cb9/guia_seguridad_5_capas.md) que documenta las configuraciones de seguridad para cada capa en entornos VPS tradicionales y su equivalencia en nuestro stack serverless actual.
+* **Bloqueos en Servidor Web (Vercel):** Modificamos el archivo de configuración [vercel.json](file:///Users/sossa/IA/generador-licencias/vercel.json) de la plataforma en producción para forzar redirecciones automáticas a `/404` en caso de intentos de lectura sobre archivos de configuración sensibles como `.env`, `firebase-adminsdk.json`, `sri_contingency.db` y archivos de compilación, emulando las reglas de denegación de Nginx para el stack serverless.
+
 
