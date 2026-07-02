@@ -2394,6 +2394,8 @@ export function onAcceptTermsChange() {
     const nextBtn = document.getElementById('btn-checkout-next');
     const payphoneContainer = document.getElementById('payphone-button');
     const paypalContainer = document.getElementById('store-paypal-button-container');
+    const paypalOverlay = document.getElementById('store-paypal-overlay');
+    const payphoneOverlay = document.getElementById('store-payphone-overlay');
 
     if (accepted) {
         if (nextBtn) {
@@ -2403,12 +2405,12 @@ export function onAcceptTermsChange() {
         }
         if (payphoneContainer) {
             payphoneContainer.style.opacity = '1';
-            payphoneContainer.style.pointerEvents = 'auto';
         }
         if (paypalContainer) {
             paypalContainer.style.opacity = '1';
-            paypalContainer.style.pointerEvents = 'auto';
         }
+        if (paypalOverlay) paypalOverlay.style.display = 'none';
+        if (payphoneOverlay) payphoneOverlay.style.display = 'none';
     } else {
         if (nextBtn) {
             nextBtn.disabled = true;
@@ -2416,17 +2418,34 @@ export function onAcceptTermsChange() {
             nextBtn.style.pointerEvents = 'none';
         }
         if (payphoneContainer) {
-            payphoneContainer.style.opacity = '0.4';
-            payphoneContainer.style.pointerEvents = 'none';
+            payphoneContainer.style.opacity = '0.7';
         }
         if (paypalContainer) {
-            paypalContainer.style.opacity = '0.4';
-            paypalContainer.style.pointerEvents = 'none';
+            paypalContainer.style.opacity = '0.7';
         }
+        if (paypalOverlay) paypalOverlay.style.display = 'block';
+        if (payphoneOverlay) payphoneOverlay.style.display = 'block';
+    }
+}
+
+export function onPaymentClickWithoutTerms() {
+    if (typeof window.showToast === 'function') {
+        window.showToast('Debes leer y aceptar los Términos de Servicio y las condiciones de la Licencia para continuar.', true);
+    }
+    const label = document.querySelector('label[for="store-chk-accept-terms"]');
+    if (label) {
+        label.style.transition = 'all 0.2s';
+        label.style.color = '#ef4444';
+        label.style.textShadow = '0 0 8px rgba(239, 68, 68, 0.6)';
+        setTimeout(() => {
+            label.style.color = '#fff';
+            label.style.textShadow = 'none';
+        }, 1500);
     }
 }
 
 // Bind to window for global/inline access
+window.onPaymentClickWithoutTerms = onPaymentClickWithoutTerms;
 window.onAcceptTermsChange = onAcceptTermsChange;
 window.addToCart = addToCart;
 window.removeFromCart = removeFromCart;

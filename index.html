@@ -4927,19 +4927,29 @@
 
                     <!-- Panel PayPal -->
                     <div class="store-payment-panel" id="store-pay-paypal" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;" data-i18n="checkout_paypal_desc">Paga de manera instantánea y segura con tu cuenta PayPal o tarjeta de crédito:</p>
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0; text-align: center;" data-i18n="checkout_paypal_desc">Paga de manera instantánea y segura con tu cuenta PayPal o tarjeta de crédito:</p>
                         
-                        <div id="store-paypal-button-container" style="min-height: 150px; text-align: center; width: 100%; box-sizing: border-box; background: #ffffff; padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 12px;">
-                            <!-- Botón de PayPal cargado dinámicamente -->
+                        <div style="display: flex; justify-content: center; width: 100%; box-sizing: border-box;">
+                            <div style="position: relative; width: 100%; max-width: 420px; box-sizing: border-box;">
+                                <div id="store-paypal-button-container" style="min-height: 115px; width: 100%; box-sizing: border-box; background: rgba(0, 48, 135, 0.08); border: 1px solid rgba(0, 156, 222, 0.15); padding: 16px; border-radius: 14px; margin-bottom: 12px;">
+                                    <!-- Botón de PayPal cargado dinámicamente -->
+                                </div>
+                                <!-- Overlay para clics cuando los términos no están aceptados -->
+                                <div id="store-paypal-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 12px); cursor: pointer; z-index: 10; display: block; border-radius: 14px;" onclick="window.onPaymentClickWithoutTerms()"></div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Panel PayPhone -->
                     <div class="store-payment-panel" id="store-pay-payphone">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;" data-i18n="checkout_payphone_desc">Paga al instante de forma segura usando tu cuenta <strong style="color: #fff;">PayPhone</strong> o tu tarjeta de crédito/débito favorita:</p>
+                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0; text-align: center;" data-i18n="checkout_payphone_desc">Paga al instante de forma segura usando tu cuenta <strong style="color: #fff;">PayPhone</strong> o tu tarjeta de crédito/débito favorita:</p>
                         
                         <div style="display: flex; justify-content: center; width: 100%; box-sizing: border-box;">
-                            <div id="payphone-button" style="width: 100%; max-width: 300px; min-height: 50px; display: flex; justify-content: center; align-items: center;"></div>
+                            <div style="position: relative; width: 100%; max-width: 300px; box-sizing: border-box;">
+                                <div id="payphone-button" style="width: 100%; min-height: 50px; display: flex; justify-content: center; align-items: center; background: rgba(255, 108, 0, 0.04); border: 1px solid rgba(255, 108, 0, 0.1); padding: 12px; border-radius: 14px; box-sizing: border-box;"></div>
+                                <!-- Overlay para clics cuando los términos no están aceptados -->
+                                <div id="store-payphone-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10; display: block; border-radius: 14px;" onclick="window.onPaymentClickWithoutTerms()"></div>
+                            </div>
                         </div>
                     </div>
 
