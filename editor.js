@@ -671,9 +671,20 @@ function compileContract() {
     // Determinar firmas requeridas
     const needsBuyerSignature = (activeTemplateId === 'split_sheet' || activeTemplateId === 'coproduccion' || isExclusive);
     
+    // Auto-detectar etiqueta RUC si tiene 13 dígitos
+    let idLabelL = t.buyerId || 'Identificación/RUT:';
+    if (producerConfig.id && producerConfig.id.trim().length === 13) {
+        idLabelL = 'RUC (Ecuador):';
+    }
+    
+    let idLabelR = t.buyerId || 'Identificación/RUT:';
+    if (buyerId && buyerId.trim().length === 13) {
+        idLabelR = 'RUC (Ecuador):';
+    }
+    
     let signatureRoleL = t.producerRole || 'El Licenciante (Productor)';
     let signatureNameL = producerConfig.name;
-    let signatureIdL = `${t.buyerId || 'Identificación/RUT:'} ${producerConfig.id || "0803743111"}`;
+    let signatureIdL = `${idLabelL} ${producerConfig.id || "0803743111"}`;
     let signatureAkaL = `AKA: ${producerConfig.aka}`;
     
     if (activeTemplateId === 'coproduccion') {
@@ -682,7 +693,7 @@ function compileContract() {
     
     let signatureRoleR = t.buyerRole || 'El Licenciatario (Usuario)';
     let signatureNameR = buyerName;
-    let signatureIdR = `${t.buyerId || 'Identificación/RUT:'} ${buyerId}`;
+    let signatureIdR = `${idLabelR} ${buyerId}`;
     
     if (activeTemplateId === 'coproduccion') {
         signatureRoleR = 'Coproductor / Colaborador';
@@ -690,40 +701,65 @@ function compileContract() {
         signatureRoleR = 'Autor/Letra/Voz';
     }
 
-    const signatureLeftHtml = `
-        <div class="signature-block">
-            <div class="signature-img-wrap">
-                ${producerConfig.signature
-                    ? `<img src="${producerConfig.signature}" alt="Firma ${producerConfig.aka}" class="signature-img">`
-                    : (isMonarco 
-                        ? `<img src="/firma-cgmonarco.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
-                        : (isSossa
-                            ? `<img src="/firma-sossa.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
-                            : `<div class="signature-placeholder" style="font-family:'Brush Script MT', cursive; font-size:28px; color:var(--accent); text-align:center; padding-top:5px; width:150px; margin:0 auto;">${producerConfig.name}</div>`
-                          )
-                      )
-                }
-            </div>
-            <div class="signature-line"></div>
-            <div class="signature-role">${signatureRoleL}</div>
-            <div class="signature-name">${signatureNameL}</div>
-            <div class="signature-aka">${signatureIdL}</div>
-            <div class="signature-aka">${signatureAkaL}</div>
-        </div>
-    `;
+    let signatureSectionHtml = '';
     
-    const signatureRightHtml = needsBuyerSignature ? `
-        <div class="signature-block">
-            <div class="signature-img-wrap">
-                <!-- Espacio en blanco reservado para alineación de firmas -->
+    if (needsBuyerSignature) {
+        const signatureLeftHtml = `
+            <div class="signature-block">
+                <div class="signature-img-wrap">
+                    ${producerConfig.signature
+                        ? `<img src="${producerConfig.signature}" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                        : (isMonarco 
+                            ? `<img src="/firma-cgmonarco.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                            : (isSossa
+                                ? `<img src="/firma-sossa.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                                : `<div class="signature-placeholder" style="font-family:'Brush Script MT', cursive; font-size:28px; color:var(--accent); text-align:center; padding-top:5px; width:150px; margin:0 auto;">${producerConfig.name}</div>`
+                              )
+                          )
+                    }
+                </div>
+                <div class="signature-line"></div>
+                <div class="signature-role">${signatureRoleL}</div>
+                <div class="signature-name">${signatureNameL}</div>
+                <div class="signature-aka">${signatureIdL}</div>
+                <div class="signature-aka">${signatureAkaL}</div>
             </div>
-            <div class="signature-line"></div>
-            <div class="signature-role">${signatureRoleR}</div>
-            <div class="signature-name">${signatureNameR}</div>
-            <div class="signature-aka">${signatureIdR}</div>
-            <div class="signature-aka">${t.buyerSignatureDocusign || 'Firma vía DocuSign'}</div>
-        </div>
-    ` : '';
+        `;
+        
+        const signatureRightHtml = `
+            <div class="signature-block">
+                <div class="signature-img-wrap">
+                    <!-- Espacio en blanco reservado para alineación de firmas -->
+                </div>
+                <div class="signature-line"></div>
+                <div class="signature-role">${signatureRoleR}</div>
+                <div class="signature-name">${signatureNameR}</div>
+                <div class="signature-aka">${signatureIdR}</div>
+                <div class="signature-aka">${t.buyerSignatureDocusign || 'Firma vía DocuSign'}</div>
+            </div>
+        `;
+
+        signatureSectionHtml = `
+            <div class="signature-section" style="margin-top: 30px;">
+                ${signatureLeftHtml}
+                ${signatureRightHtml}
+            </div>
+        `;
+    } else {
+        const formattedDate = new Date(effectiveDate + 'T12:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-ES', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+        signatureSectionHtml = `
+            <div class="signature-section non-exclusive-acceptance" style="margin-top: 30px; display: flex; justify-content: center; width: 100%;">
+                <div style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 15px 30px; background: rgba(16, 185, 129, 0.02); text-align: center; max-width: 500px; width: 100%;">
+                    <div style="font-size: 18px; color: #10b981; font-weight: 800; margin-bottom: 5px;">✓ Aceptado vía Pago</div>
+                    <div style="font-size: 11px; color: #636366; line-height: 1.4;">
+                        Este acuerdo no requiere firma física de conformidad con los términos y condiciones de la plataforma y el pago registrado de manera electrónica el <strong>${formattedDate}</strong> bajo la referencia: <strong class="font-data-mono">${refCode}</strong>.
+                    </div>
+                </div>
+            </div>
+        `;
+    }
 
     let html = `
         <div class="contract-doc">
@@ -742,10 +778,7 @@ function compileContract() {
             </div>
 
             <div class="contract-closure">
-                <div class="signature-section" style="margin-top: 30px;">
-                    ${signatureLeftHtml}
-                    ${signatureRightHtml}
-                </div>
+                ${signatureSectionHtml}
                 
                 <div class="digital-seal-container" style="margin-top: 25px;">
                     <div class="digital-seal">
@@ -3216,45 +3249,57 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
     const bodyHtml = parseMarkdownToHTML(md);
     const needsBuyerSignature = (templateId === 'split_sheet' || templateId === 'coproduccion' || isExclusive);
     
+    // Auto-detectar etiqueta RUC si tiene 13 dígitos
+    let idLabelL = t.buyerId || 'Identificación/RUT:';
+    if (producerConfig.id && producerConfig.id.trim().length === 13) {
+        idLabelL = 'RUC (Ecuador):';
+    }
+    
+    let idLabelR = t.buyerId || 'Identificación/RUT:';
+    if (buyerId && buyerId.trim().length === 13) {
+        idLabelR = 'RUC (Ecuador):';
+    }
+    
     let signatureRoleL = t.producerRole || 'El Licenciante (Productor)';
     let signatureNameL = producerConfig.name;
-    let signatureIdL = `${t.buyerId || 'Identificación/RUT:'} ${producerConfig.id || "0803743111"}`;
+    let signatureIdL = `${idLabelL} ${producerConfig.id || "0803743111"}`;
     let signatureAkaL = `AKA: ${producerConfig.aka}`;
 
     let signatureRoleR = t.buyerRole || 'El Licenciatario (Cliente)';
     let signatureNameR = buyerName;
-    let signatureIdR = `${t.buyerId || 'Identificación/RUT:'} ${buyerId}`;
+    let signatureIdR = `${idLabelR} ${buyerId}`;
     let signatureAkaR = ``;
 
-    let signatureLeftHtml = `
-        <div class="signature-block">
-            <div class="signature-img-wrap">
-                ${producerConfig.signatureBase64
-                    ? `<img src="${producerConfig.signatureBase64}" alt="Firma ${producerConfig.aka}" class="signature-img">`
-                    : (producerConfig.signature
-                        ? `<img src="${producerConfig.signature}" alt="Firma ${producerConfig.aka}" class="signature-img">`
-                        : (isMonarco
-                            ? `<img src="/firma-cgmonarco.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
-                            : (isSossa
-                                ? `<img src="/firma-sossa.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
-                                : `<div class="signature-placeholder" style="font-family:'Brush Script MT', cursive; font-size:28px; color:var(--accent); text-align:center; padding-top:5px; width:150px; margin:0 auto;">${producerConfig.name}</div>`
+    let signaturesSectionHtml = '';
+    
+    if (needsBuyerSignature) {
+        let signatureLeftHtml = `
+            <div class="signature-block">
+                <div class="signature-img-wrap">
+                    ${producerConfig.signatureBase64
+                        ? `<img src="${producerConfig.signatureBase64}" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                        : (producerConfig.signature
+                            ? `<img src="${producerConfig.signature}" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                            : (isMonarco
+                                ? `<img src="/firma-cgmonarco.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                                : (isSossa
+                                    ? `<img src="/firma-sossa.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                                    : `<div class="signature-placeholder" style="font-family:'Brush Script MT', cursive; font-size:28px; color:var(--accent); text-align:center; padding-top:5px; width:150px; margin:0 auto;">${producerConfig.name}</div>`
+                                  )
                               )
                           )
-                      )
-                }
+                    }
+                </div>
+                <div class="signature-line"></div>
+                <div class="signature-role">${signatureRoleL}</div>
+                <div class="signature-name">${signatureNameL}</div>
+                <div class="signature-aka">${signatureIdL}</div>
+                <div class="signature-aka">${signatureAkaL}</div>
             </div>
-            <div class="signature-line"></div>
-            <div class="signature-role">${signatureRoleL}</div>
-            <div class="signature-name">${signatureNameL}</div>
-            <div class="signature-aka">${signatureIdL}</div>
-            <div class="signature-aka">${signatureAkaL}</div>
-        </div>
-    `;
+        `;
 
-    let signatureRightHtml = '';
-    if (needsBuyerSignature) {
         const buyerSig = orderData.buyerSignature || orderData.buyerSignatureBase64 || '';
-        signatureRightHtml = `
+        let signatureRightHtml = `
             <div class="signature-block">
                 <div class="signature-img-wrap">
                     ${buyerSig 
@@ -3269,15 +3314,24 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
                 <div class="signature-aka">${orderData.buyerSignatureDocusign || t.buyerSignatureDocusign || 'Firma vía DocuSign'}</div>
             </div>
         `;
+
+        signaturesSectionHtml = `
+            <div class="contract-signatures-wrapper">
+                ${signatureLeftHtml}
+                ${signatureRightHtml}
+            </div>
+        `;
     } else {
         const formattedDate = new Date(effectiveDate + 'T12:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-ES', {
             year: 'numeric', month: 'long', day: 'numeric'
         });
-        signatureRightHtml = `
-            <div class="signature-block" style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 15px; background: rgba(16, 185, 129, 0.02); text-align: center; page-break-inside: avoid; break-inside: avoid;">
-                <div style="font-size: 18px; color: #10b981; font-weight: 800; margin-bottom: 5px;">✓ Aceptado vía Pago</div>
-                <div style="font-size: 11px; color: #636366; line-height: 1.4;">
-                    Este acuerdo no requiere firma física de conformidad con los términos y condiciones de la plataforma y el pago registrado de manera electrónica el <strong>${formattedDate}</strong> bajo la referencia: <strong class="font-data-mono">${refCode}</strong>.
+        signaturesSectionHtml = `
+            <div class="non-exclusive-acceptance-wrapper" style="display: flex; justify-content: center; width: 100%; page-break-inside: avoid; break-inside: avoid;">
+                <div style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 15px 30px; background: rgba(16, 185, 129, 0.02); text-align: center; max-width: 500px; width: 100%;">
+                    <div style="font-size: 18px; color: #10b981; font-weight: 800; margin-bottom: 5px;">✓ Aceptado vía Pago</div>
+                    <div style="font-size: 11px; color: #636366; line-height: 1.4;">
+                        Este acuerdo no requiere firma física de conformidad con los términos y condiciones de la plataforma y el pago registrado de manera electrónica el <strong>${formattedDate}</strong> bajo la referencia: <strong class="font-data-mono">${refCode}</strong>.
+                    </div>
                 </div>
             </div>
         `;
@@ -3299,10 +3353,7 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
         </div>
 
         <div class="contract-closure" style="page-break-inside: avoid !important; break-inside: avoid !important;">
-            <div class="contract-signatures-wrapper">
-                ${signatureLeftHtml}
-                ${signatureRightHtml}
-            </div>
+            ${signaturesSectionHtml}
         </div>
     `;
 

@@ -302,19 +302,19 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
         except Exception as e:
             print(f"Warning: Failed to decode buyer signature: {e}")
             
-    # Reestructuración de firmas en tabla de múltiples filas para alineación garantizada
-    row_images = []
-    # Productor
-    if producer_img_path:
-        try:
-            row_images.append(Image(producer_img_path, width=120, height=45))
-        except Exception:
-            row_images.append(Paragraph("<font name='Times-Italic' size=14 color='#1c1c1e'><i>" + data_fields.get('producerName', 'Joao David Dominguez') + "</i></font>", styles['SignatureValueStyle']))
-    else:
-        row_images.append(Paragraph("<font name='Times-Italic' size=14 color='#1c1c1e'><i>" + data_fields.get('producerName', 'Joao David Dominguez') + "</i></font>", styles['SignatureValueStyle']))
-
-    # Comprador
     if needs_buyer:
+        # Reestructuración de firmas en tabla de múltiples filas para alineación garantizada
+        row_images = []
+        # Productor
+        if producer_img_path:
+            try:
+                row_images.append(Image(producer_img_path, width=120, height=45))
+            except Exception:
+                row_images.append(Paragraph("<font name='Times-Italic' size=14 color='#1c1c1e'><i>" + data_fields.get('producerName', 'Joao David Dominguez') + "</i></font>", styles['SignatureValueStyle']))
+        else:
+            row_images.append(Paragraph("<font name='Times-Italic' size=14 color='#1c1c1e'><i>" + data_fields.get('producerName', 'Joao David Dominguez') + "</i></font>", styles['SignatureValueStyle']))
+
+        # Comprador
         if buyer_img_path:
             try:
                 row_images.append(Image(buyer_img_path, width=120, height=45))
@@ -322,67 +322,103 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
                 row_images.append(Spacer(1, 45))
         else:
             row_images.append(Spacer(1, 45))
+
+        # Fila 1: Línea de firma
+        row_lines = [
+            Paragraph("_____________________________", styles['SignatureValueStyle']),
+            Paragraph("_____________________________", styles['SignatureValueStyle'])
+        ]
+
+        # Fila 2: Rol
+        row_roles = [
+            Paragraph(data_fields.get('producerRole', 'El Licenciante (Productor)'), styles['SignatureLabelStyle']),
+            Paragraph(data_fields.get('buyerRole', 'El Licenciatario (Usuario)'), styles['SignatureLabelStyle'])
+        ]
+
+        # Fila 3: Nombre
+        row_names = [
+            Paragraph(data_fields.get('producerName', 'Joao David Dominguez'), styles['SignatureValueStyle']),
+            Paragraph(data_fields.get('buyerName', 'Jair Yepez'), styles['SignatureValueStyle'])
+        ]
+
+        # Fila 4: Identificación (Auto-detectar RUC)
+        producer_id = str(data_fields.get('producerIdNum') or data_fields.get('producerId', '0803743111')).strip()
+        producer_id_label = "RUC (Ecuador):" if len(producer_id) == 13 else "Identificación/RUT:"
+        
+        buyer_id = str(data_fields.get('buyerId', '0803743111')).strip()
+        buyer_id_label = "RUC (Ecuador):" if len(buyer_id) == 13 else "Identificación/RUT:"
+
+        row_ids = [
+            Paragraph(f"{producer_id_label} {producer_id}", styles['SignatureValueStyle']),
+            Paragraph(f"{buyer_id_label} {buyer_id}", styles['SignatureValueStyle'])
+        ]
+
+        # Fila 5: Metadata adicional (AKA o DocuSign)
+        row_metas = [
+            Paragraph(f"AKA: {data_fields.get('aka', 'Sossa')}", styles['SignatureValueStyle']),
+            Paragraph("Firma vía DocuSign / Electrónica", styles['SignatureValueStyle'])
+        ]
+
+        sig_data = [
+            row_images,
+            row_lines,
+            row_roles,
+            row_names,
+            row_ids,
+            row_metas
+        ]
+
+        sig_table = Table(sig_data, colWidths=[252, 252])
+        sig_table.setStyle(TableStyle([
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('TOPPADDING', (0,0), (-1,-1), 1),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+        ]))
+        
+        story.append(KeepTogether([sig_table]))
     else:
-        row_images.append('')
-
-    # Fila 1: Línea de firma
-    row_lines = []
-    row_lines.append(Paragraph("_____________________________", styles['SignatureValueStyle']))
-    if needs_buyer:
-        row_lines.append(Paragraph("_____________________________", styles['SignatureValueStyle']))
-    else:
-        row_lines.append('')
-
-    # Fila 2: Rol
-    row_roles = []
-    row_roles.append(Paragraph(data_fields.get('producerRole', 'El Licenciante (Productor)'), styles['SignatureLabelStyle']))
-    if needs_buyer:
-        row_roles.append(Paragraph(data_fields.get('buyerRole', 'El Licenciatario (Usuario)'), styles['SignatureLabelStyle']))
-    else:
-        row_roles.append('')
-
-    # Fila 3: Nombre
-    row_names = []
-    row_names.append(Paragraph(data_fields.get('producerName', 'Joao David Dominguez'), styles['SignatureValueStyle']))
-    if needs_buyer:
-        row_names.append(Paragraph(data_fields.get('buyerName', 'Jair Yepez'), styles['SignatureValueStyle']))
-    else:
-        row_names.append('')
-
-    # Fila 4: Identificación
-    row_ids = []
-    row_ids.append(Paragraph(f"Identificación/RUT: {data_fields.get('producerIdNum') or data_fields.get('producerId', '0803743111')}", styles['SignatureValueStyle']))
-    if needs_buyer:
-        row_ids.append(Paragraph(f"Identificación/RUT: {data_fields.get('buyerId', '0803743111')}", styles['SignatureValueStyle']))
-    else:
-        row_ids.append('')
-
-    # Fila 5: Metadata adicional (AKA o DocuSign)
-    row_metas = []
-    row_metas.append(Paragraph(f"AKA: {data_fields.get('aka', 'Sossa')}", styles['SignatureValueStyle']))
-    if needs_buyer:
-        row_metas.append(Paragraph("Firma vía DocuSign / Electrónica", styles['SignatureValueStyle']))
-    else:
-        row_metas.append('')
-
-    sig_data = [
-        row_images,
-        row_lines,
-        row_roles,
-        row_names,
-        row_ids,
-        row_metas
-    ]
-
-    sig_table = Table(sig_data, colWidths=[252, 252])
-    sig_table.setStyle(TableStyle([
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('TOPPADDING', (0,0), (-1,-1), 1),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 1),
-    ]))
-    
-    story.append(KeepTogether([sig_table]))
+        # Tarjeta de aceptado vía pago centrada (para licencias no exclusivas)
+        accept_style_title = ParagraphStyle(
+            'AcceptTitle',
+            parent=styles['SignatureValueStyle'],
+            textColor=colors.HexColor("#10b981"),
+            fontSize=11,
+            leading=13,
+            alignment=1, # Center
+            fontName='Helvetica-Bold'
+        )
+        accept_style_body = ParagraphStyle(
+            'AcceptBody',
+            parent=styles['SignatureLabelStyle'],
+            textColor=colors.HexColor("#4a5568"),
+            fontSize=8,
+            leading=11,
+            alignment=1 # Center
+        )
+        
+        ref_code = data_fields.get('refCode', 'REF')
+        date_display = data_fields.get('date', '')
+        
+        accept_content = [
+            Paragraph("<b>✓ Aceptado vía Pago</b>", accept_style_title),
+            Spacer(1, 4),
+            Paragraph(f"Este acuerdo no requiere firma física de conformidad con los términos y condiciones de la plataforma y el pago registrado de manera electrónica el <b>{date_display}</b> bajo la referencia: <b>{ref_code}</b>.", accept_style_body)
+        ]
+        
+        accept_table = Table([[accept_content]], colWidths=[360])
+        accept_table.setStyle(TableStyle([
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#f0fff4")), # Fondo verde claro
+            ('BOX', (0,0), (-1,-1), 1, colors.HexColor("#10b981")),     # Borde verde
+            ('TOPPADDING', (0,0), (-1,-1), 10),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 10),
+            ('LEFTPADDING', (0,0), (-1,-1), 15),
+            ('RIGHTPADDING', (0,0), (-1,-1), 15),
+        ]))
+        
+        story.append(KeepTogether([accept_table]))
     
     hash_data = f"{data_fields.get('refCode')}|{data_fields.get('beatName')}|{data_fields.get('buyerName')}|{data_fields.get('buyerEmail')}|{data_fields.get('value')}|{data_fields.get('date')}|{aka}"
     crypto_hash = hashlib.sha256(hash_data.encode('utf-8')).hexdigest()
