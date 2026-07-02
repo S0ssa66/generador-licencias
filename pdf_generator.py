@@ -398,12 +398,39 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
         )
         
         ref_code = data_fields.get('refCode', 'REF')
-        date_display = data_fields.get('date', '')
+        raw_date = data_fields.get('date', '')
         
+        # Formatear fecha de YYYY-MM-DD a formato amigable según el idioma
+        date_display = raw_date
+        lang = data_fields.get('lang', 'es')
+        if raw_date and '-' in raw_date:
+            try:
+                parts = raw_date.split('-')
+                if len(parts) == 3:
+                    year = parts[0]
+                    month_num = int(parts[1])
+                    day_num = int(parts[2])
+                    
+                    if lang == 'en':
+                        months_en = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+                        date_display = f"{months_en[month_num - 1]} {day_num}, {year}"
+                    else:
+                        months_es = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+                        date_display = f"{day_num} de {months_es[month_num - 1]} de {year}"
+            except Exception as e:
+                print(f"Warning: Failed to format date in PDF: {e}")
+                
+        if lang == 'en':
+            accept_title_text = "<b>✓ Accepted via Payment</b>"
+            accept_body_text = f"This agreement does not require a physical signature in accordance with the platform terms and conditions, and the payment registered electronically on <b>{date_display}</b> under reference: <b>{ref_code}</b>."
+        else:
+            accept_title_text = "<b>✓ Aceptado vía Pago</b>"
+            accept_body_text = f"Este acuerdo no requiere firma física de conformidad con los términos y condiciones de la plataforma y el pago registrado de manera electrónica el <b>{date_display}</b> bajo la referencia: <b>{ref_code}</b>."
+            
         accept_content = [
-            Paragraph("<b>✓ Aceptado vía Pago</b>", accept_style_title),
+            Paragraph(accept_title_text, accept_style_title),
             Spacer(1, 4),
-            Paragraph(f"Este acuerdo no requiere firma física de conformidad con los términos y condiciones de la plataforma y el pago registrado de manera electrónica el <b>{date_display}</b> bajo la referencia: <b>{ref_code}</b>.", accept_style_body)
+            Paragraph(accept_body_text, accept_style_body)
         ]
         
         accept_table = Table([[accept_content]], colWidths=[360])

@@ -930,7 +930,8 @@ async function downloadPDF() {
                 producerSignatureBase64: pConfig.signature || "",
                 buyerSignatureBase64: "", // En espera de DocuSign si aplica
                 needsBuyerSignature: needsBuyerSig,
-                logoBase64: (pConfig.plan === 'elite' || window.currentUserIsAdmin) ? (pConfig.logoBase64 || "") : ""
+                logoBase64: (pConfig.plan === 'elite' || window.currentUserIsAdmin) ? (pConfig.logoBase64 || "") : "",
+                lang: currentLang
             };
             
             const res = await fetch('/api/generate-contract-pdf', {
