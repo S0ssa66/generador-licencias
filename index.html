@@ -891,8 +891,8 @@
 
                 <!-- PayPhone -->
                 <button type="button" class="pm-card-btn" onclick="selectPaymentMethod('payphone')" style="padding:16px 20px;">
-                    <div style="width:40px; height:40px; border-radius:8px; background:#00AACC; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15); overflow:hidden;">
-                        <img src="/banks/payphone.png" style="width:100%; height:100%; object-fit:cover; display:block;" alt="PayPhone">
+                    <div style="width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.15); overflow:hidden;">
+                        <img src="/banks/payphone_icon.png" style="width:100%; height:100%; object-fit:contain; display:block;" alt="PayPhone">
                     </div>
                     <div style="flex:1; margin-left:6px;">
                         <div style="font-size:15px; font-weight:700; color:#fff;">PayPhone</div>
@@ -4045,7 +4045,7 @@
             document.querySelectorAll('#pm-step-1 .pm-card-btn').forEach(btn => {
                 btn.classList.remove('pm-active');
                 // Quitar indicador dot interno
-                const indicator = btn.querySelector('div[style*="border-radius: 50%"]');
+                const indicator = btn.querySelector('div[style*="border-radius:50%"]') || btn.querySelector('div[style*="border-radius: 50%"]');
                 if (indicator) {
                     indicator.innerHTML = '';
                     indicator.style.borderColor = 'rgba(255,255,255,0.25)';
@@ -4060,7 +4060,7 @@
             
             if (activeBtn) {
                 activeBtn.classList.add('pm-active');
-                const indicator = activeBtn.querySelector('div[style*="border-radius: 50%"]');
+                const indicator = activeBtn.querySelector('div[style*="border-radius:50%"]') || activeBtn.querySelector('div[style*="border-radius: 50%"]');
                 if (indicator) {
                     indicator.style.borderColor = '#6366f1';
                     indicator.innerHTML = '<div style="width:10px; height:10px; border-radius:50%; background:#6366f1;"></div>';
@@ -4819,29 +4819,32 @@
                             <div style="position: absolute; top: -8px; background: linear-gradient(135deg, #0079c1, #00457c); color: #fff; font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); pointer-events: none; white-space: nowrap;">
                                 Recomendado
                             </div>
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" style="height: 16px; pointer-events: none;" alt="PayPal">
+                            <img src="/banks/paypal.svg" style="height: 16px; pointer-events: none;" alt="PayPal">
                             <span style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; margin-top: 2px; pointer-events: none;">Tarjeta Internac.</span>
                         </button>
 
                         <!-- Tarjeta PayPhone -->
                         <button type="button" class="pay-card-btn payphone" id="btn-pay-payphone" onclick="window.switchStorePaymentMethod('payphone')">
-                            <div style="font-size: 14px; font-weight: 900; color: #ff6c00; letter-spacing: -0.5px; display: flex; align-items: center; gap: 2px; pointer-events: none;">
-                                <span style="color: #fff;">pay</span><span>phone</span>
+                            <div style="height: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; pointer-events: none;">
+                                <img src="/banks/payphone_icon.png" style="height: 100%; object-fit: contain; pointer-events: none;" alt="PayPhone">
                             </div>
                             <span style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; pointer-events: none;">Tarjetas Ecuador</span>
                         </button>
 
                         <!-- Tarjeta Deuna! -->
                         <button type="button" class="pay-card-btn deuna" id="btn-pay-deuna" onclick="window.switchStorePaymentMethod('deuna')">
-                            <div style="font-size: 14px; font-weight: 900; color: #00ffcc; letter-spacing: -0.5px; pointer-events: none;">
-                                Deuna!
+                            <div style="height: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; pointer-events: none;">
+                                <img src="/banks/deuna.svg" style="height: 100%; object-fit: contain; pointer-events: none;" alt="Deuna!">
                             </div>
                             <span style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; pointer-events: none;">QR / Celular</span>
                         </button>
 
                         <!-- Tarjeta Transferencia -->
                         <button type="button" class="pay-card-btn transfer" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')">
-                            <i data-lucide="landmark" style="width: 16px; height: 16px; color: #8a91a6; pointer-events: none;"></i>
+                            <div style="display: flex; gap: 4px; align-items: center; justify-content: center; height: 16px; margin-bottom: 2px; pointer-events: none;">
+                                <img src="/banks/pichincha.svg" style="height: 14px; object-fit: contain; background: #0f1322; border-radius: 2px;" alt="Pichincha">
+                                <img src="/banks/guayaquil.svg" style="height: 14px; object-fit: contain; background: #fff; border-radius: 2px;" alt="Guayaquil">
+                            </div>
                             <span data-i18n="checkout_pay_transfer" style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; margin-top: 1px; pointer-events: none;">Depósito / Transf.</span>
                         </button>
 
