@@ -3760,12 +3760,12 @@ function initFeaturedProducerRotation() {
         },
         {
             name: "CG Monarco",
-            img: "producer_monarco.jpg",
+            img: "producer_monarco.jpg?v=3",
             desc: {
                 es: "Productor Platinum • Trap & Reggaeton",
                 en: "Platinum Producer • Trap & Reggaeton"
             },
-            position: "center 15%",
+            position: "center 5%",
             borderColor: "border-neon-blue",
             labelColor: "text-neon-blue",
             duration: 4000 // Others appear for 4 seconds
