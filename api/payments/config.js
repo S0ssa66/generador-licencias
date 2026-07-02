@@ -5,7 +5,23 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 
 const ADMIN_UID = 'paXbnNbHMMPC31X3hf0oTUx4bbr2';
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://generador-licencias.vercel.app';
+const ALLOWED_ORIGINS = [
+    'https://beatss.app',
+    'https://www.beatss.app',
+    'https://generador-licencias.vercel.app'
+];
+
+function getCorsOrigin(req) {
+    const origin = req.headers.origin;
+    if (!origin) return 'https://beatss.app';
+    if (ALLOWED_ORIGINS.includes(origin) || 
+        origin.endsWith('.vercel.app') || 
+        origin.startsWith('http://localhost') || 
+        origin.startsWith('http://127.0.0.1')) {
+        return origin;
+    }
+    return 'https://beatss.app';
+}
 
 // Inicializar Firebase Admin (solo una vez)
 function initFirebaseAdmin() {
@@ -21,7 +37,7 @@ function initFirebaseAdmin() {
 
 export default async function handler(req, res) {
     // CORS headers - restringido al dominio propio
-    res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+    res.setHeader('Access-Control-Allow-Origin', getCorsOrigin(req));
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 

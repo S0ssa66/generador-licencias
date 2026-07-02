@@ -67,7 +67,9 @@ class CustomHandler(HandlerGetMixin, HandlerPostMixin, http.server.SimpleHTTPReq
             'http://127.0.0.1:8000',
             'http://127.0.0.1:5173',
             'http://127.0.0.1:3000',
-            'https://generador-licencias.vercel.app'
+            'https://generador-licencias.vercel.app',
+            'https://beatss.app',
+            'https://www.beatss.app'
         ]
         origin = self.headers.get('Origin')
         if origin in allowed_origins:
