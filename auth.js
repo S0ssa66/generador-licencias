@@ -132,6 +132,12 @@ export function setupAuthModalEvents() {
         }
         console.log("🔓 Abriendo login-modal con estilo forzado para pestaña:", tabType);
         
+        // Mover el modal directamente al body para escapar de cualquier div roto (como payment-modal oculto)
+        if (modal.parentElement !== document.body) {
+            console.log("🛠️ Re-emparentando login-modal al body para evitar ocultamiento heredado");
+            document.body.appendChild(modal);
+        }
+        
         // Forzar estilos inline en el backdrop
         modal.style.cssText = "display: flex !important; position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background-color: rgba(11, 14, 20, 0.85) !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; z-index: 999999 !important; align-items: center !important; justify-content: center !important; opacity: 1 !important; visibility: visible !important;";
         
