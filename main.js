@@ -3772,12 +3772,12 @@ function initFeaturedProducerRotation() {
         },
         {
             name: "Mr. Micua",
-            img: "producer_mrmicua.jpg",
+            img: "producer_mrmicua.jpg?v=3",
             desc: {
                 es: "Productor Platinum • Dancehall & Trap",
                 en: "Platinum Producer • Dancehall & Trap"
             },
-            position: "center 10%",
+            position: "center 20%",
             borderColor: "border-elite-gold",
             labelColor: "text-elite-gold",
             duration: 4000
