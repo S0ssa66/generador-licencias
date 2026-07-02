@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <link rel="preload" href="producer_sossa.webp" as="image" fetchpriority="high">
-    <title>Generador de Licencias de Uso Musical | sossa</title>
+    <title>Beatss - Generador de Licencias de Uso Musical</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,7 +27,7 @@
     <link rel="stylesheet" href="styles.css?v=36">
     <link rel="stylesheet" href="https://cdn.payphonetodoesposible.com/box/v1.1/payphone-payment-box.css">
     <link rel="manifest" href="/manifest.json">
-    <link rel="icon" type="image/png" href="/logo-sossa.png">
+    <link rel="icon" type="image/png" href="/logo.png">
 
     <!-- Material Symbols for Redesign -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
@@ -138,7 +138,10 @@
         <nav class="fixed top-0 z-50 w-full h-20 bg-surface/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-margin-mobile md:px-margin-desktop">
             <div class="max-w-container-max mx-auto w-full flex items-center justify-between">
                 <div class="flex items-center gap-12">
-                    <a class="text-headline-md font-headline-md font-extrabold tracking-tighter text-on-surface cursor-pointer" onclick="window.location.reload()">BEATSS</a>
+                    <a class="flex items-center gap-3 cursor-pointer" onclick="window.location.reload()">
+                        <img src="/logo.png" class="h-10 w-auto object-contain" alt="Beatss Logo"/>
+                        <span class="text-headline-md font-headline-md font-extrabold tracking-tighter text-on-surface">Beatss</span>
+                    </a>
                     <div class="hidden md:flex items-center gap-8">
                         <a id="landing-btn-nav-catalog" data-i18n="nav_marketplace" class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" href="#" onclick="event.preventDefault(); window.showAppView('catalog')">Marketplace</a>
                         <a data-i18n="nav_dashboard" class="font-label-caps text-label-caps text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer" href="#" onclick="document.getElementById('landing-btn-login').click()">Dashboard</a>
@@ -474,7 +477,10 @@
         <footer class="bg-surface-container-lowest py-24 px-margin-mobile md:px-margin-desktop border-t border-white/5">
             <div class="max-w-container-max mx-auto grid grid-cols-1 md:grid-cols-4 gap-gutter">
                 <div class="col-span-1 md:col-span-1">
-                    <h2 class="font-headline-md font-bold text-on-surface mb-6">BEATSS</h2>
+                    <div class="flex items-center gap-3 mb-6">
+                        <img src="/logo.png" class="h-8 w-auto object-contain" alt="Beatss Logo"/>
+                        <h2 class="font-headline-md font-bold text-on-surface">Beatss</h2>
+                    </div>
                     <p class="text-on-surface-variant text-sm max-w-xs mb-8" data-i18n="footer_desc">
                         Elevando el estándar de la industria musical a través de la automatización inteligente y la integridad legal.
                     </p>
@@ -1039,10 +1045,10 @@
             <div class="sidebar-header p-4 border-b border-white/5 flex items-center justify-between">
                 <div class="logo-area flex items-center gap-3">
                     <div class="logo-icon w-10 h-10 rounded-full bg-electric-purple/10 flex items-center justify-center text-electric-purple border border-electric-purple/20" id="app-logo">
-                        <i data-lucide="music"></i>
+                        <img src="/logo.png" style="width: 24px; height: 24px; object-fit: contain;" alt="Beatss Logo"/>
                     </div>
                     <div>
-                        <h1 id="app-sidebar-title" class="font-headline-md text-[18px] font-bold text-on-surface m-0 leading-tight">sossa</h1>
+                        <h1 id="app-sidebar-title" class="font-headline-md text-[18px] font-bold text-on-surface m-0 leading-tight">Beatss</h1>
                         <p class="subtitle font-label-caps text-[10px] text-on-surface-variant m-0">Generador de Licencias</p>
                         <div id="plan-badge-container" class="mt-1"></div>
                     </div>

@@ -1010,11 +1010,11 @@ async function initApp(user) {
         const isSossa = akaName.includes('sossa') || window.currentUserIsAdmin;
 
         if (isSossa) {
-            logoImg.innerHTML = '<i data-lucide="music"></i>';
+            logoImg.innerHTML = '<img src="/logo.png" style="width: 24px; height: 24px; object-fit: contain;">';
             document.body.classList.add('theme-sossa');
             document.body.classList.remove('theme-cgmonarco', 'theme-mrmicua');
         } else if (isMonarco) {
-            logoImg.innerHTML = '<i data-lucide="headphones"></i>';
+            logoImg.innerHTML = '<img src="/logo.png" style="width: 24px; height: 24px; object-fit: contain;">';
             document.body.classList.remove('theme-sossa', 'theme-mrmicua');
             document.body.classList.add('theme-cgmonarco');
         } else if (isMicua) {
@@ -1022,12 +1022,12 @@ async function initApp(user) {
             document.body.classList.remove('theme-sossa', 'theme-cgmonarco');
             document.body.classList.add('theme-mrmicua');
         } else {
-            logoImg.innerHTML = '<i data-lucide="music"></i>';
+            logoImg.innerHTML = '<img src="/logo.png" style="width: 24px; height: 24px; object-fit: contain;">';
             document.body.classList.add('theme-sossa');
             document.body.classList.remove('theme-cgmonarco', 'theme-mrmicua');
         }
         
-        sidebarTitle.textContent = 'BEATSS';
+        sidebarTitle.textContent = 'Beatss';
         const sidebarSubtitle = document.getElementById('app-sidebar-subtitle');
         if (sidebarSubtitle) {
             sidebarSubtitle.textContent = `Panel: ${producerConfig.aka || 'Productor'}`;
