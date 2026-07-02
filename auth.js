@@ -157,6 +157,20 @@ export function setupAuthModalEvents() {
         window.openAuthModal('login');
     });
 
+    // Abrir modal de login desde el Catálogo / Pasarela de Pagos
+    const catalogBtnLogin = document.getElementById('catalog-btn-login');
+    console.log("🔍 Registrando click en catalog-btn-login:", catalogBtnLogin);
+    catalogBtnLogin?.addEventListener('click', () => {
+        console.log("🎯 Clic detectado en catalog-btn-login!");
+        if (window.currentUser) {
+            if (typeof window.showAppView === 'function') {
+                window.showAppView('home');
+            }
+        } else {
+            window.openAuthModal('login');
+        }
+    });
+
     // Redirigir al catálogo/marketplace desde la Landing Page
     document.getElementById('landing-btn-nav-catalog')?.addEventListener('click', (e) => {
         e.preventDefault();
