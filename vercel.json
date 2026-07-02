@@ -1,4 +1,36 @@
 {
+  "redirects": [
+    {
+      "source": "/.env",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/firebase-adminsdk.json",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/sri_contingency.db",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/package.json",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/package-lock.json",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/vercel.json",
+      "destination": "/404",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

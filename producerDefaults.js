@@ -60,6 +60,29 @@ export const PRODUCER_DEFAULTS = {
         emailjsPublicKey: "",
         gdriveClientId: "",
         storageProvider: "gdrive-central"
+    },
+    'esme420typebeat@gmail.com': {
+        name: "Sauce Beats",
+        aka: "Sauce Beats",
+        email: "esme420typebeat@gmail.com",
+        phone: "",
+        place: "Quito, Ecuador",
+        id: "",
+        pro: "BMI",
+        ipi: "",
+        publisher: "Sauce Beats Music",
+        address: "Quito, Ecuador",
+        birthdate: "",
+        dsClientId: "",
+        dsAccountId: "",
+        dsEnv: "demo",
+        emailjsServiceId: "",
+        emailjsTemplateId: "",
+        emailjsPublicKey: "",
+        gdriveClientId: "",
+        storageProvider: "gdrive-central",
+        plan: "elite",
+        expirationPro: "2036-12-31T23:59:59.000Z"
     }
 };
 
@@ -71,6 +94,8 @@ export function getProducerDefault(email, displayName) {
         return { ...PRODUCER_DEFAULTS['sossa'], email: cleanEmail };
     } else if (cleanEmail === 'mistermicua@gmail.com') {
         return { ...PRODUCER_DEFAULTS['mistermicua@gmail.com'] };
+    } else if (cleanEmail === 'esme420typebeat@gmail.com') {
+        return { ...PRODUCER_DEFAULTS['esme420typebeat@gmail.com'] };
     } else {
         // Nuevo productor (7-Day Pro Trial)
         const now = new Date();

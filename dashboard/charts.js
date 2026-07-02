@@ -581,9 +581,57 @@ async function updateDashboardView() {
     initTooltips();
 }
 
+async function exportDashboardToPDF() {
+    const element = document.getElementById('tab-dashboard');
+    if (!element) return;
+
+    // Obtener elementos a ocultar para la exportación limpia
+    const controls = element.querySelector('.flex.items-center.gap-3');
+    const originalDisplay = controls ? controls.style.display : '';
+    if (controls) controls.style.display = 'none';
+
+    // Mostrar un toast cargando
+    if (typeof window.showToast === 'function') {
+        window.showToast(window.currentLang === 'es' ? 'Generando reporte PDF...' : 'Generating PDF report...');
+    }
+
+    const producerName = window.producerConfig?.aka || window.producerConfig?.name || 'Productor';
+    const today = new Date().toISOString().split('T')[0];
+
+    // Configuración de html2pdf
+    const opt = {
+        margin:       [12, 12, 12, 12],
+        filename:     `Reporte_Estadisticas_${producerName}_${today}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { 
+            scale: 2, 
+            useCORS: true, 
+            backgroundColor: document.body.classList.contains('light-theme') ? '#f5f5f9' : '#08080a'
+        },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+    };
+
+    try {
+        // Ejecutar html2pdf y descargar
+        await html2pdf().set(opt).from(element).save();
+        if (typeof window.showToast === 'function') {
+            window.showToast(window.currentLang === 'es' ? 'Reporte PDF descargado con éxito' : 'PDF report downloaded successfully');
+        }
+    } catch (err) {
+        console.error('Error generating PDF:', err);
+        if (typeof window.showToast === 'function') {
+            window.showToast(window.currentLang === 'es' ? 'Error al generar el PDF' : 'Error generating PDF', true);
+        }
+    } finally {
+        // Restaurar controles y bordes ocultos
+        if (controls) controls.style.display = originalDisplay;
+    }
+}
+
 // Bindings to global scope for backward compatibility
 window.updateDashboardView = updateDashboardView;
 window.renderMonthlySalesChart = renderMonthlySalesChart;
 window.renderLicenseTypesChart = renderLicenseTypesChart;
 window.renderTopBeatsChart = renderTopBeatsChart;
 window.renderTopBuyersTable = renderTopBuyersTable;
+window.exportDashboardToPDF = exportDashboardToPDF;

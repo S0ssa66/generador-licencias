@@ -2896,6 +2896,14 @@ function setupEventListeners() {
     if (dbRefreshBtn) {
         dbRefreshBtn.addEventListener('click', updateDashboardView);
     }
+    const dbExportPdfBtn = document.getElementById('btn-dashboard-export-pdf');
+    if (dbExportPdfBtn) {
+        dbExportPdfBtn.addEventListener('click', () => {
+            if (typeof window.exportDashboardToPDF === 'function') {
+                window.exportDashboardToPDF();
+            }
+        });
+    }
 
     document.getElementById('btn-clear-fields').addEventListener('click', clearFormFields);
     document.getElementById('btn-clear-history').addEventListener('click', clearAllHistory);
