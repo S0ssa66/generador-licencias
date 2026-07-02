@@ -1,6 +1,33 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <script>
+        // Purga radical de Service Workers y cachés obsoletas al iniciar para evitar bloqueos tras despliegues de producción
+        if ('serviceWorker' in navigator && !localStorage.getItem('beatss_sw_cleaned_v4')) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for (var registration of registrations) {
+                    registration.unregister().then(function() {
+                        console.log('🗑️ Service Worker desregistrado al inicio.');
+                    });
+                }
+            }).catch(function(err) { console.error('Error desregistrando SW:', err); });
+            
+            if (window.caches) {
+                caches.keys().then(function(keys) {
+                    return Promise.all(keys.map(function(key) { 
+                        return caches.delete(key).then(function() {
+                            console.log('🗑️ Caché eliminada:', key);
+                        });
+                    }));
+                }).catch(function(err) { console.error('Error limpiando cachés:', err); });
+            }
+            localStorage.setItem('beatss_sw_cleaned_v4', 'true');
+            // Retrasar recarga un momento para asegurar que las operaciones se completaron
+            setTimeout(function() {
+                window.location.reload(true);
+            }, 300);
+        }
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <link rel="preload" href="producer_sossa.webp" as="image" fetchpriority="high">
