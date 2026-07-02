@@ -446,17 +446,17 @@ window.getGDriveDirectLink = getGDriveDirectLink;
 
 // Configuración de Productor por defecto
 let producerConfig = {
-    name: "Joao David Dominguez",
+    name: "Sossa",
     aka: "Sossa",
-    email: "masterjuego25@gmail.com",
-    phone: "+593961201184",
+    email: "sossabeatz1@gmail.com",
+    phone: "",
     place: "Quito, Ecuador",
-    id: "0803743111",
+    id: "",
     pro: "BMI",
-    ipi: "01170943066",
+    ipi: "",
     publisher: "Songtrust",
-    address: "Esmeraldas - Ecuador",
-    birthdate: "2001-07-06",
+    address: "",
+    birthdate: "",
     dsClientId: "",
     dsAccountId: "",
     dsEnv: "demo",
@@ -1199,7 +1199,7 @@ async function loadProducerConfig() {
     
     // Rellenar campos del modal
     document.getElementById('cfg-producer-name').value = producerConfig.name;
-    document.getElementById('cfg-producer-id').value = producerConfig.id || (window.currentUserIsAdmin ? "0803743111" : "0803188796");
+    document.getElementById('cfg-producer-id').value = producerConfig.id || "";
     document.getElementById('cfg-producer-aka').value = producerConfig.aka;
     document.getElementById('cfg-default-place').value = producerConfig.place;
     document.getElementById('cfg-producer-email').value = producerConfig.email;
