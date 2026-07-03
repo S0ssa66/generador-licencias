@@ -1161,6 +1161,16 @@ export function updateCheckoutStepView(step) {
                         Titular: <span style="color: #fff; font-weight: 600;">${deunaName}</span>
                     `;
                 }
+                const deunaQrImage = document.getElementById('deuna-qr-image');
+                if (deunaQrImage) {
+                    if (window.storeProducerConfig.deunaQrBase64) {
+                        deunaQrImage.src = window.storeProducerConfig.deunaQrBase64;
+                    } else {
+                        // Fallback: dynamic QR generated via api.qrserver.com using the cleanPhone
+                        const qrPayload = `deuna://payment?phone=${cleanPhone}`;
+                        deunaQrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
+                    }
+                }
                 deunaVisible = true;
             } else if (deunaTab) {
                 deunaTab.style.display = 'none';

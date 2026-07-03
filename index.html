@@ -3212,6 +3212,21 @@
                           <input type="text" id="cfg-deuna-name" placeholder="Nombre completo">
                       </div>
                   </div>
+                  <div class="input-row" style="margin-top: 6px;">
+                      <div class="input-group">
+                          <label>Código QR Deuna! (Imagen)</label>
+                          <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                              <button type="button" class="btn" id="btn-upload-deuna-qr" style="font-size: 11px; padding: 6px 12px; display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 8px; color: #fff; cursor: pointer;">
+                                  <i data-lucide="qr-code" style="width: 14px; height: 14px;"></i> Subir QR de Deuna
+                              </button>
+                              <button type="button" class="btn" id="btn-clear-deuna-qr" style="font-size: 11px; padding: 6px 12px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; color: #ef4444; cursor: pointer; display: none;">Eliminar</button>
+                              <input type="file" id="cfg-deuna-qr-file" accept="image/*" style="display: none;">
+                          </div>
+                          <div id="deuna-qr-preview-container" style="display: none; margin-top: 8px;">
+                              <img id="deuna-qr-preview-img" src="" style="max-height: 120px; border-radius: 8px; border: 1px solid var(--border-color); background: white; padding: 4px;" alt="Vista previa QR">
+                          </div>
+                      </div>
+                  </div>
 
                   <div style="font-weight: 600; font-size: 11px; color: var(--text-primary); margin-top: 8px; margin-bottom: 4px;">PayPal:</div>
                   <div class="input-row">
@@ -4999,7 +5014,7 @@
                                     </div>
                                 </div>
                                 <div class="text-center bg-white p-3 rounded-xl shadow-lg border border-[#2D2D35] inline-block w-full max-w-[240px] mx-auto">
-                                    <img src="/deuna-qr.jpg" class="w-full h-auto object-contain rounded" alt="Deuna QR">
+                                    <img id="deuna-qr-image" src="/deuna-qr.jpg" class="w-full h-auto object-contain rounded" alt="Deuna QR">
                                 </div>
                             </div>
 

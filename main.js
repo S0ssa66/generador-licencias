@@ -1271,6 +1271,24 @@ async function loadProducerConfig() {
     document.getElementById('cfg-bank-guayaquil-dni').value = producerConfig.bankGuayaquilDni || "";
     document.getElementById('cfg-deuna-phone').value = producerConfig.deunaPhone || "";
     document.getElementById('cfg-deuna-name').value = producerConfig.deunaName || "";
+    
+    // Cargar QR de Deuna
+    const deunaQrPreviewImg = document.getElementById('deuna-qr-preview-img');
+    const deunaQrPreviewContainer = document.getElementById('deuna-qr-preview-container');
+    const btnClearDeunaQr = document.getElementById('btn-clear-deuna-qr');
+    if (deunaQrPreviewImg && deunaQrPreviewContainer && btnClearDeunaQr) {
+        if (producerConfig.deunaQrBase64) {
+            deunaQrPreviewImg.src = producerConfig.deunaQrBase64;
+            deunaQrPreviewContainer.style.display = 'block';
+            btnClearDeunaQr.style.display = 'inline-block';
+            window.tempDeunaQrBase64 = producerConfig.deunaQrBase64;
+        } else {
+            deunaQrPreviewImg.src = '';
+            deunaQrPreviewContainer.style.display = 'none';
+            btnClearDeunaQr.style.display = 'none';
+            window.tempDeunaQrBase64 = null;
+        }
+    }
     document.getElementById('cfg-paypal-email').value = producerConfig.paypalEmail || "";
     document.getElementById('cfg-paypal-client-id').value = producerConfig.paypalClientId || "";
     document.getElementById('cfg-paypal-client-secret').value = producerConfig.paypalClientSecret || "";
@@ -1604,6 +1622,7 @@ async function saveProducerConfig() {
     producerConfig.bankGuayaquilDni = document.getElementById('cfg-bank-guayaquil-dni').value.trim();
     producerConfig.deunaPhone = document.getElementById('cfg-deuna-phone').value.trim();
     producerConfig.deunaName = document.getElementById('cfg-deuna-name').value.trim();
+    producerConfig.deunaQrBase64 = window.tempDeunaQrBase64 || "";
     producerConfig.paypalEmail = document.getElementById('cfg-paypal-email').value.trim();
     producerConfig.paypalClientId = document.getElementById('cfg-paypal-client-id').value.trim();
     producerConfig.paypalClientSecret = document.getElementById('cfg-paypal-client-secret').value.trim();
@@ -2643,6 +2662,73 @@ function setupEventListeners() {
             document.getElementById('logo-preview-container').style.display = 'none';
             btnClearLogoEl.style.display = 'none';
             window.tempLogoBase64 = null;
+        });
+    }
+
+    // Eventos de Código QR de Deuna!
+    const btnUploadDeunaQrEl = document.getElementById('btn-upload-deuna-qr');
+    const fileDeunaQrInputEl = document.getElementById('cfg-deuna-qr-file');
+    const btnClearDeunaQrEl = document.getElementById('btn-clear-deuna-qr');
+    const deunaQrPreviewImgEl = document.getElementById('deuna-qr-preview-img');
+    const deunaQrPreviewContainerEl = document.getElementById('deuna-qr-preview-container');
+
+    if (btnUploadDeunaQrEl && fileDeunaQrInputEl && btnClearDeunaQrEl) {
+        btnUploadDeunaQrEl.addEventListener('click', () => {
+            fileDeunaQrInputEl.click();
+        });
+
+        fileDeunaQrInputEl.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('image/')) {
+                showToast("❌ Por favor selecciona un archivo de imagen válido.", true);
+                fileDeunaQrInputEl.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 400; // Ancho/alto máximo de 400px para el QR
+                    
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85); // Usar JPEG con buena compresión
+                    
+                    if (deunaQrPreviewImgEl) deunaQrPreviewImgEl.src = compressedBase64;
+                    if (deunaQrPreviewContainerEl) deunaQrPreviewContainerEl.style.display = 'block';
+                    btnClearDeunaQrEl.style.display = 'inline-block';
+                    window.tempDeunaQrBase64 = compressedBase64;
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        btnClearDeunaQrEl.addEventListener('click', () => {
+            fileDeunaQrInputEl.value = '';
+            if (deunaQrPreviewImgEl) deunaQrPreviewImgEl.src = '';
+            if (deunaQrPreviewContainerEl) deunaQrPreviewContainerEl.style.display = 'none';
+            btnClearDeunaQrEl.style.display = 'none';
+            window.tempDeunaQrBase64 = null;
         });
     }
 
