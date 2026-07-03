@@ -265,7 +265,8 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
     # ── Columna Derecha: Datos SRI ────────────────────────────────────────────
     # Código de barras + QR
     try:
-        barcode_drawing = createBarcodeDrawing("Code128", value=clave_acceso, barHeight=28, barWidth=0.75)
+        # Reducir barWidth a 0.52 (ancho aprox 205px) para que no desborde
+        barcode_drawing = createBarcodeDrawing("Code128", value=clave_acceso, barHeight=28, barWidth=0.52)
     except Exception as e:
         barcode_drawing = Paragraph(f"[Código de barras no disponible]", s_muted)
 
@@ -274,13 +275,21 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
             "https://declaraciones.sri.gob.ec/comprobantes-electronicos-internet/"
             f"publico/detalleComprobante.jsf?claveAcceso={clave_acceso}"
         )
-        qr_drawing = createBarcodeDrawing("QR", value=qr_url, width=52, height=52)
+        qr_drawing = createBarcodeDrawing("QR", value=qr_url, width=50, height=50)
     except Exception as e:
         print(f"[-] [RIDE] Error al generar QR: {e}")
         qr_drawing = None
 
+    clave_flowables = [
+        Paragraph(f"<b>CLAVE DE ACCESO:</b>", s_normal),
+        Spacer(1, 3),
+        barcode_drawing,
+        Spacer(1, 2),
+        Paragraph(f"<font size=7>{clave_acceso}</font>", s_normal),
+    ]
+
     if qr_drawing:
-        tabla_codigos = Table([[barcode_drawing, qr_drawing]], colWidths=[180, 58])
+        tabla_codigos = Table([[clave_flowables, qr_drawing]], colWidths=[205, 52])
         tabla_codigos.setStyle(TableStyle([
             ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
             ("LEFTPADDING",   (0,0), (-1,-1), 0),
@@ -290,7 +299,7 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
         ]))
         codigos_flowable = tabla_codigos
     else:
-        codigos_flowable = barcode_drawing
+        codigos_flowable = KeepTogether(clave_flowables)
 
     sri_flowables = [
         Paragraph(f"<font size=11><b>R.U.C.: {ruc}</b></font>", s_normal),
@@ -308,8 +317,6 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
         Paragraph(f"<b>EMISIÓN:</b> {emision}", s_normal),
         Spacer(1, 6),
         codigos_flowable,
-        Spacer(1, 4),
-        Paragraph(f"<b>CLAVE DE ACCESO:</b><br/><font size=6.5>{clave_acceso}</font>", s_normal),
     ]
 
     # ── Tabla cabecera de dos columnas ────────────────────────────────────────
