@@ -1,4 +1,14 @@
 {
+  "rewrites": [
+    {
+      "source": "/api/payments/deuna/:endpoint*",
+      "destination": "/api/payments/deuna"
+    },
+    {
+      "source": "/api/gdrive-:action*",
+      "destination": "/api/gdrive"
+    }
+  ],
   "redirects": [
     {
       "source": "/.env",
