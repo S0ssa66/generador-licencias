@@ -943,7 +943,7 @@ export function openBeatCheckoutModal(beatId) {
         // Modo Carrito
         if (window.cart.length === 0) {
             if (typeof window.showToast === 'function') window.showToast("Tu carrito está vacío.", true);
-            return;
+            // Continúa para mostrar el estado vacío
         }
         singleView.style.display = 'none';
         multiView.style.display = 'block';
@@ -1126,7 +1126,6 @@ export function updateCheckoutStepView(step) {
                 if (deunaNameEl) {
                     deunaNameEl.innerHTML = `
                         Titular: <span style="color: #fff; font-weight: 600;">${deunaName}</span>
-                        <a href="${deunaDeeplink}" style="margin-left: 12px; background: linear-gradient(135deg, #ff6b35, #ff9500); color: #fff; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 8px; text-decoration: none; display: inline-block; vertical-align: middle;" onclick="setTimeout(()=>window.open('${deunaWhatsapp}', '_blank'), 800)">⚡ Abrir Deuna!</a>
                     `;
                 }
                 deunaVisible = true;
@@ -1309,12 +1308,6 @@ export function switchStorePaymentMethod(method) {
                 <div style="color: #ef4444; font-size: 13px;">El productor no ha configurado PayPal.</div>
             `;
         }
-    } else if (method === 'deuna') {
-        receiptSection.style.display = 'none';
-        nextBtn.style.display = 'block';
-        nextBtn.textContent = 'Confirmar Pedido y Ver QR';
-        const qrCont = document.getElementById('deuna-qr-container');
-        if (qrCont) qrCont.style.display = 'none';
     } else {
         receiptSection.style.display = 'block';
         nextBtn.style.display = 'block';
@@ -2200,7 +2193,7 @@ export async function submitBeatPurchasePayment(method, reference = '') {
         return;
     }
 
-    if (method !== 'paypal' && method !== 'deuna' && !storePaymentReceiptBase64) {
+    if (method !== 'paypal' && !storePaymentReceiptBase64) {
         if (typeof window.showToast === 'function') window.showToast('Por favor sube la captura de tu comprobante de pago.', true);
         return;
     }
@@ -2245,7 +2238,7 @@ export async function submitBeatPurchasePayment(method, reference = '') {
 
     try {
         let finalReceiptUrl = '';
-        if (method !== 'paypal' && method !== 'deuna' && storePaymentReceiptBase64) {
+        if (method !== 'paypal' && storePaymentReceiptBase64) {
             if (nextBtn) nextBtn.innerHTML = '⏳ Subiendo comprobante...';
             
             if (typeof window.dataURLtoBlob !== 'function' || typeof window.uploadFileToStorage !== 'function') {
@@ -2302,95 +2295,6 @@ export async function submitBeatPurchasePayment(method, reference = '') {
             storePaymentReceiptBase64 = null;
             document.getElementById('beat-checkout-modal').style.display = 'none';
             await finalizePaymentSuccess(redirectPaymentId, itemsToProcess);
-        } else if (method === 'deuna') {
-            try {
-                if (nextBtn) nextBtn.innerHTML = '⏳ Generando QR de pago...';
-                const deunaPhone = window.storeProducerConfig.deunaPhone || '0999999999';
-                
-                const res = await fetch('/api/payments/deuna/qr', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        purchaseId: redirectPaymentId,
-                        amount: itemsToProcess.reduce((sum, item) => sum + item.price, 0) * (1 - (discountPercent / 100)),
-                        deunaPhone: deunaPhone
-                    })
-                });
-                
-                if (!res.ok) throw new Error("Error en el servidor al generar QR.");
-                const data = await res.json();
-                
-                // Cargar imagen y mostrar QR
-                document.getElementById('deuna-qr-img').src = data.qrUrl;
-                document.getElementById('deuna-qr-container').style.display = 'block';
-                
-                // Ocultar sección de subida de comprobantes
-                const uploadSec = document.getElementById('store-receipt-upload-section');
-                if (uploadSec) uploadSec.style.display = 'none';
-                
-                // Botón deeplink móvil
-                const dlContainer = document.getElementById('deuna-deeplink-btn-container');
-                if (dlContainer) {
-                    dlContainer.innerHTML = `
-                        <a href="${data.deeplink}" style="background: linear-gradient(135deg, #ff6b35, #ff9500); color: #fff; font-size: 13px; font-weight: 700; padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; width: 100%; max-width: 280px; box-sizing: border-box; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);" target="_blank">📲 Pagar desde App Deuna!</a>
-                    `;
-                }
-                
-                // Simulación local de webhook
-                const simBtn = document.getElementById('btn-deuna-simulate-confirm');
-                if (simBtn) {
-                    simBtn.onclick = async () => {
-                        try {
-                            if (typeof window.showToast === 'function') window.showToast("Simulando confirmación de pago...");
-                            const simRes = await fetch('/api/payments/deuna/simulate-confirm', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ purchaseId: redirectPaymentId })
-                            });
-                            const simData = await simRes.json();
-                            if (simData.status !== 'success') {
-                                throw new Error(simData.error || "Fallo en simulación");
-                            }
-                        } catch (se) {
-                            console.error(se);
-                            if (typeof window.showToast === 'function') window.showToast("Error de simulación: " + se.message, true);
-                        }
-                    };
-                }
-                
-                // Listener reactivo Firestore
-                const docRef = doc(db, "payments", redirectPaymentId);
-                const unsub = onSnapshot(docRef, async (docSnap) => {
-                    if (docSnap.exists()) {
-                        const payData = docSnap.data();
-                        if (payData.status === 'completed' || payData.status === 'approved') {
-                            unsub();
-                            if (typeof window.showToast === 'function') window.showToast('✅ ¡Pago confirmado! Descargando archivos...');
-                            
-                            // Auto-entrega segura
-                            try {
-                                await autoDeliverBeatSale(redirectPaymentId, payData);
-                            } catch (ae) { console.warn("Error en auto-entrega:", ae); }
-                            
-                            // Vaciar el carrito
-                            clearPurchasedItems();
-                            storePaymentReceiptBase64 = null;
-                            
-                            document.getElementById('beat-checkout-modal').style.display = 'none';
-                            await finalizePaymentSuccess(redirectPaymentId, itemsToProcess);
-                        }
-                    }
-                });
-                
-                if (nextBtn) {
-                    nextBtn.disabled = true;
-                    nextBtn.innerHTML = '⌛ Esperando pago...';
-                }
-                return;
-            } catch (qrErr) {
-                console.error("Error al iniciar QR Deuna:", qrErr);
-                if (typeof window.showToast === 'function') window.showToast("Error al inicializar pago con Deuna!.", true);
-            }
         } else {
             if (typeof window.showToast === 'function') window.showToast('¡Pedido registrado! Esperando aprobación del productor.');
             clearPurchasedItems();

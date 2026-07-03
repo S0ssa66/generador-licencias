@@ -1,9 +1,3 @@
----
-tipo: dashboard_navegacion
-proyecto: BEATSS
-estado: activo
-ultima_revision: 2026-07-02
----
 # 🎛️ Panel de Control - BEATSS
 
 Bienvenido a la Bóveda de Documentación de **BEATSS**. Este panel sirve como el punto central de navegación para todos los análisis, reportes de viabilidad, auditorías de seguridad, y estados operativos de la plataforma.
