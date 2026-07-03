@@ -294,10 +294,11 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
     ]
 
     if qr_drawing:
-        tabla_codigos = Table([[clave_flowables, qr_drawing]], colWidths=[198, 59])
+        # Ajustar anchos y alineación para acercar el QR a la izquierda
+        tabla_codigos = Table([[clave_flowables, qr_drawing]], colWidths=[196, 56], hAlign="LEFT")
         tabla_codigos.setStyle(TableStyle([
             ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
-            ("ALIGN",         (1,0), (1,-1), "CENTER"),  # Centra el QR en su celda
+            ("ALIGN",         (1,0), (1,-1), "LEFT"),  # Pega el QR a la izquierda de su celda
             ("LEFTPADDING",   (0,0), (-1,-1), 0),
             ("RIGHTPADDING",  (0,0), (-1,-1), 0),
             ("TOPPADDING",    (0,0), (-1,-1), 0),
