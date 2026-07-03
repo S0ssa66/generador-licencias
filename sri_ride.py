@@ -215,6 +215,11 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
         fontSize=7.5,
         textColor=GRAY_MUTED,
     )
+    s_center = ParagraphStyle(
+        "RIDE_Center",
+        parent=s_normal,
+        alignment=1,  # TA_CENTER
+    )
 
     story = []
 
@@ -265,8 +270,8 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
     # ── Columna Derecha: Datos SRI ────────────────────────────────────────────
     # Código de barras + QR
     try:
-        # Reducir barWidth a 0.52 (ancho aprox 205px) para que no desborde
-        barcode_drawing = createBarcodeDrawing("Code128", value=clave_acceso, barHeight=28, barWidth=0.52)
+        # Reducir barWidth a 0.5 (ancho aprox 196px) para mejor margen
+        barcode_drawing = createBarcodeDrawing("Code128", value=clave_acceso, barHeight=28, barWidth=0.5)
     except Exception as e:
         barcode_drawing = Paragraph(f"[Código de barras no disponible]", s_muted)
 
@@ -275,7 +280,7 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
             "https://declaraciones.sri.gob.ec/comprobantes-electronicos-internet/"
             f"publico/detalleComprobante.jsf?claveAcceso={clave_acceso}"
         )
-        qr_drawing = createBarcodeDrawing("QR", value=qr_url, width=50, height=50)
+        qr_drawing = createBarcodeDrawing("QR", value=qr_url, width=54, height=54)
     except Exception as e:
         print(f"[-] [RIDE] Error al generar QR: {e}")
         qr_drawing = None
@@ -285,13 +290,14 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
         Spacer(1, 3),
         barcode_drawing,
         Spacer(1, 2),
-        Paragraph(f"<font size=7>{clave_acceso}</font>", s_normal),
+        Paragraph(f"<font size=7>{clave_acceso}</font>", s_center),
     ]
 
     if qr_drawing:
-        tabla_codigos = Table([[clave_flowables, qr_drawing]], colWidths=[205, 52])
+        tabla_codigos = Table([[clave_flowables, qr_drawing]], colWidths=[198, 59])
         tabla_codigos.setStyle(TableStyle([
             ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+            ("ALIGN",         (1,0), (1,-1), "CENTER"),  # Centra el QR en su celda
             ("LEFTPADDING",   (0,0), (-1,-1), 0),
             ("RIGHTPADDING",  (0,0), (-1,-1), 0),
             ("TOPPADDING",    (0,0), (-1,-1), 0),
