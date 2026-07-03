@@ -56,14 +56,21 @@ tailwind.config = {
                 "surface-container-high": "#272a31",
                 "error": "#ffb4ab",
                 "secondary-fixed": "#bbe9ff",
-                "on-primary-fixed-variant": "#5516be"
+                "on-primary-fixed-variant": "#5516be",
+                "border-muted": "#2D2D35",
+                "surface-elevated": "#1A1A20"
             },
             spacing: {
                 "base": "0.5rem",
                 "container-max": "125rem",
                 "margin-mobile": "1rem",
                 "gutter": "1.5rem",
-                "margin-desktop": "3rem"
+                "margin-desktop": "3rem",
+                "container-margin": "24px",
+                "stack-sm": "8px",
+                "stack-md": "16px",
+                "stack-lg": "32px",
+                "payment-card-gap": "12px"
             },
             fontFamily: {
                 "sans": ["Outfit", "Inter", "sans-serif"],
@@ -73,6 +80,7 @@ tailwind.config = {
                 "headline-lg": ["Montserrat", "sans-serif"],
                 "display-lg": ["Montserrat", "sans-serif"],
                 "data-mono": ["JetBrains Mono", "monospace"],
+                "label-mono": ["JetBrains Mono", "monospace"],
                 "body-md": ["Outfit", "sans-serif"],
                 "label-caps": ["Montserrat", "sans-serif"]
             },
@@ -83,6 +91,7 @@ tailwind.config = {
                 "headline-lg": ["2rem", { "lineHeight": "1.2", "fontWeight": "700" }],
                 "display-lg": ["3rem", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800" }],
                 "data-mono": ["0.875rem", { "lineHeight": "1.4", "fontWeight": "500" }],
+                "label-mono": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500" }],
                 "body-md": ["1rem", { "lineHeight": "1.5", "fontWeight": "400" }],
                 "label-caps": ["0.75rem", { "lineHeight": "1", "letterSpacing": "0.1em", "fontWeight": "600" }]
             }

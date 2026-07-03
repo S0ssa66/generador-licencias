@@ -326,9 +326,13 @@ export function renderCartItems() {
     
     const total = window.getCheckoutPrice();
     const totalStr = '$' + total.toFixed(2) + ' USD';
-    document.getElementById('cart-total-price-display').textContent = totalStr;
-    document.getElementById('deuna-total-price').textContent = totalStr;
-    document.getElementById('transfer-total-price').textContent = totalStr;
+    const displayPriceEl = document.getElementById('cart-total-price-display');
+    if (displayPriceEl) displayPriceEl.textContent = totalStr;
+    const deunaTotalEl = document.getElementById('deuna-total-price');
+    if (deunaTotalEl) deunaTotalEl.textContent = totalStr;
+    const transferTotalEl = document.getElementById('transfer-total-price');
+    if (transferTotalEl) transferTotalEl.textContent = totalStr;
+    if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
     
     const isMultiProducer = Object.keys(groups).length > 1;
     const checkoutNextBtn = document.getElementById('checkout-next-step-btn');
@@ -750,8 +754,10 @@ export function applyCheckoutCoupon() {
         
         const deunaTotal = document.getElementById('deuna-total-price');
         const transferTotal = document.getElementById('transfer-total-price');
+    if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
         if (deunaTotal) deunaTotal.textContent = priceStr;
         if (transferTotal) transferTotal.textContent = priceStr;
+        if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
         
         // Re-render PayPal button with new price
         const activeTab = getSelectedStorePaymentMethod();
@@ -773,8 +779,10 @@ export function applyCheckoutCoupon() {
         const priceStr = '$' + price.toFixed(2) + ' USD';
         const deunaTotal = document.getElementById('deuna-total-price');
         const transferTotal = document.getElementById('transfer-total-price');
+    if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
         if (deunaTotal) deunaTotal.textContent = priceStr;
         if (transferTotal) transferTotal.textContent = priceStr;
+        if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
     }
 }
 
@@ -786,10 +794,12 @@ export function updateExclusivePrice(val) {
     const priceStr = '$' + parsed.toFixed(2) + ' USD';
     const deunaTotal = document.getElementById('deuna-total-price');
     const transferTotal = document.getElementById('transfer-total-price');
+    if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
     const offerInput = document.getElementById('offer-price-input');
     
     if (deunaTotal) deunaTotal.textContent = priceStr;
     if (transferTotal) transferTotal.textContent = priceStr;
+        if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
     if (offerInput) offerInput.value = parsed;
     
     // Recargar PayPal para reflejar monto
@@ -937,8 +947,11 @@ export function openBeatCheckoutModal(beatId) {
 
         // Reset total prices based on basic license
         const priceStr = '$' + LICENSE_CONFIGS.basic.price.toFixed(2) + ' USD';
-        document.getElementById('deuna-total-price').textContent = priceStr;
-        document.getElementById('transfer-total-price').textContent = priceStr;
+        const deunaTotalEl = document.getElementById('deuna-total-price');
+        if (deunaTotalEl) deunaTotalEl.textContent = priceStr;
+        const transferTotalEl = document.getElementById('transfer-total-price');
+        if (transferTotalEl) transferTotalEl.textContent = priceStr;
+    if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
     } else {
         // Modo Carrito
         if (window.cart.length === 0) {
@@ -973,6 +986,7 @@ export function openBeatCheckoutModal(beatId) {
     if (window.lucide) window.lucide.createIcons();
 
     updateCheckoutStepView(1);
+    if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
     document.getElementById('beat-checkout-modal').style.display = 'flex';
 }
 
@@ -1020,8 +1034,11 @@ export function selectCheckoutLicense(licenseKey) {
     // Update prices
     const price = window.getCheckoutPrice();
     const priceStr = '$' + price.toFixed(2) + ' USD';
-    document.getElementById('deuna-total-price').textContent = priceStr;
-    document.getElementById('transfer-total-price').textContent = priceStr;
+    const deunaTotalEl = document.getElementById('deuna-total-price');
+    if (deunaTotalEl) deunaTotalEl.textContent = priceStr;
+    const transferTotalEl = document.getElementById('transfer-total-price');
+    if (transferTotalEl) transferTotalEl.textContent = priceStr;
+    if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
 
     // If active tab is PayPal, re-initialize PayPal button
     const activeTab = getSelectedStorePaymentMethod();
@@ -1036,19 +1053,28 @@ export function selectCheckoutLicense(licenseKey) {
 export function updateCheckoutStepView(step) {
     checkoutCurrentStep = step;
 
-    // 1. Actualizar indicadores de pasos
-    // 1. Actualizar indicadores de pasos (nuevo sistema premium ck-step-dot)
+    // 1. Actualizar indicadores de pasos y colores de texto del Stepper
     [1, 2, 3].forEach(s => {
+        const navItem = document.getElementById(`ck-nav-step-${s}`);
         const dot = document.getElementById(`ck-dot-${s}`);
-        if (!dot) return;
-        dot.classList.remove('active', 'done');
-        if (s < step) {
-            dot.classList.add('done');
-            dot.innerHTML = '✓';
-        } else if (s === step) {
-            dot.classList.add('active');
+        if (!navItem || !dot) return;
+        
+        if (s === step) {
+            // Paso Activo
+            navItem.classList.remove('text-[#c5c4db]', 'opacity-60');
+            navItem.classList.add('text-[#bec2ff]', 'font-bold');
+            dot.className = "flex items-center justify-center w-6 h-6 rounded-full bg-[#bec2ff] text-[#0001ac] font-mono text-xs font-bold transition-all";
             dot.innerHTML = s;
+        } else if (s < step) {
+            // Paso Completado
+            navItem.classList.remove('text-[#bec2ff]', 'opacity-60');
+            navItem.classList.add('text-[#bec2ff]/80');
+            dot.className = "flex items-center justify-center w-6 h-6 rounded-full bg-[#bec2ff]/20 text-[#bec2ff] border border-[#bec2ff]/30 font-mono text-xs font-bold transition-all";
+            dot.innerHTML = '✓';
         } else {
+            // Paso Futuro
+            navItem.className = "flex items-center gap-2 text-[#c5c4db] opacity-60";
+            dot.className = "flex items-center justify-center w-6 h-6 rounded-full border border-[#454558] font-mono text-xs transition-all";
             dot.innerHTML = s;
         }
     });
@@ -3197,3 +3223,81 @@ window.showUpsellModal = showUpsellModal;
 window.finalizePaymentSuccess = finalizePaymentSuccess;
 window.handleCheckoutCompletion = handleCheckoutCompletion;
 
+
+
+export function updateStoreCheckoutSummary() {
+    const summaryContainer = document.getElementById('checkout-summary-items');
+    if (!summaryContainer) return;
+
+    let summaryHtml = '';
+    let total = 0;
+
+    if (checkoutSelectedBeatId) {
+        // Single Beat Mode
+        const beat = findBeatById(checkoutSelectedBeatId);
+        if (beat) {
+            const artwork = window.getBeatArtwork ? window.getBeatArtwork(beat) : '';
+            const licenseName = LICENSE_CONFIGS[checkoutSelectedLicense]?.name || checkoutSelectedLicense;
+            const price = window.getCheckoutPrice();
+            total = price;
+
+            summaryHtml = `
+                <div class="flex gap-4 items-start">
+                    <img src="${artwork}" class="w-16 h-16 bg-[#1A1A20] rounded-lg flex-shrink-0 object-cover border border-[#454558]/20" alt="${beat.name}">
+                    <div class="space-y-0.5 overflow-hidden">
+                        <h3 class="font-bold text-white leading-tight truncate text-sm">${window.sanitizeHtml ? window.sanitizeHtml(beat.name) : beat.name}</h3>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-[9px] bg-[#bec2ff]/10 text-[#bec2ff] border border-[#bec2ff]/20 px-1.5 py-0.5 rounded uppercase font-mono">${licenseName}</span>
+                            <span class="text-[9px] text-[#c5c4db] font-mono">${beat.bpm ? beat.bpm + ' BPM' : ''}</span>
+                        </div>
+                        <p class="text-[#bec2ff] font-bold text-base mt-1">$${price.toFixed(2)}</p>
+                    </div>
+                </div>
+            `;
+        }
+    } else if (window.cart && window.cart.length > 0) {
+        // Multi Beat Mode
+        total = window.getCheckoutPrice();
+        window.cart.forEach((item) => {
+            const beat = findBeatById(item.beatId) || item;
+            const artwork = window.getBeatArtwork ? window.getBeatArtwork(beat) : (item.artwork || '');
+            const licenseName = LICENSE_CONFIGS[item.licenseType]?.name || item.licenseType;
+
+            summaryHtml += `
+                <div class="flex gap-4 items-start pb-4 border-b border-[#454558]/10 last:border-0 last:pb-0">
+                    <img src="${artwork}" class="w-12 h-12 bg-[#1A1A20] rounded-lg flex-shrink-0 object-cover border border-[#454558]/20" alt="${item.beatName}">
+                    <div class="space-y-0.5 overflow-hidden">
+                        <h3 class="font-bold text-white leading-tight truncate text-xs">${window.sanitizeHtml ? window.sanitizeHtml(item.beatName) : item.beatName}</h3>
+                        <div class="text-[9px] text-[#c5c4db]">${licenseName}</div>
+                        <p class="text-[#bec2ff] font-bold text-xs mt-0.5">$${item.price.toFixed(2)}</p>
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        summaryHtml = `<div class="text-xs text-[#c5c4db] italic text-center py-4">Tu carrito está vacío</div>`;
+    }
+
+    summaryContainer.innerHTML = summaryHtml;
+
+    const subtotal = checkoutSelectedBeatId ? total : window.getCartTotal();
+    const subtotalEl = document.getElementById('summary-subtotal');
+    if (subtotalEl) subtotalEl.textContent = '$' + subtotal.toFixed(2);
+
+    const discountAmountEl = document.getElementById('summary-discount-amount');
+    const discountRow = document.getElementById('summary-discount-row');
+    if (window.checkoutDiscountPercent && total > 0) {
+        const discount = subtotal * (window.checkoutDiscountPercent / 100);
+        if (discountAmountEl && discountRow) {
+            discountAmountEl.textContent = '-$' + discount.toFixed(2);
+            discountRow.style.display = 'flex';
+        }
+    } else if (discountRow) {
+        discountRow.style.display = 'none';
+    }
+
+    const totalEl = document.getElementById('summary-total-display');
+    if (totalEl) totalEl.textContent = '$' + total.toFixed(2);
+}
+
+window.updateStoreCheckoutSummary = updateStoreCheckoutSummary;

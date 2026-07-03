@@ -206,6 +206,10 @@
             background: rgba(255,255,255,0.05) !important;
             box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
         }
+        .pay-card-btn:active {
+            transform: translateY(-1px) scale(0.96) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+        }
         .pay-card-btn.active {
             transform: translateY(-3px) scale(1.04);
             border-width: 2px !important;
@@ -4750,738 +4754,378 @@
 
     <!-- Modal: Checkout de Beat -->
     <!-- Modal: Checkout de Beat -->
-    <div class="modal-backdrop" id="beat-checkout-modal" style="display: none; z-index: 99999; background: rgba(6, 8, 15, 0.88); backdrop-filter: blur(20px); overflow-y: auto; align-items: flex-start; padding: 30px 0 30px 0;">
-        <div class="modal" style="max-width: 580px; width: 96%; background: linear-gradient(160deg, #0e111c 0%, #090c16 100%); border: 1px solid rgba(255,255,255,0.09); border-radius: 24px; box-shadow: 0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; margin: auto; animation: checkoutFadeIn 0.35s ease;">
-            
-            <!-- ===== HEADER ===== -->
-            <div style="background: linear-gradient(135deg, rgba(0,204,255,0.07) 0%, rgba(124,58,237,0.07) 100%); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 20px 24px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, rgba(0,204,255,0.2), rgba(124,58,237,0.2)); border: 1px solid rgba(0,204,255,0.25); display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="shopping-bag" style="width: 18px; height: 18px; color: var(--accent,#00ccff);"></i>
-                    </div>
-                    <div>
-                        <h2 style="font-size: 17px; font-weight: 800; color: #fff; margin: 0; line-height: 1.2;" data-i18n="checkout_title">Adquirir Beat</h2>
-                        <p style="font-size: 11px; color: #6b7280; margin: 0; font-weight: 500;">Proceso 100% seguro y encriptado</p>
-                    </div>
+    <!-- Modal: Checkout de Beat (Stitch Redesign Full Screen) -->
+    <div class="fixed inset-0 z-[100000] bg-[#0F0F12] text-[#e4e1e6] flex flex-col overflow-y-auto" id="beat-checkout-modal" style="display: none; animation: checkoutFadeIn 0.35s ease;">
+        
+        <!-- HEADER -->
+        <header class="bg-[#131316]/80 backdrop-blur-md border-b border-[#2d2d35]/30 sticky top-0 z-50">
+            <div class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+                <div class="flex items-center gap-4">
+                    <img alt="Logo de Beatss" class="h-8 md:h-10" src="https://lh3.googleusercontent.com/aida/AP1WRLt9AahCwzP798oBo2dc5XNZYvcHGoTgGsWIDKS8hsgOtp1H96co7iN-Z5-RinQWkOMIp34JyotXJmw8Ay6muyOpin3i56KgRISGQYpOyz7b6KORr5EC2GGhTX_4_AEjidMYRMSAYkdt1oSybq2_B_QsNHOA8cjXge4uXzWYLTyHic1orAfmc8JIua8KO2FCP9Q-HK4cBRl8YFuBnz5QQgD2Y3zB1WlkFEV8NrRTqMLgt2px8Hl50ZVOVoQ"/>
+                    <span class="font-bold text-lg text-[#bec2ff]">Beatss</span>
                 </div>
-                <button class="icon-btn" id="btn-close-checkout-modal" style="width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #8a91a6; transition: all 0.2s;"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
-            </div>
-
-            <!-- ===== STEP INDICATORS ===== -->
-            <div style="padding: 18px 28px 0; box-sizing: border-box;">
-                <div style="display: flex; align-items: flex-start; justify-content: center; position: relative;">
-                    <!-- Progress line -->
-                    <div style="position: absolute; top: 17px; left: calc(50% - 120px); right: calc(50% - 120px); height: 2px; background: rgba(255,255,255,0.06); z-index: 1;">
-                        <div id="checkout-step-progress" style="width: 0%; height: 100%; background: linear-gradient(90deg, #00ccff, #7c3aed); transition: width 0.4s ease; border-radius: 2px;"></div>
-                    </div>
-                    <!-- Step 1 -->
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
-                        <div class="ck-step-dot active" data-step="1" id="ck-dot-1">1</div>
-                        <span class="ck-step-label" id="ck-label-1" style="color: var(--accent,#00ccff);">Licencia</span>
-                    </div>
-                    <!-- Step 2 -->
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
-                        <div class="ck-step-dot" data-step="2" id="ck-dot-2">2</div>
-                        <span class="ck-step-label" id="ck-label-2">Tus Datos</span>
-                    </div>
-                    <!-- Step 3 -->
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
-                        <div class="ck-step-dot" data-step="3" id="ck-dot-3">3</div>
-                        <span class="ck-step-label" id="ck-label-3">Pago</span>
-                    </div>
+                <div class="flex items-center gap-4">
+                    <button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors text-[#e4e1e6]" id="btn-close-checkout-modal">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
                 </div>
             </div>
+        </header>
 
-            <!-- ===== MODAL BODY ===== -->
-            <div class="modal-body" style="padding: 20px 24px; max-height: 74vh; overflow-y: auto; box-sizing: border-box; text-align: left;">
-
-                <!-- PASO 1: Selección de Licencia / Carrito -->
-                <div class="checkout-step-panel" id="checkout-panel-1">
-                    <!-- Vista de selección para un solo beat -->
-                    <div id="checkout-single-beat-view">
-                        <div id="checkout-urgency-banner" style="display: none; background: rgba(255, 68, 68, 0.08); border: 1px solid rgba(255, 68, 68, 0.18); color: #ff6b6b; padding: 10px 16px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-bottom: 16px; align-items: center; gap: 8px;">
-                            <i data-lucide="eye" style="width: 15px; height: 15px;"></i> <span id="checkout-urgency-text"></span>
-                        </div>
-                        
-                        <!-- Beat Preview -->
-                        <div id="checkout-single-beat-preview" style="display: none; align-items: center; gap: 14px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 16px; margin-bottom: 18px; box-sizing: border-box;">
-                            <img id="checkout-single-beat-img" src="" style="width: 52px; height: 52px; border-radius: 10px; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);" alt="Beat">
-                            <div style="flex: 1; overflow: hidden;">
-                                <div id="checkout-single-beat-name" style="font-weight: 800; color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
-                                <div id="checkout-single-beat-meta" style="font-size: 11px; color: #6b7280; margin-top: 3px;">-</div>
-                            </div>
-                        </div>
-
-                        <h3 style="font-size: 13px; font-weight: 700; color: #94a3b8; margin-top: 0; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="checkout_step1_title">Selecciona el Tipo de Licencia</h3>
-                        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;" id="license-options-container">
-                            <!-- Loaded dynamically -->
-                        </div>
-                        <div style="display: flex; gap: 10px; margin-top: 20px;">
-                            <button type="button" class="btn btn-secondary" id="btn-checkout-add-to-cart" data-i18n="checkout_btn_add_to_cart" style="flex: 1; height: 42px; font-weight: 700; border-radius: 12px; font-size: 13px;">Agregar al Carrito</button>
-                            <button type="button" class="btn btn-primary" id="btn-checkout-buy-now" data-i18n="checkout_btn_buy_now" style="flex: 1; height: 42px; font-weight: 800; border-radius: 12px; font-size: 13px;">Comprar Ahora</button>
-                        </div>
-                    </div>
-
-                    <!-- Vista de múltiples beats (carrito) -->
-                    <div id="checkout-multi-beat-view" style="display: none;">
-                        <h3 style="font-size: 13px; font-weight: 700; color: #94a3b8; margin-top: 0; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="checkout_cart_title">Tu Carrito de Compras</h3>
-                        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; box-sizing: border-box;" id="cart-items-container">
-                            <!-- Dynamic -->
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(0,204,255,0.06), rgba(124,58,237,0.06)); border: 1px solid rgba(0,204,255,0.18); padding: 16px 20px; border-radius: 16px; box-sizing: border-box; margin-bottom: 16px;">
-                            <span style="font-size: 13px; font-weight: 600; color: #94a3b8;" data-i18n="checkout_cart_total">Total del Carrito</span>
-                            <span id="cart-total-price-display" style="font-size: 22px; font-weight: 900; color: var(--accent,#00ccff); letter-spacing: -0.5px;">$0.00 USD</span>
-                        </div>
-                        <div style="display: flex; gap: 10px;">
-                            <button type="button" class="btn btn-secondary" id="btn-checkout-keep-shopping" data-i18n="checkout_btn_keep_shopping" style="flex: 1; height: 42px; font-weight: 700; border-radius: 12px; font-size: 13px;">Seguir Comprando</button>
-                            <button type="button" class="btn btn-primary" id="btn-checkout-proceed-billing" data-i18n="btn_continue" style="flex: 1; height: 42px; font-weight: 800; border-radius: 12px; font-size: 13px;">Continuar →</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- PASO 2: Datos del Comprador -->
-                <div class="checkout-step-panel" id="checkout-panel-2" style="display: none;">
-                    <h3 style="font-size: 13px; font-weight: 700; color: #94a3b8; margin-top: 0; margin-bottom: 18px; text-transform: uppercase; letter-spacing: 0.5px;" data-i18n="checkout_step2_title">Datos para el Contrato y Entrega</h3>
-                    <form id="checkout-billing-form" style="display: flex; flex-direction: column; gap: 14px; box-sizing: border-box;">
-                        <div class="input-group">
-                            <label for="store-buyer-name" class="ck-label" data-i18n="store_buyer_name_label">Nombre Artístico / Real Completo *</label>
-                            <input type="text" id="store-buyer-name" required placeholder="Nombre para firmar la licencia" data-i18n-placeholder="store_buyer_name_placeholder" style="width: 100%; box-sizing: border-box;">
-                        </div>
-                        <div class="input-group">
-                            <label for="store-buyer-email" class="ck-label" data-i18n="store_buyer_email_label">Correo Electrónico * (Para recibir la licencia)</label>
-                            <input type="email" id="store-buyer-email" required placeholder="tu-correo@ejemplo.com" data-i18n-placeholder="sidebar_email_placeholder" style="width: 100%; box-sizing: border-box;">
-                        </div>
-                        <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                            <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-phone" class="ck-label" data-i18n="sidebar_phone">WhatsApp</label>
-                                <input type="text" id="store-buyer-phone" placeholder="Ej: +5939xxxxxxxx" data-i18n-placeholder="store_buyer_phone_placeholder" style="width: 100%; box-sizing: border-box;">
-                            </div>
-                            <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-dni" class="ck-label" data-i18n="sidebar_buyer_id">Identificación / DNI</label>
-                                <input type="text" id="store-buyer-dni" placeholder="Cédula/RUC" data-i18n-placeholder="store_buyer_id_placeholder" style="width: 100%; box-sizing: border-box;">
-                            </div>
-                        </div>
-                        <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                            <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-city" class="ck-label" data-i18n="sidebar_city">Ciudad</label>
-                                <input type="text" id="store-buyer-city" placeholder="Ej: Quito" data-i18n-placeholder="store_buyer_city_placeholder" style="width: 100%; box-sizing: border-box;">
-                            </div>
-                            <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-country" class="ck-label" data-i18n="sidebar_country">País</label>
-                                <input type="text" id="store-buyer-country" value="Ecuador" data-i18n-placeholder="sidebar_country_placeholder" style="width: 100%; box-sizing: border-box;">
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label for="store-txt-youtube-whitelist" class="ck-label" data-i18n="store_youtube_whitelist_label">Canal de YouTube (Para Whitelist de Content ID)</label>
-                            <input type="text" id="store-txt-youtube-whitelist" placeholder="https://youtube.com/@tu_canal (Opcional)" data-i18n-placeholder="store_youtube_whitelist_placeholder" style="width: 100%; box-sizing: border-box;">
-                        </div>
-                        
-                        <!-- Recordar datos -->
-                        <div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px;">
-                            <input type="checkbox" id="store-chk-remember-me" checked style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent,#00ccff);">
-                            <label for="store-chk-remember-me" style="font-size: 12.5px; font-weight: 500; color: #8a91a6; cursor: pointer; user-select: none;">Recordar mis datos para futuras compras</label>
-                        </div>
-                        
-                        <!-- Factura RUC -->
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); padding: 14px 16px; border-radius: 14px; box-sizing: border-box;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" id="store-chk-need-invoice" onchange="document.getElementById('store-invoice-fields-container').style.display = this.checked ? 'flex' : 'none';" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent,#00ccff);">
-                                <label for="store-chk-need-invoice" style="font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; user-select: none;">🧾 Requiero Factura Autorizada (Ecuador RUC)</label>
-                            </div>
-                            <div id="store-invoice-fields-container" style="display: none; flex-direction: column; gap: 12px; margin-top: 14px; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 14px; box-sizing: border-box;">
-                                <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                                    <div class="input-group" style="flex: 1; min-width: 150px;">
-                                        <label for="store-invoice-ruc" class="ck-label">RUC del Negocio * (13 dígitos)</label>
-                                        <input type="text" id="store-invoice-ruc" placeholder="Ej: 1792948291001" style="width: 100%; box-sizing: border-box;" maxlength="13">
-                                    </div>
-                                    <div class="input-group" style="flex: 1.5; min-width: 180px;">
-                                        <label for="store-invoice-company" class="ck-label">Razón Social / Nombre Comercial *</label>
-                                        <input type="text" id="store-invoice-company" placeholder="Nombre registrado en el RUC" style="width: 100%; box-sizing: border-box;">
-                                    </div>
-                                </div>
-                                <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                                    <div class="input-group" style="flex: 1; min-width: 150px;">
-                                        <label for="store-invoice-address" class="ck-label">Dirección Fiscal *</label>
-                                        <input type="text" id="store-invoice-address" placeholder="Ej: Av. Amazonas N32-12" style="width: 100%; box-sizing: border-box;">
-                                    </div>
-                                    <div class="input-group" style="flex: 1; min-width: 150px;">
-                                        <label for="store-invoice-email" class="ck-label">Correo de Facturación *</label>
-                                        <input type="email" id="store-invoice-email" placeholder="facturacion@negocio.com" style="width: 100%; box-sizing: border-box;">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- PASO 3: Método de Pago -->
-                <div class="checkout-step-panel" id="checkout-panel-3" style="display: none;">
-
-                    <!-- Coupon -->
-                    <div id="checkout-coupon-section" style="margin-bottom: 16px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 14px; padding: 12px 14px; box-sizing: border-box;">
-                        <label for="checkout-coupon-code" style="font-size: 10.5px; font-weight: 700; color: var(--accent,#00ccff); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 5px;" data-i18n="checkout_coupon_label"><span>🏷️</span> Código de Descuento</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="checkout-coupon-code" placeholder="Escribe aquí tu cupón" data-i18n-placeholder="checkout_coupon_placeholder" style="flex: 1; height: 38px; background: #0d1020; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 0 14px; color: #fff; font-size: 13px; font-weight: 700; text-transform: uppercase; outline: none; box-sizing: border-box;">
-                            <button type="button" class="btn btn-secondary" id="btn-apply-coupon" onclick="window.applyCheckoutCoupon()" data-i18n="checkout_coupon_btn_apply" style="height: 38px; padding: 0 16px; font-size: 12px; font-weight: 700; border-radius: 10px;">Aplicar</button>
-                        </div>
-                        <div id="checkout-coupon-msg" style="font-size: 11px; margin-top: 6px; display: none; font-weight: 600;"></div>
-                    </div>
-
-                    <!-- Terms click-wrap -->
-                    <div id="checkout-terms-section" style="margin-bottom: 16px; padding: 12px 14px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; display: flex; align-items: flex-start; gap: 10px; box-sizing: border-box;">
-                        <input type="checkbox" id="store-chk-accept-terms" onchange="window.onAcceptTermsChange()" style="width: 17px; height: 17px; margin-top: 1px; accent-color: var(--accent,#00ccff); cursor: pointer; flex-shrink: 0;">
-                        <label for="store-chk-accept-terms" style="font-size: 12px; color: #94a3b8; line-height: 1.5; cursor: pointer; user-select: none;">
-                            He leído y acepto los <a href="#" onclick="event.preventDefault(); window.openSupportModal('terms');" style="color: var(--accent,#00ccff); text-decoration: none; font-weight: 700;">Términos de Servicio</a> y las condiciones de la Licencia del Beat.
-                        </label>
-                    </div>
-
-                    <!-- Trust badges strip -->
-                    <div style="display: flex; justify-content: center; align-items: center; gap: 0; background: rgba(0,204,255,0.03); border: 1px solid rgba(0,204,255,0.08); padding: 10px 6px; border-radius: 14px; margin-bottom: 20px; box-sizing: border-box; flex-wrap: wrap;">
-                        <div class="ck-trust-badge">
-                            <i data-lucide="shield-check" style="width: 13px; height: 13px; color: #22d3a5;"></i>
-                            <span>SSL Seguro</span>
-                        </div>
-                        <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.08); margin: 0 4px;"></div>
-                        <div class="ck-trust-badge">
-                            <i data-lucide="zap" style="width: 13px; height: 13px; color: #f59e0b;"></i>
-                            <span>Entrega Inmediata</span>
-                        </div>
-                        <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.08); margin: 0 4px;"></div>
-                        <div class="ck-trust-badge">
-                            <i data-lucide="file-text" style="width: 13px; height: 13px; color: var(--accent,#00ccff);"></i>
-                            <span>Firma Digital</span>
-                        </div>
-                        <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.08); margin: 0 4px;"></div>
-                        <div class="ck-trust-badge">
-                            <i data-lucide="lock" style="width: 13px; height: 13px; color: #a78bfa;"></i>
-                            <span>Datos Encriptados</span>
-                        </div>
-                    </div>
-
-                    <!-- Payment method selector -->
-                    <p style="font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px;">Elige tu método de pago</p>
-                    <div class="pay-method-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 22px; box-sizing: border-box;">
-
-                        <!-- PayPal -->
-                        <button type="button" class="pay-card-btn paypal active" id="btn-pay-paypal" onclick="window.switchStorePaymentMethod('paypal')">
-                            <div style="position: absolute; top: -9px; background: linear-gradient(135deg, #003087, #009cde); color: #fff; font-size: 8px; font-weight: 900; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; pointer-events: none;">⭐ Recomendado</div>
-                            <img src="/banks/paypal.svg" style="height: 18px; pointer-events: none;" alt="PayPal">
-                            <span style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; pointer-events: none;">Internacional</span>
-                        </button>
-
-                        <!-- PayPhone -->
-                        <button type="button" class="pay-card-btn payphone" id="btn-pay-payphone" onclick="window.switchStorePaymentMethod('payphone')">
-                            <div style="height: 18px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-                                <img src="/banks/payphone_icon.png" style="height: 100%; object-fit: contain; pointer-events: none;" alt="PayPhone">
-                            </div>
-                            <span style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; pointer-events: none;">Ecuador 🇪🇨</span>
-                        </button>
-
-                        <!-- Deuna -->
-                        <button type="button" class="pay-card-btn deuna" id="btn-pay-deuna" onclick="window.switchStorePaymentMethod('deuna')">
-                            <div style="height: 18px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
-                                <img src="/banks/deuna.svg" style="height: 100%; object-fit: contain; pointer-events: none;" alt="Deuna!">
-                            </div>
-                            <span style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; pointer-events: none;">QR / Celular</span>
-                        </button>
-
-                        <!-- Transferencia -->
-                        <button type="button" class="pay-card-btn transfer" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')">
-                            <div style="display: flex; gap: 5px; align-items: center; justify-content: center; height: 18px; pointer-events: none;">
-                                <img src="/banks/pichincha.svg" style="height: 14px; object-fit: contain; background: #0f1322; border-radius: 3px;" alt="Pichincha">
-                                <img src="/banks/guayaquil.svg" style="height: 14px; object-fit: contain; background: #fff; border-radius: 3px;" alt="Guayaquil">
-                            </div>
-                            <span style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; pointer-events: none;" data-i18n="checkout_pay_transfer">Depósito / Transf.</span>
-                        </button>
-
-                        <!-- Oferta (hidden by default) -->
-                        <button type="button" class="pay-card-btn offer" id="btn-pay-offer" onclick="window.switchStorePaymentMethod('offer')" style="display: none;">
-                            <span style="font-size: 18px; pointer-events: none;">🏷️</span>
-                            <span style="font-size: 9px; color: #f59e0b; font-weight: 700; text-transform: uppercase; pointer-events: none;" data-i18n="checkout_pay_offer">Negociar</span>
-                        </button>
-                    </div>
-
-                    <!-- ===== PAYMENT PANELS ===== -->
-
-                    <!-- Panel Deuna -->
-                    <div class="store-payment-panel" id="store-pay-deuna" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.5; margin-bottom: 14px; margin-top: 0;" data-i18n="deuna_steps_title">Sigue los pasos para completar tu pago con <strong style="color: #fff;">Deuna!</strong>:</p>
-                        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
-                            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(0,255,204,0.04); border: 1px solid rgba(0,255,204,0.1); border-radius: 12px;">
-                                <span style="background: linear-gradient(135deg, #00ffcc, #00ccff); color: #000; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; flex-shrink: 0;">1</span>
-                                <span style="font-size: 12.5px; color: #cbd5e0;" data-i18n="deuna_step_1">Escanea el código QR con tu app <strong style="color: #fff;">Deuna!</strong></span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(0,255,204,0.04); border: 1px solid rgba(0,255,204,0.1); border-radius: 12px;">
-                                <span style="background: linear-gradient(135deg, #00ffcc, #00ccff); color: #000; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; flex-shrink: 0;">2</span>
-                                <span style="font-size: 12.5px; color: #cbd5e0;" data-i18n="deuna_step_2">Toma una captura del comprobante y súbela abajo</span>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(0,255,204,0.04); border: 1px solid rgba(0,255,204,0.1); border-radius: 12px;">
-                                <span style="background: linear-gradient(135deg, #00ffcc, #00ccff); color: #000; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; flex-shrink: 0;">3</span>
-                                <span style="font-size: 12.5px; color: #cbd5e0;" data-i18n="deuna_step_3">Confirma tu compra — recibirás los archivos por correo</span>
-                            </div>
-                        </div>
-
-                        <!-- Info card -->
-                        <div style="background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px 20px; margin-bottom: 16px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <div>
-                                <div style="font-size: 11px; color: #6b7280; font-weight: 600; margin-bottom: 3px;">TITULAR</div>
-                                <div style="font-size: 14px; font-weight: 700; color: #fff;" id="deuna-info-name">-</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 11px; color: #6b7280; font-weight: 600; margin-bottom: 3px;">CELULAR</div>
-                                <div style="font-size: 14px; font-weight: 700; color: #fff;" id="deuna-info-phone">-</div>
-                            </div>
-                            <div style="background: linear-gradient(135deg, rgba(0,204,255,0.12), rgba(124,58,237,0.12)); border: 1px solid rgba(0,204,255,0.2); color: var(--accent,#00ccff); padding: 8px 16px; border-radius: 10px; font-size: 13px; font-weight: 800;">
-                                💳 <span id="deuna-total-price">$0.00 USD</span>
-                            </div>
-                        </div>
-
-                        <!-- Static QR -->
-                        <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px; box-sizing: border-box;">
-                            <p style="font-size: 12px; font-weight: 600; color: #94a3b8; margin: 0 0 12px;">📱 Escanea el código QR con la app Deuna!</p>
-                            <div style="background: #fff; padding: 14px; border-radius: 16px; display: inline-block; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
-                                <img src="/deuna-qr.jpg" style="width: 220px; height: auto; object-fit: contain; display: block;" alt="Deuna QR">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Panel Transferencia -->
-                    <div class="store-payment-panel" id="store-pay-transfer" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.5; margin-bottom: 14px; margin-top: 0;" data-i18n="checkout_transfer_desc">Transfiere a cualquiera de las siguientes cuentas del productor:</p>
-                        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; box-sizing: border-box;">
-                            <!-- Banco Pichincha -->
-                            <div id="store-bank-pichincha-card" class="ck-bank-card ck-bank-pichincha">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                    <span style="font-weight: 800; font-size: 11px; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px;">🏦 Banco Pichincha</span>
-                                </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                                    <div style="font-size: 12px; color: #94a3b8;">Cuenta: <strong style="color: #fff;" id="pichincha-info-acc">-</strong></div>
-                                    <div style="font-size: 12px; color: #94a3b8;">Titular: <span style="color: #e2e8f0;" id="pichincha-info-name">-</span></div>
-                                    <div style="font-size: 12px; color: #94a3b8;">CI/RUC: <span style="color: #e2e8f0;" id="pichincha-info-dni">-</span></div>
-                                </div>
-                            </div>
-                            <!-- Banco Guayaquil -->
-                            <div id="store-bank-guayaquil-card" class="ck-bank-card ck-bank-guayaquil">
-                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                                    <span style="font-weight: 800; font-size: 11px; color: #ec4899; text-transform: uppercase; letter-spacing: 0.5px;">🏦 Banco Guayaquil</span>
-                                </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                                    <div style="font-size: 12px; color: #94a3b8;">Cuenta: <strong style="color: #fff;" id="guayaquil-info-acc">-</strong></div>
-                                    <div style="font-size: 12px; color: #94a3b8;">Titular: <span style="color: #e2e8f0;" id="guayaquil-info-name">-</span></div>
-                                    <div style="font-size: 12px; color: #94a3b8;">CI/RUC: <span style="color: #e2e8f0;" id="guayaquil-info-dni">-</span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div style="background: linear-gradient(135deg, rgba(0,204,255,0.08), rgba(124,58,237,0.08)); border: 1px solid rgba(0,204,255,0.2); color: var(--accent,#00ccff); padding: 10px 16px; border-radius: 12px; text-align: center; box-sizing: border-box; font-size: 13px; font-weight: 800;">
-                            Total a Pagar: <span id="transfer-total-price">$0.00 USD</span>
-                        </div>
-                    </div>
-
-                    <!-- Panel PayPal -->
-                    <div class="store-payment-panel" id="store-pay-paypal" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.5; margin-bottom: 16px; margin-top: 0; text-align: center;" data-i18n="checkout_paypal_desc">Paga de manera instantánea y segura con tu cuenta PayPal o tarjeta de crédito:</p>
-                        <div style="display: flex; justify-content: center; width: 100%; box-sizing: border-box;">
-                            <div style="position: relative; width: 100%; max-width: 420px; box-sizing: border-box;">
-                                <div id="store-paypal-button-container" style="min-height: 115px; width: 100%; box-sizing: border-box; background: rgba(0,48,135,0.08); border: 1px solid rgba(0,156,222,0.15); padding: 16px; border-radius: 16px; margin-bottom: 12px;"></div>
-                                <div id="store-paypal-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 12px); cursor: pointer; z-index: 10; display: block; border-radius: 16px;" onclick="window.onPaymentClickWithoutTerms()"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Panel PayPhone -->
-                    <div class="store-payment-panel" id="store-pay-payphone">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.5; margin-bottom: 16px; margin-top: 0; text-align: center;" data-i18n="checkout_payphone_desc">Paga al instante usando tu cuenta <strong style="color: #fff;">PayPhone</strong> o tarjeta:</p>
-                        <div style="display: flex; justify-content: center; width: 100%; box-sizing: border-box;">
-                            <div style="position: relative; width: 100%; max-width: 300px; box-sizing: border-box;">
-                                <div id="payphone-button" style="width: 100%; min-height: 50px; display: flex; justify-content: center; align-items: center; background: rgba(255,108,0,0.04); border: 1px solid rgba(255,108,0,0.1); padding: 14px; border-radius: 16px; box-sizing: border-box;"></div>
-                                <div id="store-payphone-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10; display: block; border-radius: 16px;" onclick="window.onPaymentClickWithoutTerms()"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Panel Oferta -->
-                    <div class="store-payment-panel" id="store-pay-offer" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.5; margin-bottom: 16px; margin-top: 0;" data-i18n="checkout_offer_desc">Propón un precio de oferta al productor para adquirir los derechos exclusivos de esta instrumental:</p>
-                        <div style="display: flex; flex-direction: column; gap: 14px; box-sizing: border-box;">
-                            <div class="input-group">
-                                <label for="offer-price-input" class="ck-label" data-i18n="checkout_offer_label">Tu Propuesta Económica ($ USD) *</label>
-                                <input type="number" id="offer-price-input" min="250" step="5" placeholder="Ej: 400" style="width: 100%; box-sizing: border-box; background: #0d1020; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 16px; color: #fff; font-weight: 700; font-size: 20px; outline: none;">
-                                <span style="font-size: 11px; color: #6b7280; margin-top: 6px; display: block;"><span data-i18n="checkout_offer_min_label">Monto mínimo:</span> <strong style="color: var(--accent,#00ccff);">$250.00 USD</strong></span>
-                            </div>
-                            <div class="input-group">
-                                <label for="offer-message-input" class="ck-label" data-i18n="checkout_offer_msg_label">Mensaje para el Productor</label>
-                                <textarea id="offer-message-input" placeholder="Ej: Hola, me interesa mucho este beat. Mi presupuesto máximo actual es de $400..." rows="3" style="width: 100%; box-sizing: border-box; background: #0d1020; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 16px; color: #fff; font-family: inherit; font-size: 13px; resize: none; outline: none;"></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Receipt Upload -->
-                    <div id="store-receipt-upload-section" style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 18px; box-sizing: border-box;">
-                        <label class="ck-label" style="margin-bottom: 10px;" data-i18n="checkout_upload_receipt_label">📸 Sube tu Comprobante de Pago *</label>
-                        <div class="ck-upload-zone" onclick="document.getElementById('store-receipt-file').click()">
-                            <input type="file" id="store-receipt-file" accept="image/*" style="display: none;">
-                            <i data-lucide="upload-cloud" style="width: 28px; height: 28px; color: var(--accent,#00ccff); margin: 0 auto 8px; display: block;"></i>
-                            <div style="font-size: 13px; font-weight: 700; color: #94a3b8;">Haz clic para subir una imagen</div>
-                            <div id="store-receipt-file-name" style="font-size: 11px; color: #6b7280; margin-top: 4px;" data-i18n="checkout_no_file_selected">Ningún archivo seleccionado</div>
-                        </div>
-                        <p style="font-size: 11px; color: #6b7280; margin-top: 10px; margin-bottom: 0; line-height: 1.5;" data-i18n="checkout_receipt_warning">⚠️ El productor revisará tu comprobante y te enviará los archivos por correo en las próximas horas.</p>
-                    </div>
-
-                </div>
-
-            </div>
-
-            <!-- ===== FOOTER ===== -->
-            <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.06); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; background: rgba(0,0,0,0.15);">
-                <div style="display: flex; gap: 8px;">
-                    <button class="ck-btn-secondary" id="btn-checkout-prev" style="display: none;" data-i18n="btn_back">← Atrás</button>
-                    <button class="ck-btn-secondary" id="btn-checkout-cancel" data-i18n="btn_cancel">Cancelar</button>
-                </div>
-                <button class="ck-btn-primary" id="btn-checkout-next" data-i18n="btn_continue">
-                    Continuar <i data-lucide="arrow-right" style="width: 16px; height: 16px;"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-        <div class="modal" style="max-width: 600px; width: 95%; background: #0c0e14; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; margin: auto;">
-            <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 20px 24px; box-sizing: border-box;">
-                <h2 style="font-size: 20px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 8px; margin: 0;">
-                    <i data-lucide="shopping-bag" style="color: var(--accent, #00ccff);"></i> <span data-i18n="checkout_title">Adquirir Beat</span>
-                </h2>
-                <button class="icon-btn" id="btn-close-checkout-modal"><i data-lucide="x"></i></button>
-            </div>
-            
-            <div class="modal-body" style="padding: 24px; max-height: 78vh; overflow-y: auto; box-sizing: border-box; text-align: left;">
-                <!-- Step Indicators -->
-                <div style="display: flex; justify-content: space-between; margin-bottom: 24px; position: relative; width: 100%; box-sizing: border-box; padding: 0 10px;">
-                    <div style="position: absolute; top: 15px; left: 10%; right: 10%; height: 2px; background: rgba(255,255,255,0.05); z-index: 1;">
-                        <div id="checkout-step-progress" style="width: 0%; height: 100%; background: var(--accent, #00ccff); transition: width 0.3s ease;"></div>
-                    </div>
-                    <div class="checkout-step-indicator active" data-step="1" style="position: relative; z-index: 2; background: #0c0e14; border: 2px solid var(--accent, #00ccff); color: #fff; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">1</div>
-                    <div class="checkout-step-indicator" data-step="2" style="position: relative; z-index: 2; background: #0c0e14; border: 2px solid rgba(255,255,255,0.1); color: #8a91a6; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">2</div>
-                    <div class="checkout-step-indicator" data-step="3" style="position: relative; z-index: 2; background: #0c0e14; border: 2px solid rgba(255,255,255,0.1); color: #8a91a6; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;">3</div>
-                </div>
-
-                <!-- PASO 1: Selección de Licencia / Carrito -->
-                <div class="checkout-step-panel" id="checkout-panel-1">
-                    <!-- Vista de selección para un solo beat -->
-                    <div id="checkout-single-beat-view">
-                        <div id="checkout-urgency-banner" style="display: none; background: rgba(255, 68, 68, 0.1); border: 1px solid rgba(255, 68, 68, 0.2); color: #ff4444; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 16px; align-items: center; gap: 8px;">
-                            <i data-lucide="eye" style="width: 16px; height: 16px;"></i> <span id="checkout-urgency-text"></span>
-                        </div>
-                        
-                        <!-- Beat Preview Header (Adquirir Licencia) -->
-                        <div id="checkout-single-beat-preview" style="display: none; align-items: center; gap: 14px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); padding: 12px; border-radius: 12px; margin-bottom: 16px; box-sizing: border-box;">
-                            <img id="checkout-single-beat-img" src="" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 1px solid rgba(255, 255, 255, 0.1);" alt="Carátula del Beat">
-                            <div style="flex: 1; text-align: left; overflow: hidden;">
-                                <div id="checkout-single-beat-name" style="font-weight: 800; color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
-                                <div id="checkout-single-beat-meta" style="font-size: 11px; color: #8a91a6; margin-top: 4px;">-</div>
-                            </div>
-                        </div>
-
-                        <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;" data-i18n="checkout_step1_title">1. Selecciona el Tipo de Licencia:</h3>
-                        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;" id="license-options-container">
-                            <!-- Cargado dinámicamente -->
-                        </div>
-                        <div style="display: flex; gap: 12px; margin-top: 20px;">
-                            <button type="button" class="btn btn-secondary" id="btn-checkout-add-to-cart" data-i18n="checkout_btn_add_to_cart" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Agregar al Carrito</button>
-                            <button type="button" class="btn btn-primary" id="btn-checkout-buy-now" data-i18n="checkout_btn_buy_now" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Comprar Ahora</button>
-                        </div>
-                    </div>
-                    <!-- Vista de múltiples beats en el carrito -->
-                    <div id="checkout-multi-beat-view" style="display: none;">
-                        <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;" data-i18n="checkout_cart_title">1. Tu Carrito de Compras:</h3>
-                        <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; box-sizing: border-box;" id="cart-items-container">
-                            <!-- Items del carrito cargados dinámicamente -->
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 16px; border-radius: 12px; box-sizing: border-box; margin-bottom: 16px;">
-                            <span style="font-size: 14px; font-weight: 600; color: #8a91a6;" data-i18n="checkout_cart_total">Total del Carrito:</span>
-                            <span id="cart-total-price-display" style="font-size: 18px; font-weight: 800; color: var(--accent, #00ccff);">$0.00 USD</span>
-                        </div>
-                        <div style="display: flex; gap: 12px; margin-top: 20px;">
-                            <button type="button" class="btn btn-secondary" id="btn-checkout-keep-shopping" data-i18n="checkout_btn_keep_shopping" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Seguir Comprando</button>
-                            <button type="button" class="btn btn-primary" id="btn-checkout-proceed-billing" data-i18n="btn_continue" style="flex: 1; height: 40px; font-weight: 700; border-radius: 10px; font-size: 13px;">Continuar</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- PASO 2: Datos del Comprador -->
-                <div class="checkout-step-panel" id="checkout-panel-2" style="display: none;">
-                    <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 16px;" data-i18n="checkout_step2_title">2. Datos para el Contrato y Entrega:</h3>
-                    <form id="checkout-billing-form" style="display: flex; flex-direction: column; gap: 14px; box-sizing: border-box;">
-                        <div class="input-group">
-                            <label for="store-buyer-name" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="store_buyer_name_label">Nombre Artístico / Real Completo *</label>
-                            <input type="text" id="store-buyer-name" required placeholder="Nombre para firmar la licencia" data-i18n-placeholder="store_buyer_name_placeholder" style="width: 100%; box-sizing: border-box;">
-                        </div>
-                        <div class="input-group">
-                            <label for="store-buyer-email" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="store_buyer_email_label">Correo Electrónico * (Para recibir la licencia)</label>
-                            <input type="email" id="store-buyer-email" required placeholder="tu-correo@ejemplo.com" data-i18n-placeholder="sidebar_email_placeholder" style="width: 100%; box-sizing: border-box;">
-                        </div>
-                        <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                            <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-phone" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="sidebar_phone">WhatsApp</label>
-                                <input type="text" id="store-buyer-phone" placeholder="Ej: +5939xxxxxxxx" data-i18n-placeholder="store_buyer_phone_placeholder" style="width: 100%; box-sizing: border-box;">
-                            </div>
-                            <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-dni" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="sidebar_buyer_id">Identificación / DNI</label>
-                                <input type="text" id="store-buyer-dni" placeholder="Cédula/RUC" data-i18n-placeholder="store_buyer_id_placeholder" style="width: 100%; box-sizing: border-box;">
-                            </div>
-                        </div>
-                        <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                            <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-city" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="sidebar_city">Ciudad</label>
-                                <input type="text" id="store-buyer-city" placeholder="Ej: Quito" data-i18n-placeholder="store_buyer_city_placeholder" style="width: 100%; box-sizing: border-box;">
-                            </div>
-                            <div class="input-group" style="flex: 1; min-width: 120px;">
-                                <label for="store-buyer-country" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="sidebar_country">País</label>
-                                <input type="text" id="store-buyer-country" value="Ecuador" data-i18n-placeholder="sidebar_country_placeholder" style="width: 100%; box-sizing: border-box;">
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label for="store-txt-youtube-whitelist" style="font-size: 12px; font-weight: 600; color: #8a91a6;" data-i18n="store_youtube_whitelist_label">Canal de YouTube (Para Whitelist de Content ID)</label>
-                            <input type="text" id="store-txt-youtube-whitelist" placeholder="https://youtube.com/@tu_canal (Opcional)" data-i18n-placeholder="store_youtube_whitelist_placeholder" style="width: 100%; box-sizing: border-box;">
-                        </div>
-                        
-                        <!-- Opción Recordar Datos para Compras Futuras -->
-                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; margin-bottom: 14px;">
-                            <input type="checkbox" id="store-chk-remember-me" checked style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent, #00ccff);">
-                            <label for="store-chk-remember-me" style="font-size: 12.5px; font-weight: 500; color: #8a91a6; cursor: pointer; user-select: none;">Recordar mis datos para futuras compras</label>
-                        </div>
-                        
-                        <!-- Opción de Factura de Negocio RUC -->
-                        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 14px; border-radius: 12px; margin-top: 4px; box-sizing: border-box;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" id="store-chk-need-invoice" onchange="document.getElementById('store-invoice-fields-container').style.display = this.checked ? 'flex' : 'none';" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent, #00ccff);">
-                                <label for="store-chk-need-invoice" style="font-size: 12.5px; font-weight: 700; color: #fff; cursor: pointer; user-select: none;">Requiero Factura Autorizada (Ecuador RUC)</label>
-                            </div>
-                            <div id="store-invoice-fields-container" style="display: none; flex-direction: column; gap: 12px; margin-top: 14px; border-top: 1px dashed rgba(255, 255, 255, 0.08); padding-top: 14px; box-sizing: border-box;">
-                                <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                                    <div class="input-group" style="flex: 1; min-width: 150px;">
-                                        <label for="store-invoice-ruc" style="font-size: 11.5px; font-weight: 600; color: #8a91a6;">RUC del Negocio * (13 dígitos)</label>
-                                        <input type="text" id="store-invoice-ruc" placeholder="Ej: 1792948291001" style="width: 100%; box-sizing: border-box;" maxlength="13">
-                                    </div>
-                                    <div class="input-group" style="flex: 1.5; min-width: 180px;">
-                                        <label for="store-invoice-company" style="font-size: 11.5px; font-weight: 600; color: #8a91a6;">Razón Social / Nombre Comercial *</label>
-                                        <input type="text" id="store-invoice-company" placeholder="Nombre registrado en el RUC" style="width: 100%; box-sizing: border-box;">
-                                    </div>
-                                </div>
-                                <div class="input-row" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                                    <div class="input-group" style="flex: 1; min-width: 150px;">
-                                        <label for="store-invoice-address" style="font-size: 11.5px; font-weight: 600; color: #8a91a6;">Dirección Fiscal *</label>
-                                        <input type="text" id="store-invoice-address" placeholder="Ej: Av. Amazonas N32-12" style="width: 100%; box-sizing: border-box;">
-                                    </div>
-                                    <div class="input-group" style="flex: 1; min-width: 150px;">
-                                        <label for="store-invoice-email" style="font-size: 11.5px; font-weight: 600; color: #8a91a6;">Correo Electrónico de Facturación *</label>
-                                        <input type="email" id="store-invoice-email" placeholder="facturacion@negocio.com" style="width: 100%; box-sizing: border-box;">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- PASO 3: Método de Pago -->
-                <div class="checkout-step-panel" id="checkout-panel-3" style="display: none;">
-                    <h3 style="font-size: 15px; font-weight: 700; color: #fff; margin-top: 0; margin-bottom: 12px;" data-i18n="checkout_step3_title">3. Selecciona tu Método de Pago:</h3>
+        <!-- MAIN -->
+        <main class="max-w-7xl mx-auto w-full px-6 py-8 flex-1">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Left Column: Checkout Flow -->
+                <div class="lg:col-span-8 space-y-6">
                     
-                    <!-- Coupon Input -->
-                    <div id="checkout-coupon-section" style="margin-bottom: 16px; background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px; box-sizing: border-box;">
-                        <label for="checkout-coupon-code" style="font-size: 11px; font-weight: 600; color: var(--accent, #00ccff); text-transform: uppercase; margin-bottom: 6px; display: block;" data-i18n="checkout_coupon_label">🏷️ Código de Descuento</label>
-                        <div style="display: flex; gap: 8px;">
-                            <input type="text" id="checkout-coupon-code" placeholder="Escribe aquí tu cupón" data-i18n-placeholder="checkout_coupon_placeholder" style="flex: 1; height: 36px; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 0 12px; color: #fff; font-size: 13px; font-weight: 700; text-transform: uppercase; outline: none; box-sizing: border-box;">
-                            <button type="button" class="btn btn-secondary" id="btn-apply-coupon" onclick="window.applyCheckoutCoupon()" data-i18n="checkout_coupon_btn_apply" style="height: 36px; padding: 0 16px; font-size: 12px; font-weight: 700; border-radius: 8px;">Aplicar</button>
+                    <!-- Stepper -->
+                    <nav class="flex items-center justify-between md:justify-start md:gap-12 pb-4 border-b border-[#454558]/20">
+                        <div class="flex items-center gap-2 text-[#bec2ff] font-bold" id="ck-nav-step-1">
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-[#bec2ff] text-[#0001ac] font-mono text-xs" id="ck-dot-1">1</span>
+                            <span class="font-mono uppercase tracking-wider text-xs md:text-sm">Licencia</span>
                         </div>
-                        <div id="checkout-coupon-msg" style="font-size: 11px; margin-top: 6px; display: none; font-weight: 600;"></div>
-                    </div>
-                    
-                    <!-- Aceptación obligatoria de términos (Click-Wrap) -->
-                    <div id="checkout-terms-section" style="margin-bottom: 16px; padding: 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; display: flex; align-items: flex-start; gap: 10px; box-sizing: border-box;">
-                        <input type="checkbox" id="store-chk-accept-terms" onchange="window.onAcceptTermsChange()" style="width: 18px; height: 18px; margin-top: 1px; accent-color: var(--accent, #00ccff); cursor: pointer; flex-shrink: 0;">
-                        <label for="store-chk-accept-terms" style="font-size: 12px; color: #cbd5e0; line-height: 1.4; cursor: pointer; user-select: none;">
-                            He leído y acepto los <a href="#" onclick="event.preventDefault(); window.openSupportModal('terms');" style="color: var(--accent, #00ccff); text-decoration: none; font-weight: 600;">Términos de Servicio</a> y las condiciones de la Licencia del Beat.
-                        </label>
-                    </div>
-
-                    <!-- Sellos de Seguridad y Confianza -->
-                    <div style="display: flex; justify-content: space-around; align-items: center; background: rgba(0, 204, 255, 0.03); border: 1px solid rgba(0, 204, 255, 0.08); padding: 10px 14px; border-radius: 12px; margin-bottom: 18px; box-sizing: border-box; font-size: 11.5px; font-weight: 600; color: #cbd5e0; flex-wrap: wrap; gap: 8px;">
-                        <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="shield-check" style="width: 14px; height: 14px; color: var(--accent, #00ccff);"></i> 🔒 Conexión SSL Segura</span>
-                        <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="zap" style="width: 14px; height: 14px; color: #f59e0b;"></i> ⚡ Entrega Inmediata</span>
-                        <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="file-text" style="width: 14px; height: 14px; color: var(--accent, #00ccff);"></i> 📄 Firma Digital</span>
-                    </div>
-
-                    <!-- Nueva Selección de Método de Pago Premium -->
-                    <div class="pay-method-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 20px; box-sizing: border-box;">
-                        
-                        <!-- Tarjeta PayPal (Destacada y Primera) -->
-                        <button type="button" class="pay-card-btn paypal active" id="btn-pay-paypal" onclick="window.switchStorePaymentMethod('paypal')">
-                            <div style="position: absolute; top: -8px; background: linear-gradient(135deg, #0079c1, #00457c); color: #fff; font-size: 8px; font-weight: 900; padding: 2px 6px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); pointer-events: none; white-space: nowrap;">
-                                Recomendado
-                            </div>
-                            <img src="/banks/paypal.svg" style="height: 16px; pointer-events: none;" alt="PayPal">
-                            <span style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; margin-top: 2px; pointer-events: none;">Tarjeta Internac.</span>
-                        </button>
-
-                        <!-- Tarjeta PayPhone -->
-                        <button type="button" class="pay-card-btn payphone" id="btn-pay-payphone" onclick="window.switchStorePaymentMethod('payphone')">
-                            <div style="height: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; pointer-events: none;">
-                                <img src="/banks/payphone_icon.png" style="height: 100%; object-fit: contain; pointer-events: none;" alt="PayPhone">
-                            </div>
-                            <span style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; pointer-events: none;">Tarjetas Ecuador</span>
-                        </button>
-
-                        <!-- Tarjeta Deuna! -->
-                        <button type="button" class="pay-card-btn deuna" id="btn-pay-deuna" onclick="window.switchStorePaymentMethod('deuna')">
-                            <div style="height: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; pointer-events: none;">
-                                <img src="/banks/deuna.svg" style="height: 100%; object-fit: contain; pointer-events: none;" alt="Deuna!">
-                            </div>
-                            <span style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; pointer-events: none;">QR / Celular</span>
-                        </button>
-
-                        <!-- Tarjeta Transferencia -->
-                        <button type="button" class="pay-card-btn transfer" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')">
-                            <div style="display: flex; gap: 4px; align-items: center; justify-content: center; height: 16px; margin-bottom: 2px; pointer-events: none;">
-                                <img src="/banks/pichincha.svg" style="height: 14px; object-fit: contain; background: #0f1322; border-radius: 2px;" alt="Pichincha">
-                                <img src="/banks/guayaquil.svg" style="height: 14px; object-fit: contain; background: #fff; border-radius: 2px;" alt="Guayaquil">
-                            </div>
-                            <span data-i18n="checkout_pay_transfer" style="font-size: 9px; color: #8a91a6; font-weight: 700; text-transform: uppercase; margin-top: 1px; pointer-events: none;">Depósito / Transf.</span>
-                        </button>
-
-                        <!-- Tarjeta Oferta -->
-                        <button type="button" class="pay-card-btn offer" id="btn-pay-offer" onclick="window.switchStorePaymentMethod('offer')" style="display: none;">
-                            <span style="font-size: 14px; pointer-events: none;">🏷️</span>
-                            <span data-i18n="checkout_pay_offer" style="font-size: 9px; color: #f59e0b; font-weight: 700; text-transform: uppercase; pointer-events: none;">Negociar</span>
-                        </button>
-                    </div>
-
-                    <!-- Panel Deuna -->
-                    <div class="store-payment-panel" id="store-pay-deuna" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 12px; margin-top: 0;" data-i18n="deuna_steps_title">Sigue los pasos para completar tu pago con <strong style="color: #fff;">Deuna!</strong>:</p>
-                        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
-                            <div style="display: flex; align-items: flex-start; gap: 10px;">
-                                <span style="background: var(--accent, #00ccff); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; margin-top: 1px;">1</span>
-                                <span style="font-size: 13px; color: #cdd;" data-i18n="deuna_step_1">Copia el número de celular y envía el pago desde tu app <strong style="color: #fff;">Deuna!</strong></span>
-                            </div>
-                            <div style="display: flex; align-items: flex-start; gap: 10px;">
-                                <span style="background: var(--accent, #00ccff); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; margin-top: 1px;">2</span>
-                                <span style="font-size: 13px; color: #cdd;" data-i18n="deuna_step_2">Toma una captura del comprobante y súbelo abajo</span>
-                            </div>
-                            <div style="display: flex; align-items: flex-start; gap: 10px;">
-                                <span style="background: var(--accent, #00ccff); color: #000; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; margin-top: 1px;">3</span>
-                                <span style="font-size: 13px; color: #cdd;" data-i18n="deuna_step_3">Confirma tu compra — el productor aprobará y recibirás los archivos por correo</span>
-                            </div>
+                        <div class="hidden md:block w-12 h-px bg-[#454558]/30"></div>
+                        <div class="flex items-center gap-2 text-[#c5c4db]" id="ck-nav-step-2">
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full border border-[#454558] font-mono text-xs" id="ck-dot-2">2</span>
+                            <span class="font-mono uppercase tracking-wider text-xs md:text-sm">Tus Datos</span>
                         </div>
-                        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 16px; text-align: center; box-sizing: border-box;">
-                            <div style="font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px;" id="deuna-info-phone">Celular: -</div>
-                            <div style="font-size: 13px; color: #8a91a6; margin-bottom: 12px;" id="deuna-info-name">Titular: -</div>
-                            <div style="font-size: 12px; background: rgba(0, 204, 255, 0.08); color: var(--accent, #00ccff); padding: 8px 16px; border-radius: 8px; display: inline-block; font-weight: 700;">
-                                💳 Total a Pagar: <strong id="deuna-total-price">$0.00 USD</strong>
-                            </div>
+                        <div class="hidden md:block w-12 h-px bg-[#454558]/30"></div>
+                        <div class="flex items-center gap-2 text-[#c5c4db]" id="ck-nav-step-3">
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full border border-[#454558] font-mono text-xs" id="ck-dot-3">3</span>
+                            <span class="font-mono uppercase tracking-wider text-xs md:text-sm">Pago</span>
                         </div>
-                        
-                        <!-- Contenedor del QR Estático -->
-                        <div style="text-align: center; margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px; box-sizing: border-box;">
-                            <div style="font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px;">Escanea el código QR en la app Deuna!</div>
-                            <div style="background: #fff; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 12px;">
-                                <img src="/deuna-qr.jpg" style="width: 250px; height: 350px; object-fit: contain; display: block;" alt="Deuna QR">
-                            </div>
-                        </div>
-                    </div>
+                    </nav>
 
-                    <!-- Panel Transferencia -->
-                    <div class="store-payment-panel" id="store-pay-transfer" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 12px; margin-top: 0;" data-i18n="checkout_transfer_desc">Transfiere a cualquiera de las siguientes cuentas directas del productor:</p>
-                        
-                        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; box-sizing: border-box;">
-                            <!-- Banco Pichincha -->
-                            <div id="store-bank-pichincha-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 14px; box-sizing: border-box;">
-                                <div style="font-weight: 700; font-size: 12px; color: #f59e0b; margin-bottom: 6px;">BANCO PICHINCHA</div>
-                                <div style="font-size: 13px; color: #fff;">Cuenta: <strong id="pichincha-info-acc">-</strong></div>
-                                <div style="font-size: 12px; color: #8a91a6; margin-top: 2px;">Titular: <span id="pichincha-info-name">-</span></div>
-                                <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="pichincha-info-dni">-</span></div>
+                    <!-- PASO 1: Selección de Licencia / Carrito -->
+                    <div class="checkout-step-panel space-y-6" id="checkout-panel-1">
+                        <div id="checkout-single-beat-view">
+                            <div id="checkout-urgency-banner" style="display: none;" class="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-bold">
+                                <span class="material-symbols-outlined">visibility</span>
+                                <span id="checkout-urgency-text"></span>
                             </div>
-                            <!-- Banco Guayaquil -->
-                            <div id="store-bank-guayaquil-card" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 14px; box-sizing: border-box;">
-                                <div style="font-weight: 700; font-size: 12px; color: #ec4899; margin-bottom: 6px;">BANCO GUAYAQUIL</div>
-                                <div style="font-size: 13px; color: #fff;">Cuenta: <strong id="guayaquil-info-acc">-</strong></div>
-                                <div style="font-size: 12px; color: #8a91a6; margin-top: 2px;">Titular: <span id="guayaquil-info-name">-</span></div>
-                                <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="guayaquil-info-dni">-</span></div>
-                            </div>
-                        </div>
-                        <div style="font-size: 11px; background: rgba(0, 204, 255, 0.08); color: var(--accent, #00ccff); padding: 6px 12px; border-radius: 6px; display: inline-block; width: 100%; text-align: center; box-sizing: border-box; margin-bottom: 12px;">
-                            Total a Pagar: <strong id="transfer-total-price">$0.00 USD</strong>
-                        </div>
-                    </div>
-
-                    <!-- Panel PayPal -->
-                    <div class="store-payment-panel" id="store-pay-paypal" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0; text-align: center;" data-i18n="checkout_paypal_desc">Paga de manera instantánea y segura con tu cuenta PayPal o tarjeta de crédito:</p>
-                        
-                        <div style="display: flex; justify-content: center; width: 100%; box-sizing: border-box;">
-                            <div style="position: relative; width: 100%; max-width: 420px; box-sizing: border-box;">
-                                <div id="store-paypal-button-container" style="min-height: 115px; width: 100%; box-sizing: border-box; background: rgba(0, 48, 135, 0.08); border: 1px solid rgba(0, 156, 222, 0.15); padding: 16px; border-radius: 14px; margin-bottom: 12px;">
-                                    <!-- Botón de PayPal cargado dinámicamente -->
+                            
+                            <!-- Beat Preview (Optional Single Beat details) -->
+                            <div id="checkout-single-beat-preview" style="display: none;" class="flex items-center gap-4 bg-[#1A1A20] border border-[#454558]/30 p-4 rounded-xl mt-4">
+                                <img id="checkout-single-beat-img" src="" class="w-12 h-12 rounded-lg object-cover bg-[#131316]" alt="Beat">
+                                <div class="flex-1 overflow-hidden">
+                                    <div id="checkout-single-beat-name" class="font-bold text-white text-sm truncate">-</div>
+                                    <div id="checkout-single-beat-meta" class="text-xs text-[#c5c4db]">-</div>
                                 </div>
-                                <!-- Overlay para clics cuando los términos no están aceptados -->
-                                <div id="store-paypal-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 12px); cursor: pointer; z-index: 10; display: block; border-radius: 14px;" onclick="window.onPaymentClickWithoutTerms()"></div>
+                            </div>
+
+                            <h3 class="font-mono text-xs text-[#bec2ff] uppercase tracking-wider mt-6">Selecciona el Tipo de Licencia</h3>
+                            <div class="flex flex-col gap-4 mt-3" id="license-options-container">
+                                <!-- Loaded dynamically -->
+                            </div>
+                            <div class="flex gap-4 mt-8">
+                                <button type="button" class="flex-1 py-4 bg-[#1A1A20] hover:bg-white/5 border border-[#454558]/30 text-white rounded-xl font-bold transition-all" id="btn-checkout-add-to-cart">Agregar al Carrito</button>
+                                <button type="button" class="flex-1 py-4 bg-[#bec2ff] hover:bg-[#bec2ff]/80 text-[#0001ac] rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(190,194,255,0.2)]" id="btn-checkout-buy-now">Comprar Ahora</button>
+                            </div>
+                        </div>
+
+                        <!-- Vista de múltiples beats (carrito) -->
+                        <div id="checkout-multi-beat-view" style="display: none;" class="space-y-6">
+                            <h3 class="font-mono text-xs text-[#bec2ff] uppercase tracking-wider">Tu Carrito de Compras</h3>
+                            <div class="flex flex-col gap-4" id="cart-items-container">
+                                <!-- Dynamic -->
+                            </div>
+                            <div class="flex justify-between items-center bg-[#1A1A20] border border-[#454558]/30 p-5 rounded-xl">
+                                <span class="text-[#c5c4db] font-semibold">Total del Carrito</span>
+                                <span id="cart-total-price-display" class="text-2xl font-black text-[#bec2ff]">$0.00 USD</span>
+                            </div>
+                            <div class="flex gap-4">
+                                <button type="button" class="flex-1 py-4 bg-[#1A1A20] hover:bg-white/5 border border-[#454558]/30 text-white rounded-xl font-bold transition-all" id="btn-checkout-keep-shopping">Seguir Comprando</button>
+                                <button type="button" class="flex-1 py-4 bg-[#bec2ff] hover:bg-[#bec2ff]/80 text-[#0001ac] rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(190,194,255,0.2)]" id="btn-checkout-proceed-billing">Continuar →</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Panel PayPhone -->
-                    <div class="store-payment-panel" id="store-pay-payphone">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0; text-align: center;" data-i18n="checkout_payphone_desc">Paga al instante de forma segura usando tu cuenta <strong style="color: #fff;">PayPhone</strong> o tu tarjeta de crédito/débito favorita:</p>
+                    <!-- PASO 2: Datos del Comprador -->
+                    <div class="checkout-step-panel space-y-6" id="checkout-panel-2" style="display: none;">
+                        <h2 class="font-bold text-2xl text-white">Datos para el Contrato y Entrega</h2>
+                        <form id="checkout-billing-form" class="grid grid-cols-1 md:grid-cols-2 gap-6" onsubmit="event.preventDefault();">
+                            <div class="space-y-2">
+                                <label for="store-buyer-name" class="font-mono text-xs text-[#c5c4db] block uppercase">Nombre Artístico / Real Completo *</label>
+                                <input type="text" id="store-buyer-name" required class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] focus:ring-1 focus:ring-[#bec2ff] transition-all outline-none" placeholder="Nombre para firmar la licencia">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="store-buyer-email" class="font-mono text-xs text-[#c5c4db] block uppercase">Correo Electrónico * (Para recibir la licencia)</label>
+                                <input type="email" id="store-buyer-email" required class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] focus:ring-1 focus:ring-[#bec2ff] transition-all outline-none" placeholder="tu-correo@ejemplo.com">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="store-buyer-phone" class="font-mono text-xs text-[#c5c4db] block uppercase">WhatsApp</label>
+                                <input type="text" id="store-buyer-phone" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] focus:ring-1 focus:ring-[#bec2ff] transition-all outline-none" placeholder="Ej: +5939xxxxxxxx">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="store-buyer-dni" class="font-mono text-xs text-[#c5c4db] block uppercase">Identificación / DNI</label>
+                                <input type="text" id="store-buyer-dni" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] focus:ring-1 focus:ring-[#bec2ff] transition-all outline-none" placeholder="Cédula/RUC">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="store-buyer-city" class="font-mono text-xs text-[#c5c4db] block uppercase">Ciudad</label>
+                                <input type="text" id="store-buyer-city" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] focus:ring-1 focus:ring-[#bec2ff] transition-all outline-none" placeholder="Ej: Quito">
+                            </div>
+                            <div class="space-y-2">
+                                <label for="store-buyer-country" class="font-mono text-xs text-[#c5c4db] block uppercase">País</label>
+                                <input type="text" id="store-buyer-country" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] focus:ring-1 focus:ring-[#bec2ff] transition-all outline-none" value="Ecuador">
+                            </div>
+                            <div class="md:col-span-2 space-y-2">
+                                <label for="store-txt-youtube-whitelist" class="font-mono text-xs text-[#c5c4db] block uppercase">Canal de YouTube (Para Whitelist de Content ID)</label>
+                                <input type="text" id="store-txt-youtube-whitelist" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] focus:ring-1 focus:ring-[#bec2ff] transition-all outline-none" placeholder="https://youtube.com/@tu_canal (Opcional)">
+                            </div>
+                            
+                            <!-- Recordar datos -->
+                            <div class="md:col-span-2 flex items-center gap-3 pt-2">
+                                <input type="checkbox" id="store-chk-remember-me" checked class="w-5 h-5 rounded border-[#2D2D35] bg-[#1A1A20] text-[#bec2ff] focus:ring-[#bec2ff]">
+                                <label for="store-chk-remember-me" class="text-sm text-[#c5c4db] cursor-pointer select-none">Recordar mis datos para futuras compras</label>
+                            </div>
+                            
+                            <!-- Factura RUC -->
+                            <div class="md:col-span-2 bg-[#1A1A20] border border-[#454558]/30 p-5 rounded-2xl space-y-4">
+                                <div class="flex items-center gap-3">
+                                    <input type="checkbox" id="store-chk-need-invoice" onchange="document.getElementById('store-invoice-fields-container').style.display = this.checked ? 'flex' : 'none';" class="w-5 h-5 rounded border-[#2D2D35] bg-[#1A1A20] text-[#bec2ff] focus:ring-[#bec2ff]">
+                                    <label for="store-chk-need-invoice" class="text-sm text-white font-bold cursor-pointer select-none">🧾 Requiero Factura Autorizada (Ecuador RUC)</label>
+                                </div>
+                                <div id="store-invoice-fields-container" style="display: none;" class="flex-col gap-4 border-t border-[#454558]/20 pt-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="space-y-2">
+                                            <label for="store-invoice-ruc" class="font-mono text-xs text-[#c5c4db] block uppercase">RUC del Negocio * (13 dígitos)</label>
+                                            <input type="text" id="store-invoice-ruc" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] outline-none" placeholder="Ej: 1792948291001" maxlength="13">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="store-invoice-company" class="font-mono text-xs text-[#c5c4db] block uppercase">Razón Social *</label>
+                                            <input type="text" id="store-invoice-company" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] outline-none" placeholder="Nombre registrado en el RUC">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="store-invoice-address" class="font-mono text-xs text-[#c5c4db] block uppercase">Dirección Fiscal *</label>
+                                            <input type="text" id="store-invoice-address" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] outline-none" placeholder="Ej: Av. Amazonas N32-12">
+                                        </div>
+                                        <div class="space-y-2">
+                                            <label for="store-invoice-email" class="font-mono text-xs text-[#c5c4db] block uppercase">Correo de Facturación *</label>
+                                            <input type="email" id="store-invoice-email" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white focus:border-[#bec2ff] outline-none" placeholder="facturacion@negocio.com">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- PASO 3: Método de Pago -->
+                    <div class="checkout-step-panel space-y-6" id="checkout-panel-3" style="display: none;">
                         
-                        <div style="display: flex; justify-content: center; width: 100%; box-sizing: border-box;">
-                            <div style="position: relative; width: 100%; max-width: 300px; box-sizing: border-box;">
-                                <div id="payphone-button" style="width: 100%; min-height: 50px; display: flex; justify-content: center; align-items: center; background: rgba(255, 108, 0, 0.04); border: 1px solid rgba(255, 108, 0, 0.1); padding: 12px; border-radius: 14px; box-sizing: border-box;"></div>
-                                <!-- Overlay para clics cuando los términos no están aceptados -->
-                                <div id="store-payphone-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10; display: block; border-radius: 14px;" onclick="window.onPaymentClickWithoutTerms()"></div>
+                        <!-- Coupon -->
+                        <div id="checkout-coupon-section" class="bg-[#1A1A20] border border-[#454558]/30 p-5 rounded-2xl space-y-3">
+                            <label for="checkout-coupon-code" class="font-mono text-xs text-[#bec2ff] block uppercase tracking-wider font-bold">🏷️ Código de Descuento</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="checkout-coupon-code" class="flex-1 bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white font-bold uppercase focus:border-[#bec2ff] outline-none" placeholder="Escribe aquí tu cupón">
+                                <button type="button" class="px-5 bg-[#353438] hover:bg-[#454558] text-white rounded-lg font-bold transition-all" id="btn-apply-coupon" onclick="window.applyCheckoutCoupon()">Aplicar</button>
+                            </div>
+                            <div id="checkout-coupon-msg" class="text-xs font-bold mt-1" style="display:none;"></div>
+                        </div>
+
+                        <!-- Terms -->
+                        <div id="checkout-terms-section" class="bg-[#1A1A20] border border-[#454558]/30 p-4 rounded-xl flex items-start gap-3">
+                            <input type="checkbox" id="store-chk-accept-terms" onchange="window.onAcceptTermsChange()" class="w-5 h-5 rounded border-[#2D2D35] bg-[#1A1A20] text-[#bec2ff] focus:ring-[#bec2ff] cursor-pointer">
+                            <label for="store-chk-accept-terms" class="text-xs text-[#c5c4db] cursor-pointer select-none leading-normal">
+                                He leído y acepto los <a href="#" onclick="event.preventDefault(); window.openSupportModal('terms');" class="text-[#bec2ff] font-bold hover:underline">Términos de Servicio</a> y las condiciones de la Licencia del Beat.
+                            </label>
+                        </div>
+
+                        <!-- Trust Strip -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-[#bec2ff]/5 border border-[#bec2ff]/10 p-3 rounded-xl text-center text-xs font-bold text-[#c5c4db]">
+                            <span class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-green-500 text-sm">verified_user</span> SSL Seguro</span>
+                            <span class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-yellow-500 text-sm">bolt</span> Entrega Inmediata</span>
+                            <span class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-[#bec2ff] text-sm">description</span> Firma Digital</span>
+                            <span class="flex items-center justify-center gap-1.5"><span class="material-symbols-outlined text-purple-400 text-sm">lock</span> Encriptado</span>
+                        </div>
+
+                        <!-- Pay Cards Selector -->
+                        <h3 class="font-mono text-xs text-[#bec2ff] uppercase tracking-wider">Elige tu método de pago</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <!-- PayPal -->
+                            <div class="pay-card-btn paypal bg-[#1A1A20] p-4 rounded-xl flex flex-col items-center justify-center gap-2 group cursor-pointer border border-[#454558]/30 hover:border-[#bec2ff]/50 transition-all relative" id="btn-pay-paypal" onclick="window.switchStorePaymentMethod('paypal')">
+                                <div class="absolute -top-3 bg-gradient-to-r from-[#003087] to-[#009cde] text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider pointer-events-none">⭐ Recomendado</div>
+                                <img src="/banks/paypal.svg" class="h-5 pointer-events-none" alt="PayPal">
+                                <span class="text-[9px] text-[#c5c4db] font-bold uppercase pointer-events-none">Internacional</span>
+                            </div>
+                            <!-- PayPhone -->
+                            <div class="pay-card-btn payphone bg-[#1A1A20] p-4 rounded-xl flex flex-col items-center justify-center gap-2 group cursor-pointer border border-[#454558]/30 hover:border-[#bec2ff]/50 transition-all" id="btn-pay-payphone" onclick="window.switchStorePaymentMethod('payphone')">
+                                <img src="/banks/payphone_icon.png" class="h-5 object-contain pointer-events-none" alt="PayPhone">
+                                <span class="text-[9px] text-[#c5c4db] font-bold uppercase pointer-events-none">Tarjetas Ecuador</span>
+                            </div>
+                            <!-- Deuna! -->
+                            <div class="pay-card-btn deuna bg-[#1A1A20] p-4 rounded-xl flex flex-col items-center justify-center gap-2 group cursor-pointer border border-[#454558]/30 hover:border-[#bec2ff]/50 transition-all" id="btn-pay-deuna" onclick="window.switchStorePaymentMethod('deuna')">
+                                <img src="/banks/deuna.svg" class="h-5 object-contain pointer-events-none" alt="Deuna!">
+                                <span class="text-[9px] text-[#c5c4db] font-bold uppercase pointer-events-none">QR / Celular</span>
+                            </div>
+                            <!-- Transferencia -->
+                            <div class="pay-card-btn transfer bg-[#1A1A20] p-4 rounded-xl flex flex-col items-center justify-center gap-2 group cursor-pointer border border-[#454558]/30 hover:border-[#bec2ff]/50 transition-all" id="btn-pay-transfer" onclick="window.switchStorePaymentMethod('transfer')">
+                                <div class="flex gap-2 items-center justify-center h-5 pointer-events-none">
+                                    <img src="/banks/pichincha.svg" class="h-3.5 object-contain bg-[#0f1322] border border-[#f59e0b]/20 rounded px-1" alt="Pichincha">
+                                    <img src="/banks/guayaquil.svg" class="h-3.5 object-contain bg-white rounded px-1" alt="Guayaquil">
+                                </div>
+                                <span class="text-[9px] text-[#c5c4db] font-bold uppercase pointer-events-none">Depósito / Transf.</span>
+                            </div>
+                            <!-- Oferta -->
+                            <div class="pay-card-btn offer bg-[#1A1A20] p-4 rounded-xl flex flex-col items-center justify-center gap-2 group cursor-pointer border border-[#454558]/30 hover:border-[#bec2ff]/50 transition-all" id="btn-pay-offer" onclick="window.switchStorePaymentMethod('offer')" style="display: none;">
+                                <span class="text-xl pointer-events-none">🏷️</span>
+                                <span class="text-[9px] text-yellow-500 font-bold uppercase pointer-events-none">Negociar</span>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Panel Hacer Oferta (Licencia Exclusiva) -->
-                    <div class="store-payment-panel" id="store-pay-offer" style="display: none;">
-                        <p style="font-size: 13px; color: #8a91a6; line-height: 1.4; margin-bottom: 16px; margin-top: 0;" data-i18n="checkout_offer_desc">Propón un precio de oferta al productor para adquirir los derechos exclusivos de esta instrumental:</p>
-                        <div style="display: flex; flex-direction: column; gap: 14px; box-sizing: border-box;">
-                            <div class="input-group">
-                                <label for="offer-price-input" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;" data-i18n="checkout_offer_label">Tu Propuesta Económica ($ USD) *</label>
-                                <input type="number" id="offer-price-input" min="250" step="5" placeholder="Ej: 400" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; font-weight: 700; font-size: 16px; outline: none;">
-                                <span style="font-size: 11px; color: #8a91a6; margin-top: 6px; display: block;"><span data-i18n="checkout_offer_min_label">Monto mínimo de negociación:</span> <strong style="color: var(--accent, #00ccff); font-weight: 700;">$250.00 USD</strong></span>
+                        <!-- ===== PAYMENT DETAILS PANELS ===== -->
+                        <div id="payment-details-panels" class="mt-6">
+                            
+                            <!-- Panel Deuna -->
+                            <div class="store-payment-panel bg-[#1A1A20]/40 border border-[#454558]/30 p-5 rounded-2xl space-y-4" id="store-pay-deuna" style="display: none;">
+                                <div class="flex justify-between items-center bg-[#bec2ff]/5 border border-[#bec2ff]/15 p-3 rounded-lg">
+                                    <span class="text-xs text-[#c5c4db] uppercase font-bold">Total a pagar:</span>
+                                    <span id="deuna-total-price" class="text-sm font-bold text-[#bec2ff]">$0.00 USD</span>
+                                </div>
+                                <p class="text-sm text-[#c5c4db]">Sigue los pasos para pagar con <strong>Deuna!</strong>:</p>
+                                <ol class="space-y-2 text-xs">
+                                    <li class="flex items-center gap-3 bg-[#bec2ff]/5 p-3 rounded-lg border border-[#bec2ff]/15"><span class="w-5 h-5 flex items-center justify-center rounded-full bg-[#bec2ff] text-[#0001ac] font-bold">1</span> Copia el número de celular y envía el pago desde Deuna!</li>
+                                    <li class="flex items-center gap-3 bg-[#bec2ff]/5 p-3 rounded-lg border border-[#bec2ff]/15"><span class="w-5 h-5 flex items-center justify-center rounded-full bg-[#bec2ff] text-[#0001ac] font-bold">2</span> Toma una captura de pantalla del comprobante</li>
+                                    <li class="flex items-center gap-3 bg-[#bec2ff]/5 p-3 rounded-lg border border-[#bec2ff]/15"><span class="w-5 h-5 flex items-center justify-center rounded-full bg-[#bec2ff] text-[#0001ac] font-bold">3</span> Sube la captura abajo y haz clic en Confirmar</li>
+                                </ol>
+                                <div class="bg-[#131316] border border-[#2D2D35] p-4 rounded-xl flex justify-between items-center">
+                                    <div>
+                                        <div class="text-[10px] text-[#c5c4db] uppercase font-bold">Celular</div>
+                                        <div class="text-sm font-bold text-white" id="deuna-info-phone">-</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-[10px] text-[#c5c4db] uppercase font-bold">Titular</div>
+                                        <div class="text-sm font-bold text-white" id="deuna-info-name">-</div>
+                                    </div>
+                                </div>
+                                <div class="text-center bg-white p-3 rounded-xl shadow-lg border border-[#2D2D35] inline-block w-full max-w-[200px] mx-auto">
+                                    <img src="/deuna-qr.jpg" class="w-full h-auto object-contain rounded" alt="Deuna QR">
+                                </div>
                             </div>
-                            <div class="input-group">
-                                <label for="offer-message-input" style="font-size: 11px; font-weight: 600; color: #8a91a6; text-transform: uppercase; display: block; margin-bottom: 6px;" data-i18n="checkout_offer_msg_label">Mensaje para el Productor</label>
-                                <textarea id="offer-message-input" placeholder="Ej: Hola, me interesa mucho este beat. Mi presupuesto máximo actual es de $400..." rows="3" style="width: 100%; box-sizing: border-box; background: #12141c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px; color: #fff; font-family: inherit; font-size: 13px; resize: none; outline: none;"></textarea>
+
+                            <!-- Panel Transferencia -->
+                            <div class="store-payment-panel bg-[#1A1A20]/40 border border-[#454558]/30 p-5 rounded-2xl space-y-4" id="store-pay-transfer" style="display: none;">
+                                <div class="flex justify-between items-center bg-[#bec2ff]/5 border border-[#bec2ff]/15 p-3 rounded-lg">
+                                    <span class="text-xs text-[#c5c4db] uppercase font-bold">Total a transferir:</span>
+                                    <span id="transfer-total-price" class="text-sm font-bold text-[#bec2ff]">$0.00 USD</span>
+                                </div>
+                                <p class="text-sm text-[#c5c4db]">Transfiere a cualquiera de estas cuentas directas:</p>
+                                <div class="space-y-3">
+                                    <div id="store-bank-pichincha-card" class="bg-[#131316] border border-[#2D2D35] p-4 rounded-xl">
+                                        <div class="text-xs font-bold text-[#f59e0b] uppercase tracking-wider mb-2">🏦 Banco Pichincha</div>
+                                        <div class="grid grid-cols-2 gap-2 text-xs">
+                                            <div>Cuenta: <strong class="text-white" id="pichincha-info-acc">-</strong></div>
+                                            <div>Titular: <span class="text-white" id="pichincha-info-name">-</span></div>
+                                            <div class="col-span-2">CI/RUC: <span class="text-white" id="pichincha-info-dni">-</span></div>
+                                        </div>
+                                    </div>
+                                    <div id="store-bank-guayaquil-card" class="bg-[#131316] border border-[#2D2D35] p-4 rounded-xl">
+                                        <div class="text-xs font-bold text-[#ec4899] uppercase tracking-wider mb-2">🏦 Banco Guayaquil</div>
+                                        <div class="grid grid-cols-2 gap-2 text-xs">
+                                            <div>Cuenta: <strong class="text-white" id="guayaquil-info-acc">-</strong></div>
+                                            <div>Titular: <span class="text-white" id="guayaquil-info-name">-</span></div>
+                                            <div class="col-span-2">CI/RUC: <span class="text-white" id="guayaquil-info-dni">-</span></div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- Panel PayPal -->
+                            <div class="store-payment-panel bg-[#1A1A20]/40 border border-[#454558]/30 p-5 rounded-2xl text-center space-y-4" id="store-pay-paypal" style="display: none;">
+                                <p class="text-sm text-[#c5c4db]">Paga de manera instantánea y segura con tu cuenta PayPal o tarjeta:</p>
+                                <div class="relative max-w-sm mx-auto">
+                                    <div id="store-paypal-button-container" class="min-height-[115px] bg-[#003087]/5 border border-[#009cde]/10 p-4 rounded-xl"></div>
+                                    <div id="store-paypal-overlay" class="absolute inset-0 cursor-pointer z-10 rounded-xl" onclick="window.onPaymentClickWithoutTerms()"></div>
+                                </div>
+                            </div>
+
+                            <!-- Panel PayPhone -->
+                            <div class="store-payment-panel bg-[#1A1A20]/40 border border-[#454558]/30 p-5 rounded-2xl text-center space-y-4" id="store-pay-payphone" style="display: none;">
+                                <p class="text-sm text-[#c5c4db]">Paga al instante usando tu cuenta <strong>PayPhone</strong> o tarjeta:</p>
+                                <div class="relative max-w-xs mx-auto">
+                                    <div id="payphone-button" class="min-h-[50px] bg-[#ff6c00]/5 border border-[#ff6c00]/10 p-4 rounded-xl"></div>
+                                    <div id="store-payphone-overlay" class="absolute inset-0 cursor-pointer z-10 rounded-xl" onclick="window.onPaymentClickWithoutTerms()"></div>
+                                </div>
+                            </div>
+
+                            <!-- Panel Oferta -->
+                            <div class="store-payment-panel bg-[#1A1A20]/40 border border-[#454558]/30 p-5 rounded-2xl space-y-4" id="store-pay-offer" style="display: none;">
+                                <p class="text-sm text-[#c5c4db]">Propón un precio de oferta al productor para adquirir los derechos exclusivos:</p>
+                                <div class="space-y-4">
+                                    <div class="space-y-2">
+                                        <label for="offer-price-input" class="font-mono text-xs text-[#c5c4db] block uppercase">Tu Propuesta Económica ($ USD) *</label>
+                                        <input type="number" id="offer-price-input" min="250" step="5" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white font-bold text-lg outline-none" placeholder="Ej: 400">
+                                        <span class="text-[10px] text-[#c5c4db] block mt-1">Monto mínimo: <strong class="text-primary">$250.00 USD</strong></span>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label for="offer-message-input" class="font-mono text-xs text-[#c5c4db] block uppercase">Mensaje para el Productor</label>
+                                        <textarea id="offer-message-input" rows="3" class="w-full bg-[#131316] border border-[#2D2D35] px-4 py-3 rounded-lg text-white outline-none resize-none" placeholder="Ej: Hola, me interesa mucho este beat. Mi presupuesto es..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Receipt Upload Section (Visible for Transfer/Deuna) -->
+                            <div id="store-receipt-upload-section" class="bg-[#1A1A20] border border-[#454558]/30 p-5 rounded-2xl mt-4 space-y-3" style="display: none;">
+                                <label class="font-mono text-xs text-[#c5c4db] block uppercase font-bold">📸 Sube tu Comprobante de Pago *</label>
+                                <div class="border-2 border-dashed border-[#454558]/40 hover:border-[#bec2ff]/50 rounded-xl p-6 text-center cursor-pointer transition-all bg-[#131316]/40" onclick="document.getElementById('store-receipt-file').click()">
+                                    <input type="file" id="store-receipt-file" accept="image/*" class="hidden">
+                                    <span class="material-symbols-outlined text-4xl text-[#bec2ff] mx-auto mb-2 block">upload_file</span>
+                                    <div class="text-sm font-bold text-[#c5c4db]">Haz clic para subir una imagen</div>
+                                    <div id="store-receipt-file-name" class="text-xs text-[#c5c4db]/60 mt-1">Ningún archivo seleccionado</div>
+                                </div>
+                                <p class="text-[10px] text-[#c5c4db]/70 leading-normal">⚠️ El productor revisará tu comprobante y te enviará los archivos por correo en las próximas horas.</p>
+                            </div>
+
                         </div>
                     </div>
+                </div>
 
-                    <!-- Subida de Comprobante -->
-                    <div id="store-receipt-upload-section" style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px; box-sizing: border-box;">
-                        <label style="font-size: 12px; font-weight: 600; color: #8a91a6; display: block; margin-bottom: 8px;" data-i18n="checkout_upload_receipt_label">📸 Sube tu Comprobante de Pago *</label>
-                        <div style="display: flex; gap: 12px; align-items: center; box-sizing: border-box;">
-                            <input type="file" id="store-receipt-file" accept="image/*" style="display: none;">
-                            <button type="button" class="btn btn-secondary" id="btn-store-upload-receipt" style="flex: 1; height: 38px; font-size: 12px; justify-content: center; gap: 6px; box-sizing: border-box; background: rgba(0, 204, 255, 0.08); border-color: rgba(0, 204, 255, 0.3); color: var(--accent, #00ccff);">
-                                <i data-lucide="upload" style="width: 15px; height: 15px;"></i> <span data-i18n="checkout_upload_receipt_btn">Subir Comprobante</span>
+                <!-- Right Column: Summary Card -->
+                <div class="lg:col-span-4">
+                    <aside class="sticky top-28 space-y-6">
+                        <div class="glass-panel rounded-2xl p-6 space-y-6 relative overflow-hidden bg-[#1A1A20]/40 backdrop-blur-md border border-[#454558]/30 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
+                            <!-- Glow -->
+                            <div class="absolute -top-16 -right-16 w-32 h-32 bg-[#bec2ff]/10 blur-[50px] rounded-full pointer-events-none"></div>
+                            
+                            <h3 class="text-lg text-white font-bold">Resumen de Orden</h3>
+                            
+                            <!-- Checkout Single Beat Preview Mirror / Cart Summary -->
+                            <div id="checkout-summary-items" class="space-y-4">
+                                <!-- Dynamic items loaded via updateCartUI/renderCartItems -->
+                            </div>
+
+                            <div class="space-y-4 border-t border-[#454558]/20 pt-4">
+                                <div class="flex justify-between text-[#c5c4db]">
+                                    <span class="text-sm">Subtotal</span>
+                                    <span id="summary-subtotal" class="font-mono text-sm">$0.00</span>
+                                </div>
+                                <div class="flex justify-between text-green-400" id="summary-discount-row" style="display:none;">
+                                    <span class="text-sm">Descuento</span>
+                                    <span id="summary-discount-amount" class="font-mono text-sm">-$0.00</span>
+                                </div>
+                                <div class="flex justify-between text-white pt-2">
+                                    <span class="font-bold">Total</span>
+                                    <span id="summary-total-display" class="font-bold text-xl font-mono text-[#bec2ff]">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer actions for wizard -->
+                        <div class="flex justify-between items-center">
+                            <div class="flex gap-2">
+                                <button class="px-5 py-2.5 bg-[#1A1A20] hover:bg-white/5 border border-[#454558]/30 text-white rounded-xl text-sm font-bold transition-all" id="btn-checkout-prev" style="display: none;">← Atrás</button>
+                                <button class="px-5 py-2.5 bg-[#1A1A20] hover:bg-white/5 border border-[#454558]/30 text-white rounded-xl text-sm font-bold transition-all" id="btn-checkout-cancel">Cancelar</button>
+                            </div>
+                            <button class="px-6 py-3 bg-[#bec2ff] hover:bg-[#bec2ff]/80 text-[#0001ac] rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all shadow-[0_0_20px_rgba(190,194,255,0.2)]" id="btn-checkout-next">
+                                Continuar <span class="material-symbols-outlined text-sm">arrow_forward</span>
                             </button>
-                            <span id="store-receipt-file-name" style="font-size: 11px; color: #8a91a6; flex: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;" data-i18n="checkout_no_file_selected">Ningún archivo seleccionado</span>
                         </div>
-                        <p style="font-size: 11px; color: #8a91a6; margin-top: 8px; margin-bottom: 0; line-height: 1.4;" data-i18n="checkout_receipt_warning">⚠️ El productor revisará tu comprobante y te enviará los archivos por correo en las próximas horas.</p>
-                    </div>
-
+                    </aside>
                 </div>
-
             </div>
-
-            <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.05); padding: 16px 24px; display: flex; justify-content: space-between; box-sizing: border-box;">
-                <button class="btn btn-secondary" id="btn-checkout-prev" style="display: none; height: 38px; padding: 0 16px; font-size: 13px;" data-i18n="btn_back">Atrás</button>
-                <button class="btn btn-secondary" id="btn-checkout-cancel" style="height: 38px; padding: 0 16px; font-size: 13px;" data-i18n="btn_cancel">Cancelar</button>
-                <button class="btn btn-primary" id="btn-checkout-next" style="height: 38px; padding: 0 24px; font-size: 13px; font-weight: 700;" data-i18n="btn_continue">Continuar</button>
-            </div>
-        </div>
+        </main>
     </div>
-
-    <!-- Modal: Descarga Gratuita -->
+<!-- Modal: Descarga Gratuita -->
     <div class="modal-backdrop" id="free-download-modal" style="display: none; z-index: 99999; background: rgba(11, 14, 20, 0.8); backdrop-filter: blur(8px);">
         <div class="modal" style="max-width: 450px; width: 90%; background: #0c0e14; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden;">
             <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 20px 24px; box-sizing: border-box;">

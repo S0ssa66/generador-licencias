@@ -204,7 +204,7 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"[-] Error al iniciar el contingency worker del SRI: {e}", file=sys.stderr)
 
-    server_address = ('127.0.0.1', port)
+    server_address = ('0.0.0.0', port)
     httpd = http.server.HTTPServer(server_address, CustomHandler)
     try:
         httpd.serve_forever()
