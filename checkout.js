@@ -1037,12 +1037,19 @@ export function updateCheckoutStepView(step) {
     checkoutCurrentStep = step;
 
     // 1. Actualizar indicadores de pasos
-    document.querySelectorAll('.checkout-step-indicator').forEach(el => {
-        const s = parseInt(el.getAttribute('data-step'), 10);
-        if (s <= step) {
-            el.classList.add('active');
+    // 1. Actualizar indicadores de pasos (nuevo sistema premium ck-step-dot)
+    [1, 2, 3].forEach(s => {
+        const dot = document.getElementById(`ck-dot-${s}`);
+        if (!dot) return;
+        dot.classList.remove('active', 'done');
+        if (s < step) {
+            dot.classList.add('done');
+            dot.innerHTML = '✓';
+        } else if (s === step) {
+            dot.classList.add('active');
+            dot.innerHTML = s;
         } else {
-            el.classList.remove('active');
+            dot.innerHTML = s;
         }
     });
 
@@ -1076,8 +1083,8 @@ export function updateCheckoutStepView(step) {
             // Paso 2 (formulario de facturación): Botón "Atrás" y "Continuar" en el footer
             footerPrevBtn.style.display = 'block';
             footerCancelBtn.style.display = 'none';
-            footerNextBtn.style.display = 'block';
-            footerNextBtn.textContent = 'Continuar';
+            footerNextBtn.style.display = 'flex';
+            footerNextBtn.innerHTML = 'Continuar <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
         } else if (step === 3) {
             // Paso 3 (pago): Botón "Atrás" siempre visible. "Confirmar Compra" se gestiona según el método.
             footerPrevBtn.style.display = 'block';
