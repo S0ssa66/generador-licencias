@@ -519,16 +519,31 @@ function compileContract() {
     const refCode = document.getElementById('ref-code').value.trim() || "[Código Referencia]";
     const effectiveDate = document.getElementById('effective-date').value;
     const dateFormatted = (currentLang === 'en' ? formatFechaIngles(effectiveDate) : formatFechaEspanol(effectiveDate)) || "[Fecha]";
-    const celebrationPlace = document.getElementById('celebration-place').value.trim() || "[Lugar de Celebración]";
+    const isSossaProducer = (producerConfig.aka && producerConfig.aka.toLowerCase().includes('sossa')) || 
+                            (producerConfig.name && producerConfig.name.toLowerCase().includes('sossa'));
+
+    let celebrationPlace = document.getElementById('celebration-place').value.trim() || "[Lugar de Celebración]";
+    if (isSossaProducer) {
+        celebrationPlace = currentLang === 'en' 
+            ? "Executed electronically under the jurisdiction of New Mexico, USA" 
+            : "Celebrado de forma electrónica bajo la jurisdicción de Nuevo México, EE. UU.";
+    }
+
     const paymentMethod = document.getElementById('payment-method').value;
     let displayPaymentMethod = paymentMethod;
-    if (currentLang === 'en') {
+    if (isSossaProducer && ['PayPal', 'Tarjeta de Crédito', 'deuna', 'payphone', 'Stripe'].includes(paymentMethod)) {
+        displayPaymentMethod = currentLang === 'en'
+            ? "Authorized electronic payment processing (Stripe, PayPal, PayPhone, Deuna!)"
+            : "Procesamiento electrónico de pago autorizado (Stripe, PayPal, PayPhone, Deuna!)";
+    } else if (currentLang === 'en') {
         const paymentTranslations = {
             'PayPal': 'PayPal',
             'Transferencia Bancaria': 'Bank Transfer',
             'Tarjeta de Crédito': 'Credit Card',
             'Western Union': 'Western Union',
-            'Otro': 'Other'
+            'Otro': 'Other',
+            'deuna': 'Deuna!',
+            'payphone': 'PayPhone'
         };
         displayPaymentMethod = paymentTranslations[paymentMethod] || paymentMethod;
     }
@@ -581,8 +596,6 @@ function compileContract() {
             : 'Al tratarse de una Licencia Exclusiva, el Licenciatario está facultado para la distribución digital estándar y el uso del sistema Content ID de manera controlada sobre su versión final (la Nueva Canción) siempre y cuando se abstenga estrictamente de reclamar la propiedad exclusiva o la monetización de la pista instrumental en sí misma, quedando obligado a incluir en lista blanca (*whitelist*) cualquier canción derivada legítima no exclusiva preexistente creada por otros licenciatarios antes de este acuerdo.');
 
     // Configurar variables de reemplazo
-    const isSossaProducer = (producerConfig.aka && producerConfig.aka.toLowerCase().includes('sossa')) || 
-                            (producerConfig.name && producerConfig.name.toLowerCase().includes('sossa'));
 
     // 1. Declaración legal del productor (Persona Natural vs. LLC de Nuevo México)
     let producer_legal_declaration = "";
