@@ -187,8 +187,8 @@ def main():
             )
             
             # 2. Jurisdicción y ley aplicable (Nuevo México)
-            laws_jurisdiction = "el Estado de Nuevo México, Estados Unidos de América"
-            jurisdiction_place = "los tribunales del Estado de Nuevo México, EE. UU."
+            laws_jurisdiction = "Nuevo México, Estados Unidos de América"
+            jurisdiction_place = "Nuevo México, EE. UU."
             
             # 3. Reglas de sincronización comercial
             if is_exclusive:

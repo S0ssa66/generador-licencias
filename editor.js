@@ -3222,10 +3222,10 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
     let jurisdiction_place = "";
     let jurisdiction_place_en = "";
     if (isSossaProducer) {
-        laws_jurisdiction = "el Estado de Nuevo México, Estados Unidos de América";
-        laws_jurisdiction_en = "the State of New Mexico, United States of America";
-        jurisdiction_place = "los tribunales del Estado de Nuevo México, EE. UU.";
-        jurisdiction_place_en = "the courts of the State of New Mexico, USA";
+        laws_jurisdiction = "Nuevo México, Estados Unidos de América";
+        laws_jurisdiction_en = "New Mexico, United States of America";
+        jurisdiction_place = "Nuevo México, EE. UU.";
+        jurisdiction_place_en = "New Mexico, USA";
     } else {
         laws_jurisdiction = "la República del Ecuador";
         laws_jurisdiction_en = "the Republic of Ecuador";
