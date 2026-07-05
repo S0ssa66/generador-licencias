@@ -581,6 +581,68 @@ function compileContract() {
             : 'Al tratarse de una Licencia Exclusiva, el Licenciatario está facultado para la distribución digital estándar y el uso del sistema Content ID de manera controlada sobre su versión final (la Nueva Canción) siempre y cuando se abstenga estrictamente de reclamar la propiedad exclusiva o la monetización de la pista instrumental en sí misma, quedando obligado a incluir en lista blanca (*whitelist*) cualquier canción derivada legítima no exclusiva preexistente creada por otros licenciatarios antes de este acuerdo.');
 
     // Configurar variables de reemplazo
+    const isSossaProducer = (producerConfig.aka && producerConfig.aka.toLowerCase().includes('sossa')) || 
+                            (producerConfig.name && producerConfig.name.toLowerCase().includes('sossa'));
+
+    // 1. Declaración legal del productor (Persona Natural vs. LLC de Nuevo México)
+    let producer_legal_declaration = "";
+    let producer_legal_declaration_en = "";
+    if (isSossaProducer) {
+        producer_legal_declaration = `**Sossa Music LLC**, una compañía de responsabilidad limitada constituida bajo las leyes del Estado de Nuevo México, EE. UU., representada legalmente por su Gerente **Joao David Dominguez** (quien opera bajo el seudónimo profesional de **Sossa**)`;
+        producer_legal_declaration_en = `**Sossa Music LLC**, a limited liability company incorporated under the laws of the State of New Mexico, USA, legally represented by its Manager **Joao David Dominguez** (who operates under the professional pseudonym **Sossa**)`;
+    } else {
+        const prodName = producerConfig.name || "Joao David Dominguez";
+        const prodAka = producerConfig.aka || "Sossa";
+        const prodId = producerConfig.id || "0803743111";
+        producer_legal_declaration = `**${prodName}**, conocido profesionalmente en la industria musical como **${prodAka}**, con documento de identidad Nro. ${prodId}`;
+        producer_legal_declaration_en = `**${prodName}**, professionally known in the music industry as **${prodAka}**, with ID/Passport No. ${prodId}`;
+    }
+
+    // 2. Jurisdicción y ley aplicable
+    let laws_jurisdiction = "";
+    let laws_jurisdiction_en = "";
+    let jurisdiction_place = "";
+    let jurisdiction_place_en = "";
+    if (isSossaProducer) {
+        laws_jurisdiction = "Nuevo México, Estados Unidos de América";
+        laws_jurisdiction_en = "New Mexico, United States of America";
+        jurisdiction_place = "Nuevo México, EE. UU.";
+        jurisdiction_place_en = "New Mexico, USA";
+    } else {
+        laws_jurisdiction = "la República del Ecuador";
+        laws_jurisdiction_en = "the Republic of Ecuador";
+        jurisdiction_place = `la ciudad de ${cityOfJurisdiction}`;
+        jurisdiction_place_en = `the city of ${cityOfJurisdiction}`;
+    }
+
+    // 3. Reglas de sincronización comercial (especial para Exclusive)
+    let clause_sync_rules = "";
+    let clause_sync_rules_en = "";
+    if (isExclusive) {
+        clause_sync_rules = `Se concede al Licenciatario el derecho ilimitado y perpetuo de sincronizar la Nueva Canción en producciones audiovisuales (tales como cine, televisión, cortometrajes, videojuegos o comerciales publicitarios de marcas). No obstante, el Productor retiene su participación del 50% de las regalías de composición (Publishing / Writer's Share) administradas a través de su sociedad de gestión colectiva (${producerConfig.pro || 'BMI'} / ${producerConfig.publisher || 'Songtrust'}) sobre cualquier explotación comercial de sincronización.`;
+        clause_sync_rules_en = `The Licensee is granted the unlimited and perpetual right to synchronize the New Song in audiovisual productions (such as film, television, short films, video games, or commercial brand advertisements). However, the Producer retains their 50% share of composition royalties (Publishing / Writer's Share) administered through their collective rights organization (${producerConfig.pro || 'BMI'} / ${producerConfig.publisher || 'Songtrust'}) on any commercial synchronization exploitation.`;
+    } else {
+        clause_sync_rules = `Queda expresamente prohibida la sincronización del Beat o de la Nueva Canción en producciones de cine, cortometrajes, programas de televisión, videojuegos o comerciales publicitarios de marcas de consumo masivo, salvo acuerdo y licenciamiento independiente con el Productor.`;
+        clause_sync_rules_en = `The synchronization of the Beat or the New Song in film productions, short films, television programs, video games, or commercial advertisements of mass consumer brands is expressly prohibited, except by independent agreement and licensing with the Producer.`;
+    }
+
+    // 4. Cláusula de rescisión dinámica (Clause 9)
+    let clause_rescission_title = "";
+    let clause_rescission_title_en = "";
+    let clause_rescission_body = "";
+    let clause_rescission_body_en = "";
+    if (isExclusive) {
+        clause_rescission_title = "Irrevocabilidad del Acuerdo";
+        clause_rescission_title_en = "Irrevocability of the Agreement";
+        clause_rescission_body = "Al tratarse de una transferencia de derechos exclusivos sobre el instrumental, el presente Contrato es definitivo, irrevocable y perpetuo. El Licenciante renuncia de forma expresa e irrevocable a cualquier facultad de rescisión unilateral o terminación anticipada una vez perfeccionada la compraventa.";
+        clause_rescission_body_en = "As this is a transfer of exclusive rights over the instrumental, this Agreement is final, irrevocable, and perpetual. The Licensor expressly and irrevocably waives any power of unilateral termination or early rescission once the sale is finalized.";
+    } else {
+        clause_rescission_title = "Opción de Rescisión del Licenciante (Cláusula de Salvaguarda)";
+        clause_rescission_title_en = "Licensor's Termination Option (Safeguard Clause)";
+        clause_rescission_body = `El Licenciante se reserva la facultad discrecional y la opción exclusiva, ejecutable dentro de los primeros **tres (3) años** a partir de la firma de este Contrato, de dar por terminado el presente acuerdo de forma anticipada y unilateral mediante notificación escrita. Para que esta rescisión surta efecto, el Licenciante pagará al Licenciatario una indemnización equivalente al **${terminationFee}**. Tras la notificación y el pago de dicha penalidad, el Licenciatario dispondrá de un plazo máximo de siete (7) días para dar de baja y retirar la Nueva Canción de todos los canales de distribución físicos y digitales del mercado. El Licenciatario acepta expresamente que el pago de dicha penalidad constituye una indemnización total, única y final por la terminación del contrato, y renuncia irrevocablemente a reclamar cualquier otro valor, compensación o indemnización por concepto de daños, pérdidas, gastos de promoción, marketing, producción de videoclips o cualquier otra inversión realizada en relación con la Nueva Canción.`;
+        clause_rescission_body_en = `The Licensor reserves the discretionary power and exclusive option, executable within the first **three (3) years** from the signing of this Contract, to terminate this agreement early and unilaterally by written notice. For this termination to take effect, the Licensor will pay the Licensee compensation equivalent to **${terminationFee}**. Following notification and payment of said penalty, the Licensee will have a period of seven (7) days to take down and withdraw the New Song from all physical and digital distribution channels in the market. The Licensee expressly agrees that the payment of said penalty constitutes a full, sole, and final compensation for the termination of the agreement, and irrevocably waives the right to claim any other value, compensation, or damages for promotion, marketing, video production expenses, or any other investment made in connection with the New Song.`;
+    }
+
     const vars = {
         producer_name: producerConfig.name || "Joao David Dominguez",
         producer_aka: producerConfig.aka || "Sossa",
@@ -625,7 +687,21 @@ function compileContract() {
         license_exclusivity: isExclusive ? (currentLang === 'en' ? 'Exclusive' : 'Exclusiva') : (currentLang === 'en' ? 'Non-Exclusive' : 'No Exclusiva'),
         license_exclusivity_lower: isExclusive ? (currentLang === 'en' ? 'exclusive' : 'exclusiva') : (currentLang === 'en' ? 'non-exclusive' : 'no exclusiva'),
         clause_rescission_rules: clause_rescission_rules,
-        clause_content_id_rules: clause_content_id_rules
+        clause_content_id_rules: clause_content_id_rules,
+
+        // Nuevas variables para Sossa Music LLC
+        producer_legal_declaration: producer_legal_declaration,
+        producer_legal_declaration_en: producer_legal_declaration_en,
+        laws_jurisdiction: laws_jurisdiction,
+        laws_jurisdiction_en: laws_jurisdiction_en,
+        jurisdiction_place: jurisdiction_place,
+        jurisdiction_place_en: jurisdiction_place_en,
+        clause_sync_rules: clause_sync_rules,
+        clause_sync_rules_en: clause_sync_rules_en,
+        clause_rescission_title: clause_rescission_title,
+        clause_rescission_title_en: clause_rescission_title_en,
+        clause_rescission_body: clause_rescission_body,
+        clause_rescission_body_en: clause_rescission_body_en
     };
 
     // Leer campos personalizados de la barra lateral
