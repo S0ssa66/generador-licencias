@@ -3185,7 +3185,8 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
         activeTemplate = DEFAULT_TEMPLATES.find(t => t.id === templateId) || DEFAULT_TEMPLATES[0];
     }
 
-    const clause_rescission_rules = isExclusive 
+    const isPerpetual = isExclusive || type === 'premium_plus' || type === 'unlimited_flp' || (defaultConfig.years && defaultConfig.years.toLowerCase().includes('perpetua'));
+    const clause_rescission_rules = isPerpetual 
         ? (lang === 'en' 
             ? 'Once the agreement expires or becomes perpetual, the rights will be maintained as stipulated without the need for renewal.'
             : 'Una vez vencido o perpetuo el acuerdo, los derechos se mantendrán según lo estipulado sin necesidad de renovación.')
