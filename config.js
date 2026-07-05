@@ -35,7 +35,7 @@ export const LICENSE_CONFIGS = {
         physical: "Ilimitadas",
         videos: "Ilimitados",
         videoDuration: "Ilimitada",
-        years: "10 años",
+        years: "Perpetua / De por vida",
         writerShare: 50,
         producerShare: 50,
         contentId: true,
@@ -49,7 +49,7 @@ export const LICENSE_CONFIGS = {
         physical: "Ilimitadas",
         videos: "Ilimitados",
         videoDuration: "Ilimitada",
-        years: "10 años",
+        years: "Perpetua / De por vida",
         writerShare: 50,
         producerShare: 50,
         contentId: true,
@@ -199,7 +199,7 @@ export const DEFAULT_TEMPLATES = [
 ## Partes Intervinientes
 El presente Contrato de Licencia {{license_type}} {{license_exclusivity}} (en adelante, el "Contrato") se celebra y declara en vigor entre las siguientes partes:
 
-1. **El Licenciante (Productor):** {{producer_name}}, conocido profesionalmente en la industria musical como **{{producer_aka}}** (en adelante, el "Productor"), con documento de identidad Nro. {{producer_id}}, con correo electrónico de contacto: {{producer_email}} y teléfono/WhatsApp: {{producer_phone}}.
+1. **El Licenciante (Productor):** {{producer_legal_declaration}} (en adelante, el "Productor"), con correo electrónico de contacto: {{producer_email}} y teléfono/WhatsApp: {{producer_phone}}.
 2. **El Licenciatario (Usuario):** {{buyer_name}}, con documento de identidad Nro. {{buyer_id}}, con domicilio legal registrado en la ciudad de {{buyer_city}}, {{buyer_country}}, con correo electrónico de contacto registrado en la plataforma como: {{buyer_email}} y teléfono/WhatsApp: {{buyer_phone}} (en adelante, el "Licenciatario").
 
 Ambas partes de mutuo acuerdo y con plena capacidad legal para obligarse, suscriben las cláusulas y condiciones detalladas a continuación en el presente instrumento jurídico.
@@ -234,7 +234,7 @@ Si el Licenciatario excede cualquiera de estos límites de reproducción o venta
 ### Cláusula 5. Sincronización Audiovisual
 * **5.1. Margen de Sincronización:** Se concede al Licenciatario el derecho no exclusivo de sincronizar la Nueva Canción con imágenes en movimiento para la creación de un máximo de **{{clause_videos}}** independientes (Videos).
 * **5.2. Duración y Difusión:** Cada Video no podrá exceder los **{{clause_video_duration}}** de duración en pantalla (o la duración total de la Nueva Canción si esta fuera mayor). Dichos videos podrán ser distribuídos en redes sociales y plataformas de video digital públicas (como YouTube y Vevo).
-* **5.3. Restricciones Mayores:** Queda expresamente prohibida la sincronización del Beat o de la Nueva Canción en producciones de cine, cortometrajes, programas de televisión, videojuegos o comerciales publicitarios de marcas de consumo masivo, salvo acuerdo y licenciamiento independiente con el Productor.
+* **5.3. Sincronización Comercial:** {{clause_sync_rules}}
 
 ### Cláusula 6. Restricciones de Uso y Prohibición de Content ID / Registro Digital
 El Licenciatario se compromete de forma absoluta a cumplir las siguientes prohibiciones operativas:
@@ -251,14 +251,14 @@ El Licenciatario se compromete de forma absoluta a cumplir las siguientes prohib
 El Licenciatario mantendrá la obligación comercial y moral de otorgar los créditos correspondientes al Productor en cualquier formato físico, digital o audiovisual donde la Nueva Canción sea expuesta al público. El formato de acreditación estandarizado y mandatorio deberá ser:
 > **{{clause_credits}}**
 
-### Cláusula 9. Opción de Rescisión del Licenciante (Cláusula de Salvaguarda)
-El Licenciante se reserva la facultad discrecional y la opción exclusiva, ejecutable dentro de los primeros **tres (3) años** a partir de la firma de este Contrato, de dar por terminado el presente acuerdo de forma anticipada y unilateral mediante notificación escrita. Para que esta rescisión surta efecto, el Licenciante pagará al Licenciatario una indemnización equivalente al **{{clause_termination_fee}}**. Tras la notificación y el pago de dicha penalidad, el Licenciatario dispondrá de un plazo máximo de siete (7) días para dar de baja y retirar la Nueva Canción de todos los canales de distribución físicos y digitales del mercado. El Licenciatario acepta expresamente que el pago de dicha penalidad constituye una indemnización total, única y final por la terminación del contrato, y renuncia irrevocablemente a reclamar cualquier otro valor, compensación o indemnización por concepto de daños, pérdidas, gastos de promoción, marketing, producción de videoclips o cualquier otra inversión realizada en relación con la Nueva Canción.
+### Cláusula 9. {{clause_rescission_title}}
+{{clause_rescission_body}}
 
 ### Cláusula 10. Incumplimiento y Penalizaciones
 Cualquier violación directa o indirecta a las cláusulas descritas en este documento facultará al Productor a rescindir la licencia de manera inmediata y sin derecho a reembolsos. El Licenciatario será civil y económicamente responsable de todos los daños, perjuicios, costos legales, honorarios de abogados y gastos judiciales en los que incurra el Productor con el fin de defender sus derechos de propiedad intelectual frente a un uso no autorizado de la obra musical.
 
 ### Cláusula 11. Ley Aplicable, Jurisdicción y Competencia
-Este acuerdo se rige de forma exclusiva por las leyes de la República del Ecuador. Para cualquier controversia, litigio o reclamación derivada de la interpretación, validez o ejecución de este Contrato, las partes renuncian expresamente a cualquier otro fuero que por domicilio les corresponda y se someten expresamente a la jurisdicción de los jueces y **tribunales competentes de la ciudad de {{jurisdiction_city}}**.
+Este acuerdo se rige de forma exclusiva por las leyes de **{{laws_jurisdiction}}**. Para cualquier controversia, litigio o reclamación derivada de la interpretación, validez o ejecución de este Contrato, las partes renuncian expresamente a cualquier otro fuero que por domicilio les corresponda y se someten expresamente a la jurisdicción de los jueces y **tribunales competentes de {{jurisdiction_place}}**.
 
 ### Cláusula 12. Consentimiento, Aceptación por Acto de Pago y Medidas de Seguridad
 Las partes acuerdan que el presente contrato puede ser formalizado de manera física, digital o mediante firmas escaneadas intercambiadas por medios electrónicos.
@@ -281,7 +281,7 @@ Como medida de seguridad e integridad contractual, este documento incorpora el l
 ## Intervening Parties
 This {{license_type}} {{license_exclusivity}} License Agreement (hereinafter, the "Agreement") is entered into and declared in force by and between the following parties:
 
-1. **The Licensor (Producer):** {{producer_name}}, professionally known in the music industry as **{{producer_aka}}** (hereinafter, the "Producer"), with ID/Passport No. {{producer_id}}, contact email: {{producer_email}}, and phone/WhatsApp: {{producer_phone}}.
+1. **The Licensor (Producer):** {{producer_legal_declaration_en}} (hereinafter, the "Producer"), contact email: {{producer_email}}, and phone/WhatsApp: {{producer_phone}}.
 2. **The Licensee (User):** {{buyer_name}}, with ID/Passport No. {{buyer_id}}, registered legal address in the city of {{buyer_city}}, {{buyer_country}}, contact email registered on the platform: {{buyer_email}}, and phone/WhatsApp: {{buyer_phone}} (hereinafter, the "Licensee").
 
 Both parties, by mutual agreement and with full legal capacity to bind themselves, subscribe to the clauses and conditions detailed below in this legal instrument.
@@ -316,7 +316,7 @@ If the Licensee exceeds any of these reproduction or sales limits, this license 
 ### Clause 5. Audiovisual Synchronization
 * **5.1. Synchronization Scope:** The Licensee is granted the non-exclusive right to synchronize the New Song with moving images for the creation of a maximum of **{{clause_videos}}** independent videos (Videos).
 * **5.2. Duration and Broadcast:** Each Video may not exceed **{{clause_video_duration}}** of screen duration (or the total duration of the New Song if it is longer). Such videos may be distributed on social networks and public digital video platforms (such as YouTube and Vevo).
-* **5.3. Major Restrictions:** The synchronization of the Beat or the New Song in film productions, short films, television programs, video games, or commercial advertisements of mass consumer brands is expressly prohibited, except by independent agreement and licensing with the Producer.
+* **5.3. Commercial Synchronization:** {{clause_sync_rules_en}}
 
 ### Clause 6. Restrictions of Use and Prohibition of Content ID / Digital Registration
 The Licensee absolutely agrees to comply with the following operational prohibitions:
@@ -333,14 +333,14 @@ The Licensee absolutely agrees to comply with the following operational prohibit
 The Licensee will maintain the commercial and moral obligation to grant corresponding credits to the Producer in any physical, digital, or audiovisual format where the New Song is exposed to the public. The standardized and mandatory credit format must be:
 > **{{clause_credits}}**
 
-### Clause 9. Licensor's Termination Option (Safeguard Clause)
-The Licensor reserves the discretionary power and exclusive option, executable within the first **three (3) years** from the signing of this Contract, to terminate this agreement early and unilaterally by written notice. For this termination to take effect, the Licensor will pay the Licensee compensation equivalent to **{{clause_termination_fee}}**. Following notification and payment of said penalty, the Licensee will have a period of seven (7) days to take down and withdraw the New Song from all physical and digital distribution channels in the market. The Licensee expressly agrees that the payment of said penalty constitutes a full, sole, and final compensation for the termination of the agreement, and irrevocably waives the right to claim any other value, compensation, or damages for promotion, marketing, video production expenses, or any other investment made in connection with the New Song.
+### Clause 9. {{clause_rescission_title_en}}
+{{clause_rescission_body_en}}
 
 ### Clause 10. Breach and Penalties
 Any direct or indirect violation of the clauses described in this document will entitle the Producer to terminate the license immediately and without right to refunds. The Licensee will be civilly and financially responsible for all damages, losses, legal costs, attorney fees, and court expenses incurred by the Producer to defend their intellectual property rights against unauthorized use of the musical work.
 
 ### Clause 11. Applicable Law, Jurisdiction, and Competence
-This agreement is governed exclusively by the laws of the Republic of Ecuador. For any controversy, litigation, or claim arising from the interpretation, validity, or execution of this Contract, the parties expressly waive any other jurisdiction that may correspond to them by reason of their domicile and expressly submit to the jurisdiction of the competent judges and **courts of the city of {{jurisdiction_city}}**.
+This agreement is governed exclusively by the laws of **{{laws_jurisdiction_en}}**. For any controversy, litigation, or claim arising from the interpretation, validity, or execution of this Contract, the parties expressly waive any other jurisdiction that may correspond to them by reason of their domicile and expressly submit to the jurisdiction of the competent judges and **courts of {{jurisdiction_place_en}}**.
 
 ### Clause 12. Consent, Acceptance by Payment Act, and Security Measures
 The parties agree that this contract may be executed physically, digitally, or via scanned signatures exchanged by electronic means.
