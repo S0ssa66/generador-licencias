@@ -2310,16 +2310,72 @@ async function fetchWithTimeout(resource, options = {}) {
 // Subir PDF a la nube usando Google Drive > GoFile > PixelDrain > file.io > tmpfiles.org
 async function uploadPDFToCloud(base64DataUri, filename) {
     const blob = await dataURLtoBlob(base64DataUri);
+    const storageProvider = producerConfig.storageProvider || 'gdrive-central';
 
-    // 0. Intentar con Google Drive (prioritario si está configurado)
-    if (producerConfig.gdriveClientId) {
+    // 0. Intentar con Google Drive Central (plataforma)
+    if (storageProvider === 'gdrive-central' && auth.currentUser) {
         try {
-            console.log('Subiendo PDF a Google Drive...');
+            console.log('Subiendo PDF a Google Drive Central...');
+            const idToken = await auth.currentUser.getIdToken();
+            const sessionRes = await fetch('/api/gdrive-upload-session', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
+                },
+                body: JSON.stringify({
+                    fileName: filename,
+                    subFolder: 'Contratos',
+                    contentType: 'application/pdf',
+                    producerAka: producerConfig.aka || producerConfig.name
+                })
+            });
+
+            if (!sessionRes.ok) {
+                const sessionErr = await sessionRes.json();
+                throw new Error(sessionErr.error || 'No se pudo iniciar la sesión de subida en Google Drive Central.');
+            }
+
+            const sessionData = await sessionRes.json();
+            const uploadUrl = sessionData.uploadUrl;
+
+            const resJson = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', uploadUrl);
+                xhr.setRequestHeader('Content-Type', 'application/pdf');
+                xhr.onreadystatechange = () => {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                resolve(JSON.parse(xhr.responseText));
+                            } catch (e) {
+                                reject(e);
+                            }
+                        } else {
+                            reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+                        }
+                    }
+                };
+                xhr.send(blob);
+            });
+
+            const downloadUrl = `${window.location.origin}/api/proxy-audio?id=${resJson.id}`;
+            console.log('PDF subido con éxito a Google Drive Central:', downloadUrl);
+            return downloadUrl;
+        } catch (centralDriveErr) {
+            console.warn('Google Drive Central falló, intentando otros métodos:', centralDriveErr.message);
+        }
+    }
+
+    // 0.1 Intentar con Google Drive Personal
+    if (storageProvider === 'gdrive' || producerConfig.gdriveClientId) {
+        try {
+            console.log('Subiendo PDF a Google Drive Personal...');
             const driveUrl = await uploadToGoogleDrive(base64DataUri, filename);
-            console.log('PDF subido con éxito a Google Drive:', driveUrl);
+            console.log('PDF subido con éxito a Google Drive Personal:', driveUrl);
             return driveUrl;
         } catch (driveErr) {
-            console.warn('Google Drive falló, intentando con Firebase Storage / otros métodos:', driveErr.message);
+            console.warn('Google Drive Personal falló, intentando otros métodos:', driveErr.message);
         }
     }
 
