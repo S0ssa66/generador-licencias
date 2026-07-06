@@ -416,8 +416,16 @@ async function uploadToCentralDrive(file, config, onProgress) {
     });
     
     if (!sessionRes.ok) {
-        const sessionErr = await sessionRes.json();
-        throw new Error(sessionErr.error || 'No se pudo iniciar la sesión de subida en Google Drive Central.');
+        let errMsg = 'No se pudo iniciar la sesión de subida en Google Drive Central.';
+        try {
+            const sessionErr = await sessionRes.json();
+            errMsg = sessionErr.error || errMsg;
+        } catch (e) {
+            try {
+                errMsg = await sessionRes.text();
+            } catch (textErr) {}
+        }
+        throw new Error(`HTTP ${sessionRes.status}: ${errMsg}`);
     }
     
     const sessionData = await sessionRes.json();
@@ -617,8 +625,13 @@ export function initFileUploads() {
             }, 3000);
 
         } catch (finalErr) {
-            console.warn("Fallo general de subida a Drive, intentando servidores alternativos:", finalErr);
-            if (typeof window.showToast === 'function') window.showToast("Usando servidores alternativos de respaldo...", false);
+            console.error("Fallo general de subida a Drive:", finalErr);
+            if (typeof window.showToast === 'function') {
+                window.showToast("Drive Error: " + finalErr.message, true);
+                setTimeout(() => {
+                    window.showToast("Usando servidores alternativos de respaldo...", false);
+                }, 4000);
+            }
             
             activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo...`;
             if (window.lucide) window.lucide.createIcons();

@@ -2335,8 +2335,16 @@ async function uploadPDFToCloud(base64DataUri, filename) {
         });
 
         if (!sessionRes.ok) {
-            const sessionErr = await sessionRes.json();
-            throw new Error(sessionErr.error || 'No se pudo iniciar la sesión de subida en Google Drive Central.');
+            let errMsg = 'No se pudo iniciar la sesión de subida en Google Drive Central.';
+            try {
+                const sessionErr = await sessionRes.json();
+                errMsg = sessionErr.error || errMsg;
+            } catch (e) {
+                try {
+                    errMsg = await sessionRes.text();
+                } catch (textErr) {}
+            }
+            throw new Error(`HTTP ${sessionRes.status}: ${errMsg}`);
         }
 
         const sessionData = await sessionRes.json();
