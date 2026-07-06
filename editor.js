@@ -2317,70 +2317,81 @@ async function uploadPDFToCloud(base64DataUri, filename) {
         storageProvider = 'gdrive-central';
     }
 
+    async function uploadToCentral() {
+        console.log('Subiendo PDF a Google Drive Central...');
+        const idToken = await auth.currentUser.getIdToken();
+        const sessionRes = await fetch('/api/gdrive-upload-session', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+                fileName: filename,
+                subFolder: 'Contratos',
+                contentType: 'application/pdf',
+                producerAka: producerConfig.aka || producerConfig.name
+            })
+        });
+
+        if (!sessionRes.ok) {
+            const sessionErr = await sessionRes.json();
+            throw new Error(sessionErr.error || 'No se pudo iniciar la sesión de subida en Google Drive Central.');
+        }
+
+        const sessionData = await sessionRes.json();
+        const uploadUrl = sessionData.uploadUrl;
+
+        const resJson = await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', uploadUrl);
+            xhr.setRequestHeader('Content-Type', 'application/pdf');
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState === 4) {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            resolve(JSON.parse(xhr.responseText));
+                        } catch (e) {
+                            reject(e);
+                        }
+                    } else {
+                        reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
+                    }
+                }
+            };
+            xhr.send(blob);
+        });
+
+        const downloadUrl = `${window.location.origin}/api/proxy-audio?id=${resJson.id}`;
+        console.log('PDF subido con éxito a Google Drive Central:', downloadUrl);
+        return downloadUrl;
+    }
+
     // 0. Intentar con Google Drive Central (plataforma)
     if (storageProvider === 'gdrive-central' && auth.currentUser) {
         try {
-            console.log('Subiendo PDF a Google Drive Central...');
-            const idToken = await auth.currentUser.getIdToken();
-            const sessionRes = await fetch('/api/gdrive-upload-session', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${idToken}`
-                },
-                body: JSON.stringify({
-                    fileName: filename,
-                    subFolder: 'Contratos',
-                    contentType: 'application/pdf',
-                    producerAka: producerConfig.aka || producerConfig.name
-                })
-            });
-
-            if (!sessionRes.ok) {
-                const sessionErr = await sessionRes.json();
-                throw new Error(sessionErr.error || 'No se pudo iniciar la sesión de subida en Google Drive Central.');
-            }
-
-            const sessionData = await sessionRes.json();
-            const uploadUrl = sessionData.uploadUrl;
-
-            const resJson = await new Promise((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.open('PUT', uploadUrl);
-                xhr.setRequestHeader('Content-Type', 'application/pdf');
-                xhr.onreadystatechange = () => {
-                    if (xhr.readyState === 4) {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            try {
-                                resolve(JSON.parse(xhr.responseText));
-                            } catch (e) {
-                                reject(e);
-                            }
-                        } else {
-                            reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
-                        }
-                    }
-                };
-                xhr.send(blob);
-            });
-
-            const downloadUrl = `${window.location.origin}/api/proxy-audio?id=${resJson.id}`;
-            console.log('PDF subido con éxito a Google Drive Central:', downloadUrl);
-            return downloadUrl;
+            return await uploadToCentral();
         } catch (centralDriveErr) {
             console.warn('Google Drive Central falló, intentando otros métodos:', centralDriveErr.message);
         }
     }
 
     // 0.1 Intentar con Google Drive Personal
-    if (storageProvider === 'gdrive' || producerConfig.gdriveClientId) {
+    if (storageProvider === 'gdrive') {
         try {
             console.log('Subiendo PDF a Google Drive Personal...');
             const driveUrl = await uploadToGoogleDrive(base64DataUri, filename);
             console.log('PDF subido con éxito a Google Drive Personal:', driveUrl);
             return driveUrl;
         } catch (driveErr) {
-            console.warn('Google Drive Personal falló, intentando otros métodos:', driveErr.message);
+            console.warn('Google Drive Personal falló, intentando fallback a Google Drive Central:', driveErr.message);
+            if (auth.currentUser) {
+                try {
+                    return await uploadToCentral();
+                } catch (centralErr) {
+                    console.warn('Fallo también en Google Drive Central:', centralErr.message);
+                }
+            }
         }
     }
 

@@ -399,6 +399,52 @@ export function renderBeatsList() {
     if (typeof window.safeCreateIcons === 'function') window.safeCreateIcons();
 }
 
+async function uploadToCentralDrive(file, config, onProgress) {
+    const idToken = await auth.currentUser.getIdToken();
+    const sessionRes = await fetch('/api/gdrive-upload-session', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+            fileName: file.name,
+            subFolder: 'Beats',
+            contentType: file.type,
+            producerAka: config.aka || config.name
+        })
+    });
+    
+    if (!sessionRes.ok) {
+        const sessionErr = await sessionRes.json();
+        throw new Error(sessionErr.error || 'No se pudo iniciar la sesión de subida en Google Drive Central.');
+    }
+    
+    const sessionData = await sessionRes.json();
+    const uploadUrl = sessionData.uploadUrl;
+    
+    const resJson = await uploadFileToResumableSessionWithProgress(file, uploadUrl, onProgress);
+    return `${window.location.origin}/api/proxy-audio?id=${resJson.id}`;
+}
+
+async function uploadToPersonalDrive(file, config, onProgress) {
+    let token;
+    if (typeof window.getGdriveToken === 'function') {
+        token = await window.getGdriveToken();
+    } else {
+        throw new Error("Google Drive Token Helper personal no disponible.");
+    }
+    
+    const folderName = `${config.aka || config.name || 'BEATSS'} Licencias`;
+    if (typeof window.getOrCreateDriveFolder !== 'function') {
+        throw new Error("Google Drive Folder Helper no disponible.");
+    }
+    const rootId = await window.getOrCreateDriveFolder(token, folderName);
+    const beatsFolderId = await window.getOrCreateDriveFolder(token, 'Beats', rootId);
+
+    return await uploadFileToDriveWithProgress(file, token, beatsFolderId, onProgress);
+}
+
 export function initFileUploads() {
     const fileUploader = document.getElementById('shared-file-uploader');
     if (!fileUploader) return;
@@ -499,65 +545,50 @@ export function initFileUploads() {
             }
             
             let downloadURL;
+            let uploadSuccess = false;
+
             if (storageProvider === 'gdrive-central') {
                 activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Central...`;
                 if (window.lucide) window.lucide.createIcons();
 
-                const idToken = await auth.currentUser.getIdToken();
-                const sessionRes = await fetch('/api/gdrive-upload-session', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${idToken}`
-                    },
-                    body: JSON.stringify({
-                        fileName: file.name,
-                        subFolder: 'Beats',
-                        contentType: file.type,
-                        producerAka: config.aka || config.name
-                    })
-                });
-                
-                if (!sessionRes.ok) {
-                    const sessionErr = await sessionRes.json();
-                    throw new Error(sessionErr.error || 'No se pudo iniciar la sesión de subida en Google Drive Central.');
+                try {
+                    downloadURL = await uploadToCentralDrive(file, config, (progress) => {
+                        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
+                        if (window.lucide) window.lucide.createIcons();
+                    });
+                    uploadSuccess = true;
+                } catch (driveErr) {
+                    console.warn("Fallo al subir a Google Drive Central, intentando fallback a servidores alternativos...", driveErr);
                 }
-                
-                const sessionData = await sessionRes.json();
-                const uploadUrl = sessionData.uploadUrl;
-                
-                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... 0%`;
-                if (window.lucide) window.lucide.createIcons();
-
-                const resJson = await uploadFileToResumableSessionWithProgress(file, uploadUrl, (progress) => {
-                    activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
-                    if (window.lucide) window.lucide.createIcons();
-                });
-                
-                downloadURL = `${window.location.origin}/api/proxy-audio?id=${resJson.id}`;
             } else {
-                let token;
                 activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Drive...`;
                 if (window.lucide) window.lucide.createIcons();
-                if (typeof window.getGdriveToken === 'function') {
-                    token = await window.getGdriveToken();
-                } else {
-                    throw new Error("Google Drive Token Helper personal no disponible.");
+
+                try {
+                    downloadURL = await uploadToPersonalDrive(file, config, (progress) => {
+                        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
+                        if (window.lucide) window.lucide.createIcons();
+                    });
+                    uploadSuccess = true;
+                } catch (driveErr) {
+                    console.warn("Fallo al subir a Google Drive Personal, intentando fallback a Google Drive Central...", driveErr);
+                    try {
+                        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Central (Fallback)...`;
+                        if (window.lucide) window.lucide.createIcons();
+                        
+                        downloadURL = await uploadToCentralDrive(file, config, (progress) => {
+                            activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo a Central... ${progress}%`;
+                            if (window.lucide) window.lucide.createIcons();
+                        });
+                        uploadSuccess = true;
+                    } catch (centralErr) {
+                        console.error("Fallo también en la subida a Google Drive Central (Fallback):", centralErr);
+                    }
                 }
-                
-                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo a Drive...`;
-                
-                const folderName = `${config.aka || config.name || 'BEATSS'} Licencias`;
-                if (typeof window.getOrCreateDriveFolder !== 'function') {
-                    throw new Error("Google Drive Folder Helper no disponible.");
-                }
-                const rootId = await window.getOrCreateDriveFolder(token, folderName);
-                const beatsFolderId = await window.getOrCreateDriveFolder(token, 'Beats', rootId);
-     
-                downloadURL = await uploadFileToDriveWithProgress(file, token, beatsFolderId, (progress) => {
-                    activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
-                    if (window.lucide) window.lucide.createIcons();
-                });
+            }
+
+            if (!uploadSuccess) {
+                throw new Error("No se pudo subir a Google Drive.");
             }
 
             const targetInput = document.getElementById(activeUploadTarget);
@@ -585,8 +616,8 @@ export function initFileUploads() {
                 }
             }, 3000);
 
-        } catch (driveErr) {
-            console.warn("Fallo en la subida a Google Drive, intentando fallback a servidores alternativos:", driveErr);
+        } catch (finalErr) {
+            console.warn("Fallo general de subida a Drive, intentando servidores alternativos:", finalErr);
             if (typeof window.showToast === 'function') window.showToast("Usando servidores alternativos de respaldo...", false);
             
             activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo...`;
