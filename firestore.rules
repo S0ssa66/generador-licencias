@@ -1,172 +1,18 @@
-rules_version = '2';
+rules_version='2'
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Función auxiliar para verificar si el usuario es administrador.
-    // SEGURIDAD: Solo se acepta el Custom Claim 'admin:true' asignado vía Firebase Admin SDK.
-    // El fallback por email ha sido eliminado: cualquier email puede ser replicado en otro
-    // proveedor de identidad. El claim solo puede ser establecido desde el servidor con privilegios.
-    function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
-    }
-
-    // Función auxiliar para validar datos de contacto públicos (leads)
-    function isValidContact() {
-      let data = request.resource.data;
-      return data.keys().hasOnly(['name', 'email', 'id', 'phone', 'city', 'country', 'updatedAt', 'source']) &&
-             data.email is string && data.email.size() < 100 &&
-             data.name is string && data.name.size() < 100 &&
-             (!('id' in data) || (data.id is string && data.id.size() < 50)) &&
-             (!('phone' in data) || (data.phone is string && data.phone.size() < 30)) &&
-             (!('city' in data) || (data.city is string && data.city.size() < 50)) &&
-             (!('country' in data) || (data.country is string && data.country.size() < 50)) &&
-             (!('source' in data) || (data.source is string && data.source.size() < 50)) &&
-             (!('updatedAt' in data) || (data.updatedAt is number));
-    }
-
-    // Función auxiliar para validar datos de whitelist para evitar abuso de almacenamiento
-    function isValidWhitelistEntry() {
-      let data = request.resource.data;
-      return data.keys().hasOnly(['channelUrl', 'artistName', 'songName', 'licenseRef', 'createdAt']) &&
-             data.channelUrl is string && data.channelUrl.size() < 150 &&
-             data.artistName is string && data.artistName.size() < 100 &&
-             data.songName is string && data.songName.size() < 150 &&
-             data.licenseRef is string && data.licenseRef.size() < 100 &&
-             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() < 50));
-    }
-
-    // Regla para la contabilidad consolidada de Sossa Admin (Collection Group query)
-    match /{path=**}/licencias/{document} {
-      allow read: if isAdmin();
-    }
-
-    // Regla para consulta de configuraciones de todos los productores (Sossa Admin y Tienda Pública)
-    match /{path=**}/config/{document} {
-      allow read: if true;
-    }
-
-    // Regla para consulta global de beats (Catálogo Global)
-    match /{path=**}/beats/{document} {
-      allow read: if true;
-    }
-
-    // Regla para solicitudes de pago local y compras de beats (creación autenticada y edición restringida)
-    match /payments/{paymentId} {
-      allow create: if request.auth != null && 
-                       request.auth.uid == request.resource.data.userId &&
-                       request.resource.data.type in ['beat_purchase', 'exclusive_offer'] &&
-                       request.resource.data.status == 'pending';
-      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || resource.data.producerId == request.auth.uid || isAdmin());
-      allow update: if request.auth != null && (
-                       isAdmin() || 
-                       (resource.data.producerId == request.auth.uid && 
-                        request.resource.data.status in ['cancelled', 'cancelado'] && 
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
-                    );
-      allow delete: if false;
-    }
-
-    // Regla para referidos (referrals)
-    match /referrals/{referralId} {
-      allow read: if request.auth != null && (resource.data.referrerId == request.auth.uid || isAdmin());
-      allow create: if request.auth != null && request.auth.uid == referralId;
-      allow update: if request.auth != null && (request.auth.uid == referralId || isAdmin());
-      allow delete: if isAdmin();
-    }
-
-    // Regla para códigos VIP
-    match /vip_codes/{codeId} {
-      allow get: if request.auth != null;
-      allow list, write: if isAdmin();
-    }
-
-    // Reglas para la cola de tareas asíncronas (tasks)
-    match /tasks/{taskId} {
-      allow create: if request.auth != null && 
-                       request.resource.data.userId == request.auth.uid &&
-                       (!('estado' in request.resource.data) || request.resource.data.estado == 'pending');
-      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
-      allow update: if request.auth != null && (
-                       isAdmin() || 
-                       (resource.data.userId == request.auth.uid && 
-                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['estado', 'resultado', 'progreso', 'tipo', 'consulta']))
-                    );
-      allow delete: if isAdmin();
-    }
-
-    // Regla principal por usuario
-    match /users/{userId} {
-      // Sossa Admin tiene acceso completo
-      allow read, write: if isAdmin();
-
-      // El propio usuario puede leer su documento
-      allow read: if request.auth != null && request.auth.uid == userId;
-      
-      // El propio usuario puede crear/actualizar su documento principal con restricciones de plan y códigos
-      allow create: if request.auth != null && request.auth.uid == userId && (
-        !request.resource.data.keys().hasAny(['plan', 'planActivatedAt', 'expirationPro', 'redeemedCodes']) || request.resource.data.plan == 'inicial'
-      );
-      allow update: if request.auth != null && request.auth.uid == userId && (
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan', 'planActivatedAt', 'expirationPro', 'redeemedCodes']) || 
-        (request.resource.data.plan == 'inicial' && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['planActivatedAt', 'expirationPro', 'redeemedCodes']))
-      );
-
-      // Reglas para subcolección config/producer (acceso público de lectura, escritura privada)
-      match /config/producer {
-        allow read: if true;
-        allow create: if request.auth != null && request.auth.uid == userId && (
-          !request.resource.data.keys().hasAny(['plan', 'expirationPro', 'redeemedCodes']) || 
-          request.resource.data.plan == 'inicial'
-        );
-        allow update: if isAdmin() || (
-          request.auth != null && request.auth.uid == userId && (
-            // Permitir actualización si no se tocan los campos de plan
-            (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan', 'expirationPro', 'redeemedCodes'])) ||
-            // Permitir degradar a plan inicial sin alterar redeemedCodes ni expirationPro
-            (request.resource.data.plan == 'inicial' && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['expirationPro', 'redeemedCodes']))
-          )
-        );
-      }
-
-      // Reglas para subcolección private_config (cualquier documento)
-      match /private_config/{document} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      }
-
-      // Reglas para subcolecciones normales
-      match /beats/{beatId} {
-        allow read: if true;
-        allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-
-        // Enlaces de descarga privados y protegidos
-        match /private/files {
-          allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-        }
-      }
-
-      match /templates/{templateId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      }
-
-      match /licencias/{licenciaId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      }
-
-      match /whitelist/{whitelistId} {
-        allow read, delete: if (request.auth != null && request.auth.uid == userId) || isAdmin();
-        allow create: if (((request.auth != null && request.auth.uid == userId) || isAdmin()) ||
-                          exists(/databases/$(database)/documents/users/$(userId)/licencias/$(request.resource.data.licenseRef))) &&
-                         isValidWhitelistEntry();
-        allow update: if false;
-      }
-
-      match /contacts/{contactId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-        
-        // Permitir creación pública (leads) con tipos de datos e input sanos
-        allow create: if isValidContact();
-      }
+    match /{document=**} {
+      // This rule allows anyone with your database reference to view, edit,
+      // and delete all data in your database. It is useful for getting
+      // started, but it is configured to expire after 30 days because it
+      // leaves your app open to attackers. At that time, all client
+      // requests to your database will be denied.
+      //
+      // Make sure to write security rules for your app before that time, or
+      // else all client requests to your database will be denied until you
+      // update your rules.
+      allow read, write: if request.time < timestamp.date(2026, 8, 4);
     }
   }
 }

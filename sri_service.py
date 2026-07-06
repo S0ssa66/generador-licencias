@@ -184,6 +184,27 @@ def actualizar_estado_factura_db(payment_id, producer_id, estado, clave_acceso=N
                 req = urllib.request.Request(full_url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="PATCH")
                 with urllib.request.urlopen(req) as response:
                     print(f"[+] [SRI DB] Pago {payment_id} actualizado con datos del SRI ({estado}) en Firestore.")
+                    
+                    # Disparar envío de correo al comprador si el estado es AUTORIZADO
+                    if estado == "AUTORIZADO":
+                        try:
+                            # Obtener email del comprador leyendo el documento de pago
+                            req_get = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"}, method="GET")
+                            buyer_email = ""
+                            with urllib.request.urlopen(req_get) as response_get:
+                                pay_doc = json.loads(response_get.read().decode("utf-8"))
+                                buyer_email = pay_doc.get("fields", {}).get("buyerEmail", {}).get("stringValue", "")
+                            
+                            if buyer_email:
+                                from email_service import send_invoice_email
+                                send_invoice_email(
+                                    buyer_email=buyer_email,
+                                    reference_id=ref_code or payment_id,
+                                    xml_content=xml_autorizado,
+                                    ride_filepath=ride_path
+                                )
+                        except Exception as mail_err:
+                            print(f"[-] [SRI Email] Falló el proceso de envío de correo automático: {mail_err}")
             except Exception as e:
                 print(f"[-] [SRI DB] Error al actualizar estado SRI en Firestore para el pago {payment_id}: {e}")
 
@@ -308,10 +329,10 @@ def emitir_factura_sri_background(reference_id, producer_id):
             
     ruc_emisor = producer_config.get('sriRuc')
     p12_b64 = private_config.get('sriP12Base64')
-    p12_password = private_config.get('sriP12Password')
+    p12_password = os.environ.get("SRI_FIRMA_PASSWORD") or private_config.get('sriP12Password')
     
     if not ruc_emisor or not p12_b64 or not p12_password:
-        print(f"[!] [SRI] Facturación SRI no configurada o incompleta para el productor {producer_id}. Se omite la factura.")
+        print(f"[!] [SRI] Facturación SRI no configurada o incompleta para el productor {producer_id} (falta RUC, P12 o contraseña). Se omite la factura.")
         return
         
     print(f"[+] [SRI] Iniciando emisión de factura agrupada para la transacción {reference_id}...")

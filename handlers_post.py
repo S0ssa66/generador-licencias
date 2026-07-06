@@ -26,6 +26,55 @@ import sri_ride
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 
+def get_or_create_drive_folder(token, folder_name, parent_id=None):
+    import urllib.request
+    import urllib.parse
+    import json
+    
+    q = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+    if parent_id:
+        q += f" and '{parent_id}' in parents"
+        
+    url = f"https://www.googleapis.com/drive/v3/files?q={urllib.parse.quote(q)}&fields=files(id)"
+    headers = {"Authorization": f"Bearer {token}"}
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            files = res_data.get("files", [])
+            if files:
+                return files[0]["id"]
+    except Exception as e:
+        raise Exception(f"Error buscando carpeta {folder_name}: {e}")
+        
+    # Crear carpeta
+    create_url = "https://www.googleapis.com/drive/v3/files"
+    meta = {
+        "name": folder_name,
+        "mimeType": "application/vnd.google-apps.folder"
+    }
+    if parent_id:
+        meta["parents"] = [parent_id]
+        
+    req = urllib.request.Request(
+        create_url, 
+        data=json.dumps(meta).encode("utf-8"), 
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        },
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req) as response:
+            folder = json.loads(response.read().decode("utf-8"))
+            if "id" in folder:
+                return folder["id"]
+            raise Exception("No se pudo crear la carpeta en Google Drive.")
+    except Exception as e:
+        raise Exception(f"Error creando carpeta {folder_name}: {e}")
+
+
 def process_async_task(task_id, id_token):
     """Worker asíncrono que procesa la tarea utilizando el pipeline de agentes en segundo plano."""
     print(f"[*] [Worker] Iniciando procesamiento de tarea {task_id}...")
@@ -88,8 +137,14 @@ class HandlerPostMixin:
     def do_POST(self):
         parsed = urlparse(self.path)
         
-        # Aplicar Rate Limiting por IP en webhooks de pago
-        if parsed.path in ['/api/payments/deuna/webhook', '/api/payments/payphone/webhook']:
+        # Aplicar Rate Limiting por IP en webhooks y confirmaciones de pago
+        if parsed.path in [
+            '/api/payments/deuna/webhook',
+            '/api/payments/deuna/simulate-confirm',
+            '/api/payments/payphone/webhook',
+            '/api/payments/payphone/confirm',
+            '/api/payments/payphone/subscription/confirm'
+        ]:
             client_ip = self.headers.get('X-Forwarded-For', self.client_address[0]).split(',')[0].strip()
             if not check_ip_rate_limit(client_ip, limit=10, window=60):
                 print(f"[⚠️ Rate Limit Exceeded] IP {client_ip} ha excedido el límite en {parsed.path}")
@@ -311,6 +366,29 @@ class HandlerPostMixin:
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ Error al generar QR Deuna: {str(e)}")
         elif parsed.path == '/api/payments/deuna/webhook' or parsed.path == '/api/payments/deuna/simulate-confirm':
+            # Validar firma/token del webhook para evitar fraudes en producción
+            deuna_secret = os.environ.get("DEUNA_WEBHOOK_SECRET")
+            is_simulation = parsed.path == '/api/payments/deuna/simulate-confirm'
+            
+            # Si es simulación, exigir token de autenticación local
+            if is_simulation:
+                if not self.check_local_auth():
+                    print("[⚠️ Security Alert] Intento no autorizado de simulación de pago Deuna.")
+                    self.send_response(401)
+                    self.send_cors_headers()
+                    self.end_headers()
+                    self.wfile.write(b'{"error": "Unauthorized: Invalid or missing local auth token"}')
+                    return
+            elif deuna_secret:
+                token_recibido = self.headers.get('X-Deuna-Token') or self.headers.get('Authorization')
+                if token_recibido != deuna_secret and token_recibido != f"Bearer {deuna_secret}":
+                    print("[⚠️ Security Alert] Token de webhook de Deuna inválido o ausente.")
+                    self.send_response(401)
+                    self.send_cors_headers()
+                    self.end_headers()
+                    self.wfile.write(b'{"error": "Unauthorized"}')
+                    return
+
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             try:
@@ -1224,6 +1302,98 @@ INSTRUCCIONES:
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
                 print(f"❌ [Admin Copilot] Error en el Copiloto de administración: {str(e)}")
+        elif parsed.path == '/api/gdrive-upload-session':
+            auth_header = self.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
+                self.send_response(401)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "No autorizado: falta el token de sesion"}')
+                return
+            id_token = auth_header.split('Bearer ')[1].strip()
+            
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            try:
+                payload = json.loads(post_data.decode('utf-8'))
+                file_name = payload.get('fileName')
+                sub_folder = payload.get('subFolder', 'Beats')
+                content_type = payload.get('contentType', 'application/octet-stream')
+                producer_aka = payload.get('producerAka', 'BEATSS')
+                
+                if not file_name:
+                    raise ValueError("Falta parametro fileName")
+                
+                from firestore_ops import fetch_firestore_document
+                gdrive_config = fetch_firestore_document('system/gdrive_config', id_token)
+                if not gdrive_config:
+                    raise Exception("El Google Drive central no esta vinculado o error al leer configuracion.")
+                    
+                client_id = gdrive_config.get('clientId')
+                client_secret = gdrive_config.get('clientSecret')
+                refresh_token = gdrive_config.get('refreshToken')
+                
+                if not client_id or not client_secret or not refresh_token:
+                    raise Exception("Configuracion de Google Drive incompleta.")
+                    
+                import urllib.parse
+                import urllib.request
+                
+                token_url = "https://oauth2.googleapis.com/token"
+                token_data = urllib.parse.urlencode({
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "refresh_token": refresh_token,
+                    "grant_type": "refresh_token"
+                }).encode("utf-8")
+                
+                req = urllib.request.Request(token_url, data=token_data, method="POST")
+                with urllib.request.urlopen(req) as response:
+                    token_res = json.loads(response.read().decode("utf-8"))
+                    access_token = token_res["access_token"]
+                    
+                root_folder_name = f"{producer_aka} Licencias"
+                root_folder_id = get_or_create_drive_folder(access_token, root_folder_name)
+                target_folder_id = get_or_create_drive_folder(access_token, sub_folder, root_folder_id)
+                
+                session_url = "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable"
+                session_meta = {
+                    "name": file_name,
+                    "parents": [target_folder_id]
+                }
+                
+                session_headers = {
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json; charset=UTF-8",
+                    "X-Upload-Content-Type": content_type
+                }
+                
+                req = urllib.request.Request(
+                    session_url, 
+                    data=json.dumps(session_meta).encode("utf-8"), 
+                    headers=session_headers, 
+                    method="POST"
+                )
+                
+                with urllib.request.urlopen(req) as response:
+                    upload_url = response.headers.get("Location")
+                    if not upload_url:
+                        raise Exception("Google Drive API no devolvio el Location para subida resumible.")
+                        
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"success": True, "uploadUrl": upload_url}).encode('utf-8'))
+                print(f"[+] [Google Drive Upload] Sesion iniciada para {file_name}")
+                
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
+                print(f"❌ [Google Drive Upload] Error al generar sesion: {str(e)}")
         else:
             self.send_response(404)
             self.end_headers()

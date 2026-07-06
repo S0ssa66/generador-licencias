@@ -258,6 +258,8 @@ export function toggleStorePlay(beatId) {
         document.getElementById('player-artwork').src = artworkUrl;
         player.style.display = 'block';
         document.body.classList.add('player-active');
+        
+        initializeWaveformVisualizer();
 
         window.currentStoreAudio.addEventListener('timeupdate', updatePlayerProgress);
 
@@ -388,7 +390,34 @@ export function updatePlayerProgress() {
         }
         
         const percent = (window.currentStoreAudio.currentTime / maxDuration) * 100;
-        document.getElementById('player-progress-bar').style.width = `${percent}%`;
+        const progressBar = document.getElementById('player-progress-bar');
+        if (progressBar) {
+            progressBar.style.width = `${percent}%`;
+        }
+        
+        // Actualizar el visualizador de barra de progreso en forma de onda (Waveform)
+        const visualizer = document.getElementById('player-waveform-visualizer');
+        if (visualizer) {
+            const bars = visualizer.getElementsByClassName('waveform-bar');
+            const activeIndex = Math.floor((percent / 100) * bars.length);
+            const isPlaying = !window.currentStoreAudio.paused;
+            
+            for (let i = 0; i < bars.length; i++) {
+                if (i <= activeIndex) {
+                    bars[i].classList.add('active');
+                } else {
+                    bars[i].classList.remove('active');
+                }
+                
+                // Si es la barra del playhead actual y el reproductor está activo, hacerla rebotar
+                if (i === activeIndex && isPlaying) {
+                    bars[i].classList.add('playing');
+                } else {
+                    bars[i].classList.remove('playing');
+                }
+            }
+        }
+        
         document.getElementById('player-time-current').textContent = formatAudioTime(window.currentStoreAudio.currentTime);
         document.getElementById('player-time-duration').textContent = formatAudioTime(maxDuration);
 
@@ -415,6 +444,15 @@ export function setPlayButtonState(beatId, isPlaying) {
         : '<i data-lucide="play" style="width: 18px; height: 18px; fill: #000; stroke: #000;"></i>';
     
     playBtn.innerHTML = iconHtml;
+
+    // Detener animación de rebote si se pausa
+    const visualizer = document.getElementById('player-waveform-visualizer');
+    if (visualizer) {
+        const playingBars = visualizer.querySelectorAll('.waveform-bar.playing');
+        if (!isPlaying) {
+            playingBars.forEach(bar => bar.classList.remove('playing'));
+        }
+    }
 
     if (cardBtn) {
         cardBtn.innerHTML = isPlaying
@@ -775,4 +813,46 @@ window.toggleMixerEffect = function(effect) {
 };
 
 window.initWebAudioMixer = initWebAudioMixer;
+
+export function initializeWaveformVisualizer() {
+    const container = document.getElementById('player-progress-container');
+    if (!container) return;
+    
+    // Si ya existe el visualizador, no duplicarlo, solo limpiar las barras
+    let visualizer = document.getElementById('player-waveform-visualizer');
+    if (!visualizer) {
+        visualizer = document.createElement('div');
+        visualizer.id = 'player-waveform-visualizer';
+        
+        // Ocultar la barra de progreso anterior si existe
+        const oldBar = document.getElementById('player-progress-bar');
+        if (oldBar) {
+            oldBar.style.display = 'none';
+        }
+        
+        container.appendChild(visualizer);
+    }
+    
+    visualizer.innerHTML = '';
+    
+    // Generar 60 barras de onda con alturas variables coherentes
+    const numBars = 65;
+    // Semilla pseudo-aleatoria basada en el ID del beat para que cada beat tenga su propia "huella de audio" visual única
+    let seed = window.currentStorePlayingBeatId ? parseInt(String(window.currentStorePlayingBeatId).replace(/[^0-9]/g, '')) || 42 : 42;
+    
+    for (let i = 0; i < numBars; i++) {
+        // Generar altura pseudo-aleatoria suave
+        seed = (seed * 9301 + 49297) % 233280;
+        const rand = seed / 233280.0;
+        // Altura mínima 20%, máxima 85%
+        const height = Math.floor(20 + rand * 65);
+        
+        const bar = document.createElement('div');
+        bar.className = 'waveform-bar';
+        bar.style.height = `${height}%`;
+        visualizer.appendChild(bar);
+    }
+}
+
+window.initializeWaveformVisualizer = initializeWaveformVisualizer;
 

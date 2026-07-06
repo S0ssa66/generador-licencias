@@ -14,6 +14,33 @@ import {
     onSnapshot
 } from "./firebase.js";
 
+// Funciones de utilidad: Sanitización de entradas y Analíticas de Checkout
+export function sanitizeInput(str) {
+    if (typeof str !== 'string') return '';
+    // Eliminar etiquetas HTML completamente para evitar inyecciones XSS
+    return str.replace(/<[^>]*>/g, '').trim();
+}
+
+export function logCheckoutStep(stepName, data = {}) {
+    const logKey = 'beatss_checkout_log';
+    let logs = [];
+    try {
+        logs = JSON.parse(localStorage.getItem(logKey) || '[]');
+    } catch(e) {}
+    logs.push({
+        step: stepName,
+        timestamp: new Date().toISOString(),
+        data: data
+    });
+    // Limitar log local a los últimos 50 eventos para optimizar almacenamiento
+    if (logs.length > 50) logs.shift();
+    localStorage.setItem(logKey, JSON.stringify(logs));
+    console.log(`[Checkout Analytics] ${stepName}:`, data);
+}
+
+window.sanitizeInput = sanitizeInput;
+window.logCheckoutStep = logCheckoutStep;
+
 // Initialize global state on window
 window.cart = window.cart || [];
 window.storeProducerUid = window.storeProducerUid || null;
@@ -815,6 +842,7 @@ export function updateExclusivePrice(val) {
 export function openBeatCheckoutModal(beatId) {
     console.log("🚀 openBeatCheckoutModal called with ID:", beatId);
     setupStoreCheckout();
+    logCheckoutStep('checkout_initiated', { beatId: beatId });
     checkoutSelectedBeatId = beatId;
     checkoutSelectedLicense = 'basic';
     checkoutCurrentStep = 1;
@@ -1052,6 +1080,13 @@ export function selectCheckoutLicense(licenseKey) {
 
 export function updateCheckoutStepView(step) {
     checkoutCurrentStep = step;
+    
+    if (step === 2) {
+        logCheckoutStep('buyer_info_started', { beatId: checkoutSelectedBeatId, license: checkoutSelectedLicense });
+    } else if (step === 3) {
+        const payMethod = getSelectedStorePaymentMethod();
+        logCheckoutStep('payment_method_selected', { method: payMethod, price: window.getCheckoutPrice() });
+    }
 
     // 1. Actualizar indicadores de pasos y colores de texto del Stepper
     [1, 2, 3].forEach(s => {
@@ -1492,23 +1527,23 @@ export function getSelectedStorePaymentMethod() {
 
 export async function submitExclusiveOffer() {
     const beat = findBeatById(checkoutSelectedBeatId);
-    let buyerName = document.getElementById('store-buyer-name').value.trim();
-    let buyerEmail = document.getElementById('store-buyer-email').value.trim();
-    const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
-    let buyerDni = document.getElementById('store-buyer-dni').value.trim();
-    let buyerCity = document.getElementById('store-buyer-city').value.trim();
-    const buyerCountry = document.getElementById('store-buyer-country').value.trim();
-    const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist').value.trim();
+    let buyerName = sanitizeInput(document.getElementById('store-buyer-name').value);
+    let buyerEmail = sanitizeInput(document.getElementById('store-buyer-email').value);
+    const buyerPhone = sanitizeInput(document.getElementById('store-buyer-phone').value);
+    let buyerDni = sanitizeInput(document.getElementById('store-buyer-dni').value);
+    let buyerCity = sanitizeInput(document.getElementById('store-buyer-city').value);
+    const buyerCountry = sanitizeInput(document.getElementById('store-buyer-country').value);
+    const youtubeWhitelist = sanitizeInput(document.getElementById('store-txt-youtube-whitelist').value);
     const offerPrice = parseFloat(document.getElementById('offer-price-input').value);
-    const offerMessage = document.getElementById('offer-message-input').value.trim();
+    const offerMessage = sanitizeInput(document.getElementById('offer-message-input').value);
 
     // Si requiere factura con RUC, validamos y sobrescribimos los datos del comprador
     const needInvoice = document.getElementById('store-chk-need-invoice')?.checked;
     if (needInvoice) {
-        const rucVal = document.getElementById('store-invoice-ruc').value.trim();
-        const companyVal = document.getElementById('store-invoice-company').value.trim();
-        const addressVal = document.getElementById('store-invoice-address').value.trim();
-        const emailVal = document.getElementById('store-invoice-email').value.trim();
+        const rucVal = sanitizeInput(document.getElementById('store-invoice-ruc').value);
+        const companyVal = sanitizeInput(document.getElementById('store-invoice-company').value);
+        const addressVal = sanitizeInput(document.getElementById('store-invoice-address').value);
+        const emailVal = sanitizeInput(document.getElementById('store-invoice-email').value);
 
         if (!rucVal || !companyVal || !addressVal || !emailVal) {
             if (typeof window.showToast === 'function') window.showToast('Por favor completa todos los campos de facturación RUC.', true);
@@ -1617,9 +1652,9 @@ export async function submitFreeDownloadLead() {
     const beat = findBeatById(beatId);
     if (!beat) return;
 
-    const buyerName = document.getElementById('free-buyer-name').value.trim();
-    const buyerEmail = document.getElementById('free-buyer-email').value.trim();
-    const buyerPhone = document.getElementById('free-buyer-phone').value.trim();
+    const buyerName = sanitizeInput(document.getElementById('free-buyer-name').value);
+    const buyerEmail = sanitizeInput(document.getElementById('free-buyer-email').value);
+    const buyerPhone = sanitizeInput(document.getElementById('free-buyer-phone').value);
 
     if (!buyerName || !buyerEmail) {
         if (typeof window.showToast === 'function') window.showToast('Por favor escribe tu Nombre y Correo', true);
@@ -1801,9 +1836,9 @@ export function setupStoreCheckout() {
         if (checkoutCurrentStep === 1) {
             updateCheckoutStepView(2);
         } else if (checkoutCurrentStep === 2) {
-            const buyerName = document.getElementById('store-buyer-name').value.trim();
-            const buyerEmail = document.getElementById('store-buyer-email').value.trim();
-            const buyerDni = document.getElementById('store-buyer-dni').value.trim();
+            const buyerName = sanitizeInput(document.getElementById('store-buyer-name').value);
+            const buyerEmail = sanitizeInput(document.getElementById('store-buyer-email').value);
+            const buyerDni = sanitizeInput(document.getElementById('store-buyer-dni').value);
             
             if (!buyerName || !buyerEmail) {
                 if (typeof window.showToast === 'function') window.showToast('Por favor escribe tu Nombre y Correo Electrónico.', true);
@@ -2197,21 +2232,21 @@ export async function submitBeatPurchasePayment(method, reference = '') {
         return;
     }
 
-    let buyerName = document.getElementById('store-buyer-name').value.trim();
-    let buyerEmail = document.getElementById('store-buyer-email').value.trim();
-    const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
-    let buyerDni = document.getElementById('store-buyer-dni').value.trim();
-    let buyerCity = document.getElementById('store-buyer-city').value.trim();
-    const buyerCountry = document.getElementById('store-buyer-country').value.trim();
-    const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist').value.trim();
+    let buyerName = sanitizeInput(document.getElementById('store-buyer-name').value);
+    let buyerEmail = sanitizeInput(document.getElementById('store-buyer-email').value);
+    const buyerPhone = sanitizeInput(document.getElementById('store-buyer-phone').value);
+    let buyerDni = sanitizeInput(document.getElementById('store-buyer-dni').value);
+    let buyerCity = sanitizeInput(document.getElementById('store-buyer-city').value);
+    const buyerCountry = sanitizeInput(document.getElementById('store-buyer-country').value);
+    const youtubeWhitelist = sanitizeInput(document.getElementById('store-txt-youtube-whitelist').value);
 
     // Si requiere factura con RUC, validamos y sobrescribimos los datos del comprador
     const needInvoice = document.getElementById('store-chk-need-invoice')?.checked;
     if (needInvoice) {
-        const rucVal = document.getElementById('store-invoice-ruc').value.trim();
-        const companyVal = document.getElementById('store-invoice-company').value.trim();
-        const addressVal = document.getElementById('store-invoice-address').value.trim();
-        const emailVal = document.getElementById('store-invoice-email').value.trim();
+        const rucVal = sanitizeInput(document.getElementById('store-invoice-ruc').value);
+        const companyVal = sanitizeInput(document.getElementById('store-invoice-company').value);
+        const addressVal = sanitizeInput(document.getElementById('store-invoice-address').value);
+        const emailVal = sanitizeInput(document.getElementById('store-invoice-email').value);
 
         if (!rucVal || !companyVal || !addressVal || !emailVal) {
             if (typeof window.showToast === 'function') window.showToast('Por favor completa todos los campos de facturación RUC.', true);
@@ -3200,6 +3235,7 @@ export function handleCheckoutCompletion(paymentId, items) {
 }
 
 export async function finalizePaymentSuccess(redirectPaymentId, itemsToProcess) {
+    logCheckoutStep('payment_completed', { paymentId: redirectPaymentId, itemsCount: (itemsToProcess || []).length });
     if (window.checkoutUpgradeOriginalId) {
         try {
             const originalPaymentId = window.checkoutUpgradeOriginalId;

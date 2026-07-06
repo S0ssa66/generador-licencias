@@ -202,6 +202,12 @@ export default async function handler(req, res) {
                 `https://drive.google.com/file/d/${fileId}`,
                 `https://drive.google.com/open?id=${fileId}`,
                 `https://docs.google.com/uc?id=${fileId}`,
+                `/api/proxy-audio?id=${fileId}`,
+                `api/proxy-audio?id=${fileId}`,
+                `https://beatss.app/api/proxy-audio?id=${fileId}`,
+                `https://www.beatss.app/api/proxy-audio?id=${fileId}`,
+                `https://generador-licencias.vercel.app/api/proxy-audio?id=${fileId}`,
+                `http://localhost:8000/api/proxy-audio?id=${fileId}`,
                 fileId
             ];
 
@@ -230,7 +236,10 @@ export default async function handler(req, res) {
             }
         } catch (dbErr) {
             console.warn('Fallo en búsqueda indexada de preview (posible índice de Collection Group faltante):', dbErr.message);
-            // Fallback temporal de escaneo para no romper el servicio mientras se crea el índice si es necesario
+        }
+
+        // Fallback de escaneo si no se ha autorizado mediante la búsqueda por rango indexada
+        if (!isAuthorized) {
             try {
                 const db = getFirestore();
                 const beatsSnap = await db.collectionGroup('beats').get();

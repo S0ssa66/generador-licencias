@@ -181,8 +181,13 @@ def get_sales_analytics(user='sossa', period='all'):
     avg_ltv = (total_revenue / len(buyers_map)) if len(buyers_map) > 0 else 0.0
     
     mrr = 0.0
+    total_subscribers = 0
+    active_pro = 0
+    active_elite = 0
+    cancelled_subscribers = 0
+
     try:
-        # Escanear todos los archivos de respaldo para sumar suscripciones activas
+        # Escanear todos los archivos de respaldo para sumar suscripciones activas y canceladas
         for filename in os.listdir(DIRECTORY):
             if filename.endswith('_backup_sincronizado.json'):
                 path = os.path.join(DIRECTORY, filename)
@@ -199,14 +204,34 @@ def get_sales_analytics(user='sossa', period='all'):
                     if config_str:
                         config = json.loads(config_str) if isinstance(config_str, str) else config_str
                         plan = str(config.get('plan', '')).lower()
-                        if plan == 'pro':
-                            mrr += 10.0
-                        elif plan == 'elite':
-                            mrr += 30.0
+                        status = str(config.get('planStatus', '')).lower()
+                        
+                        if plan in ['pro', 'elite']:
+                            if status in ['cancelled', 'inactive']:
+                                cancelled_subscribers += 1
+                            else:
+                                total_subscribers += 1
+                                if plan == 'pro':
+                                    mrr += 10.0
+                                    active_pro += 1
+                                elif plan == 'elite':
+                                    mrr += 30.0
+                                    active_elite += 1
                 except Exception:
                     continue
     except Exception:
         pass
+
+    # Calcular Churn Rate mensual de suscripción
+    total_ever = total_subscribers + cancelled_subscribers
+    churn_rate = (cancelled_subscribers / total_ever * 100) if total_ever > 0 else 0.0
+    
+    # ARPU (Average Revenue Per User) para suscripciones
+    arpu = (mrr / total_subscribers) if total_subscribers > 0 else 0.0
+    
+    # LTV de suscripción estimado (usando fallback de 5% de churn de la industria si es 0)
+    effective_churn = (churn_rate / 100.0) if churn_rate > 0 else 0.05
+    subscription_ltv = arpu / effective_churn if arpu > 0 else 0.0
 
     return {
         "totalRevenue": total_revenue,
@@ -219,5 +244,8 @@ def get_sales_analytics(user='sossa', period='all'):
         "topBeats": top_beats,
         "topBuyers": top_buyers,
         "avgLtv": avg_ltv,
-        "mrr": mrr
+        "mrr": mrr,
+        "churnRate": churn_rate,
+        "subscriptionLtv": subscription_ltv,
+        "totalSubscribers": total_subscribers
     }

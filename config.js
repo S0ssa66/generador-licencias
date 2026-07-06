@@ -257,10 +257,13 @@ El Licenciatario mantendrá la obligación comercial y moral de otorgar los cré
 ### Cláusula 10. Incumplimiento y Penalizaciones
 Cualquier violación directa o indirecta a las cláusulas descritas en este documento facultará al Productor a rescindir la licencia de manera inmediata y sin derecho a reembolsos. El Licenciatario será civil y económicamente responsable de todos los daños, perjuicios, costos legales, honorarios de abogados y gastos judiciales en los que incurra el Productor con el fin de defender sus derechos de propiedad intelectual frente a un uso no autorizado de la obra musical.
 
-### Cláusula 11. Ley Aplicable, Jurisdicción y Competencia
+### Cláusula 11. Garantía de Clearance de Samples
+El Productor declara y garantiza que la composición musical y la grabación del Beat son obras originales del Productor y no infringen los derechos de propiedad intelectual de ningún tercero. En caso de que el Beat incorpore samples, grabaciones o composiciones de terceros ("Samples"), el Productor garantiza haber obtenido todas las licencias, autorizaciones y pagos de derechos correspondientes ("Clearance") para su explotación comercial en los términos aquí descritos, manteniendo al Licenciatario libre e indemne ante cualquier reclamación judicial o extrajudicial presentada por terceros a este respecto.
+
+### Cláusula 12. Ley Aplicable, Jurisdicción y Competencia
 Este acuerdo se rige de forma exclusiva por las leyes de **{{laws_jurisdiction}}**. Para cualquier controversia, litigio o reclamación derivada de la interpretación, validez o ejecución de este Contrato, las partes renuncian expresamente a cualquier otro fuero que por domicilio les corresponda y se someten expresamente a la jurisdicción de los jueces y **tribunales competentes de {{jurisdiction_place}}**.
 
-### Cláusula 12. Consentimiento, Aceptación por Acto de Pago y Medidas de Seguridad
+### Cláusula 13. Consentimiento, Aceptación por Acto de Pago y Medidas de Seguridad
 Las partes acuerdan que el presente contrato puede ser formalizado de manera física, digital o mediante firmas escaneadas intercambiadas por medios electrónicos.
 No obstante, en caso de no mediar una firma manuscrita, el Licenciatario declara haber leído este documento y manifiesta su **aceptación tácita, consentimiento legal y ratificación absoluta** de todos y cada uno de los términos aquí descritos mediante la ejecución del pago de la Tarifa de Licencia (\${{license_value}} USD) y la recepción conforme de los archivos musicales del Beat.
 
@@ -339,10 +342,13 @@ The Licensee will maintain the commercial and moral obligation to grant correspo
 ### Clause 10. Breach and Penalties
 Any direct or indirect violation of the clauses described in this document will entitle the Producer to terminate the license immediately and without right to refunds. The Licensee will be civilly and financially responsible for all damages, losses, legal costs, attorney fees, and court expenses incurred by the Producer to defend their intellectual property rights against unauthorized use of the musical work.
 
-### Clause 11. Applicable Law, Jurisdiction, and Competence
+### Clause 11. Sample Clearance Warranty
+The Producer represents and warrants that the musical composition and sound recording of the Beat are original works of the Producer and do not infringe upon the intellectual property rights of any third party. If the Beat contains pre-recorded samples, recordings, or compositions of third parties ("Samples"), the Producer warrants that they have obtained all necessary licenses, permissions, and royalty clearances ("Clearance") for their commercial exploitation under the terms described herein, keeping the Licensee free and harmless from any legal or extrajudicial claims brought by third parties in this regard.
+
+### Clause 12. Applicable Law, Jurisdiction, and Competence
 This agreement is governed exclusively by the laws of **{{laws_jurisdiction_en}}**. For any controversy, litigation, or claim arising from the interpretation, validity, or execution of this Contract, the parties expressly waive any other jurisdiction that may correspond to them by reason of their domicile and expressly submit to the jurisdiction of the competent judges and **courts of {{jurisdiction_place_en}}**.
 
-### Clause 12. Consent, Acceptance by Payment Act, and Security Measures
+### Clause 13. Consent, Acceptance by Payment Act, and Security Measures
 The parties agree that this contract may be executed physically, digitally, or via scanned signatures exchanged by electronic means.
 However, in the absence of a handwritten signature, the Licensee declares to have read this document and expresses their **tacit acceptance, legal consent, and absolute ratification** of each and every one of the terms described herein by executing the payment of the License Fee (\${{license_value}} USD) and the conforming receipt of the Beat musical files.
 

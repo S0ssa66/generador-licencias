@@ -149,6 +149,96 @@ def markdown_to_flowables(md_text, styles):
             
     return flowables
 
+_styles_cache = None
+
+def get_pdf_styles():
+    global _styles_cache
+    if _styles_cache is None:
+        _styles_cache = {
+            'H1Style': ParagraphStyle(
+                'H1',
+                fontName='Helvetica-Bold',
+                fontSize=16,
+                leading=20,
+                textColor=colors.HexColor("#1a202c"),
+                spaceAfter=10,
+                keepWithNext=True
+            ),
+            'H2Style': ParagraphStyle(
+                'H2',
+                fontName='Helvetica-Bold',
+                fontSize=12,
+                leading=16,
+                textColor=colors.HexColor("#2d3748"),
+                spaceAfter=8,
+                keepWithNext=True
+            ),
+            'H3Style': ParagraphStyle(
+                'H3',
+                fontName='Helvetica-Bold',
+                fontSize=10,
+                leading=13,
+                textColor=colors.HexColor("#4a5568"),
+                spaceAfter=6,
+                keepWithNext=True
+            ),
+            'NormalStyle': ParagraphStyle(
+                'Normal',
+                fontName='Helvetica',
+                fontSize=9,
+                leading=12.5,
+                textColor=colors.HexColor("#2d3748"),
+                spaceAfter=6
+            ),
+            'TableHeaderStyle': ParagraphStyle(
+                'TableHeader',
+                fontName='Helvetica-Bold',
+                fontSize=8.5,
+                leading=11,
+                textColor=colors.whitesmoke
+            ),
+            'TableCellStyle': ParagraphStyle(
+                'TableCell',
+                fontName='Helvetica',
+                fontSize=8,
+                leading=10.5,
+                textColor=colors.HexColor("#2d3748")
+            ),
+            'SignatureLabelStyle': ParagraphStyle(
+                'SigLabel',
+                fontName='Helvetica-Bold',
+                fontSize=8,
+                leading=10,
+                textColor=colors.HexColor("#4a5568"),
+                alignment=1
+            ),
+            'SignatureValueStyle': ParagraphStyle(
+                'SigVal',
+                fontName='Helvetica',
+                fontSize=8,
+                leading=10,
+                textColor=colors.HexColor("#718096"),
+                alignment=1
+            ),
+            'AcceptTitle': ParagraphStyle(
+                'AcceptTitle',
+                fontName='Helvetica-Bold',
+                fontSize=11,
+                leading=13,
+                textColor=colors.HexColor("#10b981"),
+                alignment=1
+            ),
+            'AcceptBody': ParagraphStyle(
+                'AcceptBody',
+                fontName='Helvetica',
+                fontSize=8,
+                leading=11,
+                textColor=colors.HexColor("#4a5568"),
+                alignment=1
+            )
+        }
+    return _styles_cache
+
 def generate_pdf_from_contract(filename, md_content, data_fields):
     doc = SimpleDocTemplate(
         filename,
@@ -159,73 +249,7 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
         bottomMargin=54
     )
     
-    styles = {
-        'H1Style': ParagraphStyle(
-            'H1',
-            fontName='Helvetica-Bold',
-            fontSize=16,
-            leading=20,
-            textColor=colors.HexColor("#1a202c"),
-            spaceAfter=10,
-            keepWithNext=True
-        ),
-        'H2Style': ParagraphStyle(
-            'H2',
-            fontName='Helvetica-Bold',
-            fontSize=12,
-            leading=16,
-            textColor=colors.HexColor("#2d3748"),
-            spaceAfter=8,
-            keepWithNext=True
-        ),
-        'H3Style': ParagraphStyle(
-            'H3',
-            fontName='Helvetica-Bold',
-            fontSize=10,
-            leading=13,
-            textColor=colors.HexColor("#4a5568"),
-            spaceAfter=6,
-            keepWithNext=True
-        ),
-        'NormalStyle': ParagraphStyle(
-            'Normal',
-            fontName='Helvetica',
-            fontSize=9,
-            leading=12.5,
-            textColor=colors.HexColor("#2d3748"),
-            spaceAfter=6
-        ),
-        'TableHeaderStyle': ParagraphStyle(
-            'TableHeader',
-            fontName='Helvetica-Bold',
-            fontSize=8.5,
-            leading=11,
-            textColor=colors.whitesmoke
-        ),
-        'TableCellStyle': ParagraphStyle(
-            'TableCell',
-            fontName='Helvetica',
-            fontSize=8,
-            leading=10.5,
-            textColor=colors.HexColor("#2d3748")
-        ),
-        'SignatureLabelStyle': ParagraphStyle(
-            'SigLabel',
-            fontName='Helvetica-Bold',
-            fontSize=8,
-            leading=10,
-            textColor=colors.HexColor("#4a5568"),
-            alignment=1
-        ),
-        'SignatureValueStyle': ParagraphStyle(
-            'SigVal',
-            fontName='Helvetica',
-            fontSize=8,
-            leading=10,
-            textColor=colors.HexColor("#718096"),
-            alignment=1
-        )
-    }
+    styles = get_pdf_styles()
     
     story = []
     
@@ -379,23 +403,8 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
         story.append(KeepTogether([sig_table]))
     else:
         # Tarjeta de aceptado vía pago centrada (para licencias no exclusivas)
-        accept_style_title = ParagraphStyle(
-            'AcceptTitle',
-            parent=styles['SignatureValueStyle'],
-            textColor=colors.HexColor("#10b981"),
-            fontSize=11,
-            leading=13,
-            alignment=1, # Center
-            fontName='Helvetica-Bold'
-        )
-        accept_style_body = ParagraphStyle(
-            'AcceptBody',
-            parent=styles['SignatureLabelStyle'],
-            textColor=colors.HexColor("#4a5568"),
-            fontSize=8,
-            leading=11,
-            alignment=1 # Center
-        )
+        accept_style_title = styles['AcceptTitle']
+        accept_style_body = styles['AcceptBody']
         
         ref_code = data_fields.get('refCode', 'REF')
         raw_date = data_fields.get('date', '')

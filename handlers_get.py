@@ -16,6 +16,60 @@ import sri_ride
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 
+def check_is_public_preview(file_id):
+    import os
+    import json
+    import urllib.request
+    
+    # 1. Buscar en archivos de respaldo locales primero
+    for filename in os.listdir(DIRECTORY):
+        if filename.endswith('_backup_sincronizado.json'):
+            try:
+                with open(os.path.join(DIRECTORY, filename), 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                for key, val in data.items():
+                    if key.endswith('_beats') and val:
+                        beats = json.loads(val)
+                        for beat in beats:
+                            mp3 = beat.get('mp3', '')
+                            artwork = beat.get('artwork', '')
+                            if file_id in mp3 or file_id in artwork:
+                                print(f"[+] [Local Preview Check] File {file_id} autorizado por backup local {filename}")
+                                return True
+            except Exception as e:
+                print(f"[⚠️ Local Preview Check] Error al leer backup {filename}: {e}")
+
+    # 2. Query Firestore via REST API
+    query_body = {
+        "structuredQuery": {
+            "from": [{"collectionId": "beats", "allDescendants": True}]
+        }
+    }
+    url = "https://firestore.googleapis.com/v1/projects/licencias-musicales/databases/(default)/documents:runQuery"
+    headers = {"Content-Type": "application/json"}
+    req = urllib.request.Request(
+        url, 
+        data=json.dumps(query_body).encode("utf-8"), 
+        headers=headers, 
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req) as response:
+            results = json.loads(response.read().decode("utf-8"))
+            for result in results:
+                doc = result.get("document", {})
+                fields = doc.get("fields", {})
+                mp3 = fields.get("mp3", {}).get("stringValue", "")
+                artwork = fields.get("artwork", {}).get("stringValue", "")
+                if file_id in mp3 or file_id in artwork:
+                    print(f"[+] [Local Preview Check] File {file_id} autorizado por Firestore REST RunQuery")
+                    return True
+    except Exception as e:
+        print(f"[⚠️ Firestore Preview Check] Error en runQuery: {e}")
+        
+    return False
+
+
 class HandlerGetMixin:
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -486,6 +540,44 @@ class HandlerGetMixin:
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
                 self.wfile.write(f'{{"error": "{str(e)}"}}'.encode('utf-8'))
+        elif parsed.path == '/api/gdrive-status':
+            auth_header = self.headers.get('Authorization')
+            if not auth_header or not auth_header.startswith('Bearer '):
+                self.send_response(401)
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(b'{"error": "No autorizado: falta el token de sesion"}')
+                return
+            id_token = auth_header.split('Bearer ')[1].strip()
+            
+            try:
+                from firestore_ops import fetch_firestore_document
+                gdrive_config = fetch_firestore_document('system/gdrive_config', id_token)
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                
+                if gdrive_config:
+                    res_data = {
+                        "linked": True,
+                        "email": gdrive_config.get("authorizedEmail", "masterjuego25@gmail.com"),
+                        "clientId": gdrive_config.get("clientId", "")
+                    }
+                else:
+                    res_data = {
+                        "linked": False,
+                        "email": None,
+                        "clientId": ""
+                    }
+                self.wfile.write(json.dumps(res_data).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode('utf-8'))
         elif parsed.path == '/api/proxy-audio':
             qs = parse_qs(parsed.query)
             file_id = qs.get('id', [None])[0]
@@ -520,6 +612,10 @@ class HandlerGetMixin:
             # Si no está autorizado por firma de descarga, permitir si es una petición autenticada del panel local
             if not is_authorized:
                 is_authorized = self.check_local_auth()
+                
+            # Si no está autorizado, comprobar si es un archivo de preview público (MP3 o Artwork)
+            if not is_authorized:
+                is_authorized = check_is_public_preview(file_id)
             
             if not is_authorized:
                 self.send_response(403)
@@ -528,6 +624,71 @@ class HandlerGetMixin:
                 self.wfile.write(b'{"error": "Firma no valida o expirada"}')
                 return
                 
+            # Intentar streaming desde Google Drive usando el token central
+            try:
+                import urllib.request
+                import urllib.parse
+                import json
+                
+                # Obtener la config de Firestore sin requerir token (reglas de lectura abiertas para system/gdrive_config)
+                config_url = "https://firestore.googleapis.com/v1/projects/licencias-musicales/databases/(default)/documents/system/gdrive_config"
+                req_conf = urllib.request.Request(config_url, method="GET")
+                with urllib.request.urlopen(req_conf) as resp_conf:
+                    gdrive_config = json.loads(resp_conf.read().decode("utf-8")).get("fields", {})
+                    
+                client_id = gdrive_config.get("clientId", {}).get("stringValue")
+                client_secret = gdrive_config.get("clientSecret", {}).get("stringValue")
+                refresh_token = gdrive_config.get("refreshToken", {}).get("stringValue")
+                
+                if client_id and client_secret and refresh_token:
+                    # Refrescar token
+                    token_url = "https://oauth2.googleapis.com/token"
+                    token_data = urllib.parse.urlencode({
+                        "client_id": client_id,
+                        "client_secret": client_secret,
+                        "refresh_token": refresh_token,
+                        "grant_type": "refresh_token"
+                    }).encode("utf-8")
+                    
+                    req_tok = urllib.request.Request(token_url, data=token_data, method="POST")
+                    with urllib.request.urlopen(req_tok) as resp_tok:
+                        token_res = json.loads(resp_tok.read().decode("utf-8"))
+                        access_token = token_res["access_token"]
+                        
+                    # Stream desde Google Drive
+                    drive_file_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+                    drive_headers = {"Authorization": f"Bearer {access_token}"}
+                    
+                    # Reenviar cabecera de Rango (Range) si está presente
+                    range_header = self.headers.get("Range") or self.headers.get("range")
+                    if range_header:
+                        drive_headers["Range"] = range_header
+                        
+                    req_file = urllib.request.Request(drive_file_url, headers=drive_headers, method="GET")
+                    try:
+                        with urllib.request.urlopen(req_file) as resp_file:
+                            self.send_response(resp_file.status)
+                            
+                            # Reenviar headers clave de Google Drive
+                            for h_name, h_val in resp_file.headers.items():
+                                if h_name.lower() in ["content-type", "content-length", "content-range", "accept-ranges"]:
+                                    self.send_header(h_name, h_val)
+                            self.send_header("Access-Control-Allow-Origin", "*")
+                            self.send_header("Cache-Control", "public, max-age=86400")
+                            self.end_headers()
+                            
+                            while True:
+                                chunk = resp_file.read(64 * 1024)
+                                if not chunk:
+                                    break
+                                self.wfile.write(chunk)
+                            return
+                    except Exception as stream_err:
+                        print(f"[⚠️ Local Proxy Stream] Error al descargar de Drive, haciendo redirect: {stream_err}")
+            except Exception as oauth_err:
+                print(f"[⚠️ Local Proxy Auth] Error al refrescar token de Google, haciendo redirect: {oauth_err}")
+                
+            # Fallback redirect original si falla el streaming
             direct_link = f"https://docs.google.com/uc?export=download&id={file_id}"
             self.send_response(302)
             self.send_header('Location', direct_link)

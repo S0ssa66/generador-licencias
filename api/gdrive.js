@@ -65,6 +65,7 @@ export default async function handler(req, res) {
     
     const isStatus = pathname.includes('/gdrive-status');
     const isUploadSession = pathname.includes('/gdrive-upload-session');
+    const isSetup = pathname.includes('/gdrive-setup');
 
     if (isStatus) {
         res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
@@ -118,6 +119,107 @@ export default async function handler(req, res) {
         }
     } 
     
+    else if (isSetup) {
+        res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+        if (req.method === 'OPTIONS') return res.status(200).end();
+
+        if (req.method !== 'POST') {
+            return res.status(405).json({ error: 'Método no permitido' });
+        }
+
+        const { code, clientId, clientSecret } = req.body;
+
+        if (!code || !clientId || !clientSecret) {
+            return res.status(400).json({ error: 'Faltan parámetros: code, clientId y clientSecret son obligatorios' });
+        }
+
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'No autorizado: falta el token de sesión' });
+        }
+        const idToken = authHeader.split('Bearer ')[1];
+        
+        let adminEmail = '';
+        try {
+            initFirebaseAdmin();
+            const decodedToken = await getAuth().verifyIdToken(idToken);
+            adminEmail = decodedToken.email || '';
+        } catch (err) {
+            console.error('Error al verificar token en api/gdrive-setup:', err);
+            return res.status(401).json({ error: 'No autorizado: token inválido o expirado' });
+        }
+
+        if (adminEmail.toLowerCase() !== 'masterjuego25@gmail.com') {
+            return res.status(403).json({ error: 'Acceso prohibido: solo el administrador de la plataforma puede vincular el Google Drive central.' });
+        }
+
+        try {
+            const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    code: code,
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    redirect_uri: 'postmessage',
+                    grant_type: 'authorization_code'
+                })
+            });
+
+            if (!tokenResponse.ok) {
+                const errData = await tokenResponse.text();
+                throw new Error(`Google token exchange error: ${errData}`);
+            }
+
+            const tokenData = await tokenResponse.json();
+            const { access_token, refresh_token } = tokenData;
+
+            if (!refresh_token) {
+                throw new Error('Google no devolvió un refresh_token. Si ya vinculaste la cuenta, primero desvincúlala en los accesos de Google para que te vuelva a dar el consentimiento offline.');
+            }
+
+            const userinfoResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { 'Authorization': `Bearer ${access_token}` }
+            });
+
+            let authorizedEmail = 'masterjuego25@gmail.com';
+            if (userinfoResponse.ok) {
+                const userinfo = await userinfoResponse.json();
+                authorizedEmail = userinfo.email || authorizedEmail;
+            }
+
+            const db = getFirestore();
+            const configRef = db.collection('system').doc('gdrive_config');
+            
+            await configRef.set({
+                clientId: clientId,
+                clientSecret: clientSecret,
+                refreshToken: refresh_token,
+                authorizedEmail: authorizedEmail,
+                updatedAt: new Date().toISOString(),
+                updatedBy: adminEmail
+            });
+
+            console.log(`✅ Google Drive Central vinculado exitosamente a: ${authorizedEmail}`);
+
+            return res.status(200).json({
+                success: true,
+                email: authorizedEmail,
+                message: `¡Google Drive de la plataforma vinculado exitosamente a ${authorizedEmail}!`
+            });
+
+        } catch (error) {
+            console.error('❌ Error en gdrive-setup:', error);
+            return res.status(500).json({
+                error: 'Error interno al vincular Google Drive',
+                details: error.message
+            });
+        }
+    }
+
     else if (isUploadSession) {
         res.setHeader('Access-Control-Allow-Origin', getCorsOrigin(req));
         res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');

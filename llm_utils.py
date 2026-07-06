@@ -79,7 +79,7 @@ class GeminiProvider(LLMProvider):
             url_with_key = f"{self.url}?key={self.api_key}"
             req = urllib.request.Request(url_with_key, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
             try:
-                with urllib.request.urlopen(req) as response:
+                with urllib.request.urlopen(req, timeout=45) as response:
                     res_data = json.loads(response.read().decode("utf-8"))
                     return res_data["candidates"][0]["content"]["parts"][0]["text"]
             except urllib.error.HTTPError as e:
