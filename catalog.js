@@ -431,7 +431,12 @@ export function initFileUploads() {
 
         try {
             const config = window.producerConfig || {};
-            const storageProvider = config.storageProvider || 'gdrive-central';
+            let storageProvider = config.storageProvider || 'gdrive-central';
+            
+            // Si eligió Drive personal pero no configuró las credenciales, usar el central
+            if (storageProvider === 'gdrive' && !config.gdriveClientId) {
+                storageProvider = 'gdrive-central';
+            }
 
             if (storageProvider === 'alternative') {
                 throw new Error("Preferencia de almacenamiento establecida a servidores alternativos.");

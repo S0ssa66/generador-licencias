@@ -2310,7 +2310,12 @@ async function fetchWithTimeout(resource, options = {}) {
 // Subir PDF a la nube usando Google Drive > GoFile > PixelDrain > file.io > tmpfiles.org
 async function uploadPDFToCloud(base64DataUri, filename) {
     const blob = await dataURLtoBlob(base64DataUri);
-    const storageProvider = producerConfig.storageProvider || 'gdrive-central';
+    let storageProvider = producerConfig.storageProvider || 'gdrive-central';
+
+    // Si eligió Drive personal pero no configuró las credenciales, usar el central
+    if (storageProvider === 'gdrive' && !producerConfig.gdriveClientId) {
+        storageProvider = 'gdrive-central';
+    }
 
     // 0. Intentar con Google Drive Central (plataforma)
     if (storageProvider === 'gdrive-central' && auth.currentUser) {
