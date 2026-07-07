@@ -1982,23 +1982,25 @@ async function loadPlatformGDriveStatus() {
             headers: { 'Authorization': `Bearer ${idToken}` }
         });
         const data = await res.json();
-        if (res.ok && data.linked) {
-            statusEl.innerHTML = `<span style="color: #48bb78; font-weight: 600;">✓ Vinculado a:</span> ${data.email}`;
-            // Rellenar Client ID si está vacío
-            const idInput = document.getElementById('cfg-gdrive-client-id');
-            if (idInput && !idInput.value.trim()) {
-                idInput.value = data.clientId || '';
-            }
-            const secretInput = document.getElementById('cfg-gdrive-client-secret');
-            if (secretInput) {
+        // Rellenar Client ID si está disponible
+        const idInput = document.getElementById('cfg-gdrive-client-id');
+        if (idInput && data.clientId) {
+            idInput.value = data.clientId;
+        }
+        
+        const secretInput = document.getElementById('cfg-gdrive-client-secret');
+        if (secretInput) {
+            if (data.hasSecret) {
                 secretInput.placeholder = '•••••••••••••••••••••••• (Guardado)';
-            }
-        } else {
-            statusEl.innerHTML = `<span style="color: #e53e3e; font-weight: 600;">✗ No vinculado</span>`;
-            const secretInput = document.getElementById('cfg-gdrive-client-secret');
-            if (secretInput) {
+            } else {
                 secretInput.placeholder = 'Ingresa el Client Secret de Google Cloud';
             }
+        }
+
+        if (res.ok && data.linked) {
+            statusEl.innerHTML = `<span style="color: #48bb78; font-weight: 600;">✓ Vinculado a:</span> ${data.email}`;
+        } else {
+            statusEl.innerHTML = `<span style="color: #e53e3e; font-weight: 600;">✗ No vinculado</span>`;
         }
     } catch (e) {
         console.error('Error al cargar estado de Drive Central:', e);
@@ -2014,7 +2016,9 @@ function initPlatformGDriveOAuth() {
         showToast('Por favor, ingresa el Client ID de Google para vincular.', true);
         return;
     }
-    if (!clientSecret) {
+    const secretInput = document.getElementById('cfg-gdrive-client-secret');
+    const isSecretSaved = secretInput && secretInput.placeholder && secretInput.placeholder.includes('Guardado');
+    if (!clientSecret && !isSecretSaved) {
         showToast('Por favor, ingresa el Client Secret de Google para vincular.', true);
         return;
     }

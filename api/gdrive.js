@@ -98,16 +98,20 @@ export default async function handler(req, res) {
 
             if (configSnap.exists) {
                 const data = configSnap.data();
+                const hasSecret = !!data.clientSecret;
+                const linked = !!(data.refreshToken && data.refreshToken.trim());
                 return res.status(200).json({
-                    linked: true,
-                    email: data.authorizedEmail || 'masterjuego25@gmail.com',
-                    clientId: data.clientId || ''
+                    linked: linked,
+                    email: linked ? (data.authorizedEmail || 'masterjuego25@gmail.com') : null,
+                    clientId: data.clientId || '',
+                    hasSecret: hasSecret
                 });
             } else {
                 return res.status(200).json({
                     linked: false,
                     email: null,
-                    clientId: ''
+                    clientId: '',
+                    hasSecret: false
                 });
             }
         } catch (error) {
@@ -132,8 +136,15 @@ export default async function handler(req, res) {
 
         const { code, clientId, clientSecret } = req.body;
 
-        if (!code || !clientId || !clientSecret) {
-            return res.status(400).json({ error: 'Faltan parámetros: code, clientId y clientSecret son obligatorios' });
+        const db = getFirestore();
+        const configSnap = await db.collection('system').doc('gdrive_config').get();
+        const existingData = configSnap.exists ? configSnap.data() : {};
+
+        const finalClientId = (clientId && clientId.trim()) || existingData.clientId;
+        const finalClientSecret = (clientSecret && clientSecret.trim()) || existingData.clientSecret;
+
+        if (!code || !finalClientId || !finalClientSecret) {
+            return res.status(400).json({ error: 'Faltan parámetros: code es obligatorio y se requiere Client ID y Secret en el servidor o la petición.' });
         }
 
         const authHeader = req.headers.authorization;
@@ -162,8 +173,8 @@ export default async function handler(req, res) {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({
                     code: code,
-                    client_id: clientId,
-                    client_secret: clientSecret,
+                    client_id: finalClientId,
+                    client_secret: finalClientSecret,
                     redirect_uri: 'postmessage',
                     grant_type: 'authorization_code'
                 })
@@ -195,8 +206,8 @@ export default async function handler(req, res) {
             const configRef = db.collection('system').doc('gdrive_config');
             
             await configRef.set({
-                clientId: clientId,
-                clientSecret: clientSecret,
+                clientId: finalClientId,
+                clientSecret: finalClientSecret,
                 refreshToken: refresh_token,
                 authorizedEmail: authorizedEmail,
                 updatedAt: new Date().toISOString(),
