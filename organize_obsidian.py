@@ -10,12 +10,12 @@ DOCS_DIR = os.path.join(PROJECT_DIR, "docs")
 DASHBOARD_PATH = os.path.join(PROJECT_DIR, "Dashboard BEATSS.md")
 
 CATEGORIES = {
-    "10_Pagos": ["stripe", "ebay", "pago", "order", "receipt", "invoice", "financiera", "fee", "payphone", "deuna", "kushki", "pagoplux", "transferencia", "sri", "ruc", "cedula", "factura", "xml", "p12", "firma", "billing", "taxes", "impuestos", "rimpe"],
-    "20_Soporte": ["ayuda", "soporte", "faq", "guide", "educacion", "client", "customer", "ticket", "claim", "contentid", "disputa", "reclamacion"],
-    "30_Contratos": ["contrato", "licencia", "permiso", "autorizacion", "signature", "firma", "release", "terms", "condiciones", "privacidad", "acuerdo", "split", "sheet", "master"],
-    "40_Subagentes": ["agent", "subagent", "coordinador", "expert", "prompt", "system", "orchestrator", "coordination", "multiagent", "ai"],
-    "50_Seguridad": ["security", "audit", "rules", "vulnerabilidad", "firewall", "auth", "password", "key", "token", "secret", "cors", "encryption", "ssl", "credentials"],
-    "90_Otros": []
+    "2_Areas/10_Pagos": ["stripe", "ebay", "pago", "order", "receipt", "invoice", "financiera", "fee", "payphone", "deuna", "kushki", "pagoplux", "transferencia", "sri", "ruc", "cedula", "factura", "xml", "p12", "firma", "billing", "taxes", "impuestos", "rimpe"],
+    "3_Recursos/20_Soporte": ["ayuda", "soporte", "faq", "guide", "educacion", "client", "customer", "ticket", "claim", "contentid", "disputa", "reclamacion"],
+    "2_Areas/30_Contratos": ["contrato", "licencia", "permiso", "autorizacion", "signature", "firma", "release", "terms", "condiciones", "privacidad", "acuerdo", "split", "sheet", "master"],
+    "3_Recursos/40_Subagentes": ["agent", "subagent", "coordinador", "expert", "prompt", "system", "orchestrator", "coordination", "multiagent", "ai"],
+    "2_Areas/50_Seguridad": ["security", "audit", "rules", "vulnerabilidad", "firewall", "auth", "password", "key", "token", "secret", "cors", "encryption", "ssl", "credentials"],
+    "4_Archivo/90_Otros": []
 }
 
 def clean_name(name):
@@ -96,11 +96,11 @@ def organize_files():
                         moved = True
                         break
                 if not moved:
-                    # Move to fallback 90_Otros
-                    dest_dir = os.path.join(DOCS_DIR, "90_Otros")
+                    # Move to fallback 4_Archivo/90_Otros
+                    dest_dir = os.path.join(DOCS_DIR, "4_Archivo/90_Otros")
                     os.makedirs(dest_dir, exist_ok=True)
                     shutil.move(entry_path, os.path.join(dest_dir, entry))
-                    print(f"[+] Moved fallback: {entry} -> docs/90_Otros/")
+                    print(f"[+] Moved fallback: {entry} -> docs/4_Archivo/90_Otros/")
 
 def generate_dashboard():
     print("Generating Dashboard BEATSS.md...")
@@ -114,14 +114,14 @@ Bienvenido a la Bóveda de Documentación de **BEATSS**. Este panel sirve como e
 """
 
     sections = []
-    cats = ["10_Pagos", "20_Soporte", "30_Contratos", "40_Subagentes", "50_Seguridad", "90_Otros"]
+    cats = ["2_Areas/10_Pagos", "3_Recursos/20_Soporte", "2_Areas/30_Contratos", "3_Recursos/40_Subagentes", "2_Areas/50_Seguridad", "4_Archivo/90_Otros"]
     cat_titles = {
-        "10_Pagos": "💳 10. Pagos, SRI y Viabilidad Financiera\nDocumentos de pasarelas de pago (PayPhone, Deuna!, Stripe), facturación electrónica del SRI y contabilidad local.",
-        "20_Soporte": "🤝 20. Soporte y Educación al Cliente\nGuías de soporte, preguntas frecuentes y asistencia sobre reclamos de Content ID.",
-        "30_Contratos": "📜 30. Contratos y Licenciamiento\nLicencias de beats, acuerdos de splits de regalías, contratos de distribución y políticas.",
-        "40_Subagentes": "🤖 40. Organización de Subagentes\nEstructuras de prompts, flujos de orquestación y funcionamiento técnico de la red de subagentes.",
-        "50_Seguridad": "🔒 50. Seguridad de Datos\nAuditorías de Firebase, configuraciones de CORS, manejo de tokens y llaves de cifrado.",
-        "90_Otros": "📂 90. Otros Documentos\nDocumentos y archivos varios clasificados automáticamente sin palabras clave específicas."
+        "2_Areas/10_Pagos": "💳 10. Pagos, SRI y Viabilidad Financiera\nDocumentos de pasarelas de pago (PayPhone, Deuna!, Stripe), facturación electrónica del SRI y contabilidad local.",
+        "3_Recursos/20_Soporte": "🤝 20. Soporte y Educación al Cliente\nGuías de soporte, preguntas frecuentes y asistencia sobre reclamos de Content ID.",
+        "2_Areas/30_Contratos": "📜 30. Contratos y Licenciamiento\nLicencias de beats, acuerdos de splits de regalías, contratos de distribución y políticas.",
+        "3_Recursos/40_Subagentes": "🤖 40. Organización de Subagentes\nEstructuras de prompts, flujos de orquestación y funcionamiento técnico de la red de subagentes.",
+        "2_Areas/50_Seguridad": "🔒 50. Seguridad de Datos\nAuditorías de Firebase, configuraciones de CORS, manejo de tokens y llaves de cifrado.",
+        "4_Archivo/90_Otros": "📂 90. Otros Documentos\nDocumentos y archivos varios clasificados automáticamente sin palabras clave específicas."
     }
 
     for cat in cats:
