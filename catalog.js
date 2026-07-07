@@ -419,7 +419,7 @@ async function uploadToCentralDrive(file, config, onProgress) {
         let errMsg = 'No se pudo iniciar la sesión de subida en Google Drive Central.';
         try {
             const sessionErr = await sessionRes.json();
-            errMsg = sessionErr.error || errMsg;
+            errMsg = sessionErr.error ? (sessionErr.error + (sessionErr.details ? `: ${sessionErr.details}` : "")) : errMsg;
         } catch (e) {
             try {
                 errMsg = await sessionRes.text();
