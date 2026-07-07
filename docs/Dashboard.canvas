@@ -1,0 +1,95 @@
+{
+  "nodes": [
+    {
+      "id": "node_bienvenido",
+      "type": "file",
+      "file": "Users/Bienvenido.md",
+      "x": -400,
+      "y": -200,
+      "width": 350,
+      "height": 450
+    },
+    {
+      "id": "node_task",
+      "type": "file",
+      "file": "Users/task.md",
+      "x": 0,
+      "y": -200,
+      "width": 350,
+      "height": 450
+    },
+    {
+      "id": "node_walkthrough",
+      "type": "file",
+      "file": "Users/walkthrough.md",
+      "x": 400,
+      "y": -200,
+      "width": 350,
+      "height": 450
+    },
+    {
+      "id": "node_stripe",
+      "type": "file",
+      "file": "2_Areas/10_Pagos/viabilidad_stripe_ecuador_llc.md",
+      "x": -400,
+      "y": 300,
+      "width": 350,
+      "height": 450
+    },
+    {
+      "id": "node_ruc",
+      "type": "file",
+      "file": "2_Areas/10_Pagos/opciones_pago_con_ruc_ecuador.md",
+      "x": 0,
+      "y": 300,
+      "width": 350,
+      "height": 450
+    },
+    {
+      "id": "node_contratos",
+      "type": "file",
+      "file": "2_Areas/30_Contratos/analisis_contratos_pdf.md",
+      "x": 400,
+      "y": 300,
+      "width": 350,
+      "height": 450
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_1",
+      "fromNode": "node_bienvenido",
+      "fromSide": "right",
+      "toNode": "node_task",
+      "toSide": "left"
+    },
+    {
+      "id": "edge_2",
+      "fromNode": "node_task",
+      "fromSide": "right",
+      "toNode": "node_walkthrough",
+      "toSide": "left"
+    },
+    {
+      "id": "edge_3",
+      "fromNode": "node_bienvenido",
+      "fromSide": "bottom",
+      "toNode": "node_stripe",
+      "toSide": "top"
+    },
+    {
+      "id": "edge_4",
+      "fromNode": "node_task",
+      "fromSide": "bottom",
+      "toNode": "node_ruc",
+      "toSide": "top"
+    },
+    {
+      "id": "edge_5",
+      "fromNode": "node_walkthrough",
+      "fromSide": "bottom",
+      "toNode": "node_contratos",
+      "toSide": "top"
+    }
+  ]
+}
