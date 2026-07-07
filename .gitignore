@@ -29,3 +29,6 @@ subagent_memories.json
 
 # Added by ggshield
 .cache_ggshield
+
+# Graphify artifacts
+graphify-out/
