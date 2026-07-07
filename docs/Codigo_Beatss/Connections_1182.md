@@ -1,0 +1,17 @@
+---
+source_file: "docs/3_Recursos/Codigo_Beatss/⚠️ 3. Abuso de Almacenamiento y Falta de Tipo de Datos (Riesgo DoS  Inyección).md"
+type: "document"
+community: "⚠️ 3. Abuso de Almacenamiento y Falta de Tipo de Datos (Riesgo DoS / Inyección)"
+location: "L14"
+tags:
+  - graphify/document
+  - graphify/EXTRACTED
+  - community/_3_Abuso_de_Almacenamiento_y_Falta_de_Tipo_de_Datos_Riesgo_DoS_/_Inyeccin
+---
+
+# Connections
+
+## Connections
+- [[⚠️ 3. Abuso de Almacenamiento y Falta de Tipo de Datos (Riesgo DoS  Inyección)_2]] - `contains` [EXTRACTED]
+
+#graphify/document #graphify/EXTRACTED #community/_3_Abuso_de_Almacenamiento_y_Falta_de_Tipo_de_Datos_Riesgo_DoS_/_Inyeccin

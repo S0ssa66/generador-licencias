@@ -1,0 +1,18 @@
+---
+source_file: "docs/3_Recursos/Codigo_Beatss/initPublicStore().md"
+type: "document"
+community: "initPublicStore().md"
+location: "L12"
+tags:
+  - graphify/document
+  - graphify/EXTRACTED
+  - community/initPublicStoremd
+---
+
+# initPublicStore()
+
+## Connections
+- [[Connections_754]] - `contains` [EXTRACTED]
+- [[initPublicStore()_1]] - `contains` [EXTRACTED]
+
+#graphify/document #graphify/EXTRACTED #community/initPublicStoremd

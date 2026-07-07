@@ -1,0 +1,17 @@
+---
+source_file: "docs/2_Areas/10_Pagos/opciones_pago_con_ruc_ecuador.md"
+type: "document"
+community: "1. Nuevas Opciones de Pago Habilitadas con RUC"
+location: "L11"
+tags:
+  - graphify/document
+  - graphify/EXTRACTED
+  - community/1_Nuevas_Opciones_de_Pago_Habilitadas_con_RUC
+---
+
+# A. PayPhone Business (Corporativo con RUC)
+
+## Connections
+- [[1. Nuevas Opciones de Pago Habilitadas con RUC]] - `contains` [EXTRACTED]
+
+#graphify/document #graphify/EXTRACTED #community/1_Nuevas_Opciones_de_Pago_Habilitadas_con_RUC

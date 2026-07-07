@@ -1,0 +1,17 @@
+---
+source_file: "docs/3_Recursos/Codigo_Beatss/8. ✍️ Sincronización de Firmas y Corrección de Color.md"
+type: "document"
+community: "Corrección Visual y de Color de la Firma (Duplicados y PDF).md"
+location: "L14"
+tags:
+  - graphify/document
+  - graphify/EXTRACTED
+  - community/Correccin_Visual_y_de_Color_de_la_Firma_Duplicados_y_PDFmd
+---
+
+# Connections
+
+## Connections
+- [[8. ✍️ Sincronización de Firmas y Corrección de Color_1]] - `contains` [EXTRACTED]
+
+#graphify/document #graphify/EXTRACTED #community/Correccin_Visual_y_de_Color_de_la_Firma_Duplicados_y_PDFmd

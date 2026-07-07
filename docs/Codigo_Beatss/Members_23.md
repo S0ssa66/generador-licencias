@@ -1,0 +1,17 @@
+---
+source_file: "docs/3_Recursos/Codigo_Beatss/_COMMUNITY_accounting.js.md"
+type: "document"
+community: "accounting.js"
+location: "L10"
+tags:
+  - graphify/document
+  - graphify/EXTRACTED
+  - community/accountingjs
+---
+
+# Members
+
+## Connections
+- [[accounting.js_1]] - `contains` [EXTRACTED]
+
+#graphify/document #graphify/EXTRACTED #community/accountingjs

@@ -1,0 +1,26 @@
+---
+source_file: "docs/3_Recursos/Codigo_Beatss/updateMediaSession().md"
+type: "document"
+community: "sales.js"
+location: "L1"
+tags:
+  - graphify/document
+  - graphify/EXTRACTED
+  - community/salesjs
+---
+
+# updateMediaSession().md
+
+## Connections
+- [[_COMMUNITY_player.js]] - `references` [EXTRACTED]
+- [[playNextBeat()_1]] - `references` [EXTRACTED]
+- [[playNextLocalBeat()_1]] - `references` [EXTRACTED]
+- [[playPrevBeat()_1]] - `references` [EXTRACTED]
+- [[playPrevLocalBeat()_1]] - `references` [EXTRACTED]
+- [[player.js_2]] - `references` [EXTRACTED]
+- [[setPlayButtonState()_1]] - `references` [EXTRACTED]
+- [[togglePlayBeat()_1]] - `references` [EXTRACTED]
+- [[toggleStorePlay()_1]] - `references` [EXTRACTED]
+- [[updateMediaSession()_2]] - `contains` [EXTRACTED]
+
+#graphify/document #graphify/EXTRACTED #community/salesjs

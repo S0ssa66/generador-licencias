@@ -1,0 +1,17 @@
+---
+source_file: "docs/3_Recursos/Codigo_Beatss/Code Examples_6.md"
+type: "document"
+community: "Service Workers & Caching Strategies.md"
+location: "L14"
+tags:
+  - graphify/document
+  - graphify/EXTRACTED
+  - community/Service_Workers__Caching_Strategiesmd
+---
+
+# Connections
+
+## Connections
+- [[Code Examples_7]] - `contains` [EXTRACTED]
+
+#graphify/document #graphify/EXTRACTED #community/Service_Workers__Caching_Strategiesmd

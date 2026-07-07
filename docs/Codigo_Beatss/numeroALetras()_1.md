@@ -1,0 +1,21 @@
+---
+source_file: "docs/3_Recursos/Codigo_Beatss/numeroALetras().md"
+type: "document"
+community: "compileContract()_1.md"
+location: "L1"
+tags:
+  - graphify/document
+  - graphify/EXTRACTED
+  - community/compileContract_1md
+---
+
+# numeroALetras().md
+
+## Connections
+- [[_COMMUNITY_editor.js]] - `references` [EXTRACTED]
+- [[compileContract()_1_1]] - `references` [EXTRACTED]
+- [[compileContractData()_1]] - `references` [EXTRACTED]
+- [[editor.js_2]] - `references` [EXTRACTED]
+- [[numeroALetras()_2]] - `contains` [EXTRACTED]
+
+#graphify/document #graphify/EXTRACTED #community/compileContract_1md

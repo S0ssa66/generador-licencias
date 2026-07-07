@@ -1,0 +1,17 @@
+---
+source_file: "docs/3_Recursos/Codigo_Beatss/1. Ambiente de Pruebas (Ambiente 1).md"
+type: "document"
+community: "1. Ambiente de Pruebas (Ambiente 1)"
+location: "L14"
+tags:
+  - graphify/document
+  - graphify/EXTRACTED
+  - community/1_Ambiente_de_Pruebas_Ambiente_1
+---
+
+# Connections
+
+## Connections
+- [[1. Ambiente de Pruebas (Ambiente 1)_2]] - `contains` [EXTRACTED]
+
+#graphify/document #graphify/EXTRACTED #community/1_Ambiente_de_Pruebas_Ambiente_1

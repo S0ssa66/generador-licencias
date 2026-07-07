@@ -1,0 +1,18 @@
+---
+source_file: "docs/3_Recursos/Codigo_Beatss/Envía un correo de entrega de factura electrónica al comprador.     Utiliza la A.md"
+type: "document"
+community: "send_invoice_email().md"
+location: "L12"
+tags:
+  - graphify/document
+  - graphify/EXTRACTED
+  - community/send_invoice_emailmd
+---
+
+# Envía un correo de entrega de factura electrónica al comprador.     Utiliza la A
+
+## Connections
+- [[Connections_254]] - `contains` [EXTRACTED]
+- [[Envía un correo de entrega de factura electrónica al comprador.     Utiliza la A_1]] - `contains` [EXTRACTED]
+
+#graphify/document #graphify/EXTRACTED #community/send_invoice_emailmd
