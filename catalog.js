@@ -554,6 +554,7 @@ export function initFileUploads() {
             
             let downloadURL;
             let uploadSuccess = false;
+            let detailedError = "";
 
             if (storageProvider === 'gdrive-central') {
                 activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Central...`;
@@ -566,6 +567,7 @@ export function initFileUploads() {
                     });
                     uploadSuccess = true;
                 } catch (driveErr) {
+                    detailedError = driveErr.message;
                     console.warn("Fallo al subir a Google Drive Central, intentando fallback a servidores alternativos...", driveErr);
                 }
             } else {
@@ -579,6 +581,7 @@ export function initFileUploads() {
                     });
                     uploadSuccess = true;
                 } catch (driveErr) {
+                    detailedError = driveErr.message;
                     console.warn("Fallo al subir a Google Drive Personal, intentando fallback a Google Drive Central...", driveErr);
                     try {
                         activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Central (Fallback)...`;
@@ -590,13 +593,14 @@ export function initFileUploads() {
                         });
                         uploadSuccess = true;
                     } catch (centralErr) {
+                        detailedError += " | Fallback: " + centralErr.message;
                         console.error("Fallo también en la subida a Google Drive Central (Fallback):", centralErr);
                     }
                 }
             }
 
             if (!uploadSuccess) {
-                throw new Error("No se pudo subir a Google Drive.");
+                throw new Error("No se pudo subir a Google Drive: " + detailedError);
             }
 
             const targetInput = document.getElementById(activeUploadTarget);
