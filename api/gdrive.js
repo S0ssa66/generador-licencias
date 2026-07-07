@@ -324,7 +324,8 @@ export default async function handler(req, res) {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json; charset=UTF-8',
-                    'X-Upload-Content-Type': contentType || 'application/octet-stream'
+                    'X-Upload-Content-Type': contentType || 'application/octet-stream',
+                    'Origin': req.headers.origin || 'https://beatss.app'
                 },
                 body: JSON.stringify({
                     name: fileName,
