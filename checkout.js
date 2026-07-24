@@ -2178,7 +2178,7 @@ async function preparePaidLicenseDeliveries(deliveries, buyerData) {
             container.classList.remove('printing-pdf');
         }
 
-        const response = await fetch('/api/upload-license-pdf', {
+        const response = await fetch('/api/confirm-purchase?action=upload-license-pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
