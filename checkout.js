@@ -56,6 +56,10 @@ let checkoutCurrentStep = 1;
 let storePaymentReceiptBase64 = null;
 let checkoutIsOfferMode = false;
 
+// Deuna Dynamic Payment State
+let deunaListenerUnsubscribe = null;
+let currentDeunaPaymentId = null;
+
 // Función de sanitización XSS: escapa caracteres HTML peligrosos en datos de usuario
 // Usa la función global si dashboard.js ya la definió, de lo contrario crea la propia
 const sanitizeHtml = window.sanitizeHtml || function(str) {
@@ -1313,6 +1317,16 @@ export function updateCheckoutStepView(step) {
 }
 
 export function switchStorePaymentMethod(method) {
+    // Cleanup Deuna payment listener if switching away from deuna
+    if (method !== 'deuna' && deunaListenerUnsubscribe) {
+        deunaListenerUnsubscribe();
+        deunaListenerUnsubscribe = null;
+        const deunaStatusMsg = document.getElementById('deuna-status-message');
+        if (deunaStatusMsg) deunaStatusMsg.innerHTML = '';
+        const mobilePayBtn = document.getElementById('deuna-mobile-pay-btn');
+        if (mobilePayBtn) mobilePayBtn.style.display = 'none';
+    }
+
     // Update active card styles
     document.querySelectorAll('.pay-card-btn').forEach(btn => {
         const id = btn.id;
@@ -1390,6 +1404,10 @@ export function switchStorePaymentMethod(method) {
         receiptSection.style.display = 'block';
         nextBtn.style.display = 'block';
         nextBtn.textContent = 'Confirmar Compra';
+
+        if (method === 'deuna') {
+            initiateDeunaDynamicPayment();
+        }
     }
 
     // Sincronizar estado del Click-wrap tras cambiar método de pago
@@ -1807,6 +1825,11 @@ export function setupStoreCheckout() {
         if (modal) {
             modal.style.display = 'none';
         }
+        // Cleanup Deuna payment listener if active
+        if (deunaListenerUnsubscribe) {
+            deunaListenerUnsubscribe();
+            deunaListenerUnsubscribe = null;
+        }
     };
 
     const cancelBtn = document.getElementById('btn-checkout-cancel');
@@ -2085,8 +2108,8 @@ export function setupStoreCheckout() {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // Comprimir como JPEG con calidad 0.85
-                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+                // Comprimir como JPEG con calidad 0.7
+                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
                 storePaymentReceiptBase64 = compressedBase64;
             };
             img.src = evt.target.result;
@@ -2111,6 +2134,64 @@ export function loadStorePayPalSDK(clientId, callback) {
     sdk.setAttribute('data-client-id', clientId);
     sdk.onload = callback;
     document.head.appendChild(sdk);
+}
+
+async function preparePaidLicenseDeliveries(deliveries, buyerData) {
+    if (!Array.isArray(deliveries) || deliveries.length === 0) {
+        throw new Error('El servidor no devolvió contratos pendientes para la entrega.');
+    }
+    if (!window.compileContractData) {
+        throw new Error('No se cargó el generador de contratos.');
+    }
+    if (typeof html2pdf === 'undefined') {
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+    }
+    if (typeof html2pdf === 'undefined') {
+        throw new Error('No se pudo cargar el generador de PDF.');
+    }
+
+    const container = document.getElementById('buyer-rendered-contract-content');
+    if (!container) throw new Error('No se encontró el área de generación del contrato.');
+
+    for (const delivery of deliveries) {
+        const orderData = {
+            ...buyerData,
+            beatName: delivery.beatName,
+            licenseType: delivery.licenseType,
+            reference: delivery.reference
+        };
+        const contract = window.compileContractData(orderData, window.storeProducerConfig, 'licencia_uso', 'es');
+        container.innerHTML = contract.html;
+        container.classList.add('printing-pdf');
+
+        let pdfBase64;
+        try {
+            pdfBase64 = await html2pdf().from(container).set({
+                margin: [15, 20, 15, 20],
+                filename: `Licencia_${String(delivery.licenseType || 'basic').toUpperCase()}_${delivery.reference}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'] }
+            }).outputPdf('datauristring');
+        } finally {
+            container.classList.remove('printing-pdf');
+        }
+
+        const response = await fetch('/api/upload-license-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                paymentId: delivery.paymentId,
+                deliveryToken: delivery.deliveryToken,
+                pdfBase64
+            })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || 'No se pudo guardar y enviar el contrato PDF.');
+        }
+    }
 }
 
 export function renderStorePayPalButton(clientId) {
@@ -2203,7 +2284,8 @@ export function renderStorePayPalButton(clientId) {
                         
                         const result = await response.json();
                         if (response.ok && result.success) {
-                            if (typeof window.showToast === 'function') window.showToast('¡Pago verificado y licencias enviadas con éxito!');
+                            await preparePaidLicenseDeliveries(result.deliveries, payload);
+                            if (typeof window.showToast === 'function') window.showToast('¡Pago verificado, licencia PDF y archivos enviados con éxito!');
                             
                             clearPurchasedItems();
                             document.getElementById('beat-checkout-modal').style.display = 'none';
@@ -2317,15 +2399,8 @@ export async function submitBeatPurchasePayment(method, reference = '') {
     try {
         let finalReceiptUrl = '';
         if (method !== 'paypal' && storePaymentReceiptBase64) {
-            if (nextBtn) nextBtn.innerHTML = '⏳ Subiendo comprobante...';
-            
-            if (typeof window.dataURLtoBlob !== 'function' || typeof window.uploadFileToStorage !== 'function') {
-                throw new Error("Helpers de subida de archivos no disponibles.");
-            }
-            const blob = await window.dataURLtoBlob(storePaymentReceiptBase64);
-            const storagePath = `receipts/beats/${window.storeProducerUid || 'default'}_${Date.now()}.jpg`;
-            finalReceiptUrl = await window.uploadFileToStorage(blob, storagePath);
-            if (nextBtn) nextBtn.innerHTML = '⏳ Guardando pedido...';
+            // Guardar directamente la imagen en base64 en Firestore ya que Firebase Storage no está disponible en este proyecto
+            finalReceiptUrl = storePaymentReceiptBase64;
         }
 
         let redirectPaymentId = null;
@@ -2357,13 +2432,35 @@ export async function submitBeatPurchasePayment(method, reference = '') {
                 acceptanceTimestamp: new Date().toISOString()
             };
 
-            const docRef = await addDoc(colRef, orderData);
+            let docRefId = null;
+            if (method === 'deuna' && currentDeunaPaymentId) {
+                const existingDocRef = doc(db, "payments", currentDeunaPaymentId);
+                await updateDoc(existingDocRef, {
+                    ...orderData,
+                    receiptUrl: finalReceiptUrl,
+                    status: 'pending'
+                });
+                docRefId = currentDeunaPaymentId;
+            } else {
+                const docRef = await addDoc(colRef, orderData);
+                docRefId = docRef.id;
+            }
+            
+            // Sincronizar localmente si estamos en localhost
+            await syncPaymentToLocalBackup({
+                ...orderData,
+                id: docRefId
+            }, docRefId);
+            
             if (!redirectPaymentId) {
-                redirectPaymentId = docRef.id;
+                redirectPaymentId = docRefId;
             }
             
             if (method === 'paypal') {
-                await autoDeliverBeatSale(docRef.id, orderData);
+                await autoDeliverBeatSale(docRefId, orderData);
+            } else {
+                // Enviar correos de espera de forma asíncrona para no retrasar la interfaz del usuario
+                sendPendingPaymentEmails(orderData, docRefId).catch(err => console.error(err));
             }
         }
 
@@ -2398,9 +2495,154 @@ export async function submitBeatPurchasePayment(method, reference = '') {
     }
 }
 
+export async function syncPaymentToLocalBackup(orderData, paymentId) {
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        return;
+    }
+    try {
+        console.log("💾 Sincronizando pago nuevo a backup local en localhost...", paymentId);
+        const user = window.storeProducerConfig?.aka?.toLowerCase() === 'cg monarco' ? 'cgmonarco' : 'sossa';
+        
+        // 1. Cargar el backup actual
+        const loadRes = await fetch(`/api/load-local?user=${user}`);
+        if (!loadRes.ok) return;
+        const dbData = await loadRes.json();
+        
+        // 2. Obtener la lista de historial
+        const historyKey = `${user}_license_history`;
+        let history = [];
+        try {
+            history = JSON.parse(dbData[historyKey] || '[]');
+        } catch (e) {
+            history = [];
+        }
+        
+        // 3. Crear el registro del pago para el historial
+        const paymentEntry = {
+            id: paymentId,
+            ...orderData
+        };
+        
+        // Evitar duplicados
+        if (!history.some(x => x.id === paymentId)) {
+            history.unshift(paymentEntry);
+        }
+        
+        dbData[historyKey] = JSON.stringify(history);
+        
+        // 4. Guardar el backup actualizado
+        const headers = typeof window.getLocalHeaders === 'function'
+            ? await window.getLocalHeaders()
+            : { 'Content-Type': 'application/json' };
+
+        await fetch(`/api/save-local?user=${user}`, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(dbData)
+        });
+        console.log("✅ Pago nuevo sincronizado localmente con éxito.");
+    } catch (err) {
+        console.warn("No se pudo sincronizar el pago nuevo al backup local:", err);
+    }
+}
+
+export async function sendPendingPaymentEmails(orderData, paymentId) {
+    try {
+        console.log("🚀 Iniciando envío de correos de espera para pago pendiente:", paymentId);
+        
+        const serviceId = window.storeProducerConfig.emailjsServiceId || 'service_btb90z6';
+        const templateId = window.storeProducerConfig.emailjsTemplateId || 'template_mlimkld';
+        const publicKey = window.storeProducerConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
+
+        // 1. Cargar EmailJS si no está presente
+        if (typeof emailjs === 'undefined') {
+            try {
+                await loadScript('https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js');
+            } catch (e) {
+                console.error("No se pudo cargar EmailJS para correos de espera:", e);
+                return;
+            }
+        }
+
+        // Inicializar si es necesario
+        if (typeof emailjs !== 'undefined' && publicKey) {
+            emailjs.init(publicKey);
+        }
+
+        const typeLabels = {
+            basic: 'Licencia Básica',
+            premium: 'Licencia Premium',
+            premium_plus: 'Licencia Premium Plus',
+            unlimited: 'Licencia Ilimitada',
+            exclusive: 'Licencia Exclusiva'
+        };
+        const type = orderData.licenseType || 'basic';
+        const methodLabel = orderData.method === 'deuna' ? 'Deuna!' : 'Transferencia Bancaria';
+
+        // 2. Correo para el Comprador (Confirmación de Recepción)
+        const buyerMessage = `
+<div style="background-color: #fef3c7; border: 1px solid #f59e0b; color: #b45309; padding: 20px; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; margin-top: 15px;">
+    <h3 style="margin-top: 0; color: #92400e;">⏳ Comprobante de pago recibido</h3>
+    Hemos recibido con éxito tu comprobante de pago vía <strong>${methodLabel}</strong> para la compra del beat <strong>"${orderData.beatName}"</strong>.<br/><br/>
+    El productor está verificando la transacción. Tan pronto como sea validada y aprobada, recibirás un nuevo correo electrónico automático con los enlaces de descarga directa de tus archivos (MP3, WAV, Stems) y el contrato de la licencia <strong>${typeLabels[type] || type}</strong> firmado.<br/><br/>
+    <strong>Detalles de la Orden:</strong><br/>
+    • ID de Orden: ${paymentId}<br/>
+    • Referencia: ${orderData.reference || 'N/A'}<br/>
+    • Valor: $${(orderData.finalPrice || orderData.price || 0).toFixed(2)} USD
+</div>
+        `;
+
+        const buyerParams = {
+            to_name: orderData.buyerName,
+            to_email: orderData.buyerEmail,
+            beat_name: orderData.beatName,
+            license_type: typeLabels[type] || type,
+            delivery_links: buyerMessage,
+            producer_name: window.storeProducerConfig.aka || "Productor",
+            producer_email: window.storeProducerConfig.email || "",
+            pdf_filename: ""
+        };
+
+        await emailjs.send(serviceId, templateId, buyerParams);
+        console.log("📧 Correo de confirmación enviado al comprador.");
+
+        // 3. Correo para el Productor (Notificación de Venta Pendiente)
+        if (window.storeProducerConfig.email) {
+            const producerMessage = `
+<div style="background-color: #eff6ff; border: 1px solid #3b82f6; color: #1d4ed8; padding: 20px; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; margin-top: 15px;">
+    <h3 style="margin-top: 0; color: #1e40af;">🔔 Nueva venta pendiente de aprobación</h3>
+    El cliente <strong>${orderData.buyerName}</strong> (${orderData.buyerEmail}) ha subido un comprobante de pago de <strong>${methodLabel}</strong> por el beat <strong>"${orderData.beatName}"</strong>.<br/><br/>
+    <strong>Detalles del Pago:</strong><br/>
+    • Valor: $${(orderData.finalPrice || orderData.price || 0).toFixed(2)} USD<br/>
+    • ID de Pedido: ${paymentId}<br/>
+    • Referencia: ${orderData.reference || 'N/A'}<br/><br/>
+    Por favor ingresa a tu panel de administración en <a href="https://beatss.app" target="_blank" style="color: #3b82f6; text-decoration: underline; font-weight: bold;">beatss.app</a> para revisar el comprobante y aprobar o rechazar la entrega.
+</div>
+            `;
+
+            const producerParams = {
+                to_name: window.storeProducerConfig.aka || "Productor",
+                to_email: window.storeProducerConfig.email,
+                beat_name: orderData.beatName,
+                license_type: typeLabels[type] || type,
+                delivery_links: producerMessage,
+                producer_name: window.storeProducerConfig.aka || "Productor",
+                producer_email: window.storeProducerConfig.email || "",
+                pdf_filename: ""
+            };
+
+            await emailjs.send(serviceId, templateId, producerParams);
+            console.log("📧 Correo de notificación enviado al productor.");
+        }
+
+    } catch (err) {
+        console.warn("Fallo al enviar correos automáticos de pago pendiente:", err);
+    }
+}
+
 export async function autoDeliverBeatSale(paymentId, orderData) {
     try {
-        console.log("🚀 Iniciando entrega automatizada de PayPal para el pago:", paymentId);
+        console.log("🚀 Iniciando entrega automatizada para el pago:", paymentId);
         
         const beatCol = collection(db, "users", orderData.producerId, "beats");
         const beatSnapshot = await getDocs(beatCol);
@@ -2416,10 +2658,11 @@ export async function autoDeliverBeatSale(paymentId, orderData) {
             return;
         }
 
-        const serviceId = window.storeProducerConfig.emailjsServiceId || 'service_7ofza2v';
+        const serviceId = window.storeProducerConfig.emailjsServiceId || 'service_btb90z6';
         const templateId = window.storeProducerConfig.emailjsTemplateId || 'template_mlimkld';
         const publicKey = window.storeProducerConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
 
+        // 1. Cargar EmailJS si no está presente
         if (typeof emailjs === 'undefined') {
             try {
                 await loadScript('https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js');
@@ -2427,6 +2670,56 @@ export async function autoDeliverBeatSale(paymentId, orderData) {
                 console.error("No se pudo cargar EmailJS para entrega automática:", e);
             }
         }
+        
+        // 2. Cargar html2pdf si no está presente
+        if (typeof html2pdf === 'undefined') {
+            try {
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+            } catch (e) {
+                console.error("No se pudo cargar html2pdf para la entrega automática:", e);
+            }
+        }
+
+        let pdfUrl = "";
+        
+        // 3. No se permite entregar una compra sin su contrato PDF oficial.
+        if (!window.compileContractData || typeof html2pdf === 'undefined' || !window.uploadPDFToCloud) {
+            throw new Error('No se pudieron cargar las utilidades necesarias para generar el contrato PDF.');
+        }
+        try {
+            console.log("📄 Generando contrato PDF en segundo plano...");
+            const contractData = window.compileContractData(orderData, window.storeProducerConfig, 'licencia_uso', 'es');
+            const container = document.getElementById('buyer-rendered-contract-content');
+            if (!container) {
+                throw new Error('No se encontró el área de generación del contrato.');
+            }
+            container.innerHTML = contractData.html;
+            container.classList.add('printing-pdf');
+                
+                const opt = {
+                    margin: [15, 20, 15, 20],
+                    filename: `Licencia_${orderData.licenseType.toUpperCase()}_${orderData.reference}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                    jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'] }
+                };
+
+            let base64DataUri;
+            try {
+                base64DataUri = await html2pdf().from(container).set(opt).outputPdf('datauristring');
+            } finally {
+                container.classList.remove('printing-pdf');
+            }
+
+            console.log("☁️ Subiendo contrato PDF a la nube...");
+            pdfUrl = await window.uploadPDFToCloud(base64DataUri, opt.filename);
+            console.log("✅ Contrato subido con éxito:", pdfUrl);
+        } catch (pdfErr) {
+            console.error("Error al generar o subir el PDF del contrato de licencia:", pdfErr);
+            throw new Error(`El pago quedó registrado, pero el contrato PDF no se pudo preparar: ${pdfErr.message || 'error desconocido'}`);
+        }
+
         if (typeof emailjs !== 'undefined') {
             emailjs.init(publicKey);
 
@@ -2439,37 +2732,69 @@ export async function autoDeliverBeatSale(paymentId, orderData) {
                 premium: 'Premium',
                 premium_plus: 'Premium Plus',
                 unlimited_flp: 'Ilimitada',
+                unlimited: 'Ilimitada',
                 exclusive: 'Exclusiva'
             };
 
+            const type = orderData.licenseType || 'basic';
             const linksText = `
-<div style="font-family: -apple-system, sans-serif;">
-    <h3>Instrumental: ${beatData.name}</h3>
-    <p>Gracias por tu compra. Aquí tienes tus enlaces de descarga directa:</p>
-    <ul>
-        ${mp3 ? `<li><strong>MP3 (320kbps):</strong> <a href="${mp3}">Descargar</a></li>` : ''}
-        ${wav && (orderData.licenseType !== 'basic') ? `<li><strong>WAV (Master):</strong> <a href="${wav}">Descargar</a></li>` : ''}
-        ${stems && (orderData.licenseType !== 'basic' && orderData.licenseType !== 'premium') ? `<li><strong>Stems (Pistas Separadas):</strong> <a href="${stems}">Descargar</a></li>` : ''}
-    </ul>
-    <p>Tu contrato y licencia oficial PDF serán procesados y firmados por el productor muy pronto.</p>
-</div>`;
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+    ${pdfUrl ? `
+    <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #edf2f7; text-align: center;">
+        <div style="font-size: 10px; text-transform: uppercase; color: #718096 !important; font-weight: 700; margin-bottom: 10px; letter-spacing: 1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Documento Oficial y Legal</div>
+        <a href="${pdfUrl}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #0055ee; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 700; border: 1px solid #0044cc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">📄 Descargar Contrato (PDF)</a>
+    </div>
+    ` : `
+    <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #edf2f7; text-align: center; color: #718096; font-size: 12px;">
+        Tu contrato y licencia oficial PDF serán procesados y firmados por el productor muy pronto.
+    </div>
+    `}
+    
+    <div>
+        <div style="font-size: 10px; text-transform: uppercase; color: #718096 !important; font-weight: 700; margin-bottom: 12px; letter-spacing: 1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Archivos de Audio de Alta Calidad</div>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+            ${mp3 ? `
+            <tr style="border-bottom: 1px solid #edf2f7;">
+                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Instrumental MP3 (320kbps)</td>
+                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${mp3}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
+            </tr>
+            ` : ''}
+            ${wav && (type !== 'basic') ? `
+            <tr style="border-bottom: 1px solid #edf2f7;">
+                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Instrumental WAV (Master)</td>
+                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${wav}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
+            </tr>
+            ` : ''}
+            ${stems && (type !== 'basic' && type !== 'premium') ? `
+            <tr>
+                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Pistas Separadas (Stems)</td>
+                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${stems}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
+            </tr>
+            ` : ''}
+        </table>
+    </div>
+</div>
+            `;
 
+            const pdfFilename = `Licencia_${type.toUpperCase()}_${orderData.reference}.pdf`;
             const templateParams = {
                 to_name: orderData.buyerName,
                 to_email: orderData.buyerEmail,
                 beat_name: orderData.beatName,
-                license_type: typeLabels[orderData.licenseType] || orderData.licenseType,
+                license_type: typeLabels[type] || type,
                 delivery_links: linksText,
                 producer_name: window.storeProducerConfig.aka || "Productor",
                 producer_email: window.storeProducerConfig.email || "",
-                pdf_filename: `Licencia_PayPal_${orderData.reference}.pdf`
+                pdf_filename: pdfFilename
             };
 
             await emailjs.send(serviceId, templateId, templateParams);
             console.log("📧 Correo de entrega directa de PayPal enviado al comprador con éxito.");
         }
+        return true;
     } catch (err) {
         console.error("Fallo al enviar correo automático de PayPal:", err);
+        return false;
     }
 }
 
@@ -2963,6 +3288,35 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
         // 5. Historial de descargas
         renderDownloadLogs(data.downloads, historyList);
 
+        // 6. Iniciar escuchador en tiempo real si el pago está pendiente
+        if (payment.status === 'pending') {
+            const docRef = doc(db, "payments", paymentId);
+            const unsubscribe = onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const latestData = docSnap.data();
+                    if (latestData.status === 'approved' || latestData.status === 'completed') {
+                        unsubscribe();
+                        console.log("⚡ El pago ha sido aprobado! Actualizando portal...");
+                        // Actualizar el banner para informarle al usuario
+                        bannerPending.innerHTML = `
+                            <div class="flex items-center gap-2 font-bold mb-1 text-green-400">
+                                <i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i>
+                                <span>¡Pago Aprobado!</span>
+                            </div>
+                            Tu pago ha sido aprobado. Hemos enviado tus enlaces de descarga y licencia por correo electrónico a <strong>${payment.buyerEmail}</strong>. Por favor, revisa tu bandeja de entrada o spam.
+                        `;
+                        bannerPending.className = "mb-6 p-4 rounded-xl border border-dashed border-green-500/20 bg-green-500/5 text-green-400 text-sm";
+                        if (window.safeCreateIcons) window.safeCreateIcons();
+                    }
+                }
+            });
+            // Opcional: guardar la referencia a la desuscripción para evitar múltiples listeners
+            if (window._buyerDownloadUnsubscribe) {
+                window._buyerDownloadUnsubscribe();
+            }
+            window._buyerDownloadUnsubscribe = unsubscribe;
+        }
+
         if (window.safeCreateIcons) {
             window.safeCreateIcons();
         }
@@ -3347,3 +3701,183 @@ export function updateStoreCheckoutSummary() {
 }
 
 window.updateStoreCheckoutSummary = updateStoreCheckoutSummary;
+
+export async function initiateDeunaDynamicPayment() {
+    // 1. Validar datos del comprador en el formulario
+    const buyerName = sanitizeInput(document.getElementById('store-buyer-name').value);
+    const buyerEmail = sanitizeInput(document.getElementById('store-buyer-email').value);
+    const buyerPhone = sanitizeInput(document.getElementById('store-buyer-phone').value);
+    const buyerDni = sanitizeInput(document.getElementById('store-buyer-dni').value);
+    const buyerCity = sanitizeInput(document.getElementById('store-buyer-city').value);
+    const buyerCountry = sanitizeInput(document.getElementById('store-buyer-country').value);
+    const youtubeWhitelist = sanitizeInput(document.getElementById('store-txt-youtube-whitelist').value);
+    const needInvoice = document.getElementById('store-chk-need-invoice')?.checked;
+    
+    let finalBuyerName = buyerName;
+    let finalBuyerEmail = buyerEmail;
+    let finalBuyerDni = buyerDni;
+    let finalBuyerCity = buyerCity;
+    
+    if (needInvoice) {
+        const rucVal = sanitizeInput(document.getElementById('store-invoice-ruc').value);
+        const companyVal = sanitizeInput(document.getElementById('store-invoice-company').value);
+        const addressVal = sanitizeInput(document.getElementById('store-invoice-address').value);
+        const emailVal = sanitizeInput(document.getElementById('store-invoice-email').value);
+        
+        if (!rucVal || !companyVal || !addressVal || !emailVal) {
+            if (typeof window.showToast === 'function') window.showToast('Completa los datos de facturación en el paso anterior.', true);
+            window.updateCheckoutStepView(2);
+            return;
+        }
+        finalBuyerDni = rucVal;
+        finalBuyerName = companyVal;
+        finalBuyerEmail = emailVal;
+        finalBuyerCity = addressVal;
+    }
+    
+    if (!finalBuyerName || !finalBuyerEmail) {
+        if (typeof window.showToast === 'function') window.showToast('Por favor completa tus datos en el paso anterior.', true);
+        window.updateCheckoutStepView(2);
+        return;
+    }
+    
+    // Si ya hay un listener activo de una sesión previa, desuscribirse
+    if (deunaListenerUnsubscribe) {
+        deunaListenerUnsubscribe();
+        deunaListenerUnsubscribe = null;
+    }
+    
+    // Obtener item y precio final
+    let itemsToProcess = [];
+    if (checkoutSelectedBeatId) {
+        const beat = findBeatById(checkoutSelectedBeatId);
+        if (beat) {
+            itemsToProcess.push({
+                beatId: checkoutSelectedBeatId,
+                beatName: beat.name,
+                licenseType: checkoutSelectedLicense,
+                price: window.getCheckoutPrice()
+            });
+        }
+    } else {
+        itemsToProcess = window.cart.map(item => ({
+            beatId: item.beatId,
+            beatName: item.beatName,
+            licenseType: item.licenseType,
+            price: item.price
+        }));
+    }
+    
+    if (itemsToProcess.length === 0) return;
+    const item = itemsToProcess[0];
+    const discountPercent = window.checkoutDiscountPercent || 0;
+    const finalPrice = item.price * (1 - (discountPercent / 100));
+    
+    // Asegurar que la imagen del QR muestra el código estático oficial del productor (que sí es escaneable)
+    const qrImage = document.getElementById('deuna-qr-image');
+    if (qrImage) {
+        const deunaPhone = window.storeProducerConfig.deunaPhone || "";
+        const cleanPhone = deunaPhone.replace(/\D/g, '');
+        if (window.storeProducerConfig.deunaQrBase64) {
+            qrImage.src = window.storeProducerConfig.deunaQrBase64;
+        } else {
+            qrImage.src = '/deuna-qr.jpg';
+        }
+    }
+    
+    // Crear el documento de pago en Firestore con estado 'pending'
+    const colRef = collection(db, "payments");
+    const orderData = {
+        type: 'beat_purchase',
+        producerId: window.storeProducerUid,
+        beatId: item.beatId,
+        beatName: item.beatName,
+        licenseType: item.licenseType,
+        price: item.price,
+        buyerName: finalBuyerName,
+        buyerEmail: finalBuyerEmail,
+        buyerPhone: buyerPhone,
+        buyerDni: finalBuyerDni,
+        buyerCity: finalBuyerCity,
+        buyerCountry: buyerCountry,
+        youtubeWhitelist: youtubeWhitelist,
+        method: 'deuna',
+        reference: 'DEUNA-' + Date.now(),
+        receiptUrl: '',
+        status: 'pending',
+        discountPercent: discountPercent,
+        couponCode: window.checkoutAppliedCoupon || '',
+        originalPrice: item.price,
+        finalPrice: finalPrice,
+        timestamp: new Date().toISOString(),
+        acceptedTerms: true,
+        acceptanceTimestamp: new Date().toISOString()
+    };
+    
+    try {
+        const docRef = await addDoc(colRef, orderData);
+        currentDeunaPaymentId = docRef.id;
+        
+        const deunaPhone = window.storeProducerConfig.deunaPhone || "";
+        const cleanPhone = deunaPhone.replace(/\D/g, '');
+        const deeplink = `deuna://payment?phone=${cleanPhone}&amount=${finalPrice.toFixed(2)}&description=BEATSS-${docRef.id}`;
+        
+        // Añadir/Actualizar botón de pago móvil en el panel
+        let deunaPanel = document.getElementById('store-pay-deuna');
+        let mobilePayBtn = document.getElementById('deuna-mobile-pay-btn');
+        if (!mobilePayBtn && deunaPanel) {
+            mobilePayBtn = document.createElement('a');
+            mobilePayBtn.id = 'deuna-mobile-pay-btn';
+            mobilePayBtn.className = 'mt-3 block text-center bg-[#0001ac] hover:bg-[#00018a] text-white py-3 rounded-xl font-bold text-sm transition-all shadow-md';
+            mobilePayBtn.target = '_blank';
+            deunaPanel.appendChild(mobilePayBtn);
+        }
+        if (mobilePayBtn) {
+            mobilePayBtn.href = deeplink;
+            mobilePayBtn.innerHTML = '📲 Pagar desde la App Deuna!';
+            mobilePayBtn.style.display = 'block';
+        }
+        
+        // Agregar texto de estado "Esperando pago..."
+        let deunaStatusMsg = document.getElementById('deuna-status-message');
+        if (!deunaStatusMsg && deunaPanel) {
+            deunaStatusMsg = document.createElement('div');
+            deunaStatusMsg.id = 'deuna-status-message';
+            deunaStatusMsg.className = 'mt-2 text-xs font-mono text-center text-yellow-500 animate-pulse';
+            deunaPanel.appendChild(deunaStatusMsg);
+        }
+        if (deunaStatusMsg) {
+            deunaStatusMsg.innerHTML = '⏳ Esperando confirmación de pago en tiempo real...';
+        }
+        
+        // Iniciar escucha del documento en tiempo real
+        const docRefToListen = doc(db, "payments", docRef.id);
+        deunaListenerUnsubscribe = onSnapshot(docRefToListen, async (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.status === 'completed' || data.status === 'approved') {
+                    if (deunaListenerUnsubscribe) {
+                        deunaListenerUnsubscribe();
+                        deunaListenerUnsubscribe = null;
+                    }
+                    if (typeof window.showToast === 'function') window.showToast('¡Pago confirmado! Preparando tus archivos...');
+                    if (deunaStatusMsg) {
+                        deunaStatusMsg.innerHTML = '✅ ¡Pago Recibido! Enviando correo...';
+                        deunaStatusMsg.className = 'mt-2 text-xs font-mono text-center text-green-500 font-bold';
+                    }
+                    
+                    // Ejecutar entrega automática y limpiar carrito
+                    await autoDeliverBeatSale(docRef.id, data);
+                    clearPurchasedItems();
+                    document.getElementById('beat-checkout-modal').style.display = 'none';
+                    await finalizePaymentSuccess(docRef.id, itemsToProcess);
+                }
+            }
+        });
+        
+    } catch (err) {
+        console.error('Error iniciando pago Deuna:', err);
+        if (typeof window.showToast === 'function') window.showToast('Error al inicializar el pago dinámico de Deuna!.', true);
+    }
+}
+window.initiateDeunaDynamicPayment = initiateDeunaDynamicPayment;

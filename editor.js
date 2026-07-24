@@ -531,7 +531,7 @@ function compileContract() {
 
     const paymentMethod = document.getElementById('payment-method').value;
     let displayPaymentMethod = paymentMethod;
-    if (isSossaProducer && ['PayPal', 'Tarjeta de Crédito', 'deuna', 'payphone', 'Stripe'].includes(paymentMethod)) {
+    if (isSossaProducer && ['PayPal', 'Tarjeta de Crédito', 'deuna', 'Deuna!', 'payphone', 'PayPhone', 'Stripe'].includes(paymentMethod)) {
         displayPaymentMethod = currentLang === 'en'
             ? "Authorized electronic payment processing (Stripe, PayPal, PayPhone, Deuna!)"
             : "Procesamiento electrónico de pago autorizado (Stripe, PayPal, PayPhone, Deuna!)";
@@ -543,7 +543,10 @@ function compileContract() {
             'Western Union': 'Western Union',
             'Otro': 'Other',
             'deuna': 'Deuna!',
-            'payphone': 'PayPhone'
+            'Deuna!': 'Deuna!',
+            'payphone': 'PayPhone',
+            'PayPhone': 'PayPhone',
+            'Stripe': 'Stripe'
         };
         displayPaymentMethod = paymentTranslations[paymentMethod] || paymentMethod;
     }
@@ -977,7 +980,12 @@ async function downloadPDF() {
     safeCreateIcons();
     btn.disabled = true;
 
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // La descarga normal siempre se compone desde la vista HTML que el usuario
+    // está revisando. Así el PDF conserva tipografías, colores, logo, márgenes
+    // y estructura visual. El renderizador Python queda solo como diagnóstico
+    // opcional, nunca como el formato de entrega por defecto.
+    const useServerPdfRenderer = window.BEATSS_USE_SERVER_PDF === true;
+    if (useServerPdfRenderer && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
         try {
             const { md } = compileContract();
             
@@ -1060,7 +1068,29 @@ async function downloadPDF() {
             showToast('📄 PDF Criptográfico descargado con éxito y guardado en Documentos/Licencias');
         } catch (err) {
             console.error('Error al generar PDF criptográfico en el servidor:', err);
-            showToast('Error al generar el PDF criptográfico: ' + err.message, true);
+            // Si el proceso local abierto es una versión anterior del servidor,
+            // la entrega no queda bloqueada: el navegador genera el PDF desde
+            // la vista contractual actual, conservando exactamente su diseño.
+            try {
+                const fallbackOpt = {
+                    margin: [15, 20, 15, 20],
+                    filename: `Licencia_${type.toUpperCase()}_${finalRef} - ${beatName} - ${buyerName}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                    jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+                    pagebreak: { mode: ['css', 'legacy'] }
+                };
+                element.classList.add('printing-pdf');
+                const paper = document.getElementById('license-paper');
+                if (paper) paper.classList.add('printing-pdf');
+                await html2pdf().from(element).set(fallbackOpt).save();
+                showToast('PDF descargado desde la vista del contrato. El respaldo local se actualizará al reiniciar BeatSS.');
+                if (paper) paper.classList.remove('printing-pdf');
+                element.classList.remove('printing-pdf');
+            } catch (fallbackErr) {
+                console.error('Error en la descarga de respaldo del navegador:', fallbackErr);
+                showToast('No se pudo generar el PDF: ' + err.message, true);
+            }
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;
@@ -2311,233 +2341,148 @@ async function fetchWithTimeout(resource, options = {}) {
     }
 }
 
-// Subir PDF a la nube usando Google Drive > GoFile > PixelDrain > file.io > tmpfiles.org
-async function uploadPDFToCloud(base64DataUri, filename) {
-    const blob = await dataURLtoBlob(base64DataUri);
-    let storageProvider = producerConfig.storageProvider || 'gdrive-central';
-
-    // Si eligió Drive personal pero no configuró las credenciales, usar el central
-    if (storageProvider === 'gdrive' && !producerConfig.gdriveClientId) {
-        storageProvider = 'gdrive-central';
+function getFirebaseStorageErrorMessage(error) {
+    const code = error?.code || '';
+    if (code === 'storage/unauthorized') {
+        return 'Firebase rechazó la subida por permisos. Confirma que las reglas publicadas permiten la ruta licenses/{tu-uid}/... para tu sesión actual.';
     }
-
-    async function uploadToCentral() {
-        console.log('Subiendo PDF a Google Drive Central...');
-        const idToken = await auth.currentUser.getIdToken();
-        const sessionRes = await fetch('/api/gdrive-upload-session', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`
-            },
-            body: JSON.stringify({
-                fileName: filename,
-                subFolder: 'Contratos',
-                contentType: 'application/pdf',
-                producerAka: producerConfig.aka || producerConfig.name
-            })
-        });
-
-        if (!sessionRes.ok) {
-            let errMsg = 'No se pudo iniciar la sesión de subida en Google Drive Central.';
-            try {
-                const sessionErr = await sessionRes.json();
-                errMsg = sessionErr.error ? (sessionErr.error + (sessionErr.details ? `: ${sessionErr.details}` : "")) : errMsg;
-            } catch (e) {
-                try {
-                    errMsg = await sessionRes.text();
-                } catch (textErr) {}
-            }
-            throw new Error(`HTTP ${sessionRes.status}: ${errMsg}`);
-        }
-
-        const sessionData = await sessionRes.json();
-        const uploadUrl = sessionData.uploadUrl;
-
-        const resJson = await new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('PUT', uploadUrl);
-            xhr.setRequestHeader('Content-Type', 'application/pdf');
-            xhr.onreadystatechange = () => {
-                if (xhr.readyState === 4) {
-                    if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            resolve(JSON.parse(xhr.responseText));
-                        } catch (e) {
-                            reject(e);
-                        }
-                    } else {
-                        reject(new Error(`HTTP ${xhr.status}: ${xhr.responseText}`));
-                    }
-                }
-            };
-            xhr.send(blob);
-        });
-
-        const downloadUrl = `${window.location.origin}/api/proxy-audio?id=${resJson.id}`;
-        console.log('PDF subido con éxito a Google Drive Central:', downloadUrl);
-        return downloadUrl;
+    if (code === 'storage/unauthenticated') {
+        return 'Tu sesión de BeatSS no está autenticada en Firebase. Cierra sesión, vuelve a iniciar sesión y reintenta.';
     }
-
-    // 0. Intentar con Google Drive Central (plataforma)
-    if (storageProvider === 'gdrive-central' && auth.currentUser) {
-        try {
-            return await uploadToCentral();
-        } catch (centralDriveErr) {
-            console.warn('Google Drive Central falló, intentando otros métodos:', centralDriveErr.message);
-        }
+    if (code === 'storage/retry-limit-exceeded' || /timeout/i.test(error?.message || '')) {
+        return 'Firebase agotó el tiempo de subida. Revisa tu conexión e inténtalo otra vez.';
     }
-
-    // 0.1 Intentar con Google Drive Personal
-    if (storageProvider === 'gdrive') {
-        try {
-            console.log('Subiendo PDF a Google Drive Personal...');
-            const driveUrl = await uploadToGoogleDrive(base64DataUri, filename);
-            console.log('PDF subido con éxito a Google Drive Personal:', driveUrl);
-            return driveUrl;
-        } catch (driveErr) {
-            console.warn('Google Drive Personal falló, intentando fallback a Google Drive Central:', driveErr.message);
-            if (auth.currentUser) {
-                try {
-                    return await uploadToCentral();
-                } catch (centralErr) {
-                    console.warn('Fallo también en Google Drive Central:', centralErr.message);
-                }
-            }
-        }
-    }
-
-    // 0.1 Intentar con Firebase Storage (Excelente alternativa oficial, 100% segura y estable)
-    if (typeof storage !== 'undefined' && auth.currentUser) {
-        try {
-            console.log('Subiendo PDF a Firebase Storage...');
-            const storagePath = `licenses/${auth.currentUser.uid}/${Date.now()}_${filename}`;
-            const downloadUrl = await uploadFileToStorage(blob, storagePath);
-            console.log('PDF subido con éxito a Firebase Storage:', downloadUrl);
-            return downloadUrl;
-        } catch (storageErr) {
-            console.warn('Firebase Storage falló, intentando otros métodos:', storageErr.message);
-        }
-    }
-    
-    // 1. Intentar con PixelDrain (Limpio, sin cookies ni credenciales locales para evitar 401)
-    try {
-        console.log('Subiendo a PixelDrain...');
-        const formData = new FormData();
-        formData.append('file', blob, filename);
-
-        const response = await fetchWithTimeout('https://pixeldrain.com/api/file', {
-            method: 'POST',
-            body: formData,
-            credentials: 'omit',
-            timeout: 8000
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-                console.log('Subido a PixelDrain con éxito ID:', data.id);
-                return `https://pixeldrain.com/api/file/${data.id}`;
-            }
-        }
-    } catch (e) {
-        console.error('Error al subir a PixelDrain:', e);
-    }
-
-    // 2. Intentar con tmpfiles.org (Directo y con CORS)
-    try {
-        console.log('Subiendo a tmpfiles.org...');
-        const formData = new FormData();
-        formData.append('file', blob, filename);
-
-        const response = await fetchWithTimeout('https://tmpfiles.org/api/v1/upload', {
-            method: 'POST',
-            body: formData,
-            timeout: 8000
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.status === 'success') {
-                const viewerUrl = data.data.url;
-                const downloadUrl = viewerUrl.replace('https://tmpfiles.org/', 'https://tmpfiles.org/dl/');
-                console.log('Subido a tmpfiles.org con éxito:', downloadUrl);
-                return downloadUrl;
-            }
-        }
-    } catch (e) {
-        console.error('Error al subir a tmpfiles.org:', e);
-    }
-
-    // 3. Intentar con GoFile (Recomendado, sin límites de descarga)
-    try {
-        console.log('Subiendo a GoFile...');
-        const serverResponse = await fetchWithTimeout('https://api.gofile.io/getServer', { timeout: 6000 });
-        let server = 'store1';
-        if (serverResponse.ok) {
-            const serverData = await serverResponse.json();
-            if (serverData.status === 'ok' && serverData.data && serverData.data.server) {
-                server = serverData.data.server;
-            }
-        }
-        
-        const formData = new FormData();
-        formData.append('file', blob, filename);
-        
-        const uploadResponse = await fetchWithTimeout(`https://${server}.gofile.io/uploadFile`, {
-            method: 'POST',
-            body: formData,
-            timeout: 8000
-        });
-        
-        if (uploadResponse.ok) {
-            const uploadData = await uploadResponse.json();
-            if (uploadData.status === 'ok' && uploadData.data && uploadData.data.downloadPage) {
-                console.log('Subido a GoFile con éxito:', uploadData.data.downloadPage);
-                return uploadData.data.downloadPage;
-            }
-        }
-    } catch (e) {
-        console.error('Error al subir a GoFile:', e);
-    }
-
-    // 4. Intentar con file.io (1 sola descarga, pero muy fiable)
-    try {
-        console.log('Subiendo a file.io...');
-        const formData = new FormData();
-        formData.append('file', blob, filename);
-
-        const response = await fetchWithTimeout('https://file.io/', {
-            method: 'POST',
-            body: formData,
-            timeout: 8000
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-                console.log('Subido a file.io con éxito:', data.link);
-                return data.link;
-            }
-        }
-    } catch (e) {
-        console.error('Error al subir a file.io:', e);
-    }
-
-    throw new Error('No se pudo subir el PDF del contrato a ningún servidor de almacenamiento temporal.');
+    return `Firebase Storage no pudo guardar el PDF${code ? ` (${code})` : ''}${error?.message ? `: ${error.message}` : '.'}`;
 }
 
-// Enviar correo de entrega usando EmailJS (Subiendo PDF a la nube para plan gratis)
+function getSafePdfFilename(filename) {
+    const safe = String(filename || 'Contrato.pdf')
+        .replace(/[\\/:*?"<>|]+/g, '_')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 180) || 'Contrato.pdf';
+    return safe.toLowerCase().endsWith('.pdf') ? safe : `${safe}.pdf`;
+}
+
+function uploadPdfDirectlyToFirebase(blob, filename) {
+    const uid = auth.currentUser.uid;
+    const objectPath = `licenses/${uid}/${Date.now()}_${getSafePdfFilename(filename)}`;
+    const storageRef = ref(storage, objectPath);
+    const uploadTask = uploadBytesResumable(storageRef, blob, {
+        contentType: 'application/pdf',
+        cacheControl: 'private, max-age=0, no-transform'
+    });
+
+    return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+            try { uploadTask.cancel(); } catch (_) { /* Firebase ya terminó la tarea. */ }
+            reject(new Error('Timeout al subir el PDF directamente a Firebase Storage (45s).'));
+        }, 45000);
+
+        uploadTask.on('state_changed', null, error => {
+            clearTimeout(timeoutId);
+            reject(error);
+        }, async () => {
+            clearTimeout(timeoutId);
+            try {
+                resolve(await getDownloadURL(uploadTask.snapshot.ref));
+            } catch (error) {
+                reject(error);
+            }
+        });
+    });
+}
+
+async function uploadPdfThroughLocalBridge(blob, filename) {
+    const idToken = await auth.currentUser.getIdToken();
+    const response = await fetch('/api/firebase-upload-pdf', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/pdf',
+            'X-Firebase-Uid': auth.currentUser.uid,
+            'X-File-Name': encodeURIComponent(getSafePdfFilename(filename))
+        },
+        body: blob
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.downloadUrl) {
+        throw new Error(result.details || result.error || `Firebase respondió HTTP ${response.status}.`);
+    }
+    return result.downloadUrl;
+}
+
+// Subir el PDF de contrato a Firebase. La SDK es la vía principal, tanto en
+// localhost como en producción. El puente Python solo respalda pruebas locales
+// donde el navegador no pueda acceder al bucket directamente.
+async function uploadPDFToCloud(base64DataUri, filename) {
+    const blob = await dataURLtoBlob(base64DataUri);
+    const pdfStorageProvider = producerConfig.pdfStorageProvider || 'firebase';
+    if (pdfStorageProvider !== 'firebase') {
+        throw new Error('El almacenamiento de PDFs debe configurarse en Firebase Storage.');
+    }
+    if (typeof storage === 'undefined') {
+        throw new Error('Firebase Storage no se cargó en la aplicación. Recarga BeatSS e inténtalo otra vez.');
+    }
+    if (!auth.currentUser) {
+        throw new Error('Tu sesión de BeatSS no está autenticada en Firebase. Cierra sesión, vuelve a iniciar sesión y reintenta.');
+    }
+
+    let directError;
+    try {
+        console.log('Subiendo PDF directamente a Firebase Storage...');
+        const downloadUrl = await uploadPdfDirectlyToFirebase(blob, filename);
+        console.log('PDF subido directamente a Firebase Storage.');
+        return downloadUrl;
+    } catch (error) {
+        directError = error;
+        console.warn('La subida directa a Firebase falló; se intentará el puente local si está disponible.', error);
+    }
+
+    const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    if (isLocal) {
+        try {
+            console.log('Subiendo PDF mediante el puente local de Firebase...');
+            const downloadUrl = await uploadPdfThroughLocalBridge(blob, filename);
+            console.log('PDF subido a Firebase mediante el puente local.');
+            return downloadUrl;
+        } catch (bridgeError) {
+            console.error('El puente local de Firebase también falló:', bridgeError);
+            throw new Error(`${getFirebaseStorageErrorMessage(directError)} Respaldo local: ${getFirebaseStorageErrorMessage(bridgeError)}`);
+        }
+    }
+
+    throw new Error(getFirebaseStorageErrorMessage(directError));
+}
+
+function getDeliveryErrorMessage(error) {
+    if (!error) return 'No se recibió un detalle del servicio de correo.';
+
+    const candidates = [
+        error.message,
+        error.text,
+        error.response?.data?.message,
+        error.response?.data?.text,
+        typeof error === 'string' ? error : ''
+    ];
+    const detail = candidates.find(value => typeof value === 'string' && value.trim());
+
+    if (detail) return detail.trim().slice(0, 280);
+    if (error.status) return `El servicio de correo respondió con estado ${error.status}.`;
+    return 'No fue posible contactar el servicio de correo. Revisa tu conexión y la configuración de EmailJS.';
+}
+
+// Enviar correo de entrega usando EmailJS (subiendo PDF a la nube cuando esté disponible)
 async function sendEmailDelivery() {
     const refCode = document.getElementById('ref-code').value.trim();
     const isNew = !licenseHistory.some(l => l.refCode === refCode);
     if (isNew && checkPlanLimitExceeded('enviar esta nueva licencia por correo')) {
-        return;
+        return false;
     }
 
     // Validaciones de formulario necesarias
     if (!validateLicenseForm()) {
-        return;
+        return false;
     }
 
     // Guardar contacto automáticamente
@@ -2546,7 +2491,7 @@ async function sendEmailDelivery() {
     // Auto-guardar en historial al enviar por correo
     saveCurrentLicenseToHistory(true);
 
-    const serviceId = producerConfig.emailjsServiceId || 'service_7ofza2v';
+    const serviceId = producerConfig.emailjsServiceId || 'service_btb90z6';
     const templateId = producerConfig.emailjsTemplateId || 'template_mlimkld';
     const publicKey = producerConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
 
@@ -2560,7 +2505,7 @@ async function sendEmailDelivery() {
             await loadScript('https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js');
         } catch (e) {
             showToast('El cargador de EmailJS no está disponible. Conéctate a Internet.', true);
-            return;
+            return false;
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;
@@ -2574,7 +2519,7 @@ async function sendEmailDelivery() {
             await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
         } catch (e) {
             showToast('La librería PDF no está disponible. Conéctate a Internet.', true);
-            return;
+            return false;
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;
@@ -2614,7 +2559,10 @@ async function sendEmailDelivery() {
         
         const type = getActiveLicenseType();
         const refCode = document.getElementById('ref-code').value.trim() || "REF";
-        const pdfFilename = `Licencia_${type.toUpperCase()}_${refCode}.pdf`;
+        const beatName = document.getElementById('beat-name').value.trim() || "Beat";
+        const buyerName = document.getElementById('buyer-name').value.trim() || "Comprador";
+        const buyerEmail = document.getElementById('buyer-email').value.trim();
+        const pdfFilename = `Licencia_${type.toUpperCase()}_${refCode} - ${beatName} - ${buyerName}.pdf`;
         
         let pdfUrl = "";
         try {
@@ -2622,7 +2570,13 @@ async function sendEmailDelivery() {
             updateProgressStep('step-cloud', 'Completado', true);
         } catch (uploadError) {
             console.error('Error al subir PDF:', uploadError);
-            updateProgressStep('step-cloud', 'Error (Se omitirá)', false, true);
+            updateProgressStep('step-cloud', 'Error', false, true);
+            updateProgressStep('step-email', 'Cancelado', false, true);
+            showProgressError(
+                'Entrega no enviada',
+                `${uploadError.message || 'No fue posible guardar el contrato PDF.'} Para evitar una entrega incompleta, el correo no se envió.`
+            );
+            return false;
         }
 
         // 3. Inicializar EmailJS con la llave pública
@@ -2684,9 +2638,10 @@ async function sendEmailDelivery() {
             beat_name: beatName,
             license_type: typeLabels[type] || type,
             delivery_links: linksText,
-            producer_name: "BEATSS",
+            producer_name: producerConfig.aka || producerConfig.name || "BEATSS",
             producer_email: producerConfig.email,
-            pdf_filename: pdfFilename
+            pdf_filename: pdfFilename,
+            pdf_url: pdfUrl
         };
 
         // 5. Enviar usando emailjs.send
@@ -2697,10 +2652,11 @@ async function sendEmailDelivery() {
         
         showProgressSuccess('¡Entrega Enviada!', 'El comprador recibió el correo con el contrato PDF y los archivos de audio.');
         console.log('SUCCESS!', response.status, response.text);
+        return true;
 
     } catch (err) {
         console.error('Error al enviar correo por EmailJS:', err);
-        showProgressError('Fallo en el Envío', err.message || 'Ocurrió un error inesperado al enviar el email.');
+        showProgressError('Fallo en el Envío', getDeliveryErrorMessage(err));
         
         const steps = ['step-pdf', 'step-cloud', 'step-email'];
         steps.forEach(stepId => {
@@ -2710,6 +2666,7 @@ async function sendEmailDelivery() {
                 updateProgressStep(stepId, 'Cancelado', false, true);
             }
         });
+        return false;
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -2738,6 +2695,7 @@ function saveFormDraft() {
         }
 
         const draft = {
+            savedAt: new Date().toISOString(),
             activeLicenseType: getActiveLicenseType(),
             beatName: document.getElementById('beat-name').value,
             beatBpm: document.getElementById('beat-bpm') ? document.getElementById('beat-bpm').value : '',
@@ -2781,6 +2739,16 @@ function loadFormDraft() {
     if (!saved) return;
     try {
         const draft = JSON.parse(saved);
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const savedDate = draft.savedAt ? new Date(draft.savedAt) : null;
+        const savedLocalDate = savedDate && !Number.isNaN(savedDate.getTime())
+            ? `${savedDate.getFullYear()}-${String(savedDate.getMonth() + 1).padStart(2, '0')}-${String(savedDate.getDate()).padStart(2, '0')}`
+            : '';
+        // Un borrador de otro día no puede reutilizar silenciosamente una fecha
+        // legal antigua. El usuario aún puede escoger una fecha histórica si la
+        // necesita para una licencia manual.
+        const refreshEffectiveDate = savedLocalDate !== today;
         
         // 1. Restaurar tipo de licencia activa si existe
         if (draft.activeLicenseType) {
@@ -2817,7 +2785,7 @@ function loadFormDraft() {
             'audio-link-stems': draft.audioLinkStems,
             'ref-code': draft.refCode,
             'payment-method': draft.paymentMethod,
-            'effective-date': draft.effectiveDate,
+            'effective-date': refreshEffectiveDate ? today : draft.effectiveDate,
             'celebration-place': draft.celebrationPlace,
             'clause-formats': draft.clauseFormats,
             'clause-streams': draft.clauseStreams,
@@ -2933,9 +2901,9 @@ async function checkAndSendSignedDelivery() {
     }
 
     // Validar credenciales de EmailJS
-    const serviceId  = 'service_7ofza2v';
-    const templateId = 'template_mlimkld';
-    const publicKey  = 'Xwfa8Ai2WcXXGThLI';
+    const serviceId  = producerConfig.emailjsServiceId || 'service_btb90z6';
+    const templateId = producerConfig.emailjsTemplateId || 'template_mlimkld';
+    const publicKey  = producerConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
 
     btn.innerHTML = '<i data-lucide="loader" class="animate-spin"></i> Verificando firma...';
     btn.disabled = true;
@@ -3068,7 +3036,7 @@ async function checkAndSendSignedDelivery() {
             beat_name:      beatName,
             license_type:   typeLabels[type] || type,
             delivery_links: linksText,
-            producer_name:  "BEATSS",
+            producer_name:  producerConfig.aka || producerConfig.name || "BEATSS",
             producer_email: producerConfig.email,
             pdf_filename:   filename
         };
@@ -3280,27 +3248,39 @@ window.showProgressSuccess = showProgressSuccess;
 window.showProgressError = showProgressError;
 
 export function compileContractData(orderData, producerConfig, templateId = 'licencia_uso', lang = 'es') {
-    const type = orderData.licenseType || 'basic';
+    // Las reemisiones deben partir de la fotografía contractual ya confirmada,
+    // nunca de los campos vivos del formulario ni de una fecha nueva.
+    const source = orderData.contractSnapshot
+        ? { ...orderData, ...orderData.contractSnapshot }
+        : orderData;
+    // Las licencias históricas anteriores a la fotografía contractual guardan
+    // los campos del comprador dentro de formData. Unificarlos permite
+    // reemitirlas sin perder sus datos ni completar con valores del formulario.
+    const sourceFormData = source.formData || {};
+    const type = source.licenseType || source.type || 'basic';
     const isExclusive = type === 'exclusive';
     const defaultConfig = LICENSE_CONFIGS[type] || LICENSE_CONFIGS.basic;
 
-    const beatName = orderData.beatName || "[Nombre del Beat]";
-    const beatBpm = orderData.beatBpm || "";
-    const beatKey = orderData.beatKey || "";
-    const buyerName = orderData.buyerName || "[Nombre del Comprador]";
-    const buyerId = orderData.buyerDni || orderData.buyerId || "[Cédula/DNI]";
-    const buyerEmail = orderData.buyerEmail || "[Correo del Comprador]";
-    const buyerPhone = orderData.buyerPhone || "";
-    const buyerCity = orderData.buyerCity || "[Ciudad]";
-    const buyerCountry = orderData.buyerCountry || "[País]";
-    const value = parseFloat(orderData.finalPrice !== undefined ? orderData.finalPrice : (orderData.price || defaultConfig.price)) || 0;
-    const refCode = orderData.reference || "[Código Referencia]";
-    const effectiveDate = orderData.timestamp ? orderData.timestamp.split('T')[0] : new Date().toISOString().split('T')[0];
+    const beatName = source.beatName || "[Nombre del Beat]";
+    const beatBpm = source.beatBpm || "";
+    const beatKey = source.beatKey || "";
+    const buyerName = source.buyerName || "[Nombre del Comprador]";
+    const buyerId = source.buyerDni || source.buyerId || sourceFormData.buyerId || "[Cédula/DNI]";
+    const buyerEmail = source.buyerEmail || sourceFormData.buyerEmail || "[Correo del Comprador]";
+    const buyerPhone = source.buyerPhone || sourceFormData.buyerPhone || "";
+    const buyerCity = source.buyerCity || sourceFormData.buyerCity || "[Ciudad]";
+    const buyerCountry = source.buyerCountry || sourceFormData.buyerCountry || "[País]";
+    const value = parseFloat(source.finalPrice !== undefined ? source.finalPrice : (source.value ?? source.price ?? defaultConfig.price)) || 0;
+    const refCode = source.reference || source.refCode || "[Código Referencia]";
+    const dateCandidate = source.contractEffectiveDate || source.date || source.purchaseConfirmedAt || source.timestamp;
+    const effectiveDate = dateCandidate
+        ? String(dateCandidate).slice(0, 10)
+        : new Date().toLocaleDateString('en-CA');
     const dateFormatted = (lang === 'en' ? formatFechaIngles(effectiveDate) : formatFechaEspanol(effectiveDate)) || "[Fecha]";
     const isSossaProducer = (producerConfig.aka && producerConfig.aka.toLowerCase().includes('sossa')) || 
                             (producerConfig.name && producerConfig.name.toLowerCase().includes('sossa'));
 
-    let celebrationPlace = orderData.celebrationPlace;
+    let celebrationPlace = source.celebrationPlace || sourceFormData.celebrationPlace;
     if (!celebrationPlace) {
         if (isSossaProducer) {
             celebrationPlace = lang === 'en' 
@@ -3311,10 +3291,10 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
         }
     }
 
-    const paymentMethod = orderData.method || "PayPal";
+    const paymentMethod = source.method || source.paymentMethod || "PayPal";
     
     let displayPaymentMethod = paymentMethod;
-    if (isSossaProducer && ['PayPal', 'Tarjeta de Crédito', 'deuna', 'payphone', 'Stripe'].includes(paymentMethod)) {
+    if (isSossaProducer && ['PayPal', 'Tarjeta de Crédito', 'deuna', 'Deuna!', 'payphone', 'PayPhone', 'Stripe'].includes(paymentMethod)) {
         displayPaymentMethod = lang === 'en'
             ? "Authorized electronic payment processing (Stripe, PayPal, PayPhone, Deuna!)"
             : "Procesamiento electrónico de pago autorizado (Stripe, PayPal, PayPhone, Deuna!)";
@@ -3326,23 +3306,26 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
             'Western Union': 'Western Union',
             'Otro': 'Other',
             'deuna': 'Deuna!',
-            'payphone': 'PayPhone'
+            'Deuna!': 'Deuna!',
+            'payphone': 'PayPhone',
+            'PayPhone': 'PayPhone',
+            'Stripe': 'Stripe'
         };
         displayPaymentMethod = paymentTranslations[paymentMethod] || paymentMethod;
     }
     
-    const formats = orderData.formats || defaultConfig.formats || "[Formatos]";
-    const streams = orderData.streams || defaultConfig.streams || "[Límite Streams]";
-    const physical = orderData.physical || defaultConfig.physical || "[Límite Físicas]";
-    const videos = orderData.videos || defaultConfig.videos || "[Videos]";
-    const videoDuration = orderData.videoDuration || defaultConfig.videoDuration || "[Duración Video]";
-    const years = orderData.years || defaultConfig.years || "[Años de Vigencia]";
-    const terminationFee = orderData.terminationFee || '1000';
-    const writerShare = orderData.writerShare !== undefined ? orderData.writerShare : (defaultConfig.writerShare || 50);
-    const producerShare = orderData.producerShare !== undefined ? orderData.producerShare : (defaultConfig.producerShare || 50);
-    const credits = orderData.credits || `Prod. por ${producerConfig.aka || 'Sossa'}`;
-    const contentIdProhibited = orderData.contentIdProhibited !== undefined 
-        ? orderData.contentIdProhibited 
+    const formats = source.formats || sourceFormData.formats || defaultConfig.formats || "[Formatos]";
+    const streams = source.streams || sourceFormData.streams || defaultConfig.streams || "[Límite Streams]";
+    const physical = source.physical || sourceFormData.physical || defaultConfig.physical || "[Límite Físicas]";
+    const videos = source.videos || sourceFormData.videos || defaultConfig.videos || "[Videos]";
+    const videoDuration = source.videoDuration || sourceFormData.videoDuration || defaultConfig.videoDuration || "[Duración Video]";
+    const years = source.years || sourceFormData.years || defaultConfig.years || "[Años de Vigencia]";
+    const terminationFee = source.terminationFee || sourceFormData.terminationFee || '1000';
+    const writerShare = source.writerShare !== undefined ? source.writerShare : (sourceFormData.writerShare !== undefined ? sourceFormData.writerShare : (defaultConfig.writerShare || 50));
+    const producerShare = source.producerShare !== undefined ? source.producerShare : (sourceFormData.producerShare !== undefined ? sourceFormData.producerShare : (defaultConfig.producerShare || 50));
+    const credits = source.credits || sourceFormData.credits || `Prod. por ${producerConfig.aka || 'Sossa'}`;
+    const contentIdProhibited = source.contentIdProhibited !== undefined 
+        ? source.contentIdProhibited 
         : (defaultConfig.contentId !== undefined ? !defaultConfig.contentId : true);
 
     const valueLetters = lang === 'en' ? numberToEnglishWords(value) : numeroALetras(value);
@@ -3892,4 +3875,3 @@ if (document.readyState === 'loading') {
 } else {
     setTimeout(window.loadPaperPreferences, 100);
 }
-

@@ -11,6 +11,7 @@ const ALLOWED_ORIGINS = [
     'https://www.beatss.app',
     'https://generador-licencias.vercel.app'
 ];
+const DEFAULT_APP_ORIGIN = 'https://beatss.app';
 
 function getCorsOrigin(req) {
     const origin = req.headers.origin;
@@ -42,10 +43,12 @@ function getSignedProxyUrl(rawUrl, host, paymentId, fileType) {
                 fileId = parts[1].split('/')[0];
             }
         } else {
-            fileId = rawUrl;
+            // Los proveedores alternativos ya entregan una URL HTTPS completa.
+            // No debe tratarse como un ID de Google Drive.
+            return rawUrl;
         }
     } catch (e) {
-        fileId = rawUrl;
+        return rawUrl;
     }
     
     if (!fileId) return rawUrl;
@@ -56,7 +59,7 @@ function getSignedProxyUrl(rawUrl, host, paymentId, fileType) {
     const dataToSign = `${fileId}:${expires}:${paymentId || ''}:${fileType || ''}`;
     const signature = crypto.createHmac('sha256', SIGNING_SECRET).update(dataToSign).digest('hex');
     
-    const baseUrl = host ? `https://${host}` : ALLOWED_ORIGIN;
+    const baseUrl = host ? `https://${host}` : DEFAULT_APP_ORIGIN;
     return `${baseUrl}/api/proxy-audio?id=${fileId}&expires=${expires}&paymentId=${paymentId || ''}&fileType=${fileType || ''}&signature=${signature}`;
 }
 
@@ -129,10 +132,6 @@ export default async function handler(req, res) {
         }
     }
 
-    if (!isAuthorized) {
-        return res.status(401).json({ error: 'No autorizado. Se requiere un enlace de descarga válido o una sesión activa.' });
-    }
-
     try {
         initFirebaseAdmin();
         const db = getFirestore();
@@ -144,6 +143,36 @@ export default async function handler(req, res) {
         }
         const paymentData = paymentSnap.data();
         paymentData.id = paymentSnap.id;
+
+        // Verificar acceso: firma válida de descarga O token de sesión Firebase (admin/productor)
+        let isAuthorized = false;
+
+        // Opción 1: token de acceso firmado (compradores que llegan desde el email de confirmación)
+        if (verifyAccessSignature(paymentId, accessToken)) {
+            isAuthorized = true;
+        }
+
+        // Opción 2: token de sesión Firebase (admin o productor autenticado)
+        if (!isAuthorized) {
+            const authHeader = req.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const idToken = authHeader.split('Bearer ')[1];
+                try {
+                    const decoded = await getAuth().verifyIdToken(idToken);
+                    if (decoded && decoded.uid) {
+                        isAuthorized = true;
+                    }
+                } catch (e) {
+                    console.warn('Token inválido en get-order-downloads:', e.message);
+                }
+            }
+        }
+
+        // Si no está autorizado, pero el pago está pendiente, permitimos ver el estado pendiente (sin enlaces de descarga)
+        const isPending = paymentData.status === 'pending' || paymentData.status === 'pendiente';
+        if (!isAuthorized && !isPending) {
+            return res.status(401).json({ error: 'No autorizado. Se requiere un enlace de descarga válido o una sesión activa.' });
+        }
 
         // 2. Obtener datos del beat comprado
         const beatRef = db.collection('users').doc(paymentData.producerId).collection('beats').doc(paymentData.beatId);
@@ -175,12 +204,16 @@ export default async function handler(req, res) {
             downloads.push(doc.data());
         });
 
-        // 6. Generar enlaces seguros firmados (MP3, WAV, Stems)
+        // 6. Generar enlaces seguros firmados (MP3, WAV, Stems) solo si está autorizado
         const host = req.headers.host;
-        const signedLinks = {
+        const signedLinks = isAuthorized ? {
             mp3: getSignedProxyUrl(beatData.mp3 || '', host, paymentId, 'mp3'),
             wav: paymentData.licenseType !== 'basic' ? getSignedProxyUrl(privateWav || beatData.wav || '', host, paymentId, 'wav') : '',
             stems: (paymentData.licenseType !== 'basic' && paymentData.licenseType !== 'premium') ? getSignedProxyUrl(privateStems || beatData.stems || '', host, paymentId, 'stems') : ''
+        } : {
+            mp3: '',
+            wav: '',
+            stems: ''
         };
 
         return res.status(200).json({

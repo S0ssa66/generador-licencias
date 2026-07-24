@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Cada productor solo puede crear y administrar sus propios contratos.
+    // Las URL de descarga que genera Firebase incluyen un token específico para
+    // el comprador, por lo que no se abre el bucket al público.
+    match /licenses/{userId}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+                            && request.auth.uid == userId
+                            && request.resource.contentType == 'application/pdf'
+                            && request.resource.size < 15 * 1024 * 1024;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

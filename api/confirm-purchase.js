@@ -10,6 +10,7 @@ const ALLOWED_ORIGINS = [
     'https://www.beatss.app',
     'https://generador-licencias.vercel.app'
 ];
+const DEFAULT_APP_ORIGIN = 'https://beatss.app';
 
 function getCorsOrigin(req) {
     const origin = req.headers.origin;
@@ -35,7 +36,7 @@ function generateDownloadToken(paymentId) {
         .digest('hex');
 }
 
-function getSignedProxyUrl(rawUrl, host, paymentId, fileType) {
+function getSignedProxyUrl(rawUrl, appOrigin, paymentId, fileType) {
     if (!rawUrl) return '';
     let fileId = '';
     
@@ -49,10 +50,11 @@ function getSignedProxyUrl(rawUrl, host, paymentId, fileType) {
                 fileId = parts[1].split('/')[0];
             }
         } else {
-            fileId = rawUrl;
+            // Los enlaces de proveedores alternativos se entregan directamente.
+            return rawUrl;
         }
     } catch (e) {
-        fileId = rawUrl;
+        return rawUrl;
     }
     
     if (!fileId) return rawUrl;
@@ -61,7 +63,7 @@ function getSignedProxyUrl(rawUrl, host, paymentId, fileType) {
     const dataToSign = `${fileId}:${expires}:${paymentId || ''}:${fileType || ''}`;
     const signature = crypto.createHmac('sha256', SIGNING_SECRET).update(dataToSign).digest('hex');
     
-    const baseUrl = host ? `https://${host}` : ALLOWED_ORIGIN;
+    const baseUrl = appOrigin || DEFAULT_APP_ORIGIN;
     return `${baseUrl}/api/proxy-audio?id=${fileId}&expires=${expires}&paymentId=${paymentId || ''}&fileType=${fileType || ''}&signature=${signature}`;
 }
 
@@ -151,6 +153,7 @@ export default async function handler(req, res) {
     try {
         initFirebaseAdmin();
         const db = getFirestore();
+        const appOrigin = getCorsOrigin(req);
 
         // 1. Obtener la configuración del productor (pública y privada)
         const publicConfigRef = db.collection('users').doc(producerId).collection('config').doc('producer');
@@ -239,6 +242,7 @@ export default async function handler(req, res) {
                 reference: orderId,
                 receiptUrl: '',
                 status: 'approved',
+                deliveryStatus: 'awaiting_contract',
                 discountPercent: discountPercent,
                 couponCode: couponCode,
                 originalPrice: item.price,
@@ -249,16 +253,16 @@ export default async function handler(req, res) {
             await paymentRef.set(paymentData);
 
             // Generar enlaces de descarga para este item
-            const mp3 = getSignedProxyUrl(beatData.mp3 || "", req.headers.host, paymentRef.id, 'mp3');
+            const mp3 = getSignedProxyUrl(beatData.mp3 || "", appOrigin, paymentRef.id, 'mp3');
             const rawWav = wavLink || beatData.wav || "";
             const rawStems = stemsLink || beatData.stems || "";
             
-            const wav = getSignedProxyUrl(rawWav, req.headers.host, paymentRef.id, 'wav');
-            const stems = getSignedProxyUrl(rawStems, req.headers.host, paymentRef.id, 'stems');
+            const wav = getSignedProxyUrl(rawWav, appOrigin, paymentRef.id, 'wav');
+            const stems = getSignedProxyUrl(rawStems, appOrigin, paymentRef.id, 'stems');
 
             // Generar token de acceso para la página de descargas (sin necesidad de login)
             const downloadToken = generateDownloadToken(paymentRef.id);
-            const downloadUrl = `${ALLOWED_ORIGIN}/?download=${paymentRef.id}&token=${downloadToken}`;
+            const downloadUrl = `${appOrigin}/?download=${paymentRef.id}&token=${downloadToken}`;
 
             let linksHtml = `
             <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #edf2f7; border-radius: 8px; background-color: #f8fafc;">
@@ -268,9 +272,13 @@ export default async function handler(req, res) {
             `;
 
             deliveredItems.push({
+                paymentId: paymentRef.id,
                 beatName: item.beatName,
                 licenseType: item.licenseType,
-                linksHtml: linksHtml
+                linksHtml: linksHtml,
+                deliveryToken: SIGNING_SECRET
+                    ? crypto.createHmac('sha256', SIGNING_SECRET).update(`${paymentRef.id}:pdf-delivery`).digest('hex')
+                    : ''
             });
         }
 
@@ -278,63 +286,21 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'No se procesó ningún beat válido de la orden.' });
         }
 
-        // 5. Configurar EmailJS
-        const activeEmailjsServiceId = privateConfig.emailjsServiceId || 'service_7ofza2v';
-        const activeEmailjsTemplateId = privateConfig.emailjsTemplateId || 'template_mlimkld';
-        const activeEmailjsPublicKey = privateConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
-
-        const activeProducerAka = publicConfig.aka || 'Productor';
-        const activeProducerEmail = publicConfig.email || '';
-
-        // Combinar los enlaces de descarga de todos los beats
-        const allLinksHtml = `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1a202c;">
-            <h2 style="color: #4a5568; border-bottom: 2px solid #edf2f7; padding-bottom: 10px;">¡Gracias por tu compra!</h2>
-            <p>Hola <strong>${buyerName}</strong>, aquí tienes tus enlaces de descarga directa para tus instrumentales:</p>
-            ${deliveredItems.map(item => item.linksHtml).join('')}
-            <div style="margin-top: 25px; padding: 15px; background-color: #f7fafc; border-radius: 8px; font-size: 13px; color: #718096; line-height: 1.5;">
-                <p style="margin: 0;">🔒 Tu licencia oficial PDF y contrato firmado digitalmente por el productor serán procesados y entregados muy pronto.</p>
-            </div>
-            <p style="margin-top: 25px; font-size: 14px; color: #4a5568;">Saludos,<br><strong>${activeProducerAka}</strong></p>
-        </div>
-        `;
-
-        const templateParams = {
-            to_name: buyerName,
-            to_email: buyerEmail,
-            beat_name: deliveredItems.map(item => item.beatName).join(', '),
-            license_type: deliveredItems.map(item => typeLabels[item.licenseType] || item.licenseType).join(', '),
-            delivery_links: allLinksHtml,
-            producer_name: activeProducerAka,
-            producer_email: activeProducerEmail,
-            pdf_filename: `Licencia_PayPal_${orderId}.pdf`
-        };
-
-        // Enviar correo a través de la API REST de EmailJS
-        const emailjsResponse = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                service_id: activeEmailjsServiceId,
-                template_id: activeEmailjsTemplateId,
-                user_id: activeEmailjsPublicKey,
-                template_params: templateParams
-            })
-        });
-
-        if (!emailjsResponse.ok) {
-            const emailjsErr = await emailjsResponse.text();
-            console.error('Error al enviar correo por EmailJS:', emailjsErr);
-            // No fallamos la petición completa ya que el pago ya se cobró y se registró en la base de datos
-        } else {
-            console.log(`📧 Entrega por correo enviada con éxito a ${buyerEmail}`);
+        if (!SIGNING_SECRET) {
+            throw new Error('Falta la configuración segura de entrega (DOWNLOAD_SIGNING_KEY).');
         }
 
         return res.status(200).json({
             success: true,
-            message: 'Compra confirmada y procesada con éxito.'
+            paymentId: deliveredItems[0]?.paymentId || '',
+            deliveries: deliveredItems.map(({ paymentId, beatName, licenseType, deliveryToken }) => ({
+                paymentId,
+                beatName,
+                licenseType,
+                reference: orderId,
+                deliveryToken
+            })),
+            message: 'Compra confirmada. Generando los contratos oficiales para la entrega.'
         });
 
     } catch (error) {

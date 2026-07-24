@@ -78,6 +78,11 @@ class CustomHandler(HandlerGetMixin, HandlerPostMixin, http.server.SimpleHTTPReq
             self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
 
     def end_headers(self):
+        # Desactivar caché en desarrollo local
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
+        
         # Cabeceras de seguridad HTTP globales
         self.send_header('X-Frame-Options', 'DENY')
         self.send_header('X-Content-Type-Options', 'nosniff')
@@ -89,9 +94,12 @@ class CustomHandler(HandlerGetMixin, HandlerPostMixin, http.server.SimpleHTTPReq
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://*.google.com https://cdn.tailwindcss.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.payphonetodoesposible.com https://cdn.jsdelivr.net; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data: https://*.googleusercontent.com https://chart.googleapis.com https://cdn.payphonetodoesposible.com https://unpkg.com; "
-            "media-src 'self' blob: data: https://*.googleusercontent.com; "
-            "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://pay.payphonetodoesposible.com https://payphonetodoesposible.com;"
+            "img-src 'self' data: https://*.googleusercontent.com https://chart.googleapis.com https://api.qrserver.com https://cdnjs.cloudflare.com https://cdn.payphonetodoesposible.com https://unpkg.com; "
+            "media-src 'self' blob: data: https://*.googleusercontent.com https://pixeldrain.com; "
+            "connect-src 'self' https://*.googleapis.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://api.emailjs.com "
+            "https://pay.payphonetodoesposible.com https://payphonetodoesposible.com "
+            "https://pixeldrain.com https://upload.gofile.io https://api.gofile.io "
+            "https://tmpfiles.org https://file.io https://www.file.io;"
         )
         self.send_header('Content-Security-Policy', csp_header)
         super().end_headers()
@@ -108,7 +116,7 @@ class CustomHandler(HandlerGetMixin, HandlerPostMixin, http.server.SimpleHTTPReq
         self.send_response(200)
         self.send_cors_headers()
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Firebase-Uid, X-File-Name')
         self.end_headers()
 
     def log_message(self, format, *args):
@@ -193,19 +201,28 @@ if __name__ == '__main__':
     print(f"[*] Directorio raíz: {DIRECTORY}")
     print(f"[*] Escuchando en http://127.0.0.1:{port}")
 
-    # Lanzar el organizador de Obsidian en segundo plano
-    obsidian_thread = threading.Thread(target=run_obsidian_organizer_background, daemon=True)
-    obsidian_thread.start()
+    # El organizador mueve archivos físicamente. Se mantiene desactivado durante
+    # pruebas de licencias y solo se inicia mediante autorización explícita.
+    if os.environ.get('ENABLE_OBSIDIAN_ORGANIZER', '').lower() == 'true':
+        obsidian_thread = threading.Thread(target=run_obsidian_organizer_background, daemon=True)
+        obsidian_thread.start()
+    else:
+        print("[*] Organizador de Obsidian desactivado.")
 
     # Lanzar el worker de contingencia del SRI en segundo plano
-    try:
-        import sri_contingency
-        sri_contingency.start_contingency_worker()
-    except Exception as e:
-        print(f"[-] Error al iniciar el contingency worker del SRI: {e}", file=sys.stderr)
+    if os.environ.get('ENABLE_SRI_CONTINGENCY_WORKER', '').lower() == 'true':
+        try:
+            import sri_contingency
+            sri_contingency.start_contingency_worker()
+        except Exception as e:
+            print(f"[-] Error al iniciar el contingency worker del SRI: {e}", file=sys.stderr)
+    else:
+        print("[*] Worker de contingencia SRI desactivado.")
 
     server_address = ('0.0.0.0', port)
-    httpd = http.server.HTTPServer(server_address, CustomHandler)
+    # El proceso atiende carga de PDFs, generación de contratos y el frontend.
+    # Un servidor con hilos evita que una operación lenta bloquee toda la UI.
+    httpd = http.server.ThreadingHTTPServer(server_address, CustomHandler)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
