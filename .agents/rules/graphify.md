@@ -13,3 +13,4 @@ Rules:
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context
 - Do not rebuild or export Graphify automatically after ordinary code edits or Git commits. The previous automatic workflow recursively indexed generated notes and created thousands of duplicates.
 - Refresh it manually only for a deliberate architecture/documentation review. Keep generated output in `graphify-out/` and, if an Obsidian copy is needed, use `./sync_graphify_to_beatss_obsidian.sh`. Never export to `docs/Codigo_Beatss/`.
+- Before a manual refresh, exclude generated and non-source paths: `.git/`, `node_modules/`, `dist/`, `.vercel/`, `.venv/`, caches, backups, `graphify-out/`, `docs/Codigo_Beatss/` and `docs/3_Recursos/Codigo_Beatss/`. Index application code and curated docs only.

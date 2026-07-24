@@ -6,6 +6,10 @@ ultima_revision: 2026-07-02
 ---
 # 🧠 Memoria del Proyecto - BEATSS
 
+> Referencia histórica y técnica. Para el contexto operativo actual, empieza por
+> `AGENTS.md`, `CODEX_HANDOFF.md` y `task.md`; consulta esta nota solo cuando
+> necesites antecedentes.
+
 Esta nota actúa como la memoria persistente de desarrollo de BEATSS. Tanto tú (desde Obsidian) como yo (el asistente de IA) podemos consultar y actualizar este archivo para que no se pierda el contexto entre sesiones o compactaciones de historial.
 
 ---
