@@ -42,7 +42,7 @@ def send_invoice_email(buyer_email, reference_id, xml_content, ride_filepath=Non
             </p>
             <div class="footer">
                 Este correo fue enviado de forma automática por BEATSS License Orchestrator.<br>
-                Sossa Music LLC. Todos los derechos reservados.
+                Sossa. Todos los derechos reservados.
             </div>
         </div>
     </body>

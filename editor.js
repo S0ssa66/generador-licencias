@@ -524,9 +524,9 @@ function compileContract() {
 
     let celebrationPlace = document.getElementById('celebration-place').value.trim() || "[Lugar de Celebración]";
     if (isSossaProducer) {
-        celebrationPlace = currentLang === 'en' 
-            ? "Executed electronically under the jurisdiction of New Mexico, USA" 
-            : "Celebrado de forma electrónica bajo la jurisdicción de Nuevo México, EE. UU.";
+        celebrationPlace = currentLang === 'en'
+            ? "Executed electronically in Quito, Ecuador"
+            : "Celebrado de forma electrónica en Quito - Ecuador.";
     }
 
     const paymentMethod = document.getElementById('payment-method').value;
@@ -600,12 +600,12 @@ function compileContract() {
 
     // Configurar variables de reemplazo
 
-    // 1. Declaración legal del productor (Persona Natural vs. LLC de Nuevo México)
+    // 1. Declaración legal del productor (persona natural y nombre artístico)
     let producer_legal_declaration = "";
     let producer_legal_declaration_en = "";
     if (isSossaProducer) {
-        producer_legal_declaration = `**Sossa Music LLC**, una compañía de responsabilidad limitada constituida bajo las leyes del Estado de Nuevo México, EE. UU., representada legalmente por su Gerente **Joao David Dominguez** (quien opera bajo el seudónimo profesional de **Sossa**)`;
-        producer_legal_declaration_en = `**Sossa Music LLC**, a limited liability company incorporated under the laws of the State of New Mexico, USA, legally represented by its Manager **Joao David Dominguez** (who operates under the professional pseudonym **Sossa**)`;
+        producer_legal_declaration = `**Sossa**, nombre artístico de **Joao David Dominguez**, quien actúa como persona natural y titular de los derechos objeto de esta licencia`;
+        producer_legal_declaration_en = `**Sossa**, the professional name of **Joao David Dominguez**, acting as a natural person and holder of the rights covered by this license`;
     } else {
         const prodName = producerConfig.name || "Joao David Dominguez";
         const prodAka = producerConfig.aka || "Sossa";
@@ -620,10 +620,10 @@ function compileContract() {
     let jurisdiction_place = "";
     let jurisdiction_place_en = "";
     if (isSossaProducer) {
-        laws_jurisdiction = "Nuevo México, Estados Unidos de América";
-        laws_jurisdiction_en = "New Mexico, United States of America";
-        jurisdiction_place = "Nuevo México, EE. UU.";
-        jurisdiction_place_en = "New Mexico, USA";
+        laws_jurisdiction = "la República del Ecuador";
+        laws_jurisdiction_en = "the Republic of Ecuador";
+        jurisdiction_place = "Quito - Ecuador";
+        jurisdiction_place_en = "Quito - Ecuador";
     } else {
         laws_jurisdiction = "la República del Ecuador";
         laws_jurisdiction_en = "the Republic of Ecuador";
@@ -705,7 +705,7 @@ function compileContract() {
         clause_rescission_rules: clause_rescission_rules,
         clause_content_id_rules: clause_content_id_rules,
 
-        // Nuevas variables para Sossa Music LLC
+        // Variables legales del productor
         producer_legal_declaration: producer_legal_declaration,
         producer_legal_declaration_en: producer_legal_declaration_en,
         laws_jurisdiction: laws_jurisdiction,
@@ -3292,9 +3292,9 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
     let celebrationPlace = source.celebrationPlace || sourceFormData.celebrationPlace;
     if (!celebrationPlace) {
         if (isSossaProducer) {
-            celebrationPlace = lang === 'en' 
-                ? "Executed electronically under the jurisdiction of New Mexico, USA" 
-                : "Celebrado de forma electrónica bajo la jurisdicción de Nuevo México, EE. UU.";
+            celebrationPlace = lang === 'en'
+                ? "Executed electronically in Quito, Ecuador"
+                : "Celebrado de forma electrónica en Quito - Ecuador.";
         } else {
             celebrationPlace = buyerCity ? `${buyerCity}, ${buyerCountry}` : "[Lugar de Celebración]";
         }
@@ -3367,12 +3367,12 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
             ? 'As this is an Exclusive License, the Licensee is authorized to execute standard digital distribution and use the Content ID system in a controlled manner on their final version (the New Song), provided they strictly refrain from claiming exclusive ownership or monetization rights over the instrumental track itself, and they are obligated to whitelist any pre-existing legitimate non-exclusive derivative songs created by other licensees prior to this agreement.'
             : 'Al tratarse de una Licencia Exclusiva, el Licenciatario está facultado para la distribución digital estándar y el uso del sistema Content ID de manera controlada sobre su versión final (la Nueva Canción) siempre y cuando se abstenga estrictamente de reclamar la propiedad exclusiva o la monetización de la pista instrumental en sí misma, quedando obligado a incluir en lista blanca (*whitelist*) cualquier canción derivada legítima no exclusiva preexistente creada por otros licenciatarios antes de este acuerdo.');
 
-    // 1. Declaración legal del productor (Persona Natural vs. LLC de Nuevo México)
+    // 1. Declaración legal del productor (persona natural y nombre artístico)
     let producer_legal_declaration = "";
     let producer_legal_declaration_en = "";
     if (isSossaProducer) {
-        producer_legal_declaration = `**Sossa Music LLC**, una compañía de responsabilidad limitada constituida bajo las leyes del Estado de Nuevo México, EE. UU., representada legalmente por su Gerente **Joao David Dominguez** (quien opera bajo el seudónimo profesional de **Sossa**)`;
-        producer_legal_declaration_en = `**Sossa Music LLC**, a limited liability company incorporated under the laws of the State of New Mexico, USA, legally represented by its Manager **Joao David Dominguez** (who operates under the professional pseudonym **Sossa**)`;
+        producer_legal_declaration = `**Sossa**, nombre artístico de **Joao David Dominguez**, quien actúa como persona natural y titular de los derechos objeto de esta licencia`;
+        producer_legal_declaration_en = `**Sossa**, the professional name of **Joao David Dominguez**, acting as a natural person and holder of the rights covered by this license`;
     } else {
         const prodName = producerConfig.name || "Joao David Dominguez";
         const prodAka = producerConfig.aka || "Sossa";
@@ -3387,10 +3387,10 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
     let jurisdiction_place = "";
     let jurisdiction_place_en = "";
     if (isSossaProducer) {
-        laws_jurisdiction = "Nuevo México, Estados Unidos de América";
-        laws_jurisdiction_en = "New Mexico, United States of America";
-        jurisdiction_place = "Nuevo México, EE. UU.";
-        jurisdiction_place_en = "New Mexico, USA";
+        laws_jurisdiction = "la República del Ecuador";
+        laws_jurisdiction_en = "the Republic of Ecuador";
+        jurisdiction_place = "Quito - Ecuador";
+        jurisdiction_place_en = "Quito - Ecuador";
     } else {
         laws_jurisdiction = "la República del Ecuador";
         laws_jurisdiction_en = "the Republic of Ecuador";
