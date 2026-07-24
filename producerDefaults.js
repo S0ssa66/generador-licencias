@@ -81,8 +81,7 @@ export const PRODUCER_DEFAULTS = {
         emailjsPublicKey: "",
         gdriveClientId: "",
         storageProvider: "gdrive-central",
-        plan: "pro",
-        expirationPro: "2036-12-31T23:59:59.000Z"
+        plan: "inicial"
     }
 };
 
@@ -97,9 +96,9 @@ export function getProducerDefault(email, displayName) {
     } else if (cleanEmail === 'esme420typebeat@gmail.com') {
         return { ...PRODUCER_DEFAULTS['esme420typebeat@gmail.com'] };
     } else {
-        // Nuevo productor (7-Day Pro Trial)
-        const now = new Date();
-        const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        // Nuevo productor: el plan inicial coincide con las reglas de Firestore.
+        // Las pruebas o mejoras de plan se activan de forma segura desde el
+        // administrador o el flujo de pago, nunca desde el navegador.
         return {
             name: displayName || "Nuevo Productor",
             aka: "Productor",
@@ -120,9 +119,7 @@ export function getProducerDefault(email, displayName) {
             emailjsPublicKey: "",
             gdriveClientId: "",
             storageProvider: "gdrive-central",
-            plan: "pro",
-            expirationPro: sevenDaysLater.toISOString(),
-            trialStartedAt: now.toISOString()
+            plan: "inicial"
         };
     }
 }

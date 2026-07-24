@@ -1,5 +1,6 @@
 import { 
     auth, 
+    db,
     googleProvider,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -7,7 +8,10 @@ import {
     signInWithRedirect,
     getRedirectResult,
     onAuthStateChanged,
-    unlink
+    unlink,
+    doc,
+    getDoc,
+    setDoc
 } from "./firebase.js";
 import { UI_TRANSLATIONS } from "./i18n.js";
 
@@ -15,6 +19,48 @@ import { UI_TRANSLATIONS } from "./i18n.js";
 window.currentUser = window.currentUser || null;
 window.currentUserIsAdmin = window.currentUserIsAdmin || false;
 window.isManualLoginAttempt = window.isManualLoginAttempt || false;
+
+/**
+ * Crea y mantiene el registro privado básico de cada productor autenticado.
+ * El proveedor de acceso se guarda únicamente en /users/{uid}, que no es
+ * público, para que el administrador pueda auditar altas sin exponerlo en la
+ * configuración pública del productor.
+ */
+async function ensureUserIdentityRecord(user) {
+    if (!user?.uid) return;
+
+    const userRef = doc(db, 'users', user.uid);
+    const now = new Date().toISOString();
+    const providerIds = (user.providerData || [])
+        .map(provider => provider.providerId)
+        .filter(Boolean);
+    const primaryProvider = providerIds.includes('google.com')
+        ? 'google'
+        : providerIds.includes('password')
+            ? 'email_password'
+            : (providerIds[0] || 'unknown');
+
+    try {
+        const existing = await getDoc(userRef);
+        const auditData = {
+            email: user.email || '',
+            displayName: user.displayName || '',
+            authProvider: primaryProvider,
+            authProviders: providerIds,
+            lastLoginAt: now
+        };
+
+        if (!existing.exists()) {
+            auditData.plan = 'inicial';
+            auditData.registeredAt = user.metadata?.creationTime || now;
+        }
+
+        await setDoc(userRef, auditData, { merge: true });
+    } catch (error) {
+        // El registro de auditoría nunca debe impedir que una cuenta inicie sesión.
+        console.warn('No se pudo actualizar el registro de acceso del productor:', error.message);
+    }
+}
 
 export function setupAuthModalEvents() {
     const tabLoginBtn = document.getElementById('tab-login-btn');
@@ -319,6 +365,7 @@ export function initAuthAndApp() {
             window.currentUser = user.uid;
             window.currentUserEmail = user.email;
             window.currentUserIsAdmin = (user.email && (user.email.toLowerCase() === 'masterjuego25@gmail.com' || user.email.toLowerCase() === 'sossabeatz1@gmail.com'));
+            await ensureUserIdentityRecord(user);
         } else {
             window.currentUser = null;
             window.currentUserEmail = null;
@@ -346,6 +393,7 @@ export function initAuthAndApp() {
             document.getElementById('login-modal').style.display = 'none';
             const landing = document.getElementById('landing-page');
             if (landing) landing.style.display = 'none';
+            document.body.classList.remove('landing-active');
             
             window.currentUserIsAdmin = (user.email && (user.email.toLowerCase() === 'masterjuego25@gmail.com' || user.email.toLowerCase() === 'sossabeatz1@gmail.com'));
             
@@ -378,6 +426,7 @@ export function initAuthAndApp() {
             const landing = document.getElementById('landing-page');
             if (landing) {
                 landing.style.display = 'block';
+                document.body.classList.add('landing-active');
                 document.getElementById('login-modal').style.display = 'none';
                 if (typeof window.safeCreateIcons === 'function') {
                     setTimeout(window.safeCreateIcons, 100);
