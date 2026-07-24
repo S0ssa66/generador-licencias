@@ -3879,6 +3879,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const target = btn.dataset.target;
                 if (target === 'form') {
+                    // El historial colapsa el sidebar. Al volver al formulario
+                    // hay que restaurarlo antes de hacerlo visible en móvil.
+                    if (sidebar) sidebar.classList.remove('sidebar-hidden');
                     if (sidebar) sidebar.style.setProperty('display', 'block', 'important');
                     if (mainPanel) mainPanel.style.setProperty('display', 'none', 'important');
                 } else if (target === 'preview') {
