@@ -3246,6 +3246,15 @@ window.resetProgressStep = resetProgressStep;
 window.updateProgressStep = updateProgressStep;
 window.showProgressSuccess = showProgressSuccess;
 window.showProgressError = showProgressError;
+// El cierre vive junto al modal para que siga funcionando incluso si la
+// inicialización general de main.js se retrasa o falla después de una entrega.
+export function closeEmailProgressModal() {
+    const modal = document.getElementById('email-progress-modal');
+    if (!modal) return;
+    modal.style.display = 'none';
+}
+
+window.closeEmailProgressModal = closeEmailProgressModal;
 
 export function compileContractData(orderData, producerConfig, templateId = 'licencia_uso', lang = 'es') {
     // Las reemisiones deben partir de la fotografía contractual ya confirmada,
