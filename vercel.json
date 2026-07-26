@@ -11,6 +11,17 @@
   ],
   "redirects": [
     {
+      "source": "/(.*)",
+      "destination": "https://beatss.app/$1",
+      "permanent": true,
+      "has": [
+        {
+          "type": "host",
+          "value": "generador-licencias.vercel.app"
+        }
+      ]
+    },
+    {
       "source": "/.env",
       "destination": "/404",
       "permanent": true
@@ -68,6 +79,18 @@
         {
           "key": "Strict-Transport-Security",
           "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "same-site"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        },
+        {
+          "key": "X-Permitted-Cross-Domain-Policies",
+          "value": "none"
         }
       ]
     },

@@ -4,7 +4,10 @@ import os
 import base64
 import tempfile
 import hashlib
+import hmac
+import time
 import urllib.request
+import urllib.parse
 from urllib.parse import urlparse, parse_qs
 
 from server_utils import get_admin_token
@@ -74,39 +77,21 @@ class HandlerGetMixin:
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == '/api/local-token':
-            # Check Origin/Referer to ensure it's a local address
-            origin = self.headers.get('Origin')
-            referer = self.headers.get('Referer')
-            
-            is_local_origin = False
-            local_origins = [
-                'http://localhost:8000', 'http://localhost:5173', 'http://localhost:3000',
-                'http://127.0.0.1:8000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'
-            ]
-            
-            # If there is no Origin (same origin request from localhost), allow
-            if not origin:
-                if referer and any(x in referer for x in ['localhost:', '127.0.0.1:']):
-                    is_local_origin = True
-                elif not referer:
-                    # Direct browser access or same origin without referer
-                    is_local_origin = True
-            elif origin in local_origins:
-                is_local_origin = True
-                
-            if is_local_origin:
+            # Origin/Referer no son controles de acceso: cualquier cliente puede
+            # omitirlos. La decisión se basa en la dirección de red del cliente.
+            token = os.environ.get('LOCAL_AUTH_TOKEN', '')
+            if self.is_loopback_request() and token:
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.send_cors_headers()
                 self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate')
                 self.end_headers()
-                token = os.environ.get('LOCAL_AUTH_TOKEN', '')
                 self.wfile.write(json.dumps({"token": token}).encode('utf-8'))
             else:
-                self.send_response(403)
+                self.send_response(404)
                 self.send_cors_headers()
                 self.end_headers()
-                self.wfile.write(b'{"error": "Forbidden: Token retrieval only allowed from localhost"}')
+                self.wfile.write(b'{"error": "Not found"}')
             return
             
         elif parsed.path == '/api/load-local':
@@ -172,6 +157,12 @@ class HandlerGetMixin:
                     self.end_headers()
                     self.wfile.write(f'{{"error": "{result_path_or_err}"}}'.encode('utf-8'))
         elif parsed.path == '/api/payments/download-ride':
+            if not self.is_loopback_request() and not self.check_local_auth():
+                self.send_response(403)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Acceso local requerido"}')
+                return
             qs = parse_qs(parsed.query)
             payment_id = qs.get('paymentId', [None])[0]
             user = qs.get('user', ['sossa'])[0]
@@ -314,6 +305,12 @@ class HandlerGetMixin:
             self.wfile.write(b'{"error": "Archivo de RIDE no disponible"}')
             
         elif parsed.path == '/api/payments/download-xml':
+            if not self.is_loopback_request() and not self.check_local_auth():
+                self.send_response(403)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Acceso local requerido"}')
+                return
             qs = parse_qs(parsed.query)
             payment_id = qs.get('paymentId', [None])[0]
             user = qs.get('user', ['sossa'])[0]
@@ -430,12 +427,23 @@ class HandlerGetMixin:
                 self.wfile.write(b'{"error": "Falta parametro id"}')
                 return
                 
-            import hmac
-            secret = os.environ.get('DOWNLOAD_SIGNING_KEY', 'dev-signing-key')
+            secret = os.environ.get('DOWNLOAD_SIGNING_KEY')
+            if not secret:
+                self.send_response(503)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Servicio de descargas no configurado"}')
+                return
             expected_access_token = hmac.new(secret.encode('utf-8'), f"{payment_id}:download".encode('utf-8'), hashlib.sha256).hexdigest()
-            
-            # En desarrollo local se da acceso si el token coincide
-            is_authorized = True
+            is_authorized = self.is_loopback_request() or (
+                bool(accessToken) and hmac.compare_digest(accessToken, expected_access_token)
+            ) or self.check_local_auth()
+            if not is_authorized:
+                self.send_response(401)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Enlace de descarga no autorizado"}')
+                return
             
             try:
                 backup_path = os.path.join(DIRECTORY, f'{user}_backup_sincronizado.json')
@@ -475,11 +483,29 @@ class HandlerGetMixin:
                 private_wav = beat_data.get('wav', '')
                 private_stems = beat_data.get('stems', '')
                 
-                host = self.headers.get('Host', 'localhost:8000')
+                # Nunca construir enlaces a partir de Host sin validar: puede ser
+                # controlado por un atacante y provocar enlaces de phishing.
+                configured_origin = os.environ.get('PUBLIC_BASE_URL', '').strip().rstrip('/')
+                configured_url = urlparse(configured_origin) if configured_origin else None
+                configured_host = configured_url.hostname if configured_url else None
+                is_trusted_configured_origin = bool(
+                    configured_url and configured_url.scheme == 'https' and
+                    configured_host in {'beatss.app', 'www.beatss.app'}
+                ) or bool(
+                    configured_url and configured_url.scheme == 'https' and configured_host and
+                    configured_host.startswith('generador-licencias-') and
+                    configured_host.endswith('-masterjuego25-5300s-projects.vercel.app')
+                )
+                if is_trusted_configured_origin:
+                    base_origin = f"{configured_url.scheme}://{configured_url.netloc}"
+                elif self.is_loopback_request():
+                    base_origin = f"http://127.0.0.1:{self.server.server_port}"
+                else:
+                    base_origin = 'https://beatss.app'
                 
                 def get_signed_proxy_url(raw_url, file_type):
                     if not raw_url: return ''
-                    file_id = raw_url
+                    file_id = ''
                     if 'id=' in raw_url:
                         try:
                             file_id = raw_url.split('id=')[1].split('&')[0]
@@ -488,6 +514,13 @@ class HandlerGetMixin:
                         try:
                             file_id = raw_url.split('/d/')[1].split('/')[0]
                         except Exception: pass
+                    else:
+                        # PixelDrain, GoFile, tmpfiles y otros proveedores
+                        # alternativos ya entregan una URL HTTPS descargable.
+                        return raw_url
+
+                    if not file_id:
+                        return raw_url
                         
                     # WAV y Stems expiran en 24 horas, MP3 en 7 días
                     duration = 86400 if file_type in ['wav', 'stems'] else 86400 * 7
@@ -497,12 +530,13 @@ class HandlerGetMixin:
                     data_to_sign = f"{file_id}:{expires}:{payment_id or ''}:{file_type or ''}"
                     sig = hmac.new(secret.encode('utf-8'), data_to_sign.encode('utf-8'), hashlib.sha256).hexdigest()
                     
-                    return f"http://{host}/api/proxy-audio?id={file_id}&expires={expires}&paymentId={payment_id or ''}&fileType={file_type or ''}&signature={sig}"
+                    return f"{base_origin}/api/proxy-audio?id={file_id}&expires={expires}&paymentId={payment_id or ''}&fileType={file_type or ''}&signature={sig}"
                 
+                is_pending = payment_entry.get('status') == 'pending'
                 signed_links = {
-                    "mp3": get_signed_proxy_url(beat_data.get('mp3', ''), 'mp3'),
-                    "wav": get_signed_proxy_url(private_wav, 'wav') if payment_entry.get('licenseType') != 'basic' else '',
-                    "stems": get_signed_proxy_url(private_stems, 'stems') if payment_entry.get('licenseType') not in ['basic', 'premium'] else ''
+                    "mp3": "" if is_pending else get_signed_proxy_url(beat_data.get('mp3', ''), 'mp3'),
+                    "wav": "" if is_pending else (get_signed_proxy_url(private_wav, 'wav') if payment_entry.get('licenseType') != 'basic' else ''),
+                    "stems": "" if is_pending else (get_signed_proxy_url(private_stems, 'stems') if payment_entry.get('licenseType') not in ['basic', 'premium'] else '')
                 }
                 
                 downloads = []
@@ -552,7 +586,10 @@ class HandlerGetMixin:
             
             try:
                 from firestore_ops import fetch_firestore_document
-                gdrive_config = fetch_firestore_document('system/gdrive_config', id_token)
+                admin_token = get_admin_token()
+                if not admin_token:
+                    raise RuntimeError("No hay credenciales administrativas disponibles para consultar Storage")
+                gdrive_config = fetch_firestore_document('system/gdrive_config', admin_token)
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
@@ -595,7 +632,13 @@ class HandlerGetMixin:
                 
             import hmac
             import time
-            secret = os.environ.get('DOWNLOAD_SIGNING_KEY', 'dev-signing-key')
+            secret = os.environ.get('DOWNLOAD_SIGNING_KEY')
+            if not secret:
+                self.send_response(503)
+                self.send_cors_headers()
+                self.end_headers()
+                self.wfile.write(b'{"error": "Servicio de audio no configurado"}')
+                return
             
             is_authorized = False
             if expires:
@@ -604,7 +647,7 @@ class HandlerGetMixin:
                     if now <= int(expires):
                         data_to_sign = f"{file_id}:{expires}:{payment_id or ''}:{file_type or ''}"
                         expected_signature = hmac.new(secret.encode('utf-8'), data_to_sign.encode('utf-8'), hashlib.sha256).hexdigest()
-                        if signature == expected_signature:
+                        if signature and hmac.compare_digest(signature, expected_signature):
                             is_authorized = True
                 except Exception:
                     pass
@@ -626,13 +669,13 @@ class HandlerGetMixin:
                 
             # Intentar streaming desde Google Drive usando el token central
             try:
-                import urllib.request
-                import urllib.parse
-                import json
-                
-                # Obtener la config de Firestore sin requerir token (reglas de lectura abiertas para system/gdrive_config)
+                # Leer la configuración sensible con credenciales administrativas;
+                # nunca desde una regla pública de Firestore.
                 config_url = "https://firestore.googleapis.com/v1/projects/licencias-musicales/databases/(default)/documents/system/gdrive_config"
-                req_conf = urllib.request.Request(config_url, method="GET")
+                admin_token = get_admin_token()
+                if not admin_token:
+                    raise RuntimeError("No hay credenciales administrativas disponibles para Storage")
+                req_conf = urllib.request.Request(config_url, headers={"Authorization": f"Bearer {admin_token}"}, method="GET")
                 with urllib.request.urlopen(req_conf) as resp_conf:
                     gdrive_config = json.loads(resp_conf.read().decode("utf-8")).get("fields", {})
                     

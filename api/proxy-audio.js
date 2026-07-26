@@ -15,14 +15,13 @@ const ALLOWED_ORIGINS = [
 
 function getCorsOrigin(req) {
     const origin = req.headers.origin;
-    if (!origin) return 'https://beatss.app';
+    if (!origin) return null;
     if (ALLOWED_ORIGINS.includes(origin) || 
-        origin.endsWith('.vercel.app') || 
-        origin.startsWith('http://localhost') || 
-        origin.startsWith('http://127.0.0.1')) {
+        /^https:\/\/generador-licencias-[a-z0-9-]+-masterjuego25-5300s-projects\.vercel\.app$/i.test(origin) ||
+        /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
         return origin;
     }
-    return 'https://beatss.app';
+    return null;
 }
 const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY;
 if (!SIGNING_SECRET) {
@@ -100,12 +99,15 @@ async function getCentralGdriveToken() {
 
 export default async function handler(req, res) {
     // CORS - restringido al dominio propio
-    res.setHeader('Access-Control-Allow-Origin', getCorsOrigin(req));
+    const corsOrigin = getCorsOrigin(req);
+    res.setHeader('Vary', 'Origin');
+    if (corsOrigin) res.setHeader('Access-Control-Allow-Origin', corsOrigin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Range, Authorization');
 
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'GET') return res.status(405).json({ error: 'Método no permitido' });
+    if (!SIGNING_SECRET) return res.status(503).json({ error: 'Servicio de audio no configurado.' });
 
     const fileId = req.query.id;
     const expires = req.query.expires;
@@ -256,10 +258,6 @@ export default async function handler(req, res) {
         }
     }
 
-    if (!isAuthorized) {
-        return res.status(403).json({ error: 'Acceso denegado: este archivo es privado y requiere autenticación o una firma de descarga válida.' });
-    }
-
     // 5. Descargar y transmitir el archivo desde Google Drive a través de streaming
     const targetUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
     
@@ -280,8 +278,12 @@ export default async function handler(req, res) {
             return res.status(response.status).json({ error: 'Error al recuperar el archivo de Google Drive.' });
         }
 
-        // Reenviar cabeceras clave para streaming y reproducción en iOS/Safari
-        const contentType = response.headers.get('content-type');
+        const contentType = response.headers.get('content-type') || '';
+
+        // Si no está autorizado previamente, solo permitimos si el archivo es un PDF (contrato)
+        if (!isAuthorized && !contentType.toLowerCase().includes('pdf')) {
+            return res.status(403).json({ error: 'Acceso denegado: este archivo es privado y requiere autenticación o una firma de descarga válida.' });
+        }
         const contentLength = response.headers.get('content-length');
         const contentRange = response.headers.get('content-range');
         const acceptRanges = response.headers.get('accept-ranges');

@@ -3209,14 +3209,24 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
                     await html2pdf().from(element).set(opt).save();
 
                     // Registrar descarga en Firestore a través del endpoint
+                    const logHeaders = { 'Content-Type': 'application/json' };
+                    let logAccessToken = downloadToken || '';
+                    if (window._firebaseAuth && window._firebaseAuth.currentUser) {
+                        try {
+                            const idToken = await window._firebaseAuth.currentUser.getIdToken();
+                            logHeaders.Authorization = `Bearer ${idToken}`;
+                        } catch (tokenErr) {
+                            console.warn('No se pudo obtener el token para registrar la descarga:', tokenErr.message);
+                        }
+                    }
                     await fetch('/api/log-download', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ paymentId, fileType: 'license' })
+                        headers: logHeaders,
+                        body: JSON.stringify({ paymentId, fileType: 'license', accessToken: logAccessToken })
                     });
                     
                     // Recargar el historial
-                    setTimeout(() => refreshDownloadHistory(paymentId), 2000);
+                    setTimeout(() => refreshDownloadHistory(paymentId, downloadToken), 2000);
                 } catch (err) {
                     console.error("Error al generar PDF o registrar descarga:", err);
                     if (typeof window.showToast === 'function') {

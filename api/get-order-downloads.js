@@ -15,14 +15,22 @@ const DEFAULT_APP_ORIGIN = 'https://beatss.app';
 
 function getCorsOrigin(req) {
     const origin = req.headers.origin;
-    if (!origin) return 'https://beatss.app';
-    if (ALLOWED_ORIGINS.includes(origin) || 
-        origin.endsWith('.vercel.app') || 
-        origin.startsWith('http://localhost') || 
-        origin.startsWith('http://127.0.0.1')) {
+    if (!origin) return null;
+    if (ALLOWED_ORIGINS.includes(origin) ||
+        /^https:\/\/generador-licencias-[a-z0-9-]+-masterjuego25-5300s-projects\.vercel\.app$/i.test(origin) ||
+        /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
         return origin;
     }
-    return 'https://beatss.app';
+    return null;
+}
+
+function getAppOrigin(req) {
+    const forwardedHost = req.headers['x-forwarded-host'];
+    const host = (forwardedHost || req.headers.host || '').split(',')[0].trim().toLowerCase();
+    if (host === 'beatss.app' || host === 'www.beatss.app') return `https://${host}`;
+    if (/^generador-licencias-[a-z0-9-]+-masterjuego25-5300s-projects\.vercel\.app$/.test(host)) return `https://${host}`;
+    if (/^(localhost|127\.0\.0\.1):\d+$/.test(host)) return `http://${host}`;
+    return DEFAULT_APP_ORIGIN;
 }
 const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY;
 if (!SIGNING_SECRET) {
@@ -59,7 +67,7 @@ function getSignedProxyUrl(rawUrl, host, paymentId, fileType) {
     const dataToSign = `${fileId}:${expires}:${paymentId || ''}:${fileType || ''}`;
     const signature = crypto.createHmac('sha256', SIGNING_SECRET).update(dataToSign).digest('hex');
     
-    const baseUrl = host ? `https://${host}` : DEFAULT_APP_ORIGIN;
+    const baseUrl = getAppOrigin({ headers: { host } });
     return `${baseUrl}/api/proxy-audio?id=${fileId}&expires=${expires}&paymentId=${paymentId || ''}&fileType=${fileType || ''}&signature=${signature}`;
 }
 
@@ -93,7 +101,9 @@ function initFirebaseAdmin() {
 
 export default async function handler(req, res) {
     // CORS - restringido al dominio propio
-    res.setHeader('Access-Control-Allow-Origin', getCorsOrigin(req));
+    const corsOrigin = getCorsOrigin(req);
+    res.setHeader('Vary', 'Origin');
+    if (corsOrigin) res.setHeader('Access-Control-Allow-Origin', corsOrigin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -103,12 +113,17 @@ export default async function handler(req, res) {
     const paymentId = req.query.id;
     const accessToken = req.query.token; // Token de acceso firmado para la página de descargas
 
-    if (!paymentId) {
+    if (!paymentId || !/^[A-Za-z0-9_-]{3,160}$/.test(paymentId)) {
         return res.status(400).json({ error: 'Falta el ID del pago.' });
+    }
+    if (!SIGNING_SECRET) {
+        return res.status(503).json({ error: 'Servicio de descargas no configurado.' });
     }
 
     // Verificar acceso: firma válida de descarga O token de sesión Firebase (admin/productor)
     let isAuthorized = false;
+    let authenticatedUid = null;
+    let isAdminToken = false;
 
     // Opción 1: token de acceso firmado (compradores que llegan desde el email de confirmación)
     if (verifyAccessSignature(paymentId, accessToken)) {
@@ -124,6 +139,8 @@ export default async function handler(req, res) {
                 initFirebaseAdmin();
                 const decoded = await getAuth().verifyIdToken(idToken);
                 if (decoded && decoded.uid) {
+                    authenticatedUid = decoded.uid;
+                    isAdminToken = decoded.admin === true || (decoded.email || '').toLowerCase() === 'masterjuego25@gmail.com';
                     isAuthorized = true;
                 }
             } catch (e) {
@@ -144,33 +161,11 @@ export default async function handler(req, res) {
         const paymentData = paymentSnap.data();
         paymentData.id = paymentSnap.id;
 
-        // Verificar acceso: firma válida de descarga O token de sesión Firebase (admin/productor)
-        let isAuthorized = false;
-
-        // Opción 1: token de acceso firmado (compradores que llegan desde el email de confirmación)
-        if (verifyAccessSignature(paymentId, accessToken)) {
-            isAuthorized = true;
+        if (authenticatedUid && !isAdminToken &&
+            paymentData.userId !== authenticatedUid && paymentData.producerId !== authenticatedUid) {
+            return res.status(403).json({ error: 'La sesión no pertenece a este pedido.' });
         }
-
-        // Opción 2: token de sesión Firebase (admin o productor autenticado)
         if (!isAuthorized) {
-            const authHeader = req.headers.authorization;
-            if (authHeader && authHeader.startsWith('Bearer ')) {
-                const idToken = authHeader.split('Bearer ')[1];
-                try {
-                    const decoded = await getAuth().verifyIdToken(idToken);
-                    if (decoded && decoded.uid) {
-                        isAuthorized = true;
-                    }
-                } catch (e) {
-                    console.warn('Token inválido en get-order-downloads:', e.message);
-                }
-            }
-        }
-
-        // Si no está autorizado, pero el pago está pendiente, permitimos ver el estado pendiente (sin enlaces de descarga)
-        const isPending = paymentData.status === 'pending' || paymentData.status === 'pendiente';
-        if (!isAuthorized && !isPending) {
             return res.status(401).json({ error: 'No autorizado. Se requiere un enlace de descarga válido o una sesión activa.' });
         }
 
@@ -205,7 +200,7 @@ export default async function handler(req, res) {
         });
 
         // 6. Generar enlaces seguros firmados (MP3, WAV, Stems) solo si está autorizado
-        const host = req.headers.host;
+        const host = req.headers['x-forwarded-host'] || req.headers.host;
         const signedLinks = isAuthorized ? {
             mp3: getSignedProxyUrl(beatData.mp3 || '', host, paymentId, 'mp3'),
             wav: paymentData.licenseType !== 'basic' ? getSignedProxyUrl(privateWav || beatData.wav || '', host, paymentId, 'wav') : '',

@@ -12,7 +12,9 @@ Arquitectura modular:
 """
 
 import http.server
+import hmac
 import os
+import secrets
 import sys
 import threading
 
@@ -57,7 +59,12 @@ class CustomHandler(HandlerGetMixin, HandlerPostMixin, http.server.SimpleHTTPReq
         if not auth_header.startswith('Bearer '):
             return False
         token = auth_header.split('Bearer ')[1].strip()
-        return token == local_token
+        return hmac.compare_digest(token, local_token)
+
+    def is_loopback_request(self):
+        """Indica si la petición proviene del mismo equipo que ejecuta BEATSS."""
+        client_host = (self.client_address[0] or '').split('%', 1)[0]
+        return client_host in {'127.0.0.1', '::1', 'localhost'}
 
     def send_cors_headers(self):
         allowed_origins = [
@@ -72,10 +79,9 @@ class CustomHandler(HandlerGetMixin, HandlerPostMixin, http.server.SimpleHTTPReq
             'https://www.beatss.app'
         ]
         origin = self.headers.get('Origin')
+        self.send_header('Vary', 'Origin')
         if origin in allowed_origins:
             self.send_header('Access-Control-Allow-Origin', origin)
-        else:
-            self.send_header('Access-Control-Allow-Origin', 'http://localhost:8000')
 
     def end_headers(self):
         # Desactivar caché en desarrollo local
@@ -166,10 +172,10 @@ def load_dotenv():
 if __name__ == '__main__':
     load_dotenv()
 
-    # Asegurar que LOCAL_AUTH_TOKEN esté configurado en .env
+    # Asegurar que los secretos locales estén configurados en .env.
+    # Nunca se usa una clave fija de desarrollo para firmar descargas.
     local_token = os.environ.get('LOCAL_AUTH_TOKEN')
     if not local_token:
-        import secrets
         generated_token = secrets.token_hex(24)
         env_path = os.path.join(DIRECTORY, '.env')
         try:
@@ -179,6 +185,18 @@ if __name__ == '__main__':
             print(f"[+] LOCAL_AUTH_TOKEN autogenerado y configurado en .env.")
         except Exception as e:
             print(f"[-] Error al guardar LOCAL_AUTH_TOKEN autogenerado en .env: {e}", file=sys.stderr)
+
+    signing_key = os.environ.get('DOWNLOAD_SIGNING_KEY')
+    if not signing_key:
+        generated_key = secrets.token_urlsafe(48)
+        env_path = os.path.join(DIRECTORY, '.env')
+        try:
+            with open(env_path, 'a', encoding='utf-8') as f:
+                f.write(f'\nDOWNLOAD_SIGNING_KEY="{generated_key}"\n')
+            os.environ['DOWNLOAD_SIGNING_KEY'] = generated_key
+            print("[+] DOWNLOAD_SIGNING_KEY local generado y configurado en .env.")
+        except Exception as e:
+            print(f"[-] Error al guardar DOWNLOAD_SIGNING_KEY autogenerado en .env: {e}", file=sys.stderr)
 
     # Validación de seguridad de variables críticas
     provider = os.environ.get('LLM_PROVIDER', 'auto').lower().strip()
@@ -219,7 +237,11 @@ if __name__ == '__main__':
     else:
         print("[*] Worker de contingencia SRI desactivado.")
 
-    server_address = ('0.0.0.0', port)
+    bind_host = os.environ.get('BEATSS_BIND_HOST', '127.0.0.1').strip()
+    if bind_host not in {'127.0.0.1', '::1', '0.0.0.0'}:
+        print(f"[!] BEATSS_BIND_HOST no permitido ({bind_host!r}); se usará 127.0.0.1.")
+        bind_host = '127.0.0.1'
+    server_address = (bind_host, port)
     # El proceso atiende carga de PDFs, generación de contratos y el frontend.
     # Un servidor con hilos evita que una operación lenta bloquee toda la UI.
     httpd = http.server.ThreadingHTTPServer(server_address, CustomHandler)
