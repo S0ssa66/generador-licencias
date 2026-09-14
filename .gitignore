@@ -30,6 +30,9 @@ subagent_memories.json
 # Added by ggshield
 .cache_ggshield
 
+# Lock local del guardián de estado (no se versiona; la fuente es CURRENT_STATE.md)
+.state-claim.json
+
 # Graphify artifacts
 graphify-out/
 docs/Codigo_Beatss/
