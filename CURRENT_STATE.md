@@ -4,6 +4,27 @@
 > datos de clientes ni historial extenso. El historial se conserva en
 > `COLLABORATION_STATE.md`, que desde 2026-09-01 es un archivo de consulta.
 
+## Publicación del árbol local y Google Drive — 2026-09-14
+
+- Estado: `DONE`
+- Agente: `OpenCode`.
+- Publicado: se desplegó el árbol de trabajo completo (196 cambios locales) a
+  producción con Vercel CLI: `dpl_6pEqNt7NQ5HXd1m7w5Avu2kEgw6z`, `READY`,
+  `target: production`, alias `https://beatss.app` (verificado en `Aliases`).
+- Pre-vuelo: 163/163 pruebas Node, `npm run security:check`, build + presupuesto
+  de rendimiento; `.vercelignore` excluye `.env*`, claves, docs, scratch y SRI
+  opcional. No se expusieron secretos.
+- Verificación Live tras publicar: `/` 200, `/inicio` 200, `/tienda/sossa` 200,
+  `/compra/gracias` 200 y webhook GET 405 esperado.
+- Google Drive (Paso 103): Sossa confirmó que `sossamusic@gmail.com` ya aparece
+  vinculado sin acción adicional y que una carga real a Drive se completó sin
+  problemas antes de la venta de `Wow`. Evidencia reportada por el titular; no
+  verificable de forma independiente desde esta máquina porque exige sesión
+  autenticada. Los endpoints responden protegidos: `/api/gdrive-status` 401,
+  `/api/gdrive-oauth-client` 401 y `/api/gdrive-setup` 405 ante GET.
+- Siguiente acción exacta: ninguna para esta tarea. Pendientes reales en
+  `task.md`.
+
 ## Conciliación Stripe Live — DONE (2026-09-14)
 
 - Estado: `DONE`
