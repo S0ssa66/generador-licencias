@@ -4,6 +4,32 @@
 > datos de clientes ni historial extenso. El historial se conserva en
 > `COLLABORATION_STATE.md`, que desde 2026-09-01 es un archivo de consulta.
 
+## Arquitectura C+B con A opt-in (apagada) — 2026-09-14
+
+- Estado: `DONE` (local; NO desplegado y NO activado).
+- Agente: `OpenCode`.
+- Qué se implementó, dormido por feature flag:
+  - Nuevo resolutor puro `server-handlers/producer-settlement.js` con el modo de
+    venta por productor: `paymentMode` = `platform_seller` (C: BEATSS cobra,
+    factura y liquida) o `producer_gateway` (A: el productor usa su pasarela).
+  - Monetización por plan (B): comisión **15% en `inicial`** y **5% en planes
+    pagos**; **0%** en modo `producer_gateway`. `computeSettlement` reparte la
+    venta en centavos con redondeo.
+- Flag: `EXTERNAL_PRODUCERS_ENABLED` (por defecto `false`). Con el flag apagado
+  **sólo el productor de plataforma (Sossa) vende**: los externos no exponen
+  ningún método de cobro (`salesEnabled:false`) y el catálogo general sólo
+  incluye a Sossa. No se usa Stripe Connect.
+- Archivos: `server-handlers/producer-settlement.js` (nuevo),
+  `server-handlers/public-store.js`, `producerDefaults.js`, `.env.example`,
+  `tests/producer-settlement.test.mjs` (nuevo), `tests/public-store.test.mjs`.
+- Verificación: 174/174 pruebas Node, `npm run security:check`, build +
+  presupuesto de rendimiento.
+- Alcance: no se tocaron Stripe, Firestore, cobros, despliegue ni secretos; no se
+  activó nada en la web.
+- Siguiente acción (sólo cuando Sossa decida activar): confirmar con el contador
+  el modelo agregador (IVA/facturación), completar ledger y UI de configuración,
+  poner `EXTERNAL_PRODUCERS_ENABLED=1` y hacer E2E sandbox.
+
 ## Publicación del árbol local y Google Drive — 2026-09-14
 
 - Estado: `DONE`

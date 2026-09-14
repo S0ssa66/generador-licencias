@@ -18,7 +18,8 @@ export const PRODUCER_DEFAULTS = {
         emailjsTemplateId: "",
         emailjsPublicKey: "",
         gdriveClientId: "",
-        storageProvider: "gdrive-central"
+        storageProvider: "alternative",
+        pdfStorageProvider: "firebase"
     },
     'sossa': {
         name: "Sossa",
@@ -37,8 +38,9 @@ export const PRODUCER_DEFAULTS = {
         emailjsServiceId: "",
         emailjsTemplateId: "",
         emailjsPublicKey: "",
-        gdriveClientId: "216966055009-03rjdnq87uh3h15e3qfglp2pnmos9t5k.apps.googleusercontent.com",
-        storageProvider: "gdrive-central"
+        gdriveClientId: "",
+        storageProvider: "gdrive-central",
+        pdfStorageProvider: "firebase"
     },
     'mistermicua@gmail.com': {
         name: "Mister Micua",
@@ -59,7 +61,8 @@ export const PRODUCER_DEFAULTS = {
         emailjsTemplateId: "",
         emailjsPublicKey: "",
         gdriveClientId: "",
-        storageProvider: "gdrive-central"
+        storageProvider: "alternative",
+        pdfStorageProvider: "firebase"
     },
     'esme420typebeat@gmail.com': {
         name: "Sauce Beats",
@@ -80,7 +83,8 @@ export const PRODUCER_DEFAULTS = {
         emailjsTemplateId: "",
         emailjsPublicKey: "",
         gdriveClientId: "",
-        storageProvider: "gdrive-central",
+        storageProvider: "alternative",
+        pdfStorageProvider: "firebase",
         plan: "inicial"
     }
 };
@@ -89,7 +93,7 @@ export function getProducerDefault(email, displayName) {
     const cleanEmail = (email || "").toLowerCase();
     if (cleanEmail === 'beatscgmonarco@gmail.com') {
         return { ...PRODUCER_DEFAULTS['beatscgmonarco@gmail.com'] };
-    } else if (cleanEmail === 'masterjuego25@gmail.com' || cleanEmail === 'sossabeatz1@gmail.com') {
+    } else if (cleanEmail === 'masterjuego25@gmail.com' || cleanEmail === 'sossabeatz1@gmail.com' || cleanEmail === 'sossamusicbusiness@gmail.com') {
         return { ...PRODUCER_DEFAULTS['sossa'], email: cleanEmail };
     } else if (cleanEmail === 'mistermicua@gmail.com') {
         return { ...PRODUCER_DEFAULTS['mistermicua@gmail.com'] };
@@ -99,9 +103,12 @@ export function getProducerDefault(email, displayName) {
         // Nuevo productor: el plan inicial coincide con las reglas de Firestore.
         // Las pruebas o mejoras de plan se activan de forma segura desde el
         // administrador o el flujo de pago, nunca desde el navegador.
+        const emailName = cleanEmail.split('@')[0].replace(/[._-]+/g, ' ').trim();
+        const initialName = String(displayName || emailName || 'Nuevo Productor').trim().slice(0, 80);
         return {
-            name: displayName || "Nuevo Productor",
-            aka: "Productor",
+            name: initialName,
+            aka: initialName,
+            storeSlug: "",
             email: cleanEmail,
             phone: "",
             place: "Quito, Ecuador",
@@ -118,8 +125,14 @@ export function getProducerDefault(email, displayName) {
             emailjsTemplateId: "",
             emailjsPublicKey: "",
             gdriveClientId: "",
-            storageProvider: "gdrive-central",
-            plan: "inicial"
+            storageProvider: "firebase",
+            pdfStorageProvider: "firebase",
+            plan: "inicial",
+            // Arquitectura C+B con A opt-in, apagada por defecto. Sólo se
+            // activa al poner EXTERNAL_PRODUCERS_ENABLED=1 en el servidor.
+            paymentMode: "platform_seller",
+            externalSalesEnabled: false,
+            onboardingCompleted: false
         };
     }
 }
