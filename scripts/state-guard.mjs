@@ -3,11 +3,11 @@
 //
 // La fuente autoritativa sigue siendo CURRENT_STATE.md. Este script sólo
 // aporta un lock local (.state-claim.json, ignorado por Git) y una
-// comprobación automática para que Codex y OpenCode no se pisen.
+// comprobación automática para que Codex, OpenCode y Antigravity no se pisen.
 //
 // Uso:
 //   node scripts/state-guard.mjs check [--strict]
-//   node scripts/state-guard.mjs claim --agent Codex --task "..." [--files a,b] [--verify "..."] [--force]
+//   node scripts/state-guard.mjs claim --agent <Codex|OpenCode|Antigravity> --task "..." [--files a,b] [--verify "..."] [--force]
 //   node scripts/state-guard.mjs release [--status done|blocked] [--agent Codex] [--force]
 //   node scripts/state-guard.mjs status
 //
@@ -20,7 +20,7 @@ import { dirname, join } from 'node:path';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const LEDGER = join(ROOT, 'CURRENT_STATE.md');
 const CLAIM = join(ROOT, '.state-claim.json');
-const AGENTS = ['Codex', 'OpenCode'];
+const AGENTS = ['Codex', 'OpenCode', 'Antigravity'];
 
 function parseArgs(argv) {
   const out = { _: [] };
@@ -157,7 +157,7 @@ function cmdClaim(args) {
   const agent = typeof args.agent === 'string' ? args.agent : null;
   const task = typeof args.task === 'string' ? args.task : null;
   if (!agent || !task) {
-    console.error('Uso: claim --agent <Codex|OpenCode> --task "descripción" [--files a,b] [--verify "..."] [--force]');
+    console.error('Uso: claim --agent <Codex|OpenCode|Antigravity> --task "descripción" [--files a,b] [--verify "..."] [--force]');
     return 1;
   }
   if (!AGENTS.includes(agent) && !args.force) {

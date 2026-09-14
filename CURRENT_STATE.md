@@ -4,7 +4,95 @@
 > datos de clientes ni historial extenso. El historial se conserva en
 > `COLLABORATION_STATE.md`, que desde 2026-09-01 es un archivo de consulta.
 
+## Conciliación Stripe Live — DONE (2026-09-14)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: conciliar, sin modificar claves, la cuenta Stripe Live de
+  producción, el destino de webhook entregado y la Checkout Session reportada.
+- Resumen: el panel Live de la cuenta `BeatSS` (cuenta cuyo identificador
+  termina en `HDv5JT`) muestra una única compra exitosa de USD 30 y el destino
+  activo `BeatSS Checkout producción` hacia
+  `/api/payments/stripe/webhook`. El evento de esa compra es Live y fue
+  recuperado con HTTP 200; la respuesta de la función indicó
+  `alreadyFulfilled: true`.
+- Verificación de clave/cuenta: sin leer ni cambiar secretos, se consultó desde
+  producción la misma Checkout Session expuesta por dicho evento. Respondió
+  HTTP 200 con `complete/paid`, una sola entrega y referencia contractual. Por
+  tanto, la `STRIPE_SECRET_KEY` actual de Production sí recupera una sesión Live
+  de la cuenta `BeatSS`; no hay evidencia de desalineación real de clave/cuenta.
+- Límite de comparación: los logs del fallo redaccionan el valor exacto como
+  `cs_live_<...>`, por lo que no permiten probar igualdad literal con la sesión
+  auditada. El error sólo demuestra que se consultó un identificador que esa
+  clave no encontró; pudo ser distinto, truncado o de otra cuenta. No justifica
+  rotar la clave.
+- Archivos modificados: `CURRENT_STATE.md`.
+- Verificaciones: panel Stripe Live, destino de eventos, payload del evento,
+  logs de Vercel y consulta controlada de `session-status`; sin deploy, cambio
+  de claves, cobro, Firestore ni correo.
+- Siguiente acción: conservar `STRIPE_SECRET_KEY`. Si hace falta identificar el
+  fallo histórico, comparar un hash del identificador original antes de volver a
+  consultarlo; no reemplazar la clave por inferencia de timestamps.
+
+## Cierre de la verificación independiente — BLOCKED resueltos (2026-09-14)
+
+- Estado: `DONE`.
+- Agente: `OpenCode`.
+- Resuelto por la conciliación de Codex de la sección anterior.
+- Las verificaciones independientes de `OpenCode` y `Antigravity` que quedaron
+  `BLOCKED` por el fallo de `session-status` quedan **superadas**: la causa fue un
+  identificador `cs_live_` distinto, truncado o de otra cuenta, no una
+  desalineación de clave/cuenta. La compra Live quedó verificada
+  (`complete/paid`, una sola entrega, webhook HTTP 200 con `alreadyFulfilled:
+  true`).
+- No se rota `STRIPE_SECRET_KEY` y no se modificaron las secciones originales de
+  OpenCode/Antigravity; esta nota sólo las marca como resueltas.
+
+## Verificación independiente OpenCode — primera compra Live (2026-09-14)
+
+- Estado: `BLOCKED` (verificación parcial; falta el identificador de la compra).
+- Agente: `OpenCode`.
+- Verificado de forma independiente desde esta máquina:
+  - Endpoints públicos: `/` 200, `/inicio` 200, `/tienda/sossa` 200,
+    `/compra/gracias` 200, `/descargas/example-payment` 200 y webhook GET 405
+    esperado; `/api/public-store?producer=sossa` con 13 beats.
+  - `node --test tests/*.test.mjs`: 163/163 pruebas aprobadas.
+  - `npm run security:check`: aprobado. `npm run build`: aprobado con
+    presupuesto de rendimiento.
+  - Revisión estática: `_fulfill-beat-purchase.js` registra licencia, encola SRI,
+    genera `deliveryToken` y notifica la entrega; `stripe-session-status.js`
+    expone estado y entregas sin PII.
+  - Vercel: el último despliegue de producción figura `Ready`; en Production
+    existen los nombres `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (actualizado
+    hace 1 h), `CRON_SECRET`, `DOWNLOAD_SIGNING_KEY` y las credenciales EmailJS.
+    No se leyeron sus valores.
+- No verificable desde aquí (sin credenciales ni MCP de Stripe/Firestore):
+  estado real del pago en Stripe, documentos en Firestore, POST del webhook HTTP
+  200, correo, PDF almacenado y descarga firmada de esa compra concreta.
+- Vía disponible sin credenciales: `GET /api/payments/stripe/session-status?
+  sessionId=<cs_live_...>` (público) devuelve `paymentStatus` y las entregas.
+  Advertencia: si la orden no estuviera `fulfilled`, ese endpoint dispara el
+  fulfillment (mutación); sólo debe usarse con consentimiento.
+- Siguiente acción: Sossa proporciona el `sessionId`/URL de retorno de la compra
+  (o autoriza la CLI de Stripe) y OpenCode completa la verificación; alternativa,
+  que la complete Codex con acceso.
+
 ## Estado
+
+- Estado: `BLOCKED`
+- Agente activo: `Antigravity`
+- Fecha: `2026-09-14`
+- Objetivo: Verificar compra Live real (Stripe/entrega)
+- Archivos modificados: `CURRENT_STATE.md`
+- Resumen: Consulta en solo lectura a `/api/payments/stripe/session-status` con el identificador Live suministrado (`cs_live_...`) devolvió HTTP 500 (`{"error":"No se pudo consultar la sesión de Stripe."}`). La auditoría de logs en Vercel confirmó que la API de Stripe rechazó la llamada con `Stripe session-status error: No such checkout.session: cs_live_...`. La inspección de configuración en Vercel (`vercel env ls`) reveló que `STRIPE_SECRET_KEY` en producción figura creada hace 36 días (época de configuración inicial de sandbox) y no coincide con la cuenta o modo de la sesión Live generada. No se realizaron cobros, escrituras ni mutaciones.
+- Verificaciones ejecutadas y resultado:
+  - `GET https://beatss.app/api/payments/stripe/session-status?sessionId=cs_live_...`: HTTP 500.
+  - Logs Vercel: `Stripe session-status error: No such checkout.session: cs_live_...` confirmando que el SDK de Stripe no encuentra la sesión con la clave configurada.
+  - Inspección Vercel env: `STRIPE_SECRET_KEY` creada hace 36 días en Production (a diferencia de `STRIPE_WEBHOOK_SECRET` que fue renovada hace 1 h).
+  - Entregas (`deliveries`): 0 recuperadas (la función abortó antes de procesar la respuesta).
+  - Portal firmado y descarga MP3: No comprobables al no disponer de `paymentId` y `downloadToken` de la orden.
+- Bloqueos: Desalineación entre `STRIPE_SECRET_KEY` en Vercel Production y la cuenta/entorno donde reside la sesión `cs_live_...`.
+- Siguiente acción exacta: Sossa verifica y actualiza `STRIPE_SECRET_KEY` en Vercel Production con la clave secreta Live correspondiente a la cuenta Stripe emisora, o alternativamente proporciona la URL de entrega `/descargas/{paymentId}?token=...` enviada por correo al comprador para auditar portal y descarga MP3 directamente.
 
 - Estado: `LIVE_STRIPE_FLOW_VERIFIED`
 - Agente activo: `Codex`

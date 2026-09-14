@@ -90,6 +90,20 @@ Copiar este texto al comenzar una sesión:
 > indicada. Verifica el resultado antes de marcar la tarea como terminada y
 > actualiza `CURRENT_STATE.md` al cerrar.
 
+## Prompt de inicio para Antigravity
+
+> Trabaja en `/Users/sossa/Documents/Codex/BeatSS`. Lee primero `AGENTS.md`,
+> `CURRENT_STATE.md`, `COLLABORATION_PROTOCOL.md`, `task.md` y
+> `.agents/AGENTS.md`. Ejecuta `git status --short` y conserva todos los cambios
+> locales. Reclama la tarea con
+> `node scripts/state-guard.mjs claim --agent Antigravity --task "..." --files
+> "a,b" --verify "..."` y refléjalo en `CURRENT_STATE.md` como `IN_PROGRESS`.
+> Al cerrar, `node scripts/state-guard.mjs release --status done|blocked` y deja
+> el handoff en `CURRENT_STATE.md`. Usa una sola tarea activa a la vez y no
+> edites archivos de otra tarea `IN_PROGRESS`. No leas ni muestres `.env`,
+> credenciales, certificados ni contraseñas. No hagas commits, deploy, cobros,
+> cambios en Firestore ni envíos externos sin autorización explícita de Sossa.
+
 ## Prompt de entrega entre agentes
 
 > Antes de entregar esta tarea al otro agente, actualiza
@@ -137,13 +151,13 @@ editar.
 
 El lock vive en `.state-claim.json` (local, ignorado por Git). La fuente
 autoritativa sigue siendo `CURRENT_STATE.md`; la guardia sólo impide dos tareas
-activas a la vez. Ambos agentes deben ejecutar:
+activas a la vez. Cada agente debe ejecutar:
 
 - Al iniciar: `node scripts/state-guard.mjs check`. Si reporta una tarea ajena
   activa, detenerse y dejar nota; no abrir tarea paralela.
-- Al reclamar: `node scripts/state-guard.mjs claim --agent <Codex|OpenCode>
-  --task "..." --files "a,b" --verify "..."` y reflejar la misma entrada en
-  `CURRENT_STATE.md` (`IN_PROGRESS`).
+- Al reclamar: `node scripts/state-guard.mjs claim --agent
+  <Codex|OpenCode|Antigravity> --task "..." --files "a,b" --verify "..."` y
+  reflejar la misma entrada en `CURRENT_STATE.md` (`IN_PROGRESS`).
 - Al cerrar: `node scripts/state-guard.mjs release --status done|blocked` y
   actualizar `CURRENT_STATE.md` con el handoff completo.
 
@@ -169,3 +183,5 @@ activas a la vez. Ambos agentes deben ejecutar:
 - `Codex`: aceptado 2026-09-13; sin tarea activa tras cerrar la auditoría
   Stripe. Confirmó usar `state-guard.mjs check/claim/release` en cada sesión y
   reflejar el mismo estado en `CURRENT_STATE.md`.
+- `Antigravity`: aceptado 2026-09-14; confirmó la metodología de memoria única,
+  el ciclo con `state-guard.mjs` y las reglas duras. Sin tarea activa.
