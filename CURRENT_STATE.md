@@ -6,7 +6,7 @@
 
 ## Arquitectura C+B con A opt-in (apagada) — 2026-09-14
 
-- Estado: `DONE` (local; NO desplegado y NO activado).
+- Estado: `DONE` (publicado y apagado por feature flag).
 - Agente: `OpenCode`.
 - Qué se implementó, dormido por feature flag:
   - Nuevo resolutor puro `server-handlers/producer-settlement.js` con el modo de
@@ -24,8 +24,13 @@
   `tests/producer-settlement.test.mjs` (nuevo), `tests/public-store.test.mjs`.
 - Verificación: 174/174 pruebas Node, `npm run security:check`, build +
   presupuesto de rendimiento.
-- Alcance: no se tocaron Stripe, Firestore, cobros, despliegue ni secretos; no se
-  activó nada en la web.
+- Publicado 2026-09-14: `dpl_551SZeKJrjwJrEZneL7NbxBuGRjb`, `READY`,
+  `production`, alias `https://beatss.app`. Verificación Live: `/` 200,
+  `/inicio` 200, webhook GET 405; tienda de Sossa `salesEnabled:true` (stripe y
+  transfer); productores externos (CG Monarco, Mister Micua, Sauce Beats)
+  `salesEnabled:false` y sin ningún método de cobro.
+- Alcance: no se tocaron Stripe, Firestore ni cobros; no se expusieron secretos;
+  el flag sigue apagado, por lo que el comportamiento público no cambió.
 - Siguiente acción (sólo cuando Sossa decida activar): confirmar con el contador
   el modelo agregador (IVA/facturación), completar ledger y UI de configuración,
   poner `EXTERNAL_PRODUCERS_ENABLED=1` y hacer E2E sandbox.
