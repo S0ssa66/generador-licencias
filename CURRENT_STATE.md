@@ -6,7 +6,7 @@
 
 ## Rediseño compacto de Ventas y retiro del asistente financiero — 2026-09-16
 
-- Estado: `DONE` (local; pendiente de publicar si Sossa lo autoriza).
+- Estado: `DONE` (publicado).
 - Agente: `OpenCode`.
 - Ventas: se compactó la sección para reducir el scroll — hero más pequeño,
   métricas más bajas (min-height 104px y tipografía menor), paneles y gráficos
@@ -14,17 +14,22 @@
 - Asistente financiero (Copilot): **eliminado** — se quitó la sección
   `sales-copilot` de `index.html`, el módulo `dashboard_modules/copilot.js`, su
   import en `dashboard-module.js` y su CSS en `sales-analytics.css`. El bundle
-  ya no contiene Copilot.
+  ya no contiene Copilot. También se retiró la aserción de `copilot.js` en
+  `scripts/security-check.mjs`.
 - Archivos: `index.html`, `sales-analytics.css`, `dashboard-module.js`,
   `dashboard_modules/copilot.js` (eliminado), `main.js` (comentario),
-  `tests/auth-bootstrap.test.mjs`, `tests/security-hardening-batch11.test.mjs`,
+  `scripts/security-check.mjs`, `tests/auth-bootstrap.test.mjs`,
+  `tests/security-hardening-batch11.test.mjs`,
   `tests/security-hardening-batch14.test.mjs`.
-- Verificación: 259/259 pruebas Node, `npm run build` con presupuesto; `dist`
-  sin referencias a Copilot. La prueba de arranque ahora exige que
-  `sales-copilot` NO exista (barrera anti-regresión).
+- Verificación: 259/259 pruebas Node, `npm run security:check`, `npm run build`
+  con presupuesto; `dist` sin referencias a Copilot. La prueba de arranque ahora
+  exige que `sales-copilot` NO exista (barrera anti-regresión).
+- Publicado 2026-09-16: `dpl_2fbG5gAYwSa8LuBK7v33ktcVVTDb`, `READY`,
+  `production`, alias `https://beatss.app`. Verificación Live: `/` 200,
+  `/inicio` 200, `/tienda/sossa` 200, `/ventas` 200 y webhook GET 405.
 - Nota: quedan reglas CSS inertes de copilot en `beatss-coherence.css`
   (selectores que ya no coinciden con ningún elemento); no afectan la vista.
-- Siguiente acción: revisar visualmente y, si Sossa autoriza, publicar.
+- Siguiente acción: revisión visual de Sossa en `beatss.app/ventas` (con sesión).
 
 ## Desplegar blindaje SRI verificado a producción — DONE (2026-09-16)
 
