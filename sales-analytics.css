@@ -1,0 +1,570 @@
+/* BEATSS Sales Analytics -------------------------------------------------
+   A self-contained light dashboard. The selectors intentionally start at
+   #tab-dashboard so legacy workspace themes cannot reintroduce dark cards. */
+
+#app-container.saas-workspace #tab-dashboard.sales-analytics {
+    --sales-blue: #3157e8;
+    --sales-blue-soft: #edf2ff;
+    --sales-ink: #172238;
+    --sales-muted: #68758c;
+    --sales-line: #dbe3ef;
+    --sales-paper: #ffffff;
+    --sales-canvas: #f5f7fb;
+    display: none;
+    gap: 16px;
+    padding: clamp(16px, 1.8vw, 26px) !important;
+    background: var(--sales-canvas) !important;
+    color: var(--sales-ink) !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#app-container.saas-workspace #tab-dashboard.sales-analytics.active {
+    display: flex;
+}
+
+#app-container.saas-workspace #tab-dashboard.sales-analytics * {
+    box-sizing: border-box;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 28px;
+    width: 100%;
+    padding: 18px 22px;
+    border: 1px solid var(--sales-line) !important;
+    border-radius: 20px;
+    background: var(--sales-paper) !important;
+    box-shadow: 0 8px 24px rgba(41, 59, 92, .06);
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__heading {
+    min-width: 0;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__eyebrow,
+#app-container.saas-workspace #tab-dashboard .sales-panel__heading span {
+    display: block;
+    margin: 0 0 7px;
+    color: var(--sales-blue) !important;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__heading h1 {
+    max-width: 24ch;
+    margin: 0;
+    color: var(--sales-ink) !important;
+    font-family: var(--font-title, 'Plus Jakarta Sans', sans-serif) !important;
+    font-size: clamp(24px, 2.6vw, 34px);
+    font-weight: 800;
+    line-height: 1.04;
+    text-wrap: balance;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__heading p {
+    max-width: 62ch;
+    margin: 6px 0 0;
+    color: var(--sales-muted) !important;
+    font-size: 13px;
+    line-height: 1.55;
+    text-wrap: pretty;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__period {
+    display: grid;
+    gap: 6px;
+    color: var(--sales-muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__period select {
+    width: 176px;
+    height: 44px;
+    padding: 0 34px 0 13px;
+    border: 1px solid var(--sales-line) !important;
+    border-radius: 11px;
+    background-color: var(--sales-paper) !important;
+    color: var(--sales-ink) !important;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__icon-button,
+#app-container.saas-workspace #tab-dashboard .sales-analytics__export {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+    border-radius: 11px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 750;
+    cursor: pointer;
+    transition: transform 160ms ease-out, border-color 160ms ease-out, background-color 160ms ease-out;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__icon-button {
+    width: 44px;
+    padding: 0;
+    border: 1px solid var(--sales-line) !important;
+    background: var(--sales-paper) !important;
+    color: var(--sales-blue) !important;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__export {
+    gap: 8px;
+    padding: 0 16px;
+    border: 1px solid var(--sales-blue) !important;
+    background: var(--sales-blue) !important;
+    color: #fff !important;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__icon-button:hover,
+#app-container.saas-workspace #tab-dashboard .sales-analytics__export:hover {
+    transform: translateY(-1px);
+}
+
+#app-container.saas-workspace #tab-dashboard :is(.sales-analytics__icon-button, .sales-analytics__export, .sales-analytics__period select):focus-visible {
+    outline: 3px solid rgba(49, 87, 232, .22) !important;
+    outline-offset: 2px;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__icon-button svg,
+#app-container.saas-workspace #tab-dashboard .sales-analytics__export svg {
+    width: 17px;
+    height: 17px;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-metric,
+#app-container.saas-workspace #dashboard-stats-container > .sales-metric:nth-child(n) {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 104px;
+    padding: 14px !important;
+    border: 1px solid var(--sales-line) !important;
+    border-top: 1px solid var(--sales-line) !important;
+    border-radius: 16px !important;
+    background: var(--sales-paper) !important;
+    box-shadow: none !important;
+    overflow: hidden;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-metric--primary {
+    border-color: var(--sales-blue) !important;
+    background: var(--sales-blue) !important;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-metric--wide {
+    min-width: 0;
+}
+
+#app-container.saas-workspace #tab-dashboard #dashboard-stats-container > .sales-metric.sales-metric--primary {
+    border-color: var(--sales-blue) !important;
+    background-color: var(--sales-blue) !important;
+    background-image: none !important;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-metric__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--sales-muted) !important;
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1.35;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-metric__top svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    color: var(--sales-blue);
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-metric strong,
+#app-container.saas-workspace #dashboard-stats-container .sales-metric strong {
+    display: block;
+    max-width: 100%;
+    margin: 10px 0 2px;
+    overflow: hidden;
+    color: var(--sales-ink) !important;
+    font-family: var(--font-title, 'Plus Jakarta Sans', sans-serif) !important;
+    font-size: clamp(20px, 1.7vw, 26px) !important;
+    font-weight: 800;
+    line-height: 1.08;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-metric small {
+    display: block;
+    overflow: hidden;
+    color: var(--sales-muted) !important;
+    font-size: 11px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-metric--primary :is(.sales-metric__top, .sales-metric__top svg, strong, small) {
+    color: #fff !important;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-analytics__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, .85fr);
+    gap: 16px;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-panel {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid var(--sales-line) !important;
+    border-radius: 18px;
+    background: var(--sales-paper) !important;
+    color: var(--sales-ink) !important;
+    box-shadow: none !important;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-panel__heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-panel__heading h2 {
+    margin: 0;
+    color: var(--sales-ink) !important;
+    font-family: var(--font-title, 'Plus Jakarta Sans', sans-serif) !important;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-wrap: balance;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-panel__heading > svg {
+    width: 20px;
+    height: 20px;
+    color: var(--sales-blue);
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-chart,
+#app-container.saas-workspace #tab-dashboard #monthly-sales-chart-container,
+#app-container.saas-workspace #tab-dashboard #license-types-chart-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 170px;
+    padding: 10px;
+    border: 1px solid #e8edf5 !important;
+    border-radius: 14px;
+    background: #fbfcfe !important;
+    color: var(--sales-ink) !important;
+    overflow: hidden;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-chart--ranking {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    width: 100%;
+    min-height: 150px;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__chart {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    flex: 0 0 150px;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__chart canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__total {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__total strong {
+    display: block;
+    color: var(--sales-ink) !important;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__total span {
+    display: block;
+    margin-top: 5px;
+    color: var(--sales-muted) !important;
+    font-size: 9px;
+    font-weight: 750;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__legend {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__legend-row,
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__legend-row > div {
+    display: flex;
+    align-items: center;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__legend-row {
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--sales-muted);
+    font-size: 12px;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__legend-row > div {
+    gap: 8px;
+    min-width: 0;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__legend-row > div > span {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    border-radius: 50%;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__legend-row em {
+    overflow: hidden;
+    font-style: normal;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__legend-row > strong {
+    flex: 0 0 auto;
+    color: var(--sales-ink) !important;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-license-distribution__legend-row small {
+    color: var(--sales-muted) !important;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+#app-container.saas-workspace #tab-dashboard .horizontal-bar-row {
+    display: grid;
+    gap: 7px;
+}
+
+#app-container.saas-workspace #tab-dashboard .horizontal-bar-label-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--sales-ink);
+    font-size: 12px;
+}
+
+#app-container.saas-workspace #tab-dashboard .horizontal-bar-track {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e7ecf5;
+}
+
+#app-container.saas-workspace #tab-dashboard .horizontal-bar-fill {
+    height: 100%;
+    min-width: 6px;
+    border-radius: inherit;
+    background: var(--sales-blue) !important;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-buyers-table-wrap {
+    min-height: 250px;
+    max-height: 286px;
+    overflow: auto;
+    border: 1px solid #e8edf5;
+    border-radius: 14px;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-buyers-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--sales-ink);
+    font-size: 12px;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-buyers-table th {
+    padding: 12px 14px;
+    background: #f7f9fc;
+    color: var(--sales-muted);
+    font-size: 10px;
+    font-weight: 800;
+    text-align: left;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-buyers-table :is(th, td):nth-child(2) {
+    text-align: center;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-buyers-table :is(th, td):last-child {
+    text-align: right;
+}
+
+#app-container.saas-workspace #tab-dashboard .sales-buyers-table td {
+    padding: 12px 14px !important;
+    border-bottom: 1px solid #edf1f6;
+}
+
+@media (max-width: 1180px) {
+    #app-container.saas-workspace #tab-dashboard .sales-metric--primary,
+    #app-container.saas-workspace #tab-dashboard .sales-metric--wide {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 900px) {
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__actions {
+        align-items: flex-end;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__period {
+        flex: 1;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__period select {
+        width: 100%;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__grid {
+        grid-template-columns: 1fr;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    #app-container.saas-workspace #tab-dashboard.sales-analytics {
+        gap: 16px;
+        padding: 14px 14px calc(115px + env(safe-area-inset-bottom, 20px)) !important;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__header {
+        gap: 20px;
+        padding: 20px;
+        border-radius: 16px;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__heading h1 {
+        font-size: 31px;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__actions {
+        display: grid;
+        grid-template-columns: 1fr 44px;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__period {
+        grid-column: 1 / -1;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__export {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-analytics__metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-metric,
+    #app-container.saas-workspace #dashboard-stats-container > .sales-metric:nth-child(n) {
+        min-height: 104px;
+        padding: 12px !important;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-metric--primary,
+    #app-container.saas-workspace #tab-dashboard .sales-metric--wide {
+        grid-column: 1 / -1;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-panel {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-chart,
+    #app-container.saas-workspace #tab-dashboard #monthly-sales-chart-container,
+    #app-container.saas-workspace #tab-dashboard #license-types-chart-container {
+        min-height: 170px;
+        padding: 8px;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-license-distribution {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    #app-container.saas-workspace #tab-dashboard .sales-license-distribution__chart {
+        align-self: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #app-container.saas-workspace #tab-dashboard :is(.sales-analytics__icon-button, .sales-analytics__export) {
+        transition: none;
+    }
+}
