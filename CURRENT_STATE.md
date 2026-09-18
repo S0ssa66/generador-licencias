@@ -6,21 +6,24 @@
 
 ## Rediseño Integral de Contabilidad y Operaciones Globales — DONE (2026-09-17)
 
-- Estado: `DONE` (Corregido y Desplegado en Producción); agente: `Antigravity`; fecha: 2026-09-17.
+- Estado: `DONE` (Multi-Productor Consolidado y Desplegado en Producción); agente: `Antigravity`; fecha: 2026-09-17.
 - Objetivo: rediseñar desde cero el panel administrativo de Contabilidad y
   Operaciones Globales (`#tab-admin` / `/contabilidad`) sobre el canvas SaaS
   claro, preservando colores de marca, funcionalidades, IDs y seguridad.
 - Resumen: nuevo sistema de diseño `accounting.css` sin fondos oscuros legacy;
   subnavegador segmentado con pills modernos y compactos; resolución de condición
   de carrera en lazy loading de `accounting.js` (proxy dinámico en `main.js` y
-  disparo post-auth en `auth.js`); placeholders calibrados en `index.html` para
-  métodos de pago, planes SaaS y tarjeta principal de Sossa; resiliencia ante
-  fallos de `collectionGroup` con fallback a colecciones directas del usuario;
-  renderizado dinámico con sanitización estricta (AST preserved) y event delegation
-  seguro sin inline onclicks.
+  disparo post-auth en `auth.js`); nuevo endpoint administrativo seguro
+  `/api/account?route=admin-producers` (`server-handlers/admin-producers.js`)
+  que consolida todos los productores registrados en `/users` y `config/producer`
+  junto con las licencias globales mediante Firebase Admin SDK con autenticación
+  de token ID de Sossa; soporte para actualización de planes administrativos
+  vía API; degradación elegante a Firestore cliente; renderizado dinámico con
+  sanitización estricta (AST preserved) y event delegation seguro.
 - Archivos modificados: `accounting.css`, `index.html`, `main.js`, `auth.js`,
-  `dashboard_modules/accounting.js`, `CURRENT_STATE.md`.
-- Verificación: Node **264/264** tests aprobados; `security:check` aprobado;
+  `dashboard_modules/accounting.js`, `api/account.js`, `server-handlers/admin-producers.js`,
+  `tests/security-hardening-batch14.test.mjs`, `CURRENT_STATE.md`.
+- Verificación: Node **265/265** tests aprobados; `security:check` aprobado;
   `npm run build` y presupuesto de rendimiento aprobados (HTML gzip 61.76 kB,
   bajo el límite de 65 kB); validación visual y de compilación completada.
 - Siguiente acción exacta: mantener monitoreo del tráfico en producción y

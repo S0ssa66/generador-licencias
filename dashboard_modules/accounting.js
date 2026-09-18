@@ -67,40 +67,71 @@ async function loadConsolidatedAccounting() {
     let totalSaasRevenue = 0;
 
     try {
-        // 1. Obtener todos los productores (config) registrados
+        // 0. Consultar datos consolidados completos a través del endpoint administrativo autenticado
+        let serverDataLoaded = false;
         try {
-            const configQuery = collectionGroup(db, "config");
-            const configSnapshot = await getDocs(configQuery);
-            
-            configSnapshot.forEach((docSnap) => {
-                if (docSnap.id === 'producer') {
-                    const data = docSnap.data();
-                    const pathSegments = docSnap.ref.path.split('/');
-                    let userId = '';
-                    if (pathSegments.length >= 2 && pathSegments[0] === 'users') {
-                        userId = pathSegments[1];
-                    } else {
-                        userId = docSnap.ref.parent.parent ? docSnap.ref.parent.parent.id : '';
+            const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+            if (token) {
+                const resp = await fetch('/api/account?route=admin-producers', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (resp.ok) {
+                    const json = await resp.json();
+                    if (Array.isArray(json.producers) && json.producers.length > 0) {
+                        producerConfigs = json.producers;
+                        producerConfigs.forEach(p => {
+                            if (p.userId) uniqueUsers.add(p.userId);
+                        });
+                        serverDataLoaded = true;
                     }
-                    producerConfigs.push({
-                        userId,
-                        ...data
-                    });
-                }
-            });
-        } catch (cgConfigErr) {
-            console.warn("[BEATSS Accounting] Consulta collectionGroup(config) no disponible, usando fallback directo:", cgConfigErr);
-            if (auth.currentUser) {
-                try {
-                    const myConfigRef = doc(db, 'users', auth.currentUser.uid, 'config', 'producer');
-                    const myConfigSnap = await getDoc(myConfigRef);
-                    if (myConfigSnap.exists()) {
-                        producerConfigs.push({
-                            userId: auth.currentUser.uid,
-                            ...myConfigSnap.data()
+                    if (Array.isArray(json.licenses) && json.licenses.length > 0) {
+                        allLicenses = json.licenses;
+                        allLicenses.forEach(l => {
+                            if (l.userId) uniqueUsers.add(l.userId);
                         });
                     }
-                } catch (_) {}
+                }
+            }
+        } catch (serverErr) {
+            console.warn('[BEATSS Accounting] Endpoint serverless de administración no disponible, usando fallback directo:', serverErr);
+        }
+
+        // 1. Si no se cargó por servidor, obtener productores por Firestore cliente
+        if (!serverDataLoaded) {
+            try {
+                const configQuery = collectionGroup(db, "config");
+                const configSnapshot = await getDocs(configQuery);
+                
+                configSnapshot.forEach((docSnap) => {
+                    if (docSnap.id === 'producer') {
+                        const data = docSnap.data();
+                        const pathSegments = docSnap.ref.path.split('/');
+                        let userId = '';
+                        if (pathSegments.length >= 2 && pathSegments[0] === 'users') {
+                            userId = pathSegments[1];
+                        } else {
+                            userId = docSnap.ref.parent.parent ? docSnap.ref.parent.parent.id : '';
+                        }
+                        producerConfigs.push({
+                            userId,
+                            ...data
+                        });
+                    }
+                });
+            } catch (cgConfigErr) {
+                console.warn("[BEATSS Accounting] Consulta collectionGroup(config) no disponible, usando fallback directo:", cgConfigErr);
+                if (auth.currentUser) {
+                    try {
+                        const myConfigRef = doc(db, 'users', auth.currentUser.uid, 'config', 'producer');
+                        const myConfigSnap = await getDoc(myConfigRef);
+                        if (myConfigSnap.exists()) {
+                            producerConfigs.push({
+                                userId: auth.currentUser.uid,
+                                ...myConfigSnap.data()
+                            });
+                        }
+                    } catch (_) {}
+                }
             }
         }
 
@@ -119,62 +150,62 @@ async function loadConsolidatedAccounting() {
         producerConfigs.sort((a, b) => {
             const emailA = (a.email || "").toLowerCase();
             const emailB = (b.email || "").toLowerCase();
-            if (emailA === 'masterjuego25@gmail.com') return -1;
-            if (emailB === 'masterjuego25@gmail.com') return 1;
+            if (emailA === 'masterjuego25@gmail.com' || emailA === 'sossabeatz1@gmail.com') return -1;
+            if (emailB === 'masterjuego25@gmail.com' || emailB === 'sossabeatz1@gmail.com') return 1;
             
             const akaA = (a.aka || a.name || a.email || "").toLowerCase();
             const akaB = (b.aka || b.name || b.email || "").toLowerCase();
             return akaA.localeCompare(akaB);
         });
 
-        // 2. Query across all "licencias" subcollections
-        try {
-            const licenciasQuery = collectionGroup(db, "licencias");
-            const querySnapshot = await getDocs(licenciasQuery);
-            
-            querySnapshot.forEach((docSnap) => {
-                const data = docSnap.data();
+        // 2. Si no se cargaron licencias por servidor, consultar vía collectionGroup("licencias")
+        if (allLicenses.length === 0) {
+            try {
+                const licenciasQuery = collectionGroup(db, "licencias");
+                const querySnapshot = await getDocs(licenciasQuery);
                 
-                // Extraer el uid del path para contar productores únicos y asociarlo
-                const pathSegments = docSnap.ref.path.split('/');
-                let userId = 'unknown';
-                if (pathSegments.length >= 2 && pathSegments[0] === 'users') {
-                    userId = pathSegments[1];
-                    uniqueUsers.add(userId);
-                }
-                
-                allLicenses.push({
-                    ...data,
-                    userId: userId
-                });
-            });
-        } catch (cgLicErr) {
-            console.warn("[BEATSS Accounting] Consulta collectionGroup(licencias) no disponible, usando licencias del productor:", cgLicErr);
-            if (auth.currentUser) {
-                try {
-                    const myLicRef = collection(db, 'users', auth.currentUser.uid, 'licencias');
-                    const myLicSnap = await getDocs(myLicRef);
-                    myLicSnap.forEach(docSnap => {
-                        allLicenses.push({
-                            ...docSnap.data(),
-                            userId: auth.currentUser.uid
-                        });
-                        uniqueUsers.add(auth.currentUser.uid);
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const pathSegments = docSnap.ref.path.split('/');
+                    let userId = 'unknown';
+                    if (pathSegments.length >= 2 && pathSegments[0] === 'users') {
+                        userId = pathSegments[1];
+                        uniqueUsers.add(userId);
+                    }
+                    
+                    allLicenses.push({
+                        ...data,
+                        userId: userId
                     });
+                });
+            } catch (cgLicErr) {
+                console.warn("[BEATSS Accounting] Consulta collectionGroup(licencias) no disponible, usando licencias del productor:", cgLicErr);
+                if (auth.currentUser) {
+                    try {
+                        const myLicRef = collection(db, 'users', auth.currentUser.uid, 'licencias');
+                        const myLicSnap = await getDocs(myLicRef);
+                        myLicSnap.forEach(docSnap => {
+                            allLicenses.push({
+                                ...docSnap.data(),
+                                userId: auth.currentUser.uid
+                            });
+                            uniqueUsers.add(auth.currentUser.uid);
+                        });
+                    } catch (_) {}
+                }
+                try {
+                    const localLics = JSON.parse(localStorage.getItem('beatss_licenses') || '[]');
+                    if (Array.isArray(localLics) && localLics.length > 0 && allLicenses.length === 0) {
+                        localLics.forEach(lic => {
+                            allLicenses.push({
+                                ...lic,
+                                userId: auth.currentUser?.uid || 'local'
+                            });
+                            if (auth.currentUser) uniqueUsers.add(auth.currentUser.uid);
+                        });
+                    }
                 } catch (_) {}
             }
-            try {
-                const localLics = JSON.parse(localStorage.getItem('beatss_licenses') || '[]');
-                if (Array.isArray(localLics) && localLics.length > 0 && allLicenses.length === 0) {
-                    localLics.forEach(lic => {
-                        allLicenses.push({
-                            ...lic,
-                            userId: auth.currentUser?.uid || 'local'
-                        });
-                        if (auth.currentUser) uniqueUsers.add(auth.currentUser.uid);
-                    });
-                }
-            } catch (_) {}
         }
 
         // Ordenar por fecha descendente
@@ -917,27 +948,54 @@ function setupAdminPlanModalEvents() {
                 }
             }
             
-            // 1. Actualizar en config/producer
-            const configRef = doc(db, 'users', adminSelectedUserId, 'config', 'producer');
-            const configUpdates = {
-                plan: selectedPlan,
-                planActivatedAt: new Date().toISOString(),
-                planPayPalOrderId: 'manual_admin_activation',
-                planPayerEmail: document.getElementById('admin-plan-user-email').textContent
-            };
-            
-            // Si es inicial o no expira, expirationPro es null
-            configUpdates.expirationPro = expirationPro;
-            
-            await setDoc(configRef, configUpdates, { merge: true });
-            
-            // 2. Actualizar en el documento principal del usuario
-            const userRef = doc(db, 'users', adminSelectedUserId);
-            const userUpdates = {
-                plan: selectedPlan,
-                planActivatedAt: new Date().toISOString()
-            };
-            await setDoc(userRef, userUpdates, { merge: true });
+            let updatedViaServer = false;
+            try {
+                const token = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+                if (token) {
+                    const resp = await fetch('/api/account?route=admin-producers', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            targetUserId: adminSelectedUserId,
+                            plan: selectedPlan,
+                            expirationPro,
+                            email: document.getElementById('admin-plan-user-email')?.textContent || ''
+                        })
+                    });
+                    if (resp.ok) {
+                        updatedViaServer = true;
+                    }
+                }
+            } catch (postErr) {
+                console.warn('[BEATSS Admin] Error en actualización serverless de plan, probando Firestore directo:', postErr);
+            }
+
+            if (!updatedViaServer) {
+                // 1. Actualizar en config/producer
+                const configRef = doc(db, 'users', adminSelectedUserId, 'config', 'producer');
+                const configUpdates = {
+                    plan: selectedPlan,
+                    planActivatedAt: new Date().toISOString(),
+                    planPayPalOrderId: 'manual_admin_activation',
+                    planPayerEmail: document.getElementById('admin-plan-user-email').textContent
+                };
+                
+                // Si es inicial o no expira, expirationPro es null
+                configUpdates.expirationPro = expirationPro;
+                
+                await setDoc(configRef, configUpdates, { merge: true });
+                
+                // 2. Actualizar en el documento principal del usuario
+                const userRef = doc(db, 'users', adminSelectedUserId);
+                const userUpdates = {
+                    plan: selectedPlan,
+                    planActivatedAt: new Date().toISOString()
+                };
+                await setDoc(userRef, userUpdates, { merge: true });
+            }
             
             statusEl.textContent = '¡Plan actualizado exitosamente!';
             statusEl.style.color = '#10b981';

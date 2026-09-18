@@ -13,6 +13,7 @@ import logDownloadHandler from '../server-handlers/log-download.js';
 import paymentStatusHandler from '../server-handlers/payment-status.js';
 import accountDeletionHandler from '../server-handlers/account-deletion-request.js';
 import convertReferralHandler from '../api/convert-referral.js';
+import adminProducersHandler, { checkAdminRateLimit, resetAdminRateLimit } from '../server-handlers/admin-producers.js';
 
 function createMockRes() {
     const headers = {};
@@ -166,3 +167,35 @@ test('Lote 14: handlers serverless emiten Allow y Cache-Control: private, no-sto
     assert.strictEqual(resReferral.getHeader('allow'), 'POST, OPTIONS');
     assert.strictEqual(resReferral.getHeader('cache-control'), 'private, no-store');
 });
+
+test('Lote 14: admin-producers maneja preflight OPTIONS, protege autorización y aplica rate limiting', async () => {
+    resetAdminRateLimit();
+
+    // OPTIONS
+    const resOptions = createMockRes();
+    await adminProducersHandler({ method: 'OPTIONS', headers: {} }, resOptions);
+    assert.strictEqual(resOptions.statusCode, 204);
+    assert.strictEqual(resOptions.getHeader('allow'), 'GET, POST, OPTIONS');
+    assert.strictEqual(resOptions.getHeader('cache-control'), 'private, no-store');
+
+    // PUT no permitido -> 405
+    const resPut = createMockRes();
+    await adminProducersHandler({ method: 'PUT', headers: {} }, resPut);
+    assert.strictEqual(resPut.statusCode, 405);
+    assert.strictEqual(resPut.getHeader('allow'), 'GET, POST, OPTIONS');
+    assert.strictEqual(resPut.getHeader('cache-control'), 'private, no-store');
+
+    // GET sin autorización -> 401
+    const resNoAuth = createMockRes();
+    await adminProducersHandler({ method: 'GET', headers: {} }, resNoAuth);
+    assert.strictEqual(resNoAuth.statusCode, 401);
+
+    // Rate limiting
+    const ip = '198.51.100.42';
+    for (let i = 0; i < 60; i++) {
+        assert.strictEqual(checkAdminRateLimit(ip).allowed, true);
+    }
+    assert.strictEqual(checkAdminRateLimit(ip).allowed, false);
+    resetAdminRateLimit();
+});
+
