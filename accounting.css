@@ -275,16 +275,17 @@
    3. Sub-Navigation Segmented Controller (Tabs)
    -------------------------------------------------------------------------- */
 .admin-nav-bar {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px;
-    background: var(--adm-paper);
+    gap: 4px;
+    padding: 5px;
+    background: #eef2f6;
     border: 1px solid var(--adm-line);
-    border-radius: 16px;
-    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.03);
+    border-radius: 14px;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
     overflow-x: auto;
-    width: 100%;
+    width: fit-content;
+    max-width: 100%;
     scrollbar-width: none;
 }
 
@@ -296,8 +297,8 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 16px;
-    border-radius: 11px;
+    padding: 8px 16px;
+    border-radius: 10px;
     border: none;
     background: transparent;
     color: var(--adm-muted);
@@ -305,19 +306,20 @@
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     user-select: none;
 }
 
 .admin-nav-pill:hover {
-    background: var(--adm-card-subtle);
+    background: rgba(255, 255, 255, 0.7);
     color: var(--adm-ink);
 }
 
 .admin-nav-pill.active {
-    background: #3157e8;
-    color: #ffffff;
-    box-shadow: 0 4px 14px rgba(49, 87, 232, 0.25);
+    background: #ffffff;
+    color: var(--adm-ink);
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .admin-nav-pill i,
@@ -341,9 +343,8 @@
 }
 
 .admin-nav-pill.active .admin-badge-count {
-    background: #ffffff;
-    color: #3157e8;
-    box-shadow: none;
+    background: var(--adm-amber);
+    color: #ffffff;
 }
 
 /* --------------------------------------------------------------------------

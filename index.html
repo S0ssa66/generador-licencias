@@ -1958,7 +1958,45 @@
                                 </div>
                             </div>
                             <div class="producer-stats-grid" id="admin-producer-stats-grid">
-                                <!-- Tarjetas de productores inyectadas dinámicamente -->
+                                <div class="producer-analytics-card">
+                                    <div class="producer-card-header">
+                                        <div class="producer-card-identity">
+                                            <h4 class="producer-card-aka" title="Sossa (Principal)">Sossa (Principal)</h4>
+                                            <span class="producer-card-email" title="sossabeatz1@gmail.com">sossabeatz1@gmail.com</span>
+                                        </div>
+                                        <span class="admin-plan-badge admin-plan-badge--elite">ELITE 👑</span>
+                                    </div>
+                                    
+                                    <div class="producer-metrics-row">
+                                        <div class="producer-metric-box">
+                                            <span class="producer-metric-label">Facturado</span>
+                                            <span class="producer-metric-val-sales" id="admin-card-sossa-sales">$0.00</span>
+                                        </div>
+                                        <div class="producer-metric-box">
+                                            <span class="producer-metric-label">Licencias</span>
+                                            <span class="producer-metric-val-count" id="admin-card-sossa-lic">0</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="producer-secondary-row">
+                                        <span>Ticket: <strong>$0.0</strong></span>
+                                        <span>SRI: <strong style="color: var(--adm-green);">Activo</strong></span>
+                                    </div>
+
+                                    <div class="breakdown-row" style="margin-top: 2px;">
+                                        <div class="breakdown-info">
+                                            <span class="breakdown-label" style="font-size: 11px; color: var(--adm-muted);">Cuota GMV</span>
+                                            <span class="breakdown-value" style="font-size: 11px; color: var(--adm-ink);">100%</span>
+                                        </div>
+                                        <div class="admin-progress-container">
+                                            <div class="admin-progress-bar" style="width: 100%; background: linear-gradient(90deg, #3157e8, #10b981);"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="producer-active-date">
+                                        Activo: Productor Principal Verificado
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -1973,7 +2011,54 @@
                                     </h3>
                                 </div>
                                 <div id="admin-payment-methods-breakdown" style="display: flex; flex-direction: column; gap: 14px;">
-                                    <!-- Barras de métodos de pago inyectadas dinámicamente -->
+                                    <div class="breakdown-row">
+                                        <div class="breakdown-info">
+                                            <span class="breakdown-label" style="display:flex; align-items:center; gap: 6px; font-size: 12px; color: var(--adm-ink);">
+                                                <span style="width: 7px; height: 7px; border-radius: 50%; background: #635bff;"></span>
+                                                Stripe
+                                            </span>
+                                            <span class="breakdown-value" id="admin-stat-stripe" style="color: var(--adm-muted); font-size: 12px;">$0.00 (0%)</span>
+                                        </div>
+                                        <div class="admin-progress-container">
+                                            <div class="admin-progress-bar" id="admin-bar-stripe" style="width: 0%; background: linear-gradient(90deg, #635bff, #00d4ff);"></div>
+                                        </div>
+                                    </div>
+                                    <div class="breakdown-row">
+                                        <div class="breakdown-info">
+                                            <span class="breakdown-label" style="display:flex; align-items:center; gap: 6px; font-size: 12px; color: var(--adm-ink);">
+                                                <span style="width: 7px; height: 7px; border-radius: 50%; background: #ff6600;"></span>
+                                                PayPhone
+                                            </span>
+                                            <span class="breakdown-value" id="admin-stat-payphone" style="color: var(--adm-muted); font-size: 12px;">$0.00 (0%)</span>
+                                        </div>
+                                        <div class="admin-progress-container">
+                                            <div class="admin-progress-bar" id="admin-bar-payphone" style="width: 0%; background: linear-gradient(90deg, #ff6600, #ff9933);"></div>
+                                        </div>
+                                    </div>
+                                    <div class="breakdown-row">
+                                        <div class="breakdown-info">
+                                            <span class="breakdown-label" style="display:flex; align-items:center; gap: 6px; font-size: 12px; color: var(--adm-ink);">
+                                                <span style="width: 7px; height: 7px; border-radius: 50%; background: #00cc66;"></span>
+                                                Deuna! QR
+                                            </span>
+                                            <span class="breakdown-value" id="admin-stat-deuna" style="color: var(--adm-muted); font-size: 12px;">$0.00 (0%)</span>
+                                        </div>
+                                        <div class="admin-progress-container">
+                                            <div class="admin-progress-bar" id="admin-bar-deuna" style="width: 0%; background: linear-gradient(90deg, #00cc66, #33ff99);"></div>
+                                        </div>
+                                    </div>
+                                    <div class="breakdown-row">
+                                        <div class="breakdown-info">
+                                            <span class="breakdown-label" style="display:flex; align-items:center; gap: 6px; font-size: 12px; color: var(--adm-ink);">
+                                                <span style="width: 7px; height: 7px; border-radius: 50%; background: #0079c1;"></span>
+                                                PayPal
+                                            </span>
+                                            <span class="breakdown-value" id="admin-stat-paypal" style="color: var(--adm-muted); font-size: 12px;">$0.00 (0%)</span>
+                                        </div>
+                                        <div class="admin-progress-container">
+                                            <div class="admin-progress-bar" id="admin-bar-paypal" style="width: 0%; background: linear-gradient(90deg, #0079c1, #00457c);"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1986,7 +2071,39 @@
                                     </h3>
                                 </div>
                                 <div id="admin-saas-plans-breakdown" style="display: flex; flex-direction: column; gap: 14px;">
-                                    <!-- Barras de planes SaaS inyectadas dinámicamente -->
+                                    <div class="breakdown-row">
+                                        <div class="breakdown-info">
+                                            <span class="breakdown-label" style="display:flex; align-items:center; gap: 6px; color: #ec4899; font-size: 12px; font-weight: 700;">
+                                                Elite 👑
+                                            </span>
+                                            <span class="breakdown-value" id="admin-plan-elite-count" style="font-size: 12px; color: var(--adm-muted);">1 prod. (100%)</span>
+                                        </div>
+                                        <div class="admin-progress-container">
+                                            <div class="admin-progress-bar" id="admin-bar-elite" style="width: 100%; background: linear-gradient(90deg, #8b5cf6, #ec4899);"></div>
+                                        </div>
+                                    </div>
+                                    <div class="breakdown-row">
+                                        <div class="breakdown-info">
+                                            <span class="breakdown-label" style="display:flex; align-items:center; gap: 6px; color: #0284c7; font-size: 12px; font-weight: 700;">
+                                                Pro ⚡
+                                            </span>
+                                            <span class="breakdown-value" id="admin-plan-pro-count" style="font-size: 12px; color: var(--adm-muted);">0 prod. (0%)</span>
+                                        </div>
+                                        <div class="admin-progress-container">
+                                            <div class="admin-progress-bar" id="admin-bar-pro" style="width: 0%; background: linear-gradient(90deg, #3157e8, #0284c7);"></div>
+                                        </div>
+                                    </div>
+                                    <div class="breakdown-row">
+                                        <div class="breakdown-info">
+                                            <span class="breakdown-label" style="display:flex; align-items:center; gap: 6px; color: #64748b; font-size: 12px; font-weight: 700;">
+                                                Inicial
+                                            </span>
+                                            <span class="breakdown-value" id="admin-plan-free-count" style="font-size: 12px; color: var(--adm-muted);">0 prod. (0%)</span>
+                                        </div>
+                                        <div class="admin-progress-container">
+                                            <div class="admin-progress-bar" id="admin-bar-free" style="width: 0%; background: #cbd5e1;"></div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

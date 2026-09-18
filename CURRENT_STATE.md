@@ -6,22 +6,23 @@
 
 ## Rediseño Integral de Contabilidad y Operaciones Globales — DONE (2026-09-17)
 
-- Estado: `DONE` (Publicado en Producción); agente: `Antigravity`; fecha: 2026-09-17.
+- Estado: `DONE` (Corregido y Desplegado en Producción); agente: `Antigravity`; fecha: 2026-09-17.
 - Objetivo: rediseñar desde cero el panel administrativo de Contabilidad y
   Operaciones Globales (`#tab-admin` / `/contabilidad`) sobre el canvas SaaS
   claro, preservando colores de marca, funcionalidades, IDs y seguridad.
 - Resumen: nuevo sistema de diseño `accounting.css` sin fondos oscuros legacy;
-  subnavegador segmentado con badges dinámicos para pagos pendientes; modales
-  de comprobante y plan modernizados; renderizado dinámico con sanitización
-  estricta (AST preserved) y event delegation seguro sin inline onclicks.
-- Publicación en Vercel: despliegue de producción exitoso con alias activo
-  en `https://beatss.app` (`generador-licencias-9qbaskemu-masterjuego25-5300s-projects.vercel.app`).
-  HTTP 200 verificado en `/contabilidad` y `/`.
-- Archivos modificados: `accounting.css`, `index.html`, `main.js`,
+  subnavegador segmentado con pills modernos y compactos; resolución de condición
+  de carrera en lazy loading de `accounting.js` (proxy dinámico en `main.js` y
+  disparo post-auth en `auth.js`); placeholders calibrados en `index.html` para
+  métodos de pago, planes SaaS y tarjeta principal de Sossa; resiliencia ante
+  fallos de `collectionGroup` con fallback a colecciones directas del usuario;
+  renderizado dinámico con sanitización estricta (AST preserved) y event delegation
+  seguro sin inline onclicks.
+- Archivos modificados: `accounting.css`, `index.html`, `main.js`, `auth.js`,
   `dashboard_modules/accounting.js`, `CURRENT_STATE.md`.
 - Verificación: Node **264/264** tests aprobados; `security:check` aprobado;
-  `npm run build` y presupuesto de rendimiento aprobados (HTML gzip 60.89 kB,
-  bajo el límite de 65 kB); validación visual en escritorio y móvil completada.
+  `npm run build` y presupuesto de rendimiento aprobados (HTML gzip 61.76 kB,
+  bajo el límite de 65 kB); validación visual y de compilación completada.
 - Siguiente acción exacta: mantener monitoreo del tráfico en producción y
   proceder con los pendientes de producto o negocio de Sossa.
 

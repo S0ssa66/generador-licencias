@@ -247,8 +247,12 @@ const triggerReferralConversion = (...args) => window.triggerReferralConversion(
 const registerLanguageToggle = (...args) => window.registerLanguageToggle(...args);
 const renderBeatsGrid = (...args) => window.renderBeatsGrid(...args);
 const updateGenreAndKeyFilters = (...args) => window.updateGenreAndKeyFilters(...args);
-const loadConsolidatedAccounting = (...args) => window.loadConsolidatedAccounting(...args);
-const updateDashboardView = (...args) => window.updateDashboardView(...args);
+const loadConsolidatedAccounting = async (...args) => {
+    await loadModule('accounting');
+    if (typeof window.loadConsolidatedAccounting === 'function') {
+        return window.loadConsolidatedAccounting(...args);
+    }
+};
 const saveCurrentLicenseToHistory = (...args) => window.saveCurrentLicenseToHistory(...args);
 const clearAllHistory = (...args) => window.clearAllHistory(...args);
 const openContactsModal = (...args) => window.openContactsModal(...args);
@@ -1407,6 +1411,12 @@ async function initApp(user) {
     const adminTabBtn = document.getElementById('tab-admin-btn');
     if (adminTabBtn) {
         adminTabBtn.style.display = window.currentUserIsAdmin ? 'inline-flex' : 'none';
+    }
+    if (window.currentUserIsAdmin) {
+        const currentPath = window.location.pathname.replace(/\/+$/, '');
+        if (currentPath === '/contabilidad' || document.getElementById('tab-admin')?.classList.contains('active')) {
+            loadConsolidatedAccounting();
+        }
     }
 
     if (bootRoute === 'studio') {
@@ -3092,7 +3102,7 @@ function setupEventListeners() {
                 .then(() => window.initSriInvoicingView?.())
                 .catch((error) => console.warn('[BEATSS] No se pudo cargar el facturador SRI:', error?.message || error));
         }
-        if (tabId === 'tab-admin' && window.currentUserIsAdmin) {
+        if (tabId === 'tab-admin') {
             loadConsolidatedAccounting();
         }
         if (tabId === 'tab-dashboard') {
