@@ -93,7 +93,7 @@ export function getProducerDefault(email, displayName) {
     const cleanEmail = (email || "").toLowerCase();
     if (cleanEmail === 'beatscgmonarco@gmail.com') {
         return { ...PRODUCER_DEFAULTS['beatscgmonarco@gmail.com'] };
-    } else if (cleanEmail === 'masterjuego25@gmail.com' || cleanEmail === 'sossabeatz1@gmail.com' || cleanEmail === 'sossamusicbusiness@gmail.com') {
+    } else if (cleanEmail === 'admin@sossamusic.com' || cleanEmail === 'masterjuego25@gmail.com' || cleanEmail === 'sossabeatz1@gmail.com' || cleanEmail === 'sossamusicbusiness@gmail.com') {
         return { ...PRODUCER_DEFAULTS['sossa'], email: cleanEmail };
     } else if (cleanEmail === 'mistermicua@gmail.com') {
         return { ...PRODUCER_DEFAULTS['mistermicua@gmail.com'] };

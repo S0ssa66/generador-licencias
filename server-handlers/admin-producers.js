@@ -99,7 +99,8 @@ export default async function handler(req, res) {
     }
 
     const email = String(decodedToken.email || '').toLowerCase();
-    const isAdmin = decodedToken.admin === true || email === 'masterjuego25@gmail.com' || email === 'sossabeatz1@gmail.com';
+    const SOSSA_ADMIN_EMAILS = ['admin@sossamusic.com', 'masterjuego25@gmail.com', 'sossabeatz1@gmail.com'];
+    const isAdmin = decodedToken.admin === true || SOSSA_ADMIN_EMAILS.includes(email);
 
     if (!isAdmin) {
         return res.status(403).json({ error: 'Acceso restringido: Se requieren privilegios de administrador.' });
@@ -207,14 +208,14 @@ export default async function handler(req, res) {
         // 4. Asegurar que Sossa siempre esté como principal si no vino de la BD
         const hasSossa = producerConfigs.some(p => {
             const em = (p.email || '').toLowerCase();
-            return em === 'masterjuego25@gmail.com' || em === 'sossabeatz1@gmail.com';
+            return SOSSA_ADMIN_EMAILS.includes(em);
         });
         if (!hasSossa) {
             producerConfigs.unshift({
                 userId: decodedToken.uid,
                 aka: 'Sossa (Principal)',
                 name: 'Joao David Domínguez (Sossa)',
-                email: decodedToken.email || 'sossabeatz1@gmail.com',
+                email: decodedToken.email || 'admin@sossamusic.com',
                 plan: 'elite',
                 expirationPro: null,
                 registeredAt: '2026-01-01',
@@ -226,8 +227,10 @@ export default async function handler(req, res) {
         producerConfigs.sort((a, b) => {
             const emailA = (a.email || '').toLowerCase();
             const emailB = (b.email || '').toLowerCase();
-            if (emailA === 'masterjuego25@gmail.com' || emailA === 'sossabeatz1@gmail.com') return -1;
-            if (emailB === 'masterjuego25@gmail.com' || emailB === 'sossabeatz1@gmail.com') return 1;
+            const isSossaA = SOSSA_ADMIN_EMAILS.includes(emailA);
+            const isSossaB = SOSSA_ADMIN_EMAILS.includes(emailB);
+            if (isSossaA && !isSossaB) return -1;
+            if (!isSossaA && isSossaB) return 1;
             const nameA = (a.aka || a.name || a.email || '').toLowerCase();
             const nameB = (b.aka || b.name || b.email || '').toLowerCase();
             return nameA.localeCompare(nameB);

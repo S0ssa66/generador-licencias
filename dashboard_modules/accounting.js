@@ -16,9 +16,10 @@ const safeCreateIcons = (...args) => (typeof window !== 'undefined' && window.sa
 let adminSelectedUserId = '';
 
 async function loadConsolidatedAccounting() {
+    const SOSSA_ADMIN_EMAILS = ['admin@sossamusic.com', 'masterjuego25@gmail.com', 'sossabeatz1@gmail.com'];
     const isAdmin = window.currentUserIsAdmin ||
-        (auth.currentUser?.email && ['masterjuego25@gmail.com', 'sossabeatz1@gmail.com'].includes(auth.currentUser.email.toLowerCase())) ||
-        (window.currentUser?.email && ['masterjuego25@gmail.com', 'sossabeatz1@gmail.com'].includes(window.currentUser.email.toLowerCase()));
+        (auth.currentUser?.email && SOSSA_ADMIN_EMAILS.includes(auth.currentUser.email.toLowerCase())) ||
+        (window.currentUser?.email && SOSSA_ADMIN_EMAILS.includes(window.currentUser.email.toLowerCase()));
     if (!isAdmin) return;
     window.currentUserIsAdmin = true;
     
@@ -139,7 +140,7 @@ async function loadConsolidatedAccounting() {
         if (producerConfigs.length === 0 && auth.currentUser) {
             producerConfigs.push({
                 userId: auth.currentUser.uid,
-                email: auth.currentUser.email || 'sossabeatz1@gmail.com',
+                email: auth.currentUser.email || 'admin@sossamusic.com',
                 name: 'Joao David Domínguez (Sossa)',
                 aka: 'Sossa',
                 plan: 'elite'
@@ -150,8 +151,10 @@ async function loadConsolidatedAccounting() {
         producerConfigs.sort((a, b) => {
             const emailA = (a.email || "").toLowerCase();
             const emailB = (b.email || "").toLowerCase();
-            if (emailA === 'masterjuego25@gmail.com' || emailA === 'sossabeatz1@gmail.com') return -1;
-            if (emailB === 'masterjuego25@gmail.com' || emailB === 'sossabeatz1@gmail.com') return 1;
+            const isSossaA = SOSSA_ADMIN_EMAILS.includes(emailA);
+            const isSossaB = SOSSA_ADMIN_EMAILS.includes(emailB);
+            if (isSossaA && !isSossaB) return -1;
+            if (!isSossaA && isSossaB) return 1;
             
             const akaA = (a.aka || a.name || a.email || "").toLowerCase();
             const akaB = (b.aka || b.name || b.email || "").toLowerCase();

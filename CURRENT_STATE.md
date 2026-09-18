@@ -4,6 +4,14 @@
 > datos de clientes ni historial extenso. El historial se conserva en
 > `COLLABORATION_STATE.md`, que desde 2026-09-01 es un archivo de consulta.
 
+## Configuración de Correo Corporativo Sossa (admin@sossamusic.com) — DONE (2026-09-17)
+
+- Estado: `DONE`; agente: `Antigravity`; fecha: 2026-09-17.
+- Objetivo: configurar `admin@sossamusic.com` como correo corporativo y principal de Sossa en la plataforma BEATSS, manteniendo activos `masterjuego25@gmail.com` y `sossabeatz1@gmail.com` como alias administradores.
+- Resumen: actualización integral de comprobaciones de permisos, listas blancas y defaults en frontend (`auth.js`, `producerDefaults.js`, `dashboard_modules/accounting.js`, `storageBackup.js`, `catalog.js`, `index.html`) y backend serverless (`server-handlers/admin-producers.js`, `server-handlers/secure-license-delivery.js`, `server-handlers/log-download.js`, `server-handlers/get-order-downloads.js`, `server-handlers/payment-status.js`, `api/gdrive.js`, `api/beatstars-migration.js`, `api/_sri_download.js`, `api/proxy-audio.js`). Documentación actualizada en `.agents/AGENTS.md` y `Memoria del Proyecto.md`.
+- Verificación: 265/265 tests en Node pasados; auditoría de seguridad `node scripts/security-check.mjs` aprobada; `npm run build` y presupuesto de rendimiento aprobados (gzip 62.19 kB / 65 kB).
+- Siguiente acción exacta: realizar commit y desplegar a producción en Vercel.
+
 ## Rediseño Integral de Contabilidad y Operaciones Globales — DONE (2026-09-17)
 
 - Estado: `DONE` (Multi-Productor Consolidado y Desplegado en Producción); agente: `Antigravity`; fecha: 2026-09-17.

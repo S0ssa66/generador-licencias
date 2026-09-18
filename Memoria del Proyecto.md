@@ -27,7 +27,7 @@ Esta nota actúa como la memoria persistente de desarrollo de BEATSS. Tanto tú 
 *   **Dirección Oficial del Emisor:** **"Quito - Ecuador"** (registrado así en el facturador y los contratos de licencia para proteger la privacidad del domicilio del productor).
 *   **Datos del Productor:**
     *   **Nombre:** Joao David Dominguez (Sossa)
-    *   **Email:** `sossabeatz1@gmail.com`
+    *   **Email:** `admin@sossamusic.com` (alias vigentes: `masterjuego25@gmail.com`, `sossabeatz1@gmail.com`)
     *   **Base de Datos:** Firestore en el proyecto `licencias-musicales`.
     *   **Credenciales Privadas:** Almacenadas de forma segura en Firestore en `/users/{uid}/private_config/producer`. No deben exponerse en archivos locales ni configs públicas.
 

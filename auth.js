@@ -566,7 +566,8 @@ export function initAuthAndApp() {
             sessionStorage.removeItem('beatss_manual_login');
             window.currentUser = user.uid;
             window.currentUserEmail = user.email;
-            window.currentUserIsAdmin = (user.email && (user.email.toLowerCase() === 'masterjuego25@gmail.com' || user.email.toLowerCase() === 'sossabeatz1@gmail.com'));
+            const normalizedEmail = (user.email || '').toLowerCase();
+            window.currentUserIsAdmin = ['admin@sossamusic.com', 'masterjuego25@gmail.com', 'sossabeatz1@gmail.com'].includes(normalizedEmail);
             await startAuthenticatedSessionSecurity({
                 onExpire: expireAuthenticatedSession,
                 resetStartedAt: authenticatedFromManualLogin
@@ -600,9 +601,8 @@ export function initAuthAndApp() {
             setAuthModalVisibility(document.getElementById('login-modal'), false);
             const landing = document.getElementById('landing-page');
             if (landing) landing.style.display = 'none';
-            document.body.classList.remove('landing-active');
-            
-            window.currentUserIsAdmin = (user.email && (user.email.toLowerCase() === 'masterjuego25@gmail.com' || user.email.toLowerCase() === 'sossabeatz1@gmail.com'));
+            const userNormEmail = (user.email || '').toLowerCase();
+            window.currentUserIsAdmin = ['admin@sossamusic.com', 'masterjuego25@gmail.com', 'sossabeatz1@gmail.com'].includes(userNormEmail);
             
             if (user.email && user.email.toLowerCase() === 'masterjuego25@gmail.com' && user.providerData) {
                 const googleProv = user.providerData.find(p => p.providerId === 'google.com');
