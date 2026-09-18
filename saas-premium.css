@@ -1,0 +1,399 @@
+/*
+ * BEATSS — Premium SaaS workspace
+ * Visual layer only: all legacy IDs and functional hooks stay intact.
+ */
+
+:root {
+    --saas-canvas: #090a12;
+    --saas-panel: rgba(18, 19, 31, .88);
+    --saas-panel-solid: #141522;
+    --saas-elevated: #1b1d2b;
+    --saas-line: rgba(255, 255, 255, .085);
+    --saas-line-strong: rgba(255, 255, 255, .14);
+    --saas-muted: #9498ad;
+    --saas-violet: #8b5cf6;
+    --saas-violet-light: #a78bfa;
+    --saas-cyan: #3dd9ff;
+    --saas-radius: 16px;
+    --saas-shadow: 0 20px 60px rgba(0, 0, 0, .28);
+}
+
+body {
+    background:
+        radial-gradient(circle at 90% -10%, rgba(104, 63, 220, .20), transparent 27rem),
+        radial-gradient(circle at 47% 110%, rgba(42, 183, 255, .08), transparent 30rem),
+        var(--saas-canvas) !important;
+}
+
+.saas-workspace.app-container {
+    grid-template-columns: 342px minmax(0, 1fr) !important;
+    background: transparent !important;
+    isolation: isolate;
+}
+
+.saas-workspace.app-container::before,
+.saas-workspace.app-container::after {
+    display: none !important;
+}
+
+.saas-workspace .sidebar {
+    width: 342px !important;
+    background: rgba(13, 14, 24, .92) !important;
+    border-right: 1px solid var(--saas-line) !important;
+    box-shadow: 16px 0 45px rgba(0, 0, 0, .12);
+    backdrop-filter: blur(24px) saturate(125%) !important;
+}
+
+.saas-workspace .sidebar-header {
+    min-height: 82px;
+    padding: 17px 18px !important;
+    border-bottom-color: var(--saas-line) !important;
+}
+
+.saas-workspace .logo-icon {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 13px !important;
+    background: linear-gradient(135deg, rgba(139, 92, 246, .24), rgba(61, 217, 255, .12)) !important;
+    border-color: rgba(167, 139, 250, .32) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 22px rgba(112, 72, 225, .16);
+}
+
+.saas-workspace #app-sidebar-title {
+    letter-spacing: -.55px;
+    font-size: 19px !important;
+}
+
+.saas-workspace .subtitle {
+    letter-spacing: .12em;
+    opacity: .78;
+}
+
+.saas-workspace .header-actions {
+    gap: 2px !important;
+}
+
+.saas-workspace .btn-icon-only {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 9px !important;
+}
+
+.saas-workspace .btn-icon-only:hover {
+    background: rgba(255,255,255,.075) !important;
+}
+
+/* The stepper becomes a compact workflow navigator rather than a thin status bar. */
+.saas-workspace .sidebar > .flex.items-center.space-x-1 {
+    margin: 13px 14px 4px;
+    padding: 5px !important;
+    gap: 3px !important;
+    border: 1px solid var(--saas-line) !important;
+    border-radius: 13px;
+    background: rgba(255,255,255,.025) !important;
+}
+
+.saas-workspace .sidebar > .flex.items-center.space-x-1 > .h-\[1px\] {
+    display: none;
+}
+
+.saas-workspace [id^="nav-step-"] {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    padding: 8px 5px !important;
+    border: 0 !important;
+    border-radius: 9px;
+    transition: background .18s ease, color .18s ease, transform .18s ease;
+}
+
+.saas-workspace [id^="nav-step-"]:hover {
+    background: rgba(255,255,255,.06);
+}
+
+.saas-workspace [id^="nav-step-"].text-electric-purple {
+    background: linear-gradient(135deg, rgba(139,92,246,.23), rgba(124,58,237,.09));
+    color: #e7ddff !important;
+}
+
+.saas-workspace .step-badge {
+    width: 19px !important;
+    height: 19px !important;
+    border: 0 !important;
+    background: rgba(255,255,255,.09) !important;
+    color: #b8bbca;
+}
+
+.saas-workspace [id^="nav-step-"].text-electric-purple .step-badge {
+    color: #fff;
+    background: var(--saas-violet) !important;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, .13);
+}
+
+.saas-workspace .sidebar-scroll {
+    padding: 5px 14px 20px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(167,139,250,.45) transparent;
+}
+
+.saas-workspace .form-section {
+    padding: 11px 2px !important;
+}
+
+.saas-workspace .section-label {
+    color: #bdc0d1 !important;
+    font-size: 10px !important;
+    letter-spacing: .11em;
+}
+
+.saas-workspace .license-btn {
+    position: relative;
+    overflow: hidden;
+    min-height: 70px;
+    padding: 14px 15px !important;
+    border: 1px solid var(--saas-line) !important;
+    border-radius: 13px !important;
+    background: rgba(255,255,255,.026) !important;
+    box-shadow: none !important;
+}
+
+.saas-workspace .license-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    transform: scaleY(0);
+    transform-origin: center;
+    background: linear-gradient(var(--saas-cyan), var(--saas-violet));
+    transition: transform .18s ease;
+}
+
+.saas-workspace .license-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(167,139,250,.33) !important;
+    background: rgba(139,92,246,.08) !important;
+}
+
+.saas-workspace .license-btn.active {
+    border-color: rgba(167,139,250,.66) !important;
+    background: linear-gradient(115deg, rgba(139,92,246,.20), rgba(61,217,255,.055)) !important;
+    box-shadow: 0 9px 23px rgba(71, 36, 150, .15) !important;
+}
+
+.saas-workspace .license-btn.active::after {
+    transform: scaleY(1);
+}
+
+.saas-workspace .license-btn .lic-name {
+    font-size: 14px !important;
+    letter-spacing: -.15px;
+}
+
+.saas-workspace .license-btn.active .lic-name { color: #ede9fe !important; }
+.saas-workspace .license-btn .lic-desc { color: var(--saas-muted) !important; }
+
+.saas-workspace .input-group { gap: 6px; }
+.saas-workspace .input-group label { color: #a8acc0 !important; font-size: 10.5px !important; }
+.saas-workspace .input-group label svg { color: var(--saas-violet-light) !important; }
+
+.saas-workspace .input-group input[type="text"],
+.saas-workspace .input-group input[type="email"],
+.saas-workspace .input-group input[type="number"],
+.saas-workspace .input-group input[type="date"],
+.saas-workspace .input-group select {
+    min-height: 39px;
+    border-color: var(--saas-line) !important;
+    border-radius: 10px !important;
+    background: rgba(7,8,15,.62) !important;
+    color: #f2f3fa !important;
+}
+
+.saas-workspace .input-group input:focus,
+.saas-workspace .input-group select:focus {
+    border-color: rgba(167,139,250,.85) !important;
+    box-shadow: 0 0 0 3px rgba(139,92,246,.16) !important;
+}
+
+.saas-workspace .advanced-details {
+    border-color: var(--saas-line) !important;
+    border-radius: 12px !important;
+    background: rgba(255,255,255,.025) !important;
+}
+
+.saas-workspace .sidebar-actions {
+    gap: 8px !important;
+    padding: 14px !important;
+    border-top-color: var(--saas-line) !important;
+    background: rgba(12,13,23,.95) !important;
+}
+
+.saas-workspace #btn-download-pdf {
+    min-height: 44px;
+    border-radius: 11px !important;
+    background: linear-gradient(105deg, #7c3aed, #9b59f5 55%, #6d5dfc) !important;
+    box-shadow: 0 12px 24px rgba(111, 62, 221, .25) !important;
+}
+
+.saas-workspace #btn-send-email {
+    min-height: 42px;
+    border-color: rgba(167,139,250,.42) !important;
+    color: #d8c6ff !important;
+    border-radius: 11px !important;
+}
+
+.saas-workspace #btn-send-email:hover {
+    color: white !important;
+    background: rgba(139,92,246,.16) !important;
+}
+
+.saas-workspace .main-panel {
+    min-width: 0;
+    background: transparent !important;
+}
+
+.saas-workspace .main-header {
+    height: 78px !important;
+    padding: 0 28px !important;
+    border-bottom-color: var(--saas-line) !important;
+    background: rgba(12,13,23,.70) !important;
+    backdrop-filter: blur(24px) saturate(130%) !important;
+}
+
+.saas-workspace .tabs {
+    align-items: center;
+    gap: 5px !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.saas-workspace .tabs::-webkit-scrollbar { display: none; }
+
+.saas-workspace .tab-btn {
+    height: 40px !important;
+    flex: 0 0 auto;
+    padding: 0 12px !important;
+    border: 1px solid transparent !important;
+    border-radius: 10px !important;
+    color: #9498ad !important;
+    font-size: 12px !important;
+}
+
+.saas-workspace .tab-btn:hover {
+    border-color: var(--saas-line) !important;
+    background: rgba(255,255,255,.045) !important;
+    color: #f1f2f8 !important;
+}
+
+.saas-workspace .tab-btn.active {
+    border-color: rgba(167,139,250,.34) !important;
+    background: rgba(139,92,246,.14) !important;
+    color: #e2d6ff !important;
+}
+
+.saas-workspace .tab-btn.active .badge {
+    background: var(--saas-violet) !important;
+    color: white !important;
+}
+
+.saas-workspace .tab-content.active {
+    padding: 24px 28px 28px;
+    background: linear-gradient(180deg, rgba(255,255,255,.008), transparent 26%);
+}
+
+.saas-workspace #tab-preview.active {
+    display: flex !important;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.saas-workspace .preview-actions {
+    margin-bottom: 0 !important;
+    padding: 11px 13px;
+    border: 1px solid var(--saas-line);
+    border-radius: var(--saas-radius);
+    background: rgba(20,21,34,.70);
+    box-shadow: 0 10px 28px rgba(0,0,0,.13);
+}
+
+.saas-workspace .preview-mode-switch {
+    padding: 3px;
+    border: 1px solid var(--saas-line);
+    border-radius: 10px;
+    background: rgba(255,255,255,.025);
+}
+
+.saas-workspace .mode-btn {
+    border-radius: 7px !important;
+    padding: 7px 10px !important;
+}
+
+.saas-workspace .mode-btn.active {
+    background: rgba(139,92,246,.23) !important;
+    color: #f1ecff !important;
+}
+
+.saas-workspace .preview-container {
+    flex: 1;
+    min-height: 0;
+    border: 1px solid var(--saas-line);
+    border-radius: var(--saas-radius);
+    background:
+        linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
+        rgba(13,14,24,.68);
+    background-size: 28px 28px;
+    box-shadow: var(--saas-shadow);
+}
+
+.saas-workspace .paper {
+    border-radius: 5px;
+    box-shadow: 0 20px 52px rgba(0,0,0,.32) !important;
+}
+
+.saas-workspace .history-controls,
+.saas-workspace .history-list-wrapper,
+.saas-workspace .stat-card,
+.saas-workspace .chart-card-premium,
+.saas-workspace .beats-tab-container > *,
+.saas-workspace .empty-state {
+    border-color: var(--saas-line) !important;
+    background: rgba(20,21,34,.76) !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,.12);
+    border-radius: var(--saas-radius) !important;
+}
+
+.saas-workspace .btn-primary {
+    border-radius: 10px !important;
+    background: linear-gradient(110deg, #7c3aed, #a855f7) !important;
+}
+
+.saas-workspace .btn-secondary {
+    border-color: var(--saas-line) !important;
+    background: rgba(255,255,255,.045) !important;
+    border-radius: 10px !important;
+}
+
+.saas-workspace button:focus-visible,
+.saas-workspace input:focus-visible,
+.saas-workspace select:focus-visible {
+    outline: 2px solid var(--saas-cyan) !important;
+    outline-offset: 2px;
+}
+
+@media (max-width: 1180px) {
+    .saas-workspace.app-container { grid-template-columns: 304px minmax(0, 1fr) !important; }
+    .saas-workspace .sidebar { width: 304px !important; }
+    .saas-workspace .main-header { padding: 0 18px !important; }
+    .saas-workspace .tab-content.active { padding: 18px !important; }
+}
+
+@media (max-width: 900px) {
+    .saas-workspace.app-container {
+        display: block !important;
+        height: calc(100vh - 64px) !important;
+    }
+    .saas-workspace .sidebar { width: 100% !important; }
+    .saas-workspace .sidebar-actions { padding-bottom: 20px !important; }
+    .saas-workspace .tab-content.active { padding: 14px !important; }
+    .saas-workspace .preview-actions { align-items: stretch !important; }
+}

@@ -9,15 +9,20 @@ La raíz vigente del proyecto es `/Users/sossa/Documents/Codex/BeatSS`.
 Para mantener las sesiones rápidas y consistentes, usa este archivo como índice
 de contexto. Antes de modificar el proyecto, leer en este orden:
 
-1. `CODEX_HANDOFF.md` — ubicación vigente, migración y límites del entorno.
-2. `task.md` — estado de ejecución actual.
-3. `.agents/AGENTS.md` — reglas de producto, pagos, privacidad y SRI.
+1. `CURRENT_STATE.md` — única tarea vigente, producción verificada y siguiente acción.
+2. `COLLABORATION_PROTOCOL.md` — reglas para coordinar Codex y OpenCode.
+3. `task.md` — pendientes técnicos y de negocio.
+4. `.agents/AGENTS.md` — reglas de producto, pagos, privacidad y SRI.
 
 Consulta bajo demanda, no de forma completa en cada sesión:
 
 - `Memoria del Proyecto.md` para antecedentes técnicos e históricos.
 - `Dashboard BEATSS.md` para navegar documentación.
 - `docs/3_Recursos/Graphify/GRAPHIFY_SUMMARY.md` para arquitectura y flujos.
+- `CODEX_HANDOFF.md` y `OPEN_CODE_HANDOFF.md` para límites o procedimientos
+  específicos de cada entorno.
+- `COLLABORATION_STATE.md` para evidencia e historial; no usarlo para inferir
+  la tarea actual.
 
 La bóveda completa de Obsidian está en
 `/Users/sossa/Documents/Codex/BeatSS-Obsidian`. Los archivos bajo

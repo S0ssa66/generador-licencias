@@ -1,0 +1,839 @@
+/* BEATSS — Catálogo privado de beats
+ * Superficie autosuficiente para el inventario del productor. Esta capa deja
+ * atrás las tarjetas oscuras heredadas sin modificar IDs ni eventos.
+ */
+
+#app-container.saas-workspace #tab-beats {
+    background: var(--workspace-canvas, #f4f5f8) !important;
+    color: var(--ledger-ink, #172238) !important;
+}
+
+#app-container.saas-workspace #tab-beats .beats-tab-container {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.55fr) minmax(330px, .72fr) !important;
+    gap: clamp(20px, 2vw, 30px) !important;
+    width: min(calc(100% - 40px), 1500px);
+    min-height: 0 !important;
+    margin: 0 auto;
+    padding: clamp(24px, 2.3vw, 38px) 0 110px !important;
+}
+
+#app-container.saas-workspace #tab-beats .beats-list-section,
+#app-container.saas-workspace #tab-beats .beats-form-section {
+    min-width: 0 !important;
+}
+
+/* Encabezado operativo ------------------------------------------------ */
+
+#app-container.saas-workspace #tab-beats .beat-catalog-toolbar {
+    display: grid;
+    gap: 20px;
+    padding: 24px;
+    border: 1px solid var(--ledger-line, #dfe5ef);
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 14px 34px rgba(42, 65, 123, .07);
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-heading {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    gap: 15px;
+    align-items: center;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-heading-icon {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    background: var(--ledger-blue-soft, #eef2ff);
+    color: var(--ledger-blue, #3157e8);
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-heading-icon svg {
+    width: 22px;
+    height: 22px;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-heading p {
+    margin: 0 0 4px;
+    color: var(--ledger-blue, #3157e8) !important;
+    font: 750 10px/1.3 "IBM Plex Mono", ui-monospace, monospace;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-heading h1 {
+    margin: 0;
+    color: var(--ledger-ink, #172238) !important;
+    font-size: clamp(25px, 2vw, 34px);
+    line-height: 1.08;
+    text-wrap: balance;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-heading div > span {
+    display: block;
+    margin-top: 7px;
+    color: var(--ledger-muted, #69758a) !important;
+    font-size: 13px;
+    line-height: 1.5;
+    text-wrap: pretty;
+}
+
+#app-container.saas-workspace #tab-beats #tab-btn-add-beat {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 0 17px;
+    border: 1px solid var(--ledger-blue, #3157e8) !important;
+    border-radius: 13px;
+    background: var(--ledger-blue, #3157e8) !important;
+    color: #fff !important;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+#app-container.saas-workspace #tab-beats #tab-btn-add-beat svg {
+    width: 17px;
+    height: 17px;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-filters {
+    display: grid;
+    grid-template-columns: minmax(210px, 1.6fr) minmax(145px, .7fr) minmax(145px, .7fr);
+    gap: 10px;
+}
+
+#app-container.saas-workspace #tab-beats :is(.beat-catalog-search, .beat-catalog-select) {
+    min-width: 0;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-search {
+    position: relative;
+    display: block;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-search svg {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    width: 18px;
+    height: 18px;
+    color: #71809a;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-search input,
+#app-container.saas-workspace #tab-beats .beat-catalog-select select {
+    width: 100%;
+    min-height: 48px;
+    box-sizing: border-box;
+    border: 1px solid #dce3ef !important;
+    border-radius: 13px !important;
+    background: #f8faff !important;
+    color: var(--ledger-ink, #172238) !important;
+    font-size: 13px !important;
+    outline: none;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-search input {
+    padding: 0 14px 0 43px !important;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-search input::placeholder {
+    color: #8793a7 !important;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-select {
+    position: relative;
+    display: block;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-select > span {
+    position: absolute;
+    z-index: 1;
+    top: 7px;
+    left: 13px;
+    color: #8793a7;
+    font: 700 8px/1.2 "IBM Plex Mono", ui-monospace, monospace;
+    pointer-events: none;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-select select {
+    padding: 17px 34px 3px 12px !important;
+    cursor: pointer;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: hidden;
+    border: 1px solid #e2e8f2;
+    border-radius: 15px;
+    background: #f8faff;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-stats > span {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 12px 14px;
+    border-right: 1px solid #e2e8f2;
+    color: #748198;
+    font-size: 10px;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-stats > span:last-child {
+    border-right: 0;
+}
+
+#app-container.saas-workspace #tab-beats .beat-catalog-stats strong {
+    color: var(--ledger-ink, #172238) !important;
+    font-size: 20px;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Inventario --------------------------------------------------------- */
+
+#app-container.saas-workspace #tab-beats #tab-beats-grid.beat-catalog-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    width: 100%;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-card {
+    display: grid !important;
+    grid-template-columns: 124px minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    grid-template-areas: "artwork info" "artwork actions";
+    gap: 11px 14px !important;
+    min-width: 0;
+    min-height: 182px;
+    padding: 12px !important;
+    overflow: hidden !important;
+    border: 1px solid var(--ledger-line, #dfe5ef) !important;
+    border-radius: 20px !important;
+    background: #fff !important;
+    color: var(--ledger-ink, #172238) !important;
+    box-shadow: 0 12px 28px rgba(42, 65, 123, .07) !important;
+    transform: none !important;
+    transition: none !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-card:hover {
+    border-color: #b9c7f5 !important;
+    background: #fff !important;
+    box-shadow: 0 16px 34px rgba(42, 65, 123, .1) !important;
+    transform: none !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-artwork-container {
+    position: relative !important;
+    grid-area: artwork;
+    width: 124px !important;
+    height: 158px !important;
+    aspect-ratio: auto !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 15px !important;
+    background: #e9eef7 !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-artwork {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    transform: none !important;
+    transition: none !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-card:hover .tab-beat-artwork {
+    transform: none !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-cover-label {
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    padding: 4px 7px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, .9);
+    color: #1f3aa2;
+    font: 800 8px/1 "IBM Plex Mono", ui-monospace, monospace;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-play-btn {
+    position: absolute !important;
+    right: 9px !important;
+    bottom: 9px !important;
+    left: auto !important;
+    display: grid !important;
+    place-items: center;
+    width: 42px !important;
+    height: 42px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: var(--ledger-blue, #3157e8) !important;
+    color: #fff !important;
+    box-shadow: 0 8px 18px rgba(25, 48, 133, .22) !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    cursor: pointer;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-play-btn:disabled {
+    background: rgba(255, 255, 255, .92) !important;
+    color: #8b96a9 !important;
+    cursor: not-allowed;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-play-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-info {
+    display: grid !important;
+    grid-area: info;
+    align-content: start;
+    gap: 7px !important;
+    min-width: 0;
+    padding: 4px 2px 0 !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-kicker {
+    color: var(--ledger-blue, #3157e8) !important;
+    font: 750 9px/1.25 "IBM Plex Mono", ui-monospace, monospace;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-title {
+    display: -webkit-box !important;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden !important;
+    border: 0;
+    background: transparent;
+    color: var(--ledger-ink, #172238) !important;
+    font-size: 20px !important;
+    font-weight: 780 !important;
+    line-height: 1.18;
+    text-align: left;
+    text-overflow: ellipsis;
+    text-wrap: balance;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal !important;
+    cursor: pointer;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-meta {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 5px !important;
+    min-width: 0;
+    color: #5f6d84 !important;
+    font-size: 10px !important;
+    font-variant-numeric: tabular-nums;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-meta > span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 7px;
+    border: 1px solid #e1e7f0;
+    border-radius: 8px;
+    background: #f7f9fc;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-meta strong {
+    color: inherit;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-tags-container {
+    display: flex !important;
+    gap: 5px !important;
+    height: auto !important;
+    max-height: 24px;
+    margin: 0 !important;
+    overflow: hidden !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-tag {
+    padding: 3px 7px !important;
+    border: 1px solid #dce4fa !important;
+    border-radius: 7px !important;
+    background: var(--ledger-blue-soft, #eef2ff) !important;
+    color: var(--ledger-blue, #3157e8) !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-file-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 1px;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-file-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    min-height: 22px;
+    padding: 0 6px;
+    border: 1px solid #e1e6ef;
+    border-radius: 7px;
+    background: #f7f8fb;
+    color: #8993a4;
+    font-size: 9px;
+    font-weight: 750;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-file-status.is-ready {
+    border-color: #c8d5ff;
+    background: var(--ledger-blue-soft, #eef2ff);
+    color: var(--ledger-blue, #3157e8);
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-file-status svg {
+    width: 10px;
+    height: 10px;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-actions {
+    display: grid !important;
+    grid-area: actions;
+    grid-template-columns: minmax(0, 1fr) 40px 40px;
+    gap: 6px !important;
+    width: 100% !important;
+    min-width: 0;
+    margin: 0 !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-actions .btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100% !important;
+    min-width: 0;
+    min-height: 40px;
+    margin: 0 !important;
+    padding: 0 9px !important;
+    border: 1px solid #dce3ef !important;
+    border-radius: 11px !important;
+    background: #f8faff !important;
+    color: #45546e !important;
+    box-shadow: none !important;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-actions .tab-beat-use {
+    border-color: var(--ledger-blue, #3157e8) !important;
+    background: var(--ledger-blue, #3157e8) !important;
+    color: #fff !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-actions .tab-beat-delete {
+    border-color: #f0dddd !important;
+    background: #fffafa !important;
+    color: #a34c4c !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-beat-actions svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* Beats dados de baja ------------------------------------------------ */
+
+#app-container.saas-workspace #tab-beats .tab-retired-beats-section {
+    display: grid;
+    gap: 14px;
+    margin-top: 24px;
+    padding: 18px;
+    border: 1px solid #dfe5ef;
+    border-radius: 20px;
+    background: #f8f9fc;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beats-section[hidden] {
+    display: none !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beats-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e2e7f0;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beats-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #66758b;
+    font: 750 9px/1.2 "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: .05em;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beats-kicker svg {
+    width: 13px;
+    height: 13px;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beats-heading h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0 5px;
+    color: var(--ledger-ink, #172238);
+    font-size: 17px;
+    line-height: 1.2;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beats-heading h2 span {
+    display: inline-grid;
+    min-width: 22px;
+    min-height: 22px;
+    place-items: center;
+    padding: 0 6px;
+    border-radius: 99px;
+    background: #e7ebf3;
+    color: #66758b;
+    font: 750 10px/1 "IBM Plex Mono", ui-monospace, monospace;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beats-heading p {
+    max-width: 66ch;
+    margin: 0;
+    color: #69758a;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beats-grid {
+    display: grid;
+    gap: 10px;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-card {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #e1e6ee;
+    border-radius: 14px;
+    background: #fff;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-card > img {
+    display: block;
+    width: 58px;
+    height: 58px;
+    border-radius: 10px;
+    object-fit: cover;
+    filter: saturate(.55);
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-copy {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #7a6872;
+    font: 750 9px/1.2 "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: .045em;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-status svg {
+    width: 12px;
+    height: 12px;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-copy h3 {
+    overflow: hidden;
+    margin: 0;
+    color: var(--ledger-ink, #172238);
+    font-size: 14px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-copy :is(p, small) {
+    overflow: hidden;
+    margin: 0;
+    color: #6d798c;
+    font-size: 11px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-copy small {
+    color: #8a94a5;
+    font-size: 10px;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid #ccd7fa !important;
+    border-radius: 10px;
+    background: #f4f6ff !important;
+    color: var(--ledger-blue, #3157e8) !important;
+    box-shadow: none !important;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-actions .tab-retired-beat-edit {
+    width: 36px;
+    padding: 0;
+    border-color: #dfe5ef !important;
+    background: #fff !important;
+    color: #617087 !important;
+}
+
+#app-container.saas-workspace #tab-beats .tab-retired-beat-actions svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Panel lateral y estado vacío -------------------------------------- */
+
+#app-container.saas-workspace #tab-beats .sticky-form-card {
+    border: 1px solid var(--ledger-line, #dfe5ef) !important;
+    border-radius: 24px !important;
+    background: #fff !important;
+    box-shadow: 0 14px 34px rgba(42, 65, 123, .07) !important;
+}
+
+#app-container.saas-workspace #tab-beats #tab-beat-form-empty-state {
+    color: var(--ledger-muted, #69758a) !important;
+}
+
+#app-container.saas-workspace #tab-beats #tab-beat-form-empty-state h3 {
+    color: var(--ledger-ink, #172238) !important;
+}
+
+#app-container.saas-workspace #tab-beats #tab-beats-empty {
+    border: 1px dashed #ccd6e7 !important;
+    border-radius: 20px !important;
+    background: #fff !important;
+    color: var(--ledger-muted, #69758a) !important;
+}
+
+#app-container.saas-workspace #tab-beats #tab-beats-empty h3 {
+    color: var(--ledger-ink, #172238) !important;
+}
+
+#app-container.saas-workspace #tab-beats #tab-beats-empty .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    margin-top: 16px;
+}
+
+@media (max-width: 1280px) {
+    #app-container.saas-workspace #tab-beats .beats-tab-container {
+        grid-template-columns: minmax(0, 1fr) minmax(310px, .58fr) !important;
+    }
+
+    #app-container.saas-workspace #tab-beats #tab-beats-grid.beat-catalog-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    #app-container.saas-workspace #tab-beats .beats-tab-container {
+        grid-template-columns: minmax(0, 1fr) !important;
+        width: min(calc(100% - 32px), 900px);
+    }
+
+    #app-container.saas-workspace #tab-beats #tab-beats-grid.beat-catalog-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 760px) {
+    #app-container.saas-workspace #tab-beats .beats-tab-container {
+        width: min(calc(100% - 20px), 620px);
+        padding-top: 12px !important;
+        padding-bottom: calc(115px + env(safe-area-inset-bottom, 20px)) !important;
+    }
+
+    #app-container.saas-workspace #tab-beats .beat-catalog-toolbar {
+        gap: 15px;
+        padding: 18px;
+        border-radius: 20px;
+    }
+
+    #app-container.saas-workspace #tab-beats .beat-catalog-heading {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    #app-container.saas-workspace #tab-beats .beat-catalog-heading > div {
+        flex: 1 1 calc(100% - 54px);
+        min-width: 0;
+    }
+
+    #app-container.saas-workspace #tab-beats .beat-catalog-heading-icon {
+        width: 42px;
+        height: 42px;
+    }
+
+    #app-container.saas-workspace #tab-beats #tab-btn-add-beat {
+        flex: 1 0 100%;
+        width: 100%;
+    }
+
+    #app-container.saas-workspace #tab-beats .beat-catalog-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #app-container.saas-workspace #tab-beats .beat-catalog-search {
+        grid-column: 1 / -1;
+    }
+
+    #app-container.saas-workspace #tab-beats .beat-catalog-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #app-container.saas-workspace #tab-beats .beat-catalog-stats > span:nth-child(2) {
+        border-right: 0;
+    }
+
+    #app-container.saas-workspace #tab-beats .beat-catalog-stats > span:nth-child(-n + 2) {
+        border-bottom: 1px solid #e2e8f2;
+    }
+
+    #app-container.saas-workspace #tab-beats #tab-beats-grid.beat-catalog-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 11px !important;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-beat-card {
+        grid-template-columns: 106px minmax(0, 1fr) !important;
+        min-height: 166px;
+        border-radius: 17px !important;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-beat-artwork-container {
+        width: 106px !important;
+        height: 142px !important;
+        border-radius: 13px !important;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-beat-title {
+        font-size: 18px !important;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-beat-actions .btn {
+        min-height: 44px;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-retired-beats-section {
+        margin-top: 16px;
+        padding: 15px;
+        border-radius: 17px;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-retired-beat-card {
+        grid-template-columns: 52px minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-retired-beat-card > img {
+        width: 52px;
+        height: 52px;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-retired-beat-actions {
+        grid-column: 1 / -1;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-retired-beat-actions .tab-retired-beat-restore {
+        flex: 1;
+    }
+}
+
+@media (max-width: 390px) {
+    #app-container.saas-workspace #tab-beats .beat-catalog-filters {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #app-container.saas-workspace #tab-beats .beat-catalog-search {
+        grid-column: auto;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-beat-card {
+        grid-template-columns: 92px minmax(0, 1fr) !important;
+        gap: 9px 11px !important;
+        padding: 10px !important;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-beat-artwork-container {
+        width: 92px !important;
+        height: 126px !important;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-beat-meta > span:nth-child(n + 3),
+    #app-container.saas-workspace #tab-beats .tab-beat-tags-container {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-beat-actions {
+        grid-template-columns: minmax(0, 1fr) 44px 44px;
+    }
+
+    #app-container.saas-workspace #tab-beats .tab-beat-actions .tab-beat-use span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #app-container.saas-workspace #tab-beats .tab-beat-card,
+    #app-container.saas-workspace #tab-beats .tab-beat-artwork,
+    #app-container.saas-workspace #tab-beats .tab-beat-play-btn {
+        transition: none !important;
+    }
+}

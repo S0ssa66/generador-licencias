@@ -4,17 +4,36 @@
   "description": "",
   "main": "index.html",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npm run performance:check",
     "preview": "vite preview",
-    "security:check": "node scripts/security-check.mjs"
+    "performance:check": "node scripts/performance-budget.mjs",
+    "security:check": "node scripts/security-check.mjs",
+    "security:deps": "npm audit --omit=dev --audit-level=high",
+    "knowledge:handoffs": "node scripts/run-knowledge-steward.mjs handoffs --save",
+    "knowledge:project-docs": "node scripts/run-knowledge-steward.mjs project-docs --save",
+    "knowledge:vault-index": "node scripts/run-knowledge-steward.mjs vault-index --save",
+    "knowledge:monitor": "node scripts/knowledge-steward-monitor.mjs",
+    "knowledge:status": "node scripts/knowledge-steward-monitor.mjs --status",
+    "knowledge:monitor:local": "zsh scripts/run-knowledge-steward-monitor.sh"
   },
   "devDependencies": {
-    "vite": "^8.0.14"
+    "@firebase/rules-unit-testing": "5.0.1",
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/forms": "^0.5.10",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "vite": "8.2.1"
   },
   "dependencies": {
-    "firebase": "^12.14.0",
-    "firebase-admin": "^12.7.0"
+    "firebase": "12.17.1",
+    "firebase-admin": "13.6.0",
+    "lucide": "0.344.0",
+    "stripe": "^18.5.0"
   }
 }

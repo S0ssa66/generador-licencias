@@ -1,0 +1,42 @@
+:root {
+    --purchase-ink: #172238;
+    --purchase-muted: #64748b;
+    --purchase-line: #dfe5ee;
+    --purchase-bg: #f4f6fa;
+    --purchase-accent: #3157e8;
+    --purchase-accent-dark: #2444c7;
+    --purchase-success: #087a57;
+}
+#public-purchase-view {
+    min-height: 100dvh;
+    background: radial-gradient(circle at 16% 8%, rgba(49, 87, 232, .14), transparent 31rem), radial-gradient(circle at 84% 4%, rgba(54, 211, 153, .12), transparent 27rem), var(--purchase-bg);
+    color: var(--purchase-ink);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.public-purchase-shell { width: min(100%, 760px); margin: 0 auto; padding: clamp(36px, 8vh, 88px) 20px 48px; }
+.public-purchase-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--purchase-accent); font-size: 15px; font-weight: 800; letter-spacing: -.03em; text-decoration: none; }
+.public-purchase-brand__mark { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 10px; background: var(--purchase-accent); color: #fff; font-size: 15px; box-shadow: 0 9px 20px rgba(49, 87, 232, .22); }
+.public-purchase-card { margin-top: 28px; padding: clamp(28px, 6vw, 48px); background: rgba(255, 255, 255, .93); border: 1px solid rgba(215, 223, 235, .95); border-radius: 25px; box-shadow: 0 22px 65px rgba(28, 45, 78, .12); }
+.public-purchase-status-icon { display: grid; place-items: center; width: 54px; height: 54px; margin-bottom: 20px; border-radius: 50%; background: #e8f8f1; color: var(--purchase-success); font-size: 27px; font-weight: 800; }
+.public-purchase-status-icon--pending { background: #eef2ff; color: var(--purchase-accent); }
+.public-purchase-status-icon--error { background: #fff1f1; color: #c03e4a; }
+.public-purchase-kicker { margin: 0 0 8px; color: var(--purchase-accent); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.public-purchase-card h1 { margin: 0; color: var(--purchase-ink); font-size: clamp(27px, 5vw, 40px); line-height: 1.04; letter-spacing: -.055em; }
+.public-purchase-summary { max-width: 570px; margin: 14px 0 0; color: var(--purchase-muted); font-size: 15px; line-height: 1.6; }
+.public-purchase-deliveries { display: grid; gap: 12px; margin-top: 30px; }
+.public-purchase-delivery { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid var(--purchase-line); border-radius: 16px; background: #fff; }
+.public-purchase-delivery__copy { min-width: 0; }
+.public-purchase-delivery__copy strong, .public-purchase-delivery__copy span { display: block; }
+.public-purchase-delivery__copy strong { overflow: hidden; color: var(--purchase-ink); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.public-purchase-delivery__copy span { margin-top: 3px; color: var(--purchase-muted); font-size: 12px; }
+.public-purchase-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 0; border-radius: 11px; background: var(--purchase-accent); color: #fff; cursor: pointer; font: inherit; font-size: 13px; font-weight: 750; text-align: center; text-decoration: none; transition: background .16s ease, transform .16s ease; }
+.public-purchase-button:hover, .public-purchase-button:focus-visible { background: var(--purchase-accent-dark); transform: translateY(-1px); }
+.public-purchase-button:focus-visible, .public-purchase-link:focus-visible { outline: 3px solid rgba(49, 87, 232, .27); outline-offset: 3px; }
+.public-purchase-button--secondary { margin-top: 18px; background: #edf1f7; color: #34435d; }
+.public-purchase-button--secondary:hover, .public-purchase-button--secondary:focus-visible { background: #dfe6f2; }
+.public-purchase-note { margin: 20px 0 0; color: var(--purchase-muted); font-size: 12px; line-height: 1.55; }
+.public-purchase-link { color: var(--purchase-accent); font-size: 13px; font-weight: 700; text-decoration: none; }
+.public-purchase-card[aria-busy="true"] .public-purchase-status-icon--pending::after { content: ''; width: 20px; height: 20px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: public-purchase-spin .8s linear infinite; }
+.public-purchase-card[aria-busy="true"] .public-purchase-status-icon--pending { font-size: 0; }
+@keyframes public-purchase-spin { to { transform: rotate(360deg); } }
+@media (max-width: 540px) { .public-purchase-delivery { align-items: stretch; flex-direction: column; } .public-purchase-delivery .public-purchase-button { width: 100%; } }

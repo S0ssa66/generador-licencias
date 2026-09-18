@@ -1,15 +1,212 @@
 {
   "rewrites": [
     {
+      "source": "/api/activate-pro",
+      "destination": "/api/account?route=activate-pro"
+    },
+    {
+      "source": "/api/redeem-vip",
+      "destination": "/api/account?route=redeem-vip"
+    },
+    {
+      "source": "/api/payments/cancel-subscription",
+      "destination": "/api/account?route=cancel-subscription"
+    },
+    {
+      "source": "/api/account/deletion-request",
+      "destination": "/api/account?route=deletion-request"
+    },
+    {
+      "source": "/api/get-order-downloads",
+      "destination": "/api/order?route=get-order-downloads"
+    },
+    {
+      "source": "/api/log-download",
+      "destination": "/api/order?route=log-download"
+    },
+    {
+      "source": "/api/payments/status",
+      "destination": "/api/order?route=payment-status"
+    },
+    {
+      "source": "/api/public-store",
+      "destination": "/api/order?route=public-store"
+    },
+    {
+      "source": "/api/public-catalog",
+      "destination": "/api/order?route=public-catalog&catalog=global"
+    },
+    {
+      "source": "/api/public-artwork",
+      "destination": "/api/order?route=public-artwork"
+    },
+    {
+      "source": "/api/orders/pending",
+      "destination": "/api/order?route=create-pending-order"
+    },
+    {
+      "source": "/api/clearance",
+      "destination": "/api/order?route=clearance"
+    },
+    {
+      "source": "/api/license-delivery",
+      "destination": "/api/order?route=secure-license-delivery"
+    },
+    {
+      "source": "/api/payments/stripe/create-checkout-session",
+      "destination": "/api/stripe?route=create-checkout-session"
+    },
+    {
+      "source": "/api/payments/stripe/session-status",
+      "destination": "/api/stripe?route=session-status"
+    },
+    {
+      "source": "/api/payments/stripe/retry-deliveries",
+      "destination": "/api/stripe?route=retry-deliveries"
+    },
+    {
       "source": "/api/payments/deuna/:endpoint*",
       "destination": "/api/payments/deuna"
     },
     {
-      "source": "/api/gdrive-:action*",
+      "source": "/api/gdrive-import-email-history",
       "destination": "/api/gdrive"
+    },
+    {
+      "source": "/api/gdrive-status",
+      "destination": "/api/gdrive"
+    },
+    {
+      "source": "/api/gdrive-oauth-client",
+      "destination": "/api/gdrive"
+    },
+    {
+      "source": "/api/gdrive-setup",
+      "destination": "/api/gdrive"
+    },
+    {
+      "source": "/api/gdrive-upload-session",
+      "destination": "/api/gdrive"
+    },
+    {
+      "source": "/__/auth/:path*",
+      "destination": "https://licencias-musicales.firebaseapp.com/__/auth/:path*"
+    },
+    {
+      "source": "/inicio",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/studio",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/contrato",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/facturacion",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/licencias",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/emails",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/mis-beats",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/misbeats",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/beats",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/ventas",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pedidos",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/contabilidad",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/content-id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tienda/:producer",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/compra/:state",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/descargas/:paymentId",
+      "destination": "/index.html"
     }
   ],
   "redirects": [
+    {
+      "source": "/catalogo",
+      "destination": "/tienda/sossa",
+      "permanent": true
+    },
+    {
+      "source": "/concept.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/dashboard-concept.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/webflow-concept.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/flow-dashboard.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/prompt-demo.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/beatss-vision.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/beatss-relay-directions.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/reset-local.html",
+      "destination": "/",
+      "permanent": true
+    },
     {
       "source": "/(.*)",
       "destination": "https://beatss.app/$1",
@@ -28,6 +225,46 @@
     },
     {
       "source": "/firebase-adminsdk.json",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/Analisis_Codigo_BEATSS.pdf",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/banks/paypal.png",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/banks/guayaquil.png",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/banks/pichincha.png",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/crop_1.jpg",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/crop_2.jpg",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/crop_3.jpg",
+      "destination": "/404",
+      "permanent": true
+    },
+    {
+      "source": "/crop_4.jpg",
       "destination": "/404",
       "permanent": true
     },
@@ -52,13 +289,23 @@
       "permanent": true
     }
   ],
+  "crons": [
+    {
+      "path": "/api/payments/stripe/retry-deliveries",
+      "schedule": "0 10 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate, no-cache, no-store"
+          "value": "public, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://www.gstatic.com https://*.firebaseio.com https://www.paypal.com https://*.paypal.com https://js.stripe.com https://cdn.payphonetodoesposible.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.payphonetodoesposible.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleusercontent.com https://drive.google.com https://firebasestorage.googleapis.com https://*.stripe.com https://www.paypal.com https://*.paypal.com https://pay.payphone.com.ec https://cdn.payphonetodoesposible.com; media-src 'self' blob: data: https://*.googleapis.com https://drive.google.com https://firebasestorage.googleapis.com; connect-src 'self' https://*.firebaseio.com https://*.firebaseapp.com https://licencias-musicales.firebaseapp.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://api.stripe.com https://www.paypal.com https://*.paypal.com https://pay.payphone.com.ec https://cdn.payphonetodoesposible.com https://api.emailjs.com wss://*.firebaseio.com; frame-src 'self' https://*.firebaseapp.com https://licencias-musicales.firebaseapp.com https://accounts.google.com https://*.google.com https://js.stripe.com https://hooks.stripe.com https://www.paypal.com https://*.paypal.com https://pay.payphone.com.ec; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://www.paypal.com https://pay.payphone.com.ec;"
         },
         {
           "key": "X-Frame-Options",
@@ -74,7 +321,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
+          "value": "camera=(), microphone=(), geolocation=(), payment=(self), usb=(), screen-wake-lock=(), accelerometer=(), gyroscope=(), magnetometer=()"
         },
         {
           "key": "Strict-Transport-Security",
@@ -100,6 +347,78 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/banks/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/logo.png",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/producer_sossa.webp",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/beat-thumbnail-sossa.jpg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/producer_monarco.jpg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/producer_mrmicua.jpg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/producer_sauce.jpg",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "private, no-store"
         }
       ]
     }

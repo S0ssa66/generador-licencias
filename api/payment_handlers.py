@@ -481,6 +481,11 @@ def handle_payphone_confirm(handler, parsed):
                 firestore_success = True
             except Exception as fe:
                 print(f"[-] Error al guardar pago de PayPhone en Firestore: {fe}")
+
+        # Conservar los IDs de Firestore antes de consumir la lista para el
+        # historial local. El cliente los necesita para entregar cada licencia
+        # después de una confirmación PayPhone exitosa.
+        payment_ids_for_response = list(inserted_payment_ids)
         
         # Actualizar localmente en el historial de licencias del productor
         try:
@@ -561,7 +566,8 @@ def handle_payphone_confirm(handler, parsed):
         handler.wfile.write(json.dumps({
             "status": "success",
             "message": "Pago de PayPhone verificado y registrado exitosamente",
-            "transactionId": client_tx_id
+            "transactionId": client_tx_id,
+            "paymentIds": payment_ids_for_response
         }).encode('utf-8'))
         print(f"✅ Transacción PayPhone confirmada exitosamente: {client_tx_id}")
         

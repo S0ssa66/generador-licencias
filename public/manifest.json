@@ -13,13 +13,13 @@
   ],
   "icons": [
     {
-      "src": "/logo-sossa.png",
+      "src": "/logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo-sossa.png",
+      "src": "/logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -27,13 +27,13 @@
   ],
   "shortcuts": [
     {
-      "name": "Explorar Catálogo",
-      "short_name": "Catálogo",
-      "description": "Ver el catálogo privado de beats",
-      "url": "/#catalogo",
+      "name": "Tienda de Sossa",
+      "short_name": "Sossa",
+      "description": "Explorar los beats disponibles de Sossa",
+      "url": "/tienda/sossa",
       "icons": [
         {
-          "src": "/logo-sossa.png",
+          "src": "/logo.png",
           "sizes": "192x192"
         }
       ]
@@ -45,7 +45,7 @@
       "url": "/clearance.html",
       "icons": [
         {
-          "src": "/logo-sossa.png",
+          "src": "/logo.png",
           "sizes": "192x192"
         }
       ]

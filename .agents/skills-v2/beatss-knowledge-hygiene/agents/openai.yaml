@@ -1,0 +1,4 @@
+interface:
+  display_name: "BEATSS Knowledge Hygiene"
+  short_description: "Curación segura de documentación y bóveda"
+  default_prompt: "Use $beatss-knowledge-hygiene to audit BEATSS documentation safely."

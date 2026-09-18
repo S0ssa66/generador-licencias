@@ -1,4 +1,6 @@
 import { LICENSE_CONFIGS } from './config.js';
+import { isValidLicenseReference, resolveLicenseReference } from './license-reference.js';
+import { isSafeArtworkUrl } from './public-beat-utils.js';
 import { 
     db, 
     collection, 
@@ -6,22 +8,54 @@ import {
     getDoc, 
     doc, 
     setDoc, 
-    addDoc, 
     collectionGroup, 
     query, 
     where,
-    updateDoc,
-    onSnapshot
+    updateDoc
 } from "./firebase.js";
 
 // Funciones de utilidad: Sanitización de entradas y Analíticas de Checkout
+export function sanitizeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
+window.sanitizeHtml = sanitizeHtml;
+
 export function sanitizeInput(str) {
     if (typeof str !== 'string') return '';
-    // Eliminar etiquetas HTML completamente para evitar inyecciones XSS
-    return str.replace(/<[^>]*>/g, '').trim();
+    // Eliminar caracteres de control invisibles, etiquetas HTML y corchetes angulares
+    return str
+        .replace(/[\u0000-\u001f\u007f]/g, '')
+        .replace(/<[^>]*>/g, '')
+        .replace(/[<>]/g, '')
+        .trim();
+}
+
+const checkoutDebugEnabled = (() => {
+    try {
+        const host = window.location.hostname;
+        return /^(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3})$/.test(host)
+            || new URLSearchParams(window.location.search).has('checkout_debug');
+    } catch (_) {
+        return false;
+    }
+})();
+
+function checkoutDebug(...args) {
+    if (checkoutDebugEnabled) console.info(...args);
 }
 
 export function logCheckoutStep(stepName, data = {}) {
+    // El historial era solo una ayuda de diagnóstico y quedaba disponible a
+    // cualquier script del mismo origen. En producción no retenemos estos
+    // metadatos de compra en el navegador; soporte puede activarlo de forma
+    // explícita con checkout_debug o desde el entorno local.
+    if (!checkoutDebugEnabled) return;
     const logKey = 'beatss_checkout_log';
     let logs = [];
     try {
@@ -35,7 +69,7 @@ export function logCheckoutStep(stepName, data = {}) {
     // Limitar log local a los últimos 50 eventos para optimizar almacenamiento
     if (logs.length > 50) logs.shift();
     localStorage.setItem(logKey, JSON.stringify(logs));
-    console.log(`[Checkout Analytics] ${stepName}:`, data);
+    checkoutDebug(`[Checkout Analytics] ${stepName}:`, data);
 }
 
 window.sanitizeInput = sanitizeInput;
@@ -55,22 +89,179 @@ let checkoutSelectedLicense = 'basic';
 let checkoutCurrentStep = 1;
 let storePaymentReceiptBase64 = null;
 let checkoutIsOfferMode = false;
+let lastCheckoutLegalTrigger = null;
+let activeCheckoutLegalDocument = null;
+const CHECKOUT_TERMS_VERSION = '2026-08-14';
+let checkoutTermsAcceptance = null;
 
 // Deuna Dynamic Payment State
 let deunaListenerUnsubscribe = null;
 let currentDeunaPaymentId = null;
+let currentDeunaStatusToken = '';
+let currentDeunaOrderData = null;
+let currentDeunaItems = [];
+let currentDeunaAttempt = null;
+let deunaInitializationPromise = null;
+let pendingOfferAttempt = null;
+let pendingPurchaseAttempt = null;
+let currentPayphoneAttempt = null;
+let payphoneInitializationPromise = null;
+let storePaymentCapabilitiesPromise = null;
 
-// Función de sanitización XSS: escapa caracteres HTML peligrosos en datos de usuario
-// Usa la función global si dashboard.js ya la definió, de lo contrario crea la propia
-const sanitizeHtml = window.sanitizeHtml || function(str) {
-    if (str === null || str === undefined) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#x27;');
-};
+function loadStorePaymentCapabilities() {
+    if (window.storePaymentCapabilities) return Promise.resolve(window.storePaymentCapabilities);
+    // Las capacidades llegan junto con la tienda seleccionada. Nunca usar la
+    // configuración global de BEATSS como fallback para otro productor.
+    window.storePaymentCapabilities = {
+        stripe: false, paypal: false, payphone: false, deuna: false, transfer: false
+    };
+    storePaymentCapabilitiesPromise = Promise.resolve(window.storePaymentCapabilities);
+    return storePaymentCapabilitiesPromise;
+}
+
+function createPendingRequestId() {
+    if (!globalThis.crypto?.getRandomValues) throw new Error('Este navegador no puede proteger la solicitud.');
+    const bytes = new Uint8Array(16);
+    globalThis.crypto.getRandomValues(bytes);
+    return `po_${bytesToHex(bytes)}`;
+}
+
+function pendingAttempt(previous, identity) {
+    if (previous?.identity === identity) return previous;
+    const legalAcceptance = getCheckoutTermsAcceptance();
+    return {
+        identity,
+        requestId: createPendingRequestId(),
+        acceptanceTimestamp: legalAcceptance?.acceptedAt || new Date().toISOString(),
+        termsVersion: legalAcceptance?.termsVersion || CHECKOUT_TERMS_VERSION,
+        statusCredential: null
+    };
+}
+
+function receiptIdentity(value) {
+    const source = String(value || '');
+    return `${source.length}:${source.slice(0, 32)}:${source.slice(-32)}`;
+}
+
+async function postPendingOrder(payload) {
+    const response = await fetch('/api/orders/pending', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.success) {
+        const error = new Error(result.error || 'No se pudo registrar el pedido.');
+        error.code = result.code || '';
+        throw error;
+    }
+    return result;
+}
+
+function bytesToHex(bytes) {
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+export async function createPaymentStatusCredential() {
+    if (!globalThis.crypto?.getRandomValues || !globalThis.crypto?.subtle) {
+        throw new Error('Este navegador no puede crear una credencial segura de estado.');
+    }
+    const randomBytes = new Uint8Array(32);
+    globalThis.crypto.getRandomValues(randomBytes);
+    const token = bytesToHex(randomBytes);
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+    return { token, hash: bytesToHex(new Uint8Array(digest)) };
+}
+
+async function getPaymentStatusAuthHeaders() {
+    if (!window._firebaseAuth?.currentUser) return {};
+    try {
+        const idToken = await window._firebaseAuth.currentUser.getIdToken();
+        return { Authorization: `Bearer ${idToken}` };
+    } catch (_) {
+        return {};
+    }
+}
+
+export function startPaymentStatusPolling({
+    paymentId,
+    statusToken = '',
+    intervalMs = 4000,
+    maxAttempts = 225,
+    onApproved,
+    onTerminal,
+    onError
+}) {
+    let stopped = false;
+    let timer = null;
+    let controller = null;
+    let attempts = 0;
+
+    const stop = () => {
+        stopped = true;
+        if (timer) window.clearTimeout(timer);
+        controller?.abort();
+        timer = null;
+        controller = null;
+    };
+
+    const schedule = () => {
+        if (!stopped) timer = window.setTimeout(poll, intervalMs);
+    };
+
+    const poll = async () => {
+        if (stopped) return;
+        if (document.hidden) {
+            schedule();
+            return;
+        }
+        attempts += 1;
+        controller = new AbortController();
+        try {
+            const query = new URLSearchParams({ id: paymentId });
+            const headers = await getPaymentStatusAuthHeaders();
+            if (statusToken) headers['X-Beatss-Status-Token'] = statusToken;
+            const response = await fetch(`/api/payments/status?${query.toString()}`, {
+                headers,
+                signal: controller.signal,
+                cache: 'no-store'
+            });
+            if (response.status === 401 || response.status === 403) {
+                stop();
+                onError?.(new Error('La credencial de estado no es válida.'));
+                return;
+            }
+            if (!response.ok) throw new Error(`Estado de pago no disponible (${response.status}).`);
+            const result = await response.json();
+            if (result.status === 'approved' || result.status === 'completed') {
+                stop();
+                await onApproved?.(result);
+                return;
+            }
+            if (['cancelled', 'cancelado', 'failed', 'rejected', 'expired', 'refunded'].includes(result.status)) {
+                stop();
+                await onTerminal?.(result);
+                return;
+            }
+        } catch (error) {
+            if (error?.name === 'AbortError' || stopped) return;
+            if (attempts >= maxAttempts) {
+                stop();
+                onError?.(error);
+                return;
+            }
+        }
+        if (attempts >= maxAttempts) {
+            stop();
+            onError?.(new Error('La confirmación está tardando más de lo esperado.'));
+            return;
+        }
+        schedule();
+    };
+
+    void poll();
+    return stop;
+}
 
 
 
@@ -111,7 +302,7 @@ export function saveCartToStorage() {
     }
 }
 
-export function addToCart(beatId, licenseType, price, beatName, producerId, producerName, artwork) {
+export function addToCart(beatId, licenseType, price, beatName, producerId, producerName, artwork, producerStoreSlug = '') {
     const exists = window.cart.some(item => item.beatId === beatId);
     if (exists) {
         if (typeof window.showToast === 'function') window.showToast("Este beat ya está en tu carrito.", true);
@@ -125,6 +316,7 @@ export function addToCart(beatId, licenseType, price, beatName, producerId, prod
         beatName,
         producerId,
         producerName,
+        producerStoreSlug,
         artwork
     });
     
@@ -146,6 +338,7 @@ export function clearPurchasedItems() {
 }
 
 window.checkoutProducerGroup = async function(producerId) {
+    if (!requireCheckoutTermsAcceptance()) return;
     const otherItems = window.cart.filter(item => item.producerId !== producerId);
     const selectedItems = window.cart.filter(item => item.producerId === producerId);
     
@@ -157,13 +350,13 @@ window.checkoutProducerGroup = async function(producerId) {
     
     try {
         if (typeof window.showToast === 'function') window.showToast("Cargando cuentas del productor...");
-        const docRef = doc(db, "users", producerId, "config", "producer");
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            window.storeProducerConfig = docSnap.data();
-            if (window.storeProducerConfig && !window.storeProducerConfig.sriRuc) {
-                window.storeProducerConfig.sriRuc = "0803743111001";
-            }
+        const producerStoreSlug = selectedItems[0]?.producerStoreSlug || selectedItems[0]?.producerName;
+        const response = await fetch(`/api/public-store?producer=${encodeURIComponent(producerStoreSlug || '')}`, { cache: 'no-store' });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.producerId !== producerId) throw new Error(payload.error || 'No se pudo cargar la tienda del productor.');
+        if (payload.producer) {
+            window.storeProducerConfig = payload.producer;
+            window.storePaymentCapabilities = payload.paymentCapabilities || { stripe: false, paypal: false, payphone: false, deuna: false, transfer: false };
             window.storeProducerUid = producerId;
             
             // Set dynamic accent colors
@@ -192,6 +385,7 @@ window.checkoutProducerGroup = async function(producerId) {
 export function removeFromCart(index) {
     if (index >= 0 && index < window.cart.length) {
         const removed = window.cart.splice(index, 1);
+        resetCheckoutTermsAcceptance();
         saveCartToStorage();
         window.updateCartUI();
         if (typeof window.showToast === 'function') window.showToast(`Removido: ${removed[0].beatName}`);
@@ -209,6 +403,7 @@ export function updateCartItemLicense(index, newLicenseType) {
         if (config) {
             window.cart[index].price = config.price;
         }
+        resetCheckoutTermsAcceptance();
         saveCartToStorage();
         window.updateCartUI();
         
@@ -240,20 +435,20 @@ export function updateCartUI() {
 }
 
 export function findBeatById(beatId) {
-    console.log("🔍 findBeatById called with ID:", beatId);
-    console.log("  window.storeBeats:", window.storeBeats ? window.storeBeats.map(b => b.id) : "undefined");
-    console.log("  window.globalBeats:", window.globalBeats ? window.globalBeats.map(b => b.id) : "undefined");
+    checkoutDebug("🔍 findBeatById called with ID:", beatId);
+    checkoutDebug("  window.storeBeats:", window.storeBeats ? window.storeBeats.map(b => b.id) : "undefined");
+    checkoutDebug("  window.globalBeats:", window.globalBeats ? window.globalBeats.map(b => b.id) : "undefined");
     if (window.storeBeats) {
         const b = window.storeBeats.find(x => x.id === beatId);
         if (b) {
-            console.log("  Found in storeBeats:", b);
+            checkoutDebug("  Found in storeBeats:", b);
             return b;
         }
     }
     if (window.globalBeats) {
         const b = window.globalBeats.find(x => x.id === beatId);
         if (b) {
-            console.log("  Found in globalBeats:", b);
+            checkoutDebug("  Found in globalBeats:", b);
             return b;
         }
     }
@@ -309,6 +504,7 @@ export function renderCartItems() {
         group.items.forEach(({ item, index }) => {
             const beat = findBeatById(item.beatId) || item;
             const artwork = window.getBeatArtwork ? window.getBeatArtwork(beat) : (item.artwork || '');
+            const isPriorLicenseUpgrade = item.isPriorLicenseUpgrade === true && window.checkoutUpgradeContext?.sourcePaymentId;
             
             const optionsHtml = Object.entries(LICENSE_CONFIGS).map(([key, config]) => {
                 const isSelected = key === item.licenseType;
@@ -322,16 +518,14 @@ export function renderCartItems() {
                     <div style="flex: 1; text-align: left; overflow: hidden;">
                         <div style="font-weight: 700; color: #fff; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${window.sanitizeHtml ? window.sanitizeHtml(item.beatName) : item.beatName}</div>
                         <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
-                            <select onchange="window.updateCartItemLicense(${index}, this.value)" style="background: #12141c; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 2px 6px; font-size: 10px; outline: none; cursor: pointer;">
-                                ${optionsHtml}
-                            </select>
+                            ${isPriorLicenseUpgrade
+                                ? `<span style="font-size:10px;color:#d8c6ff;border:1px solid rgba(178,142,255,.35);padding:3px 7px;border-radius:6px;">Ampliación reservada: ${LICENSE_CONFIGS[item.licenseType]?.name || item.licenseType}</span>`
+                                : `<select onchange="window.updateCartItemLicense(${index}, this.value)" style="background: #12141c; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 2px 6px; font-size: 10px; outline: none; cursor: pointer;">${optionsHtml}</select>`}
                         </div>
                     </div>
                     <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
                         <span style="font-weight: 800; color: var(--accent, #00ccff); font-size: 13px;">$${item.price.toFixed(2)}</span>
-                        <button type="button" onclick="window.removeFromCart(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Eliminar">
-                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-                        </button>
+                        ${isPriorLicenseUpgrade ? '' : `<button type="button" onclick="window.removeFromCart(${index})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;" title="Eliminar"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i></button>`}
                     </div>
                 </div>
             `;
@@ -341,7 +535,7 @@ export function renderCartItems() {
         if (isMultiProducer) {
             html += `
                 <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
-                    <button type="button" class="btn btn-primary" onclick="window.checkoutProducerGroup('${prodId}')" style="font-size: 11px; padding: 6px 12px; font-weight: 700; border-radius: 8px; height: 28px;">
+                    <button type="button" class="btn btn-primary" data-checkout-requires-terms onclick="window.checkoutProducerGroup('${prodId}')" style="font-size: 11px; padding: 6px 12px; font-weight: 700; border-radius: 8px; height: 28px;">
                         Pagar este grupo ($${groupTotal.toFixed(2)} USD)
                     </button>
                 </div>
@@ -406,13 +600,56 @@ export function renderCartItems() {
             multiProducerWarning.style.display = 'none';
         }
     }
+
+    syncCheckoutContinuationControls();
 }
 
 // Inicialización de Tienda Pública
 export async function initPublicStore(producerAka) {
-    console.log("🛒 Cargando tienda de beats para:", producerAka);
+    checkoutDebug("🛒 Cargando tienda de beats para:", producerAka);
     const storeView = document.getElementById('public-store-view');
     const grid = document.getElementById('store-beats-grid');
+    const withStoreLoadTimeout = (promise, label) => new Promise((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+            reject(new Error(`Tiempo de espera agotado al cargar ${label}.`));
+        }, 12000);
+        Promise.resolve(promise).then(
+            (value) => {
+                window.clearTimeout(timeoutId);
+                resolve(value);
+            },
+            (error) => {
+                window.clearTimeout(timeoutId);
+                reject(error);
+            }
+        );
+    });
+    const renderUnavailableStore = (title, message) => {
+        if (!grid) return;
+        const producerName = document.getElementById('store-producer-name');
+        const producerSubtitle = document.getElementById('store-producer-aka-sub');
+        const logoImg = document.getElementById('store-logo-img');
+        const logoIcon = document.getElementById('store-logo-icon');
+        const emailLink = document.getElementById('store-email-link');
+        const phoneLink = document.getElementById('store-phone-link');
+        const waFloat = document.getElementById('store-wa-float');
+
+        if (producerName) producerName.textContent = 'BEATSS';
+        if (producerSubtitle) producerSubtitle.textContent = 'CATÁLOGO NO DISPONIBLE';
+        if (logoImg) logoImg.style.display = 'none';
+        if (logoIcon) logoIcon.style.display = 'flex';
+        if (emailLink) emailLink.style.display = 'none';
+        if (phoneLink) phoneLink.style.display = 'none';
+        if (waFloat) waFloat.style.display = 'none';
+        grid.innerHTML = `
+            <section class="store-unavailable" role="status" aria-live="polite">
+                <span class="store-unavailable-kicker">BEATSS Relay</span>
+                <h2>${title}</h2>
+                <p>${message}</p>
+                <button type="button" class="btn-primary" onclick="window.location.assign('/tienda/sossa')">Ver tienda de Sossa</button>
+            </section>
+        `;
+    };
     
     // Ocultar otras pantallas
     document.getElementById('login-modal').style.display = 'none';
@@ -435,40 +672,33 @@ export async function initPublicStore(producerAka) {
     `;
 
     try {
-        // Consultar todos los documentos "config" para buscar el AKA localmente (evitando errores por falta de índice)
-        const allConfigs = await getDocs(collectionGroup(db, "config"));
-        let producerDoc = null;
-        let producerUid = null;
-
-        for (const doc of allConfigs.docs) {
-            const akaVal = (doc.data().aka || '').toLowerCase();
-            if (akaVal === producerAka.toLowerCase()) {
-                producerDoc = doc;
-                const docPath = doc.ref.path;
-                const pathParts = docPath.split('/');
-                producerUid = pathParts[1];
-                break;
-            }
-        }
-
-        if (!producerUid || !producerDoc) {
-            grid.innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ef4444;">
-                    <i data-lucide="alert-circle" style="width: 36px; height: 36px;"></i>
-                    <p style="margin-top: 10px; font-weight: 600;">Productor "${producerAka}" no encontrado.</p>
-                </div>
-            `;
+        const storeResponse = await withStoreLoadTimeout(
+            // La tienda es un catálogo público con TTL de 60 s. Respetar esa
+            // política acelera volver a la página; el checkout global sigue
+            // solicitando una configuración fresca al iniciar una compra.
+            fetch(`/api/public-store?producer=${encodeURIComponent(producerAka)}`),
+            'la información del productor'
+        );
+        const storePayload = await storeResponse.json().catch(() => ({}));
+        if (storeResponse.status === 404) {
+            renderUnavailableStore(
+                'No encontramos este catálogo',
+                'Revisa el enlace que recibiste o explora los beats disponibles en BEATSS.'
+            );
             if (window.lucide) window.lucide.createIcons();
             return;
         }
+        if (!storeResponse.ok) throw new Error(storePayload.error || 'No se pudo cargar el catálogo.');
 
-        const configData = producerDoc.data();
+        const producerUid = storePayload.producerId;
+        const configData = storePayload.producer || {};
+        if (!producerUid || !configData.aka) throw new Error('El catálogo público no está configurado.');
+
         window.storeProducerUid = producerUid;
         window.storeProducerConfig = configData;
-        if (window.storeProducerConfig && !window.storeProducerConfig.sriRuc) {
-            window.storeProducerConfig.sriRuc = "0803743111001";
-        }
-
+        window.storePaymentCapabilities = storePayload.paymentCapabilities || {
+            stripe: false, paypal: false, payphone: false, deuna: false, transfer: false
+        };
         // Renderizar cabecera de la tienda
         document.getElementById('store-producer-name').textContent = configData.aka || configData.name || "Productor";
         document.getElementById('store-producer-aka-sub').textContent = `Catálogo Oficial de ${configData.aka || "Beats"}`;
@@ -528,20 +758,7 @@ export async function initPublicStore(producerAka) {
             waFloat.style.display = 'none';
         }
 
-        // Obtener beats de la base de datos
-        const beatsCol = collection(db, "users", producerUid, "beats");
-        const beatsSnapshot = await getDocs(beatsCol);
-        window.storeBeats = [];
-        
-        beatsSnapshot.forEach(doc => {
-            const data = doc.data();
-            if (data.mp3) { // Sólo beats con preescucha MP3
-                window.storeBeats.push({
-                    id: doc.id,
-                    ...data
-                });
-            }
-        });
+        window.storeBeats = Array.isArray(storePayload.beats) ? storePayload.beats : [];
 
         // Renderizar grilla y configurar eventos
         renderStoreBeats(window.storeBeats);
@@ -555,11 +772,10 @@ export async function initPublicStore(producerAka) {
 
     } catch (err) {
         console.error("Error cargando la tienda:", err);
-        grid.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #ef4444;">
-                <p>Error de conexión al cargar la tienda. Intenta nuevamente.</p>
-            </div>
-        `;
+        renderUnavailableStore(
+            'No pudimos abrir este catálogo',
+            'Intenta nuevamente en unos minutos o vuelve al catálogo general de BEATSS.'
+        );
     }
 }
 
@@ -579,23 +795,27 @@ export function renderStoreBeats(beats) {
             "@type": "MusicPlaylist",
             "name": `Catálogo de Instrumentales de ${window.storeProducerConfig?.aka || 'Productor'}`,
             "numTracks": beats.length,
-            "track": beats.map((beat, index) => ({
-                "@type": "MusicRecording",
-                "position": index + 1,
-                "name": beat.name,
-                "genre": beat.genre || "Instrumental",
-                "image": window.getBeatArtwork(beat),
-                "offers": {
-                    "@type": "Offer",
-                    "price": beat.basicPrice || 30.00,
-                    "priceCurrency": "USD",
-                    "availability": "https://schema.org/InStock",
-                    "seller": {
-                        "@type": "Person",
-                        "name": window.storeProducerConfig?.aka || "Productor"
+            "track": beats.map((beat, index) => {
+                const artwork = window.getBeatArtwork?.(beat) || '';
+                const image = /^https:\/\//i.test(artwork) ? artwork : '';
+                return {
+                    "@type": "MusicRecording",
+                    "position": index + 1,
+                    "name": beat.name,
+                    "genre": beat.genre || "Instrumental",
+                    ...(image ? { "image": image } : {}),
+                    "offers": {
+                        "@type": "Offer",
+                        "price": beat.basicPrice || 30.00,
+                        "priceCurrency": "USD",
+                        "availability": "https://schema.org/InStock",
+                        "seller": {
+                            "@type": "Person",
+                            "name": window.storeProducerConfig?.aka || "Productor"
+                        }
                     }
-                }
-            }))
+                };
+            })
         };
 
         schemaEl = document.createElement('script');
@@ -638,7 +858,8 @@ export function renderStoreBeats(beats) {
             : '';
         
         const buyLicenseText = window.currentLang === 'es' ? 'Adquirir Licencia' : 'Acquire License';
-        const priceValue = beat.price_basic ? `$${beat.price_basic.toFixed(2)}` : (window.currentLang === 'es' ? 'Negociable' : 'Negotiable');
+        const basicPrice = Number(beat.price_basic ?? beat.basicPrice) || 30;
+        const priceValue = `$${basicPrice.toFixed(2)}`;
         const safeBeatName = sanitizeHtml(beat.name);
         
         return `
@@ -646,11 +867,11 @@ export function renderStoreBeats(beats) {
                 <div>
                     <div class="store-beat-cover" style="position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; background: #151722;">
                         <img src="${artworkUrl}" alt="${safeBeatName}" style="width:100%; height:100%; object-fit:cover; object-position:top; border-radius:14px; transition: transform 0.5s ease;">
-                        <div class="store-play-overlay" onclick="window.toggleStorePlay('${sanitizeHtml(beat.id)}')">
-                            <button class="store-play-btn" id="btn-play-store-${sanitizeHtml(beat.id)}" style="width: 56px; height: 56px; border-radius: 50%; background: var(--accent, #00ccff); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px var(--accent-glow, rgba(0, 204, 255, 0.3)); transform: scale(0.9); transition: all 0.3s ease;">
-                                <i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>
-                            </button>
-                        </div>
+                    <button type="button" class="store-play-overlay" id="btn-play-store-${sanitizeHtml(beat.id)}" onclick="window.toggleStorePlay('${sanitizeHtml(beat.id)}')" aria-label="Reproducir vista previa de ${safeBeatName}">
+                        <span class="store-play-btn" aria-hidden="true" style="width: 56px; height: 56px; border-radius: 50%; background: var(--accent, #00ccff); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #000; box-shadow: 0 4px 15px var(--accent-glow, rgba(0, 204, 255, 0.3)); transform: scale(0.9); transition: transform 0.3s ease;">
+                            <i data-lucide="play" style="width: 24px; height: 24px; fill: #000; stroke: #000;"></i>
+                        </span>
+                    </button>
                         <button onclick="window.shareBeat('${sanitizeHtml(beat.id)}', '${sanitizeHtml(beat.name).replace(/'/g, "\\'")}')\" style="position: absolute; top: 10px; right: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(0,0,0,0.6)'" title="Compartir">
                             <i data-lucide="share-2" style="width: 14px; height: 14px;"></i>
                         </button>
@@ -664,7 +885,7 @@ export function renderStoreBeats(beats) {
                     ${tagsHtml}
                 </div>
                 <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box;">
-                    <button class="btn btn-primary" onclick="window.openBeatCheckoutModal('${sanitizeHtml(beat.id)}')" style="width: 100%; height: 44px; font-weight: 700; border-radius: 12px; font-size: 14px; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                    <button type="button" class="btn btn-primary" onclick="window.openBeatCheckoutModal('${sanitizeHtml(beat.id)}')" style="width: 100%; height: 44px; font-weight: 700; border-radius: 12px; font-size: 14px; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
                         <i data-lucide="shopping-cart" style="width: 16px; height: 16px; stroke-width: 2.5;"></i>
                         <span>${buyLicenseText}</span>
                     </button>
@@ -686,7 +907,7 @@ export function shareBeat(beatId, beatName) {
             title: `Escucha "${beatName}"`,
             text: `🎵 Escucha este increíble beat: "${beatName}"`,
             url: url
-        }).catch((error) => console.log('Error sharing', error));
+        }).catch((error) => checkoutDebug('Error sharing', error));
     } else {
         navigator.clipboard.writeText(url).then(() => {
             if (typeof window.showToast === 'function') window.showToast("Enlace copiado al portapapeles.");
@@ -706,8 +927,8 @@ export function setupStoreFilters() {
         if (b.key) keys.add(b.key);
     });
 
-    genreSelect.innerHTML = '<option value="">Todos los géneros</option>' + Array.from(genres).map(g => `<option value="${g}">${g}</option>`).join('');
-    keySelect.innerHTML = '<option value="">Todas las escalas</option>' + Array.from(keys).map(k => `<option value="${k}">${k}</option>`).join('');
+    genreSelect.innerHTML = '<option value="">Todos los géneros</option>' + Array.from(genres).map(g => `<option value="${sanitizeHtml(g)}">${sanitizeHtml(g)}</option>`).join('');
+    keySelect.innerHTML = '<option value="">Todas las escalas</option>' + Array.from(keys).map(k => `<option value="${sanitizeHtml(k)}">${sanitizeHtml(k)}</option>`).join('');
 
     function filterBeats() {
         const query = searchInput.value.toLowerCase();
@@ -729,7 +950,7 @@ export function setupStoreFilters() {
     keySelect.addEventListener('change', filterBeats);
 }
 
-export function getCheckoutPrice() {
+export function getCheckoutBasePrice() {
     let basePrice = 0;
     if (checkoutSelectedBeatId) {
         if (checkoutSelectedLicense === 'exclusive') {
@@ -747,7 +968,13 @@ export function getCheckoutPrice() {
         basePrice = getCartTotal();
     }
     
-    // Aplicar descuento de cupón
+    return basePrice;
+}
+
+export function getCheckoutPrice() {
+    const basePrice = getCheckoutBasePrice();
+
+    // Aplicar descuento de cupón únicamente al total cobrado.
     if (window.checkoutDiscountPercent > 0) {
         const discount = basePrice * (window.checkoutDiscountPercent / 100);
         return Math.max(0, basePrice - discount);
@@ -756,7 +983,7 @@ export function getCheckoutPrice() {
     return basePrice;
 }
 
-export function applyCheckoutCoupon() {
+export async function applyCheckoutCoupon() {
     const inputEl = document.getElementById('checkout-coupon-code');
     const msgEl = document.getElementById('checkout-coupon-msg');
     if (!inputEl || !msgEl) return;
@@ -769,8 +996,29 @@ export function applyCheckoutCoupon() {
         return;
     }
     
+    let foundCoupon = null;
     const coupons = window.storeProducerConfig?.coupons || [];
-    const foundCoupon = coupons.find(c => c.code === code);
+    if (coupons.length > 0) {
+        foundCoupon = coupons.find(c => c.code === code);
+    }
+    
+    // Si no está en memoria local, validar de forma segura en el backend
+    if (!foundCoupon) {
+        try {
+            const producerAlias = window.storeProducerConfig?.storeSlug || window.storeProducerConfig?.aka || window.storeProducerConfig?.name || window.storeProducerId || '';
+            if (producerAlias) {
+                const res = await fetch(`/api/public-store?producer=${encodeURIComponent(producerAlias)}&coupon=${encodeURIComponent(code)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.valid && data.discount) {
+                        foundCoupon = { code: data.code || code, discount: data.discount };
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('Error validando cupón:', err);
+        }
+    }
     
     if (foundCoupon) {
         window.checkoutDiscountPercent = foundCoupon.discount;
@@ -822,6 +1070,9 @@ export function updateExclusivePrice(val) {
     if (!parsed || parsed < 0) return;
     
     window.checkoutExclusivePrice = parsed;
+    if (checkoutSelectedLicense === 'exclusive' && getCheckoutTermsAcceptance()) {
+        resetCheckoutTermsAcceptance();
+    }
     const priceStr = '$' + parsed.toFixed(2) + ' USD';
     const deunaTotal = document.getElementById('deuna-total-price');
     const transferTotal = document.getElementById('transfer-total-price');
@@ -844,7 +1095,8 @@ export function updateExclusivePrice(val) {
 }
 
 export function openBeatCheckoutModal(beatId) {
-    console.log("🚀 openBeatCheckoutModal called with ID:", beatId);
+    checkoutDebug("🚀 openBeatCheckoutModal called with ID:", beatId);
+    loadStorePaymentCapabilities();
     setupStoreCheckout();
     logCheckoutStep('checkout_initiated', { beatId: beatId });
     checkoutSelectedBeatId = beatId;
@@ -901,10 +1153,7 @@ export function openBeatCheckoutModal(beatId) {
     document.getElementById('store-receipt-file-name').textContent = 'Ningún archivo seleccionado';
     document.getElementById('store-receipt-file').value = '';
 
-    const termsCheckbox = document.getElementById('store-chk-accept-terms');
-    if (termsCheckbox) {
-        termsCheckbox.checked = false;
-    }
+    resetCheckoutTermsAcceptance();
 
     const singleView = document.getElementById('checkout-single-beat-view');
     const multiView = document.getElementById('checkout-multi-beat-view');
@@ -951,26 +1200,26 @@ export function openBeatCheckoutModal(beatId) {
             const priceText = isExclusive ? 'Negociable (Mín. $250)' : `$${config.price.toFixed(2)}`;
             
             return `
-                <div class="license-option-card ${isActive ? 'active' : ''}" onclick="window.selectCheckoutLicense('${key}')" style="display: flex; flex-direction: column; width: 100%; box-sizing: border-box; gap: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                        <div style="text-align: left;">
-                            <div style="font-weight: 700; color: #fff; font-size: 14px;">${config.name}</div>
-                            <div style="font-size: 11px; color: #8a91a6; margin-top: 4px;">
+                <div class="license-option-card ${isActive ? 'active' : ''}">
+                    <button type="button" class="license-option-select" onclick="window.selectCheckoutLicense('${key}')" aria-pressed="${isActive}" aria-label="Seleccionar licencia ${config.name}">
+                        <div class="license-option-copy">
+                            <div class="license-option-name">${config.name}</div>
+                            <div class="license-option-details">
                                 ${config.formats} • ${config.streams} streams • ${config.years}
                             </div>
                         </div>
-                        <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
-                            <span style="font-weight: 800; color: var(--accent, #00ccff); font-size: 15px;">${priceText}</span>
-                            <div class="license-check" style="width: 18px; height: 18px; border-radius: 50%; border: 2px solid ${isActive ? 'var(--accent)' : 'rgba(255,255,255,0.2)'}; display: flex; align-items: center; justify-content: center; background: ${isActive ? 'var(--accent)' : 'transparent'};">
-                                ${isActive ? '<i data-lucide="check" style="width: 12px; height: 12px; stroke: #000; stroke-width: 3;"></i>' : ''}
+                        <div class="license-option-price-wrap">
+                            <span class="license-option-price">${priceText}</span>
+                            <div class="license-check">
+                                ${isActive ? '<i data-lucide="check" aria-hidden="true"></i>' : ''}
                             </div>
                         </div>
-                    </div>
+                    </button>
                     ${isExclusive ? `
-                        <div class="exclusive-price-container" style="display: ${isActive ? 'flex' : 'none'}; align-items: center; gap: 8px; border-top: 1px dashed rgba(255,255,255,0.08); padding-top: 8px; width: 100%;" onclick="event.stopPropagation()">
-                            <label style="font-size: 12px; color: #8a91a6;">Tu Propuesta ($ USD):</label>
-                            <input type="number" id="exclusive-price-input" min="250" value="500" oninput="window.updateExclusivePrice(this.value)" style="width: 80px; background: #12141c; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; padding: 4px 8px; font-size: 13px; font-weight: 700; outline: none; text-align: center;">
-                            <span style="font-size: 11px; color: #8a91a6;">(Mínimo: $250)</span>
+                        <div class="exclusive-price-container" style="display: ${isActive ? 'flex' : 'none'};">
+                            <label for="exclusive-price-input">Tu propuesta (USD)</label>
+                            <input type="number" id="exclusive-price-input" min="250" value="500" oninput="window.updateExclusivePrice(this.value)">
+                            <span>(mínimo $250)</span>
                         </div>
                     ` : ''}
                 </div>
@@ -997,11 +1246,14 @@ export function openBeatCheckoutModal(beatId) {
         const firstCartItem = window.cart[0];
         if (firstCartItem && firstCartItem.producerId) {
             window.storeProducerUid = firstCartItem.producerId;
-            const producerDocRef = doc(db, "users", firstCartItem.producerId, "config", "producer");
-            getDoc(producerDocRef).then((docSnap) => {
-                if (docSnap.exists()) {
-                    window.storeProducerConfig = docSnap.data();
-                    console.log("🎯 storeProducerConfig cargado exitosamente para el carrito:", window.storeProducerConfig);
+            const producerStoreSlug = firstCartItem.producerStoreSlug || firstCartItem.producerName;
+            fetch(`/api/public-store?producer=${encodeURIComponent(producerStoreSlug || '')}`, { cache: 'no-store' }).then(async (response) => {
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok || payload.producerId !== firstCartItem.producerId) throw new Error(payload.error || 'No se pudo cargar la tienda.');
+                if (payload.producer) {
+                    window.storeProducerConfig = payload.producer;
+                    window.storePaymentCapabilities = payload.paymentCapabilities || { stripe: false, paypal: false, payphone: false, deuna: false, transfer: false };
+                    checkoutDebug("🎯 storeProducerConfig cargado exitosamente para el carrito:", window.storeProducerConfig);
                     // Actualizar displays si está en Paso 3
                     if (checkoutCurrentStep === 3) {
                         updateCheckoutStepView(3);
@@ -1023,6 +1275,7 @@ export function openBeatCheckoutModal(beatId) {
 }
 
 export function selectCheckoutLicense(licenseKey) {
+    const selectionChanged = checkoutSelectedLicense !== licenseKey;
     checkoutSelectedLicense = licenseKey;
 
     // Update active class on option cards
@@ -1033,21 +1286,18 @@ export function selectCheckoutLicense(licenseKey) {
     cards.forEach((card, index) => {
         const key = keys[index];
         const isActive = key === checkoutSelectedLicense;
+        card.querySelector('.license-option-select')?.setAttribute('aria-pressed', String(isActive));
         
         if (isActive) {
             card.classList.add('active');
             const check = card.querySelector('.license-check');
             if (check) {
-                check.style.borderColor = 'var(--accent)';
-                check.style.background = 'var(--accent)';
-                check.innerHTML = '<i data-lucide="check" style="width: 12px; height: 12px; stroke: #000; stroke-width: 3;"></i>';
+                check.innerHTML = '<i data-lucide="check" aria-hidden="true"></i>';
             }
         } else {
             card.classList.remove('active');
             const check = card.querySelector('.license-check');
             if (check) {
-                check.style.borderColor = 'rgba(255,255,255,0.2)';
-                check.style.background = 'transparent';
                 check.innerHTML = '';
             }
         }
@@ -1071,6 +1321,14 @@ export function selectCheckoutLicense(licenseKey) {
     const transferTotalEl = document.getElementById('transfer-total-price');
     if (transferTotalEl) transferTotalEl.textContent = priceStr;
     if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
+
+    if (activeCheckoutLegalDocument === 'license') {
+        renderCheckoutLegalDocument('license');
+    }
+
+    if (selectionChanged) {
+        resetCheckoutTermsAcceptance();
+    }
 
     // If active tab is PayPal, re-initialize PayPal button
     const activeTab = getSelectedStorePaymentMethod();
@@ -1158,6 +1416,7 @@ export function updateCheckoutStepView(step) {
             // Cargar datos del productor para pasarelas
             const deunaTab = document.getElementById('btn-pay-deuna');
             const transferTab = document.getElementById('btn-pay-transfer');
+            const stripeTab = document.getElementById('btn-pay-stripe');
             const paypalTab = document.getElementById('btn-pay-paypal');
             const offerTab = document.getElementById('btn-pay-offer');
             
@@ -1171,39 +1430,49 @@ export function updateCheckoutStepView(step) {
             const guayaquilAcc = window.storeProducerConfig.bankGuayaquilAcc || "";
             const paypalClientId = window.storeProducerConfig.paypalClientId || "";
             const paypalEmail = window.storeProducerConfig.paypalEmail || "";
+            const stripePublishableKey = window.storeProducerConfig.stripePublishableKey || "";
             const payphonePhone = window.storeProducerConfig.payphonePhone || "";
             const payphoneClientId = window.storeProducerConfig.payphoneClientId || "";
             const payphoneAppId = window.storeProducerConfig.payphoneAppId || "";
 
             let deunaVisible = false;
             let transferVisible = false;
+            let stripeVisible = false;
             let paypalVisible = false;
             let payphoneVisible = false;
 
-            if (deunaPhone && deunaTab) {
+            const deunaBackendReady = window.storePaymentCapabilities?.deuna === true;
+            if (deunaPhone && deunaBackendReady && deunaTab) {
                 deunaTab.style.display = 'block';
                 const cleanPhone = deunaPhone.replace(/\D/g, '');
                 const deunaDeeplink = `deuna://payment?phone=${cleanPhone}`;
                 const deunaWhatsapp = `https://wa.me/${cleanPhone}`;
                 
+                function makeCopyBtn(text, label) {
+                    const safeText = encodeURIComponent(String(text || ''));
+                    const safeLabel = sanitizeHtml(label);
+                    return `<button type="button" onclick="navigator.clipboard.writeText(decodeURIComponent('${safeText}')).then(()=>window.showToast('¡${safeLabel} copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 3px 8px; font-size: 11px; margin-left: 6px;" title="Copiar ${safeLabel}">📋</button>`;
+                }
+
                 const deunaPhoneEl = document.getElementById('deuna-info-phone');
                 if (deunaPhoneEl) {
                     deunaPhoneEl.innerHTML = `
-                        Celular: <strong style="font-size: 18px; letter-spacing: 1px;">${deunaPhone}</strong>
-                        <button onclick="navigator.clipboard.writeText('${deunaPhone}').then(()=>window.showToast('¡Número copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 4px 8px; font-size: 11px; margin-left: 8px; vertical-align: middle;">📋 Copiar</button>
+                        Celular: <strong style="font-size: 18px; letter-spacing: 1px;">${sanitizeHtml(deunaPhone)}</strong>
+                        ${makeCopyBtn(deunaPhone, 'Número')}
                     `;
                 }
                 
                 const deunaNameEl = document.getElementById('deuna-info-name');
                 if (deunaNameEl) {
                     deunaNameEl.innerHTML = `
-                        Titular: <span style="color: #fff; font-weight: 600;">${deunaName}</span>
+                        Titular: <span style="color: #fff; font-weight: 600;">${sanitizeHtml(deunaName)}</span>
                     `;
                 }
                 const deunaQrImage = document.getElementById('deuna-qr-image');
                 if (deunaQrImage) {
-                    if (window.storeProducerConfig.deunaQrBase64) {
-                        deunaQrImage.src = window.storeProducerConfig.deunaQrBase64;
+                    const qrBase64 = window.storeProducerConfig.deunaQrBase64;
+                    if (qrBase64 && isSafeArtworkUrl(qrBase64)) {
+                        deunaQrImage.src = qrBase64;
                     } else {
                         // Fallback: dynamic QR generated via api.qrserver.com using the cleanPhone
                         const qrPayload = `deuna://payment?phone=${cleanPhone}`;
@@ -1215,21 +1484,15 @@ export function updateCheckoutStepView(step) {
                 deunaTab.style.display = 'none';
             }
 
-            function makeCopyBtn(text, label) {
-                return `<button onclick="navigator.clipboard.writeText('${text}').then(()=>window.showToast('¡${label} copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 3px 8px; font-size: 11px; margin-left: 6px;">📋</button>`;
-            }
-
             const pichinchaCard = document.getElementById('store-bank-pichincha-card');
-            if (pichinchaAcc && pichinchaCard) {
+            if (pichinchaAcc && window.storePaymentCapabilities?.transfer === true && pichinchaCard) {
                 pichinchaCard.style.display = 'block';
                 const pichName = window.storeProducerConfig.bankPichinchaName || "";
-                const pichDni = window.storeProducerConfig.bankPichinchaDni || "";
                 const pichType = window.storeProducerConfig.bankPichinchaType || "Ahorros";
                 pichinchaCard.innerHTML = `
                     <div style="font-weight: 700; font-size: 12px; color: #f59e0b; margin-bottom: 8px;">🏦 BANCO PICHINCHA</div>
-                    <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta (${pichType}): <strong id="pichincha-info-acc">${pichinchaAcc}</strong> ${makeCopyBtn(pichinchaAcc, 'Cuenta')}</div>
-                    <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="pichincha-info-name">${pichName}</span> ${makeCopyBtn(pichName, 'Titular')}</div>
-                    <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="pichincha-info-dni">${pichDni}</span> ${makeCopyBtn(pichDni, 'CI/RUC')}</div>
+                    <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta (${sanitizeHtml(pichType)}): <strong id="pichincha-info-acc">${sanitizeHtml(pichinchaAcc)}</strong> ${makeCopyBtn(pichinchaAcc, 'Cuenta')}</div>
+                    <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="pichincha-info-name">${sanitizeHtml(pichName)}</span> ${makeCopyBtn(pichName, 'Titular')}</div>
                 `;
                 transferVisible = true;
             } else if (pichinchaCard) {
@@ -1237,16 +1500,14 @@ export function updateCheckoutStepView(step) {
             }
 
             const guayaquilCard = document.getElementById('store-bank-guayaquil-card');
-            if (guayaquilAcc && guayaquilCard) {
+            if (guayaquilAcc && window.storePaymentCapabilities?.transfer === true && guayaquilCard) {
                 guayaquilCard.style.display = 'block';
                 const guayName = window.storeProducerConfig.bankGuayaquilName || "";
-                const guayDni = window.storeProducerConfig.bankGuayaquilDni || "";
                 const guayType = window.storeProducerConfig.bankGuayaquilType || "Corriente";
                 guayaquilCard.innerHTML = `
                     <div style="font-weight: 700; font-size: 12px; color: #ec4899; margin-bottom: 8px;">🏦 BANCO GUAYAQUIL</div>
-                    <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta (${guayType}): <strong id="guayaquil-info-acc">${guayaquilAcc}</strong> ${makeCopyBtn(guayaquilAcc, 'Cuenta')}</div>
-                    <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="guayaquil-info-name">${guayName}</span> ${makeCopyBtn(guayName, 'Titular')}</div>
-                    <div style="font-size: 12px; color: #8a91a6;">CI/RUC: <span id="guayaquil-info-dni">${guayDni}</span> ${makeCopyBtn(guayDni, 'CI/RUC')}</div>
+                    <div style="font-size: 13px; color: #fff; margin-bottom: 4px;">Cuenta (${sanitizeHtml(guayType)}): <strong id="guayaquil-info-acc">${sanitizeHtml(guayaquilAcc)}</strong> ${makeCopyBtn(guayaquilAcc, 'Cuenta')}</div>
+                    <div style="font-size: 12px; color: #8a91a6; margin-bottom: 2px;">Titular: <span id="guayaquil-info-name">${sanitizeHtml(guayName)}</span> ${makeCopyBtn(guayName, 'Titular')}</div>
                 `;
                 transferVisible = true;
             } else if (guayaquilCard) {
@@ -1257,23 +1518,52 @@ export function updateCheckoutStepView(step) {
                 transferTab.style.display = transferVisible ? 'block' : 'none';
             }
 
-            if ((paypalClientId || paypalEmail) && paypalTab) {
+            if ((paypalClientId || paypalEmail) && window.storePaymentCapabilities?.paypal === true && paypalTab) {
                 paypalTab.style.display = 'block';
                 paypalVisible = true;
             } else if (paypalTab) {
                 paypalTab.style.display = 'none';
             }
 
-            const payphoneTab = document.getElementById('btn-pay-payphone');
-            if (payphoneTab) {
-                payphoneTab.style.display = 'block';
-                payphoneVisible = true;
+            if (window.storePaymentCapabilities?.stripe === true && stripeTab) {
+                stripeTab.style.display = 'block';
+                stripeVisible = true;
+                const stripeTotal = document.getElementById('stripe-total-price');
+                if (stripeTotal) stripeTotal.textContent = `$${Number(window.getCheckoutBasePrice()).toFixed(2)} USD`;
+            } else if (stripeTab) {
+                stripeTab.style.display = 'none';
             }
 
-            if (!deunaVisible && !transferVisible && !paypalVisible && !payphoneVisible && checkoutSelectedLicense !== 'exclusive') {
+            const payphoneTab = document.getElementById('btn-pay-payphone');
+            if (payphoneTab && window.storePaymentCapabilities?.payphone === true) {
+                payphoneTab.style.display = 'block';
+                payphoneVisible = true;
+            } else if (payphoneTab) {
+                payphoneTab.style.display = 'none';
+            }
+
+            // La reserva por licencia previa se cobra exclusivamente por el
+            // Checkout Stripe que vuelve a verificar el vínculo firmado y la
+            // fecha de corte. Ocultar métodos manuales evita que alguien pague
+            // por una ruta que no puede aplicar esa validación en servidor.
+            const isPriorLicenseUpgrade = Boolean(window.checkoutUpgradeContext?.sourcePaymentId);
+            if (isPriorLicenseUpgrade) {
+                deunaVisible = false;
+                transferVisible = false;
+                paypalVisible = false;
+                payphoneVisible = false;
+                if (deunaTab) deunaTab.style.display = 'none';
+                if (transferTab) transferTab.style.display = 'none';
+                if (paypalTab) paypalTab.style.display = 'none';
+                if (payphoneTab) payphoneTab.style.display = 'none';
+                if (offerTab) offerTab.style.display = 'none';
+            }
+
+            if (!deunaVisible && !transferVisible && !stripeVisible && !paypalVisible && !payphoneVisible && checkoutSelectedLicense !== 'exclusive') {
                 const deunaPanel = document.getElementById('store-pay-deuna');
                 const transferPanel = document.getElementById('store-pay-transfer');
                 const paypalPanel = document.getElementById('store-pay-paypal');
+                const stripePanel = document.getElementById('store-pay-stripe');
                 if (deunaPanel) deunaPanel.style.display = 'none';
                 if (transferPanel) transferPanel.style.display = 'none';
                 if (paypalPanel) {
@@ -1284,20 +1574,24 @@ export function updateCheckoutStepView(step) {
                         </div>
                     `;
                 }
+                if (stripePanel) stripePanel.style.display = 'none';
                 const receiptSec = document.getElementById('store-receipt-upload-section');
                 if (receiptSec) receiptSec.style.display = 'none';
                 footerNextBtn.style.display = 'none';
             } else {
-                let defaultTab = 'paypal';
+                let defaultTab = 'stripe';
                 const currentTab = getSelectedStorePaymentMethod();
                 
                 if (currentTab === 'offer' && checkoutSelectedLicense !== 'exclusive') {
-                    if (paypalVisible) defaultTab = 'paypal';
+                    if (stripeVisible) defaultTab = 'stripe';
+                    else if (paypalVisible) defaultTab = 'paypal';
                     else if (payphoneVisible) defaultTab = 'payphone';
                     else if (deunaVisible) defaultTab = 'deuna';
                     else if (transferVisible) defaultTab = 'transfer';
                 } else if (currentTab === 'offer' && checkoutSelectedLicense === 'exclusive') {
                     defaultTab = 'offer';
+                } else if (stripeVisible) {
+                    defaultTab = 'stripe';
                 } else if (paypalVisible) {
                     defaultTab = 'paypal';
                 } else if (payphoneVisible) {
@@ -1317,6 +1611,10 @@ export function updateCheckoutStepView(step) {
 }
 
 export function switchStorePaymentMethod(method) {
+    if (window.checkoutUpgradeContext?.sourcePaymentId && method !== 'stripe') {
+        window.showToast?.('Esta ampliación se procesa únicamente con Stripe para validar la licencia original.', true);
+        method = 'stripe';
+    }
     // Cleanup Deuna payment listener if switching away from deuna
     if (method !== 'deuna' && deunaListenerUnsubscribe) {
         deunaListenerUnsubscribe();
@@ -1331,6 +1629,7 @@ export function switchStorePaymentMethod(method) {
     document.querySelectorAll('.pay-card-btn').forEach(btn => {
         const id = btn.id;
         const isCurrent = id === `btn-pay-${method}`;
+        btn.setAttribute('aria-pressed', String(isCurrent));
         if (isCurrent) {
             btn.classList.add('active');
         } else {
@@ -1341,6 +1640,8 @@ export function switchStorePaymentMethod(method) {
     // Show/hide payment sections
     document.getElementById('store-pay-deuna').style.display = method === 'deuna' ? 'block' : 'none';
     document.getElementById('store-pay-transfer').style.display = method === 'transfer' ? 'block' : 'none';
+    const stripePanel = document.getElementById('store-pay-stripe');
+    if (stripePanel) stripePanel.style.display = method === 'stripe' ? 'block' : 'none';
     document.getElementById('store-pay-paypal').style.display = method === 'paypal' ? 'block' : 'none';
     const payphonePanel = document.getElementById('store-pay-payphone');
     if (payphonePanel) payphonePanel.style.display = method === 'payphone' ? 'block' : 'none';
@@ -1351,7 +1652,12 @@ export function switchStorePaymentMethod(method) {
     const nextBtn = document.getElementById('btn-checkout-next');
     const receiptSection = document.getElementById('store-receipt-upload-section');
 
-    if (method === 'offer') {
+    if (method === 'stripe') {
+        receiptSection.style.display = 'none';
+        nextBtn.style.display = 'none';
+        const stripeTotal = document.getElementById('stripe-total-price');
+        if (stripeTotal) stripeTotal.textContent = `$${Number(window.getCheckoutBasePrice()).toFixed(2)} USD`;
+    } else if (method === 'offer') {
         // Oferta: no se necesita comprobante, solo el precio y el mensaje
         receiptSection.style.display = 'none';
         nextBtn.style.display = 'block';
@@ -1370,7 +1676,13 @@ export function switchStorePaymentMethod(method) {
         if (payphoneButtonContainer) {
             payphoneButtonContainer.innerHTML = '<div style="color: #8a91a6; font-size: 13px; text-align: center;">Cargando PayPhone...</div>';
         }
-        loadStorePayphoneSDK(() => {
+        loadStorePayphoneSDK((error) => {
+            if (error) {
+                if (payphoneButtonContainer) {
+                    payphoneButtonContainer.innerHTML = '<div style="color:#ef4444;font-size:13px;text-align:center;padding:14px;">No se pudo cargar PayPhone. Revisa tu conexión e inténtalo nuevamente.</div>';
+                }
+                return;
+            }
             renderStorePayphoneButton();
         });
     } else if (method === 'paypal') {
@@ -1405,9 +1717,6 @@ export function switchStorePaymentMethod(method) {
         nextBtn.style.display = 'block';
         nextBtn.textContent = 'Confirmar Compra';
 
-        if (method === 'deuna') {
-            initiateDeunaDynamicPayment();
-        }
     }
 
     // Sincronizar estado del Click-wrap tras cambiar método de pago
@@ -1417,27 +1726,42 @@ export function switchStorePaymentMethod(method) {
 export function loadStorePayphoneSDK(callback) {
     const existingScript = document.getElementById('store-payphone-sdk-script');
     if (existingScript) {
-        callback();
+        if (existingScript.dataset.loaded === 'true' || typeof PPaymentButtonBox === 'function') {
+            callback();
+        } else {
+            existingScript.addEventListener('load', () => callback(), { once: true });
+            existingScript.addEventListener('error', () => callback(new Error('PAYPHONE_SDK_UNAVAILABLE')), { once: true });
+        }
         return;
+    }
+    if (typeof window.loadPayphoneStyles === 'function') {
+        window.loadPayphoneStyles();
+    } else if (!document.getElementById('payphone-payment-box-styles')) {
+        const styleLink = document.createElement('link');
+        styleLink.id = 'payphone-payment-box-styles';
+        styleLink.rel = 'stylesheet';
+        styleLink.href = 'https://cdn.payphonetodoesposible.com/box/v1.1/payphone-payment-box.css';
+        document.head.appendChild(styleLink);
     }
     const sdk = document.createElement('script');
     sdk.id = 'store-payphone-sdk-script';
     sdk.src = 'https://cdn.payphonetodoesposible.com/box/v1.1/payphone-payment-box.js';
-    sdk.onload = callback;
+    sdk.onload = () => {
+        sdk.dataset.loaded = 'true';
+        callback();
+    };
+    sdk.onerror = () => callback(new Error('PAYPHONE_SDK_UNAVAILABLE'));
     document.head.appendChild(sdk);
 }
 
-export function renderStorePayphoneButton() {
+export async function renderStorePayphoneButton() {
     const container = document.getElementById('payphone-button');
     if (!container) return;
     container.innerHTML = '';
-    
-    const price = window.getCheckoutPrice();
-    const priceCents = Math.round(price * 100);
-    
+
     const token = window.storeProducerConfig.payphoneClientId || "";
     const appId = window.storeProducerConfig.payphoneAppId || "";
-    
+
     if (!token || !appId) {
         container.innerHTML = `
             <div style="background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 20px; text-align: center; box-sizing: border-box; margin-top: 8px;">
@@ -1447,10 +1771,10 @@ export function renderStorePayphoneButton() {
                 <p style="color: #8a91a6; font-size: 12px; line-height: 1.5; margin: 0 0 16px 0;">
                     Esta pasarela permite cobrar con tarjetas y la app PayPhone. Configura tu ClientID y AppID en el panel de administración de tu perfil para recibir pagos reales.
                 </p>
-                <div onclick="window.showToast('ℹ️ Vista previa de PayPhone. Configura tus credenciales para habilitar cobros reales.')" style="background: linear-gradient(135deg, #ff6b35, #ff9500); color: #ffffff; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2); transition: transform 0.2s ease; width: 100%; max-width: 280px; margin: 0 auto;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                <button type="button" onclick="window.showToast('ℹ️ Vista previa de PayPhone. Configura tus credenciales para habilitar cobros reales.')" style="border: 0; background: linear-gradient(135deg, #ff6b35, #ff9500); color: #ffffff; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2); transition: transform 0.2s ease; width: 100%; max-width: 280px; margin: 0 auto;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                     <span>Pagar con</span>
                     <span style="font-weight: 900; font-size: 17px; letter-spacing: -0.5px;">payphone</span>
-                </div>
+                </button>
                 <div style="font-size: 10px; color: #8a91a6; margin-top: 10px;">
                     ⚠️ Vista Previa de Integración
                 </div>
@@ -1458,9 +1782,20 @@ export function renderStorePayphoneButton() {
         `;
         return;
     }
-    
-    const clientTxId = 'PAYPHONE-' + Date.now();
-    
+
+    if (!getCheckoutTermsAcceptance()) {
+        container.innerHTML = '<div style="color:#8a91a6;font-size:13px;text-align:center;padding:14px;">Acepta los términos y la licencia antes de preparar una referencia PayPhone protegida.</div>';
+        return;
+    }
+    if (window.checkoutUpgradeContext?.sourcePaymentId) {
+        container.innerHTML = '<div style="color:#f59e0b;font-size:13px;text-align:center;padding:14px;">Esta ampliación se procesa únicamente con Stripe para validar la licencia original.</div>';
+        return;
+    }
+    if (typeof PPaymentButtonBox !== 'function') {
+        container.innerHTML = '<div style="color:#8a91a6;font-size:13px;text-align:center;">Cargando PayPhone...</div>';
+        return;
+    }
+
     const buyerName = document.getElementById('store-buyer-name').value.trim();
     const buyerEmail = document.getElementById('store-buyer-email').value.trim();
     const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
@@ -1468,57 +1803,91 @@ export function renderStorePayphoneButton() {
     const buyerCity = document.getElementById('store-buyer-city').value.trim();
     const buyerCountry = document.getElementById('store-buyer-country').value.trim();
     const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist').value.trim();
-    
+
     if (!buyerName || !buyerEmail) {
         container.innerHTML = '<div style="color: #f59e0b; font-size: 13px; text-align: center;">Por favor completa tu nombre y correo en el Paso anterior.</div>';
         return;
     }
-    
-    let itemsToProcess = [];
+
+    let invoiceRuc = '';
+    let invoiceCompany = '';
+    let invoiceAddress = '';
+    let invoiceEmail = '';
+    if (document.getElementById('store-chk-need-invoice')?.checked) {
+        invoiceRuc = document.getElementById('store-invoice-ruc')?.value.trim() || '';
+        invoiceCompany = document.getElementById('store-invoice-company')?.value.trim() || '';
+        invoiceAddress = document.getElementById('store-invoice-address')?.value.trim() || '';
+        invoiceEmail = document.getElementById('store-invoice-email')?.value.trim() || '';
+    }
+
+    let items = [];
     if (checkoutSelectedBeatId) {
-        const beat = findBeatById(checkoutSelectedBeatId);
-        if (beat) {
-            itemsToProcess.push({
-                beatId: checkoutSelectedBeatId,
-                beatName: beat.name,
-                licenseType: checkoutSelectedLicense,
-                price: price
-            });
-        }
+        items = [{ beatId: checkoutSelectedBeatId, licenseType: checkoutSelectedLicense }];
     } else {
-        itemsToProcess = window.cart.map(item => ({
+        items = window.cart.map(item => ({
             beatId: item.beatId,
-            beatName: item.beatName,
-            licenseType: item.licenseType,
-            price: item.price
+            licenseType: item.licenseType
         }));
     }
-    
-    const state = {
-        buyerName,
-        buyerEmail,
-        buyerPhone,
-        buyerDni,
-        buyerCity,
-        buyerCountry,
-        youtubeWhitelist,
-        items: itemsToProcess,
-        discountPercent: window.checkoutDiscountPercent || 0,
-        couponCode: window.checkoutAppliedCoupon || '',
+
+    const identity = JSON.stringify({
         producerId: window.storeProducerUid,
-        producerToken: token,
-        acceptedTerms: true,
-        acceptanceTimestamp: new Date().toISOString()
-    };
-    
-    localStorage.setItem('payphone_pending_' + clientTxId, JSON.stringify(state));
-    
-    try {
+        buyerEmail,
+        items,
+        couponCode: window.checkoutAppliedCoupon || '',
+        invoiceRuc
+    });
+    currentPayphoneAttempt = pendingAttempt(currentPayphoneAttempt, identity);
+    if (!currentPayphoneAttempt.statusCredential) {
+        currentPayphoneAttempt.statusCredential = await createPaymentStatusCredential();
+    }
+    if (payphoneInitializationPromise) return payphoneInitializationPromise;
+
+    container.innerHTML = '<div style="color:#8a91a6;font-size:13px;text-align:center;">Protegiendo importe y referencia...</div>';
+    payphoneInitializationPromise = (async () => {
+        const response = await fetch('/api/payments/payphone/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'prepare',
+                requestId: currentPayphoneAttempt.requestId,
+                producerId: window.storeProducerUid,
+                items,
+                buyerName,
+                buyerEmail,
+                buyerPhone,
+                buyerDni,
+                buyerCity,
+                buyerCountry,
+                youtubeWhitelist,
+                invoiceRuc,
+                invoiceCompany,
+                invoiceAddress,
+                invoiceEmail,
+                couponCode: window.checkoutAppliedCoupon || '',
+                acceptedTerms: true,
+                acceptanceTimestamp: currentPayphoneAttempt.acceptanceTimestamp,
+                termsVersion: currentPayphoneAttempt.termsVersion,
+                statusTokenHash: currentPayphoneAttempt.statusCredential.hash
+            })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success || !result.clientTxId || !Number.isInteger(result.amountCents)) {
+            const error = new Error(result.error || 'No se pudo preparar PayPhone.');
+            error.code = result.code || '';
+            throw error;
+        }
+        currentPayphoneAttempt.result = result;
+        localStorage.setItem(`payphone_pending_${result.clientTxId}`, JSON.stringify({
+            statusToken: currentPayphoneAttempt.statusCredential.token,
+            expiresAt: result.expiresAt
+        }));
+        container.innerHTML = '';
         const ppb = new PPaymentButtonBox({
-            token: token,
-            clientTransactionId: clientTxId,
-            amount: priceCents,
-            amountWithoutTax: priceCents,
+            token,
+            clientTransactionId: result.clientTxId,
+            amount: result.amountCents,
+            amountWithoutTax: result.amountCents,
             amountWithTax: 0,
             tax: 0,
             service: 0,
@@ -1529,11 +1898,16 @@ export function renderStorePayphoneButton() {
             documentId: buyerDni || '9999999999',
             phoneNumber: buyerPhone || '0999999999'
         });
-        
         ppb.render('#payphone-button');
-    } catch (err) {
-        console.error('Error initializing PayPhone button:', err);
-        container.innerHTML = '<div style="color: #ef4444; font-size: 13px;">Error al inicializar PayPhone.</div>';
+    })();
+    try {
+        await payphoneInitializationPromise;
+    } catch (error) {
+        console.error('Error preparando PayPhone:', error?.code || error?.message || error);
+        if (['CHECKOUT_EXPIRED', 'IDEMPOTENCY_CONFLICT'].includes(error?.code)) currentPayphoneAttempt = null;
+        container.innerHTML = `<div style="color:#ef4444;font-size:13px;text-align:center;">${sanitizeHtml(error.message || 'No se pudo preparar PayPhone.')}</div>`;
+    } finally {
+        payphoneInitializationPromise = null;
     }
 }
 
@@ -1545,6 +1919,11 @@ export function getSelectedStorePaymentMethod() {
 
 export async function submitExclusiveOffer() {
     const beat = findBeatById(checkoutSelectedBeatId);
+    if (!requireCheckoutTermsAcceptance()) return;
+    if (!beat) {
+        if (typeof window.showToast === 'function') window.showToast('El beat ya no está disponible.', true);
+        return;
+    }
     let buyerName = sanitizeInput(document.getElementById('store-buyer-name').value);
     let buyerEmail = sanitizeInput(document.getElementById('store-buyer-email').value);
     const buyerPhone = sanitizeInput(document.getElementById('store-buyer-phone').value);
@@ -1554,6 +1933,10 @@ export async function submitExclusiveOffer() {
     const youtubeWhitelist = sanitizeInput(document.getElementById('store-txt-youtube-whitelist').value);
     const offerPrice = parseFloat(document.getElementById('offer-price-input').value);
     const offerMessage = sanitizeInput(document.getElementById('offer-message-input').value);
+    let invoiceRuc = '';
+    let invoiceCompany = '';
+    let invoiceAddress = '';
+    let invoiceEmail = '';
 
     // Si requiere factura con RUC, validamos y sobrescribimos los datos del comprador
     const needInvoice = document.getElementById('store-chk-need-invoice')?.checked;
@@ -1578,6 +1961,10 @@ export async function submitExclusiveOffer() {
         buyerName = companyVal;
         buyerEmail = emailVal;
         buyerCity = addressVal; // Usar dirección fiscal
+        invoiceRuc = rucVal;
+        invoiceCompany = companyVal;
+        invoiceAddress = addressVal;
+        invoiceEmail = emailVal;
     }
 
     if (!buyerName || !buyerEmail) {
@@ -1590,66 +1977,61 @@ export async function submitExclusiveOffer() {
         return;
     }
 
-    const originalPrice = LICENSE_CONFIGS.exclusive ? LICENSE_CONFIGS.exclusive.price : 500;
-
-    const offerData = {
-        type: 'exclusive_offer',
-        producerId: window.storeProducerUid,
-        beatId: checkoutSelectedBeatId,
-        beatName: beat ? beat.name : '',
-        licenseType: 'exclusive',
-        price: offerPrice,
-        originalPrice: originalPrice,
-        offerMessage: offerMessage || '',
-        buyerName: buyerName,
-        buyerEmail: buyerEmail,
-        buyerPhone: buyerPhone,
-        buyerDni: buyerDni,
-        buyerCity: buyerCity,
-        buyerCountry: buyerCountry,
-        youtubeWhitelist: youtubeWhitelist,
-        method: 'offer',
-        reference: 'OFERTA-' + Date.now(),
-        receiptUrl: '',
-        status: 'pending',
-        timestamp: new Date().toISOString()
-    };
-
     try {
         const nextBtn = document.getElementById('btn-checkout-next');
-        const originalText = nextBtn.innerHTML;
-        nextBtn.disabled = true;
-        nextBtn.innerHTML = '⏳ Enviando oferta...';
-
-        // Guardar oferta en Firestore
-        const colRef = collection(db, "payments");
-        await addDoc(colRef, offerData);
-
-        // Guardar contacto del cantante
-        try {
-            const contactId = buyerEmail.toLowerCase().replace(/[^a-z0-9]/g, '_');
-            const contactDocRef = doc(db, "users", window.storeProducerUid, "contacts", contactId);
-            await setDoc(contactDocRef, {
-                name: buyerName,
-                email: buyerEmail,
-                phone: buyerPhone || "",
-                city: "Oferta",
-                country: buyerCountry || "",
-                updatedAt: Date.now(),
-                source: 'exclusive_offer'
-            });
-        } catch (ce) { console.warn('No se pudo guardar contacto de oferta:', ce); }
+        const originalText = nextBtn?.innerHTML || '📩 Enviar Oferta';
+        if (nextBtn) {
+            nextBtn.disabled = true;
+            nextBtn.innerHTML = '⏳ Enviando oferta...';
+        }
+        const identity = JSON.stringify({
+            producerId: window.storeProducerUid,
+            beatId: checkoutSelectedBeatId,
+            buyerEmail,
+            offerPrice,
+            offerMessage,
+            invoiceRuc
+        });
+        pendingOfferAttempt = pendingAttempt(pendingOfferAttempt, identity);
+        await postPendingOrder({
+            action: 'create',
+            requestId: pendingOfferAttempt.requestId,
+            type: 'exclusive_offer',
+            producerId: window.storeProducerUid,
+            items: [{ beatId: checkoutSelectedBeatId, licenseType: 'exclusive' }],
+            buyerName,
+            buyerEmail,
+            buyerPhone,
+            buyerDni,
+            buyerCity,
+            buyerCountry,
+            youtubeWhitelist,
+            invoiceRuc,
+            invoiceCompany,
+            invoiceAddress,
+            invoiceEmail,
+            offerPrice,
+            offerMessage,
+            acceptedTerms: true,
+            acceptanceTimestamp: pendingOfferAttempt.acceptanceTimestamp,
+            termsVersion: pendingOfferAttempt.termsVersion
+        });
+        pendingOfferAttempt = null;
 
         if (typeof window.showToast === 'function') window.showToast('✅ ¡Oferta enviada! El productor la revisará y te contactará pronto.');
         document.getElementById('beat-checkout-modal').style.display = 'none';
-        nextBtn.disabled = false;
-        nextBtn.innerHTML = originalText;
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = originalText;
+        }
     } catch (e) {
         console.error("Error al enviar oferta:", e);
         if (typeof window.showToast === 'function') window.showToast("Error al enviar oferta: " + e.message, true);
         const nextBtn = document.getElementById('btn-checkout-next');
-        nextBtn.disabled = false;
-        nextBtn.innerHTML = '📩 Enviar Oferta';
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = '📩 Enviar Oferta';
+        }
     }
 }
 
@@ -1728,7 +2110,7 @@ export function getProducerAvatar(config) {
     }
     const name = (config.aka || config.name || '').toLowerCase();
     if (name.includes('sossa')) {
-        return '/producer_sossa.png';
+        return '/producer_sossa.webp';
     }
     if (name.includes('monarco')) {
         return '/producer_monarco.jpg';
@@ -1783,15 +2165,16 @@ export function getBeatArtwork(beat) {
         config = producerConfig;
     }
 
-    if (config && config.defaultBeatArtwork && config.defaultBeatArtwork.trim() !== '') {
-        return config.defaultBeatArtwork.trim();
+    const configuredArtwork = config?.defaultBeatArtworkUrl || config?.defaultBeatArtwork;
+    if (typeof configuredArtwork === 'string' && configuredArtwork.trim() !== '' && isSafeArtworkUrl(configuredArtwork)) {
+        return configuredArtwork.trim();
     }
     
     let art = (beat.artwork || '').trim();
     art = art.replace(/^["']|["']$/g, '').trim();
     
     const lowerArt = art.toLowerCase();
-    if (art !== '' && lowerArt !== 'null' && lowerArt !== 'undefined' && lowerArt !== 'none' && !lowerArt.includes('placeholder')) {
+    if (art !== '' && lowerArt !== 'null' && lowerArt !== 'undefined' && lowerArt !== 'none' && !lowerArt.includes('placeholder') && isSafeArtworkUrl(art)) {
         return art;
     }
     
@@ -1805,7 +2188,7 @@ export function getBeatArtwork(beat) {
     if (producerLogo) {
         producerLogo = producerLogo.trim().replace(/^["']|["']$/g, '').trim();
         const lowerLogo = producerLogo.toLowerCase();
-        if (producerLogo !== '' && lowerLogo !== 'null' && lowerLogo !== 'undefined' && lowerLogo !== 'none') {
+        if (producerLogo !== '' && lowerLogo !== 'null' && lowerLogo !== 'undefined' && lowerLogo !== 'none' && isSafeArtworkUrl(producerLogo)) {
             return producerLogo;
         }
     }
@@ -1821,6 +2204,7 @@ export function setupStoreCheckout() {
     window._storeCheckoutConfigured = true;
 
     window.closeBeatCheckoutModal = function() {
+        closeCheckoutLegalDocument();
         const modal = document.getElementById('beat-checkout-modal');
         if (modal) {
             modal.style.display = 'none';
@@ -1836,6 +2220,8 @@ export function setupStoreCheckout() {
     const prevBtn = document.getElementById('btn-checkout-prev');
     const nextBtn = document.getElementById('btn-checkout-next');
     const closeBtn = document.getElementById('btn-close-checkout-modal');
+    const stripeButton = document.getElementById('btn-stripe-checkout');
+    const legalModal = document.getElementById('checkout-legal-modal');
     
     // File upload
     const uploadReceiptBtn = document.getElementById('btn-store-upload-receipt');
@@ -1849,6 +2235,16 @@ export function setupStoreCheckout() {
         window.closeBeatCheckoutModal();
     });
 
+    legalModal?.addEventListener('click', (event) => {
+        if (event.target === legalModal) closeCheckoutLegalDocument();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && activeCheckoutLegalDocument) {
+            closeCheckoutLegalDocument();
+        }
+    });
+
     if (prevBtn) prevBtn.addEventListener('click', () => {
         if (checkoutCurrentStep > 1) {
             updateCheckoutStepView(checkoutCurrentStep - 1);
@@ -1857,6 +2253,7 @@ export function setupStoreCheckout() {
 
     if (nextBtn) nextBtn.addEventListener('click', async () => {
         if (checkoutCurrentStep === 1) {
+            if (!requireCheckoutTermsAcceptance()) return;
             updateCheckoutStepView(2);
         } else if (checkoutCurrentStep === 2) {
             const buyerName = sanitizeInput(document.getElementById('store-buyer-name').value);
@@ -1988,34 +2385,42 @@ export function setupStoreCheckout() {
             const method = getSelectedStorePaymentMethod();
             if (method === 'offer') {
                 await submitExclusiveOffer();
+            } else if (method === 'stripe') {
+                await startStripeCheckout();
             } else if (method !== 'paypal') {
                 await submitBeatPurchasePayment(method);
+            } else if (window.storeProducerConfig.paypalEmail && !window.storeProducerConfig.paypalClientId) {
+                await submitBeatPurchasePayment('paypal_manual');
             } else {
                 document.getElementById('beat-checkout-modal').style.display = 'none';
             }
         }
     });
 
+    if (stripeButton) stripeButton.addEventListener('click', startStripeCheckout);
+
     const cartAddBtn = document.getElementById('btn-checkout-add-to-cart');
     if (cartAddBtn) cartAddBtn.addEventListener('click', () => {
-        console.log("🛒 click: btn-checkout-add-to-cart. ID:", checkoutSelectedBeatId);
+        checkoutDebug("🛒 click: btn-checkout-add-to-cart. ID:", checkoutSelectedBeatId);
         const beat = findBeatById(checkoutSelectedBeatId);
         if (!beat) {
             console.warn("  Cannot add to cart: Beat not found for ID:", checkoutSelectedBeatId);
             return;
         }
         const price = window.getCheckoutPrice();
+        const basePrice = getCheckoutBasePrice();
         const producerId = window.storeProducerUid;
         const producerName = window.storeProducerConfig.aka || window.storeProducerConfig.name || 'Productor';
         const artwork = window.getBeatArtwork(beat) || '';
 
         // Exclusiva validar precio mínimo
-        if (checkoutSelectedLicense === 'exclusive' && (isNaN(price) || price < 250)) {
+        if (checkoutSelectedLicense === 'exclusive' && (isNaN(basePrice) || basePrice < 250)) {
             if (typeof window.showToast === 'function') window.showToast('El monto mínimo para la licencia Exclusiva es de $250 USD.', true);
             return;
         }
 
-        const added = window.addToCart(checkoutSelectedBeatId, checkoutSelectedLicense, price, beat.name, producerId, producerName, artwork);
+        const producerStoreSlug = window.storeProducerConfig.storeSlug || producerName;
+        const added = window.addToCart(checkoutSelectedBeatId, checkoutSelectedLicense, basePrice, beat.name, producerId, producerName, artwork, producerStoreSlug);
         if (added) {
             document.getElementById('beat-checkout-modal').style.display = 'none';
         }
@@ -2023,19 +2428,21 @@ export function setupStoreCheckout() {
 
     const buyNowBtn = document.getElementById('btn-checkout-buy-now');
     if (buyNowBtn) buyNowBtn.addEventListener('click', () => {
-        console.log("⚡ click: btn-checkout-buy-now. ID:", checkoutSelectedBeatId);
+        if (!requireCheckoutTermsAcceptance()) return;
+        checkoutDebug("⚡ click: btn-checkout-buy-now. ID:", checkoutSelectedBeatId);
         const beat = findBeatById(checkoutSelectedBeatId);
         if (!beat) {
             console.warn("  Cannot buy now: Beat not found for ID:", checkoutSelectedBeatId);
             return;
         }
         const price = window.getCheckoutPrice();
+        const basePrice = getCheckoutBasePrice();
         const producerId = window.storeProducerUid;
         const producerName = window.storeProducerConfig.aka || window.storeProducerConfig.name || 'Productor';
         const artwork = window.getBeatArtwork(beat) || '';
 
         // Exclusiva validar precio mínimo
-        if (checkoutSelectedLicense === 'exclusive' && (isNaN(price) || price < 250)) {
+        if (checkoutSelectedLicense === 'exclusive' && (isNaN(basePrice) || basePrice < 250)) {
             if (typeof window.showToast === 'function') window.showToast('El monto mínimo para la licencia Exclusiva es de $250 USD.', true);
             return;
         }
@@ -2043,10 +2450,11 @@ export function setupStoreCheckout() {
         window.cart = [{
             beatId: checkoutSelectedBeatId,
             licenseType: checkoutSelectedLicense,
-            price: price,
+            price: basePrice,
             beatName: beat.name,
             producerId: producerId,
             producerName: producerName,
+            producerStoreSlug: window.storeProducerConfig.storeSlug || producerName,
             artwork: artwork
         }];
         saveCartToStorage();
@@ -2061,6 +2469,7 @@ export function setupStoreCheckout() {
 
     const proceedBillingBtn = document.getElementById('btn-checkout-proceed-billing');
     if (proceedBillingBtn) proceedBillingBtn.addEventListener('click', () => {
+        if (!requireCheckoutTermsAcceptance()) return;
         if (window.cart.length === 0) {
             if (typeof window.showToast === 'function') window.showToast("Tu carrito está vacío.", true);
             return;
@@ -2081,11 +2490,28 @@ export function setupStoreCheckout() {
         if (!file) {
             document.getElementById('store-receipt-file-name').textContent = 'Ningún archivo seleccionado';
             storePaymentReceiptBase64 = null;
+            pendingPurchaseAttempt = null;
             return;
         }
-        
+
+        const allowedReceiptTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+        const maxReceiptSourceBytes = 8 * 1024 * 1024;
+        if (!allowedReceiptTypes.has(file.type) || file.size > maxReceiptSourceBytes) {
+            e.target.value = '';
+            document.getElementById('store-receipt-file-name').textContent = 'Ningún archivo seleccionado';
+            storePaymentReceiptBase64 = null;
+            pendingPurchaseAttempt = null;
+            const reason = file.size > maxReceiptSourceBytes
+                ? 'La imagen supera el límite de 8 MB.'
+                : 'Usa una imagen JPEG, PNG o WebP.';
+            if (typeof window.showToast === 'function') window.showToast(reason, true);
+            return;
+        }
+
         document.getElementById('store-receipt-file-name').textContent = file.name;
-        
+        storePaymentReceiptBase64 = null;
+        pendingPurchaseAttempt = null;
+
         const reader = new FileReader();
         reader.onload = function(evt) {
             const img = new Image();
@@ -2112,7 +2538,19 @@ export function setupStoreCheckout() {
                 const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
                 storePaymentReceiptBase64 = compressedBase64;
             };
+            img.onerror = function() {
+                receiptFileInput.value = '';
+                document.getElementById('store-receipt-file-name').textContent = 'Ningún archivo seleccionado';
+                storePaymentReceiptBase64 = null;
+                if (typeof window.showToast === 'function') window.showToast('No se pudo leer la imagen del comprobante.', true);
+            };
             img.src = evt.target.result;
+        };
+        reader.onerror = function() {
+            receiptFileInput.value = '';
+            document.getElementById('store-receipt-file-name').textContent = 'Ningún archivo seleccionado';
+            storePaymentReceiptBase64 = null;
+            if (typeof window.showToast === 'function') window.showToast('No se pudo leer el comprobante.', true);
         };
         reader.readAsDataURL(file);
     });
@@ -2154,11 +2592,16 @@ async function preparePaidLicenseDeliveries(deliveries, buyerData) {
     if (!container) throw new Error('No se encontró el área de generación del contrato.');
 
     for (const delivery of deliveries) {
+        const contractReference = resolveLicenseReference(delivery);
+        if (!isValidLicenseReference(contractReference)) {
+            throw new Error('La compra no tiene un código de referencia válido. No se generó ningún contrato oficial.');
+        }
         const orderData = {
             ...buyerData,
             beatName: delivery.beatName,
             licenseType: delivery.licenseType,
-            reference: delivery.reference
+            reference: contractReference,
+            contractReference
         };
         const contract = window.compileContractData(orderData, window.storeProducerConfig, 'licencia_uso', 'es');
         container.innerHTML = contract.html;
@@ -2168,11 +2611,11 @@ async function preparePaidLicenseDeliveries(deliveries, buyerData) {
         try {
             pdfBase64 = await html2pdf().from(container).set({
                 margin: [15, 20, 15, 20],
-                filename: `Licencia_${String(delivery.licenseType || 'basic').toUpperCase()}_${delivery.reference}.pdf`,
+                filename: `Licencia_${String(delivery.licenseType || 'basic').toUpperCase()}_${contractReference}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, letterRendering: true },
                 jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
-                pagebreak: { mode: ['css', 'legacy'] }
+                pagebreak: { mode: ['css', 'legacy'], avoid: ['.contract-closure', '.non-exclusive-acceptance-wrapper', '.contract-signatures-wrapper', '.digital-seal-container', '.contract-heading-group'] }
             }).outputPdf('datauristring');
         } finally {
             container.classList.remove('printing-pdf');
@@ -2184,6 +2627,7 @@ async function preparePaidLicenseDeliveries(deliveries, buyerData) {
             body: JSON.stringify({
                 paymentId: delivery.paymentId,
                 deliveryToken: delivery.deliveryToken,
+                contractReference,
                 pdfBase64
             })
         });
@@ -2229,7 +2673,7 @@ export function renderStorePayPalButton(clientId) {
             },
             onApprove: async function(data, actions) {
                 return actions.order.capture().then(async function(details) {
-                    console.log('PayPal transaction completed:', details);
+                    checkoutDebug('PayPal transaction completed:', details);
                     if (typeof window.showToast === 'function') window.showToast('Pago aprobado por PayPal. Procesando entrega...');
                     
                     const buyerName = document.getElementById('store-buyer-name').value.trim();
@@ -2247,7 +2691,7 @@ export function renderStorePayPalButton(clientId) {
                             beatId: checkoutSelectedBeatId,
                             beatName: beat ? beat.name : 'Desconocido',
                             licenseType: checkoutSelectedLicense,
-                            price: window.getCheckoutPrice()
+                            price: getCheckoutBasePrice()
                         });
                     } else {
                         itemsToProcess = window.cart.map(item => ({
@@ -2308,11 +2752,7 @@ export function renderStorePayPalButton(clientId) {
 }
 
 export async function submitBeatPurchasePayment(method, reference = '') {
-    const chkTerms = document.getElementById('store-chk-accept-terms');
-    if (!chkTerms || !chkTerms.checked) {
-        if (typeof window.showToast === 'function') window.showToast('Debes leer y aceptar los Términos de Servicio y la Licencia del Beat.', true);
-        return;
-    }
+    if (!requireCheckoutTermsAcceptance()) return;
 
     let buyerName = sanitizeInput(document.getElementById('store-buyer-name').value);
     let buyerEmail = sanitizeInput(document.getElementById('store-buyer-email').value);
@@ -2321,6 +2761,10 @@ export async function submitBeatPurchasePayment(method, reference = '') {
     let buyerCity = sanitizeInput(document.getElementById('store-buyer-city').value);
     const buyerCountry = sanitizeInput(document.getElementById('store-buyer-country').value);
     const youtubeWhitelist = sanitizeInput(document.getElementById('store-txt-youtube-whitelist').value);
+    let invoiceRuc = '';
+    let invoiceCompany = '';
+    let invoiceAddress = '';
+    let invoiceEmail = '';
 
     // Si requiere factura con RUC, validamos y sobrescribimos los datos del comprador
     const needInvoice = document.getElementById('store-chk-need-invoice')?.checked;
@@ -2345,6 +2789,10 @@ export async function submitBeatPurchasePayment(method, reference = '') {
         buyerName = companyVal;
         buyerEmail = emailVal;
         buyerCity = addressVal; // Usar dirección fiscal en lugar de ciudad para el SRI
+        invoiceRuc = rucVal;
+        invoiceCompany = companyVal;
+        invoiceAddress = addressVal;
+        invoiceEmail = emailVal;
     }
 
     if (!buyerName || !buyerEmail) {
@@ -2353,7 +2801,7 @@ export async function submitBeatPurchasePayment(method, reference = '') {
         return;
     }
 
-    if (method !== 'paypal' && !storePaymentReceiptBase64) {
+    if (!storePaymentReceiptBase64) {
         if (typeof window.showToast === 'function') window.showToast('Por favor sube la captura de tu comprobante de pago.', true);
         return;
     }
@@ -2367,7 +2815,7 @@ export async function submitBeatPurchasePayment(method, reference = '') {
             beatId: checkoutSelectedBeatId,
             beatName: beat.name,
             licenseType: checkoutSelectedLicense,
-            price: window.getCheckoutPrice()
+            price: getCheckoutBasePrice()
         });
     } else {
         itemsToProcess = window.cart.map(item => ({
@@ -2383,7 +2831,6 @@ export async function submitBeatPurchasePayment(method, reference = '') {
         return;
     }
 
-    const discountPercent = window.checkoutDiscountPercent || 0;
     const discountCode = window.checkoutAppliedCoupon || '';
 
     const nextBtn = document.getElementById('btn-checkout-next');
@@ -2393,94 +2840,120 @@ export async function submitBeatPurchasePayment(method, reference = '') {
         nextBtn.innerHTML = '⏳ Guardando pedido...';
     }
 
-    const transactionId = reference || ('TXN-' + Date.now());
-    const colRef = collection(db, "payments");
-
     try {
-        let finalReceiptUrl = '';
-        if (method !== 'paypal' && storePaymentReceiptBase64) {
-            // Guardar directamente la imagen en base64 en Firestore ya que Firebase Storage no está disponible en este proyecto
-            finalReceiptUrl = storePaymentReceiptBase64;
+        if (method === 'deuna') {
+            if (!currentDeunaPaymentId || !currentDeunaStatusToken) {
+                await initiateDeunaDynamicPayment();
+            }
+            if (!currentDeunaPaymentId || !currentDeunaStatusToken) {
+                throw new Error('No se pudo crear la referencia segura de Deuna.');
+            }
+            await postPendingOrder({
+                action: 'attach-receipt',
+                paymentId: currentDeunaPaymentId,
+                statusToken: currentDeunaStatusToken,
+                receiptDataUrl: storePaymentReceiptBase64
+            });
+            if (currentDeunaOrderData) {
+                await syncPaymentToLocalBackup({ ...currentDeunaOrderData, id: currentDeunaPaymentId }, currentDeunaPaymentId);
+                sendPendingPaymentEmails(currentDeunaOrderData, currentDeunaPaymentId).catch((error) => console.error(error));
+            }
+            if (typeof window.showToast === 'function') window.showToast('¡Comprobante registrado! Deuna confirmará el pago de forma segura.');
+            clearPurchasedItems();
+            storePaymentReceiptBase64 = null;
+            document.getElementById('beat-checkout-modal').style.display = 'none';
+            logCheckoutStep('pending_order_created', { method: 'deuna', itemsCount: 1 });
+            if (nextBtn) {
+                nextBtn.disabled = false;
+                nextBtn.innerHTML = originalText;
+            }
+            return;
         }
 
-        let redirectPaymentId = null;
-        for (const item of itemsToProcess) {
+        const normalizedMethod = method === 'paypal' ? 'paypal_manual' : method;
+        const identity = JSON.stringify({
+            producerId: window.storeProducerUid,
+            method: normalizedMethod,
+            buyerEmail,
+            items: itemsToProcess.map(({ beatId, licenseType }) => ({ beatId, licenseType })),
+            couponCode: discountCode,
+            receipt: receiptIdentity(storePaymentReceiptBase64),
+            invoiceRuc,
+            reference: reference || ''
+        });
+        pendingPurchaseAttempt = pendingAttempt(pendingPurchaseAttempt, identity);
+        if (!pendingPurchaseAttempt.statusCredential) {
+            pendingPurchaseAttempt.statusCredential = await createPaymentStatusCredential();
+        }
+        const result = await postPendingOrder({
+            action: 'create',
+            requestId: pendingPurchaseAttempt.requestId,
+            type: 'beat_purchase',
+            method: normalizedMethod,
+            producerId: window.storeProducerUid,
+            items: itemsToProcess.map(({ beatId, licenseType }) => ({ beatId, licenseType })),
+            buyerName,
+            buyerEmail,
+            buyerPhone,
+            buyerDni,
+            buyerCity,
+            buyerCountry,
+            youtubeWhitelist,
+            invoiceRuc,
+            invoiceCompany,
+            invoiceAddress,
+            invoiceEmail,
+            couponCode: discountCode,
+            receiptDataUrl: storePaymentReceiptBase64,
+            statusTokenHash: pendingPurchaseAttempt.statusCredential.hash,
+            acceptedTerms: true,
+            acceptanceTimestamp: pendingPurchaseAttempt.acceptanceTimestamp,
+            termsVersion: pendingPurchaseAttempt.termsVersion
+        });
+        const statusToken = pendingPurchaseAttempt.statusCredential.token;
+        for (const payment of result.payments || []) {
             const orderData = {
                 type: 'beat_purchase',
                 producerId: window.storeProducerUid,
-                beatId: item.beatId,
-                beatName: item.beatName,
-                licenseType: item.licenseType,
-                price: item.price,
-                buyerName: buyerName,
-                buyerEmail: buyerEmail,
-                buyerPhone: buyerPhone,
-                buyerDni: buyerDni,
-                buyerCity: buyerCity,
-                buyerCountry: buyerCountry,
-                youtubeWhitelist: youtubeWhitelist,
-                method: method,
-                reference: transactionId,
-                receiptUrl: finalReceiptUrl,
-                status: method === 'paypal' ? 'approved' : 'pending',
-                discountPercent: discountPercent,
-                couponCode: discountCode,
-                originalPrice: item.price,
-                finalPrice: item.price * (1 - (discountPercent / 100)),
+                beatId: payment.beatId,
+                beatName: payment.beatName,
+                licenseType: payment.licenseType,
+                price: payment.originalPrice,
+                buyerName,
+                buyerEmail,
+                buyerPhone,
+                buyerDni,
+                buyerCity,
+                buyerCountry,
+                youtubeWhitelist,
+                invoiceRuc,
+                invoiceCompany,
+                invoiceAddress,
+                invoiceEmail,
+                method: result.method,
+                reference: result.reference,
+                receiptUrl: '',
+                status: 'pending',
+                discountPercent: result.discountPercent,
+                couponCode: result.couponCode,
+                originalPrice: payment.originalPrice,
+                finalPrice: payment.finalPrice,
                 timestamp: new Date().toISOString(),
                 acceptedTerms: true,
-                acceptanceTimestamp: new Date().toISOString()
+                acceptanceTimestamp: pendingPurchaseAttempt.acceptanceTimestamp
             };
-
-            let docRefId = null;
-            if (method === 'deuna' && currentDeunaPaymentId) {
-                const existingDocRef = doc(db, "payments", currentDeunaPaymentId);
-                await updateDoc(existingDocRef, {
-                    ...orderData,
-                    receiptUrl: finalReceiptUrl,
-                    status: 'pending'
-                });
-                docRefId = currentDeunaPaymentId;
-            } else {
-                const docRef = await addDoc(colRef, orderData);
-                docRefId = docRef.id;
-            }
-            
-            // Sincronizar localmente si estamos en localhost
-            await syncPaymentToLocalBackup({
-                ...orderData,
-                id: docRefId
-            }, docRefId);
-            
-            if (!redirectPaymentId) {
-                redirectPaymentId = docRefId;
-            }
-            
-            if (method === 'paypal') {
-                await autoDeliverBeatSale(docRefId, orderData);
-            } else {
-                // Enviar correos de espera de forma asíncrona para no retrasar la interfaz del usuario
-                sendPendingPaymentEmails(orderData, docRefId).catch(err => console.error(err));
-            }
+            await syncPaymentToLocalBackup({ ...orderData, id: payment.paymentId }, payment.paymentId);
+            try {
+                sessionStorage.setItem(`beatss_pending_status_${payment.paymentId}`, statusToken);
+            } catch (_) {}
+            sendPendingPaymentEmails(orderData, payment.paymentId).catch((error) => console.error(error));
         }
-
-        if (method === 'paypal') {
-            if (typeof window.showToast === 'function') window.showToast('¡Pago procesado y licencias enviadas con éxito!');
-            clearPurchasedItems();
-            storePaymentReceiptBase64 = null;
-            document.getElementById('beat-checkout-modal').style.display = 'none';
-            await finalizePaymentSuccess(redirectPaymentId, itemsToProcess);
-        } else {
-            if (typeof window.showToast === 'function') window.showToast('¡Pedido registrado! Esperando aprobación del productor.');
-            clearPurchasedItems();
-            storePaymentReceiptBase64 = null;
-            document.getElementById('beat-checkout-modal').style.display = 'none';
-        }
-        
-        // Redirigir al portal de descargas
-        if (redirectPaymentId) {
-            await finalizePaymentSuccess(redirectPaymentId, itemsToProcess);
-        }
+        pendingPurchaseAttempt = null;
+        if (typeof window.showToast === 'function') window.showToast('¡Pedido registrado! El productor verificará el comprobante antes de la entrega.');
+        clearPurchasedItems();
+        storePaymentReceiptBase64 = null;
+        document.getElementById('beat-checkout-modal').style.display = 'none';
+        logCheckoutStep('pending_order_created', { method: normalizedMethod, itemsCount: result.payments?.length || 0 });
         if (nextBtn) {
             nextBtn.disabled = false;
             nextBtn.innerHTML = originalText;
@@ -2500,7 +2973,7 @@ export async function syncPaymentToLocalBackup(orderData, paymentId) {
         return;
     }
     try {
-        console.log("💾 Sincronizando pago nuevo a backup local en localhost...", paymentId);
+        checkoutDebug("💾 Sincronizando pago nuevo a backup local en localhost...", paymentId);
         const user = window.storeProducerConfig?.aka?.toLowerCase() === 'cg monarco' ? 'cgmonarco' : 'sossa';
         
         // 1. Cargar el backup actual
@@ -2540,7 +3013,7 @@ export async function syncPaymentToLocalBackup(orderData, paymentId) {
             headers: headers,
             body: JSON.stringify(dbData)
         });
-        console.log("✅ Pago nuevo sincronizado localmente con éxito.");
+        checkoutDebug("✅ Pago nuevo sincronizado localmente con éxito.");
     } catch (err) {
         console.warn("No se pudo sincronizar el pago nuevo al backup local:", err);
     }
@@ -2548,11 +3021,14 @@ export async function syncPaymentToLocalBackup(orderData, paymentId) {
 
 export async function sendPendingPaymentEmails(orderData, paymentId) {
     try {
-        console.log("🚀 Iniciando envío de correos de espera para pago pendiente:", paymentId);
+        checkoutDebug("🚀 Iniciando envío de correos de espera para pago pendiente:", paymentId);
         
-        const serviceId = window.storeProducerConfig.emailjsServiceId || 'service_btb90z6';
-        const templateId = window.storeProducerConfig.emailjsTemplateId || 'template_mlimkld';
-        const publicKey = window.storeProducerConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
+        const serviceId = window.storeProducerConfig.emailjsServiceId || '';
+        const templateId = window.storeProducerConfig.emailjsTemplatePendingId || '';
+        const publicKey = window.storeProducerConfig.emailjsPublicKey || '';
+        if (!serviceId || !templateId || !publicKey) {
+            throw new Error('El productor no ha configurado el servicio de correo. El pedido permanece disponible en el portal.');
+        }
 
         // 1. Cargar EmailJS si no está presente
         if (typeof emailjs === 'undefined') {
@@ -2577,7 +3053,11 @@ export async function sendPendingPaymentEmails(orderData, paymentId) {
             exclusive: 'Licencia Exclusiva'
         };
         const type = orderData.licenseType || 'basic';
-        const methodLabel = orderData.method === 'deuna' ? 'Deuna!' : 'Transferencia Bancaria';
+        const methodLabel = orderData.method === 'deuna'
+            ? 'Deuna!'
+            : orderData.method === 'paypal_manual'
+                ? 'PayPal'
+                : 'Transferencia Bancaria';
 
         // 2. Correo para el Comprador (Confirmación de Recepción)
         const buyerMessage = `
@@ -2604,7 +3084,12 @@ export async function sendPendingPaymentEmails(orderData, paymentId) {
         };
 
         await emailjs.send(serviceId, templateId, buyerParams);
-        console.log("📧 Correo de confirmación enviado al comprador.");
+        window.recordEmailEvent?.({
+            category: 'pending_payment', status: 'sent', recipientEmail: orderData.buyerEmail, recipientName: orderData.buyerName,
+            subject: `Comprobante recibido - Orden #${paymentId}`, beatName: orderData.beatName, reference: orderData.reference,
+            paymentId, licenseType: type, templateId
+        });
+        checkoutDebug("📧 Correo de confirmación enviado al comprador.");
 
         // 3. Correo para el Productor (Notificación de Venta Pendiente)
         if (window.storeProducerConfig.email) {
@@ -2632,188 +3117,275 @@ export async function sendPendingPaymentEmails(orderData, paymentId) {
             };
 
             await emailjs.send(serviceId, templateId, producerParams);
-            console.log("📧 Correo de notificación enviado al productor.");
+            window.recordEmailEvent?.({
+                category: 'payment_notification', status: 'sent', recipientEmail: window.storeProducerConfig.email,
+                recipientName: window.storeProducerConfig.aka || 'Productor', subject: 'Nueva venta pendiente de aprobación',
+                beatName: orderData.beatName, reference: orderData.reference, paymentId, licenseType: type, templateId
+            });
+            checkoutDebug("📧 Correo de notificación enviado al productor.");
         }
 
     } catch (err) {
         console.warn("Fallo al enviar correos automáticos de pago pendiente:", err);
+        window.recordEmailEvent?.({
+            category: 'pending_payment', status: 'failed', recipientEmail: orderData?.buyerEmail, recipientName: orderData?.buyerName,
+            subject: `Comprobante recibido - Orden #${paymentId}`, beatName: orderData?.beatName, reference: orderData?.reference,
+            paymentId, templateId: window.storeProducerConfig?.emailjsTemplatePendingId || '', errorMessage: err?.message || 'Error de EmailJS'
+        });
     }
 }
 
 export async function autoDeliverBeatSale(paymentId, orderData) {
     try {
-        console.log("🚀 Iniciando entrega automatizada para el pago:", paymentId);
-        
-        const beatCol = collection(db, "users", orderData.producerId, "beats");
-        const beatSnapshot = await getDocs(beatCol);
-        let beatData = null;
-        beatSnapshot.forEach(doc => {
-            if (doc.id === orderData.beatId) {
-                beatData = doc.data();
-            }
-        });
-
-        if (!beatData) {
-            console.warn("Beat no encontrado en catálogo para la entrega automática.");
-            return;
-        }
-
-        const serviceId = window.storeProducerConfig.emailjsServiceId || 'service_btb90z6';
-        const templateId = window.storeProducerConfig.emailjsTemplateId || 'template_mlimkld';
-        const publicKey = window.storeProducerConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
-
-        // 1. Cargar EmailJS si no está presente
-        if (typeof emailjs === 'undefined') {
-            try {
-                await loadScript('https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js');
-            } catch (e) {
-                console.error("No se pudo cargar EmailJS para entrega automática:", e);
-            }
-        }
-        
-        // 2. Cargar html2pdf si no está presente
+        checkoutDebug("🚀 Preparando portal seguro para el pago:", paymentId);
         if (typeof html2pdf === 'undefined') {
-            try {
-                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
-            } catch (e) {
-                console.error("No se pudo cargar html2pdf para la entrega automática:", e);
-            }
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
         }
-
-        let pdfUrl = "";
-        
-        // 3. No se permite entregar una compra sin su contrato PDF oficial.
-        if (!window.compileContractData || typeof html2pdf === 'undefined' || !window.uploadPDFToCloud) {
+        if (!window.compileContractData || typeof html2pdf === 'undefined') {
             throw new Error('No se pudieron cargar las utilidades necesarias para generar el contrato PDF.');
         }
+        const contractData = window.compileContractData(orderData, window.storeProducerConfig, 'licencia_uso', 'es');
+        const container = document.getElementById('buyer-rendered-contract-content');
+        if (!container) throw new Error('No se encontró el área de generación del contrato.');
+        container.innerHTML = contractData.html;
+        container.classList.add('printing-pdf');
+        let pdfBase64;
         try {
-            console.log("📄 Generando contrato PDF en segundo plano...");
-            const contractData = window.compileContractData(orderData, window.storeProducerConfig, 'licencia_uso', 'es');
-            const container = document.getElementById('buyer-rendered-contract-content');
-            if (!container) {
-                throw new Error('No se encontró el área de generación del contrato.');
-            }
-            container.innerHTML = contractData.html;
-            container.classList.add('printing-pdf');
-                
-                const opt = {
-                    margin: [15, 20, 15, 20],
-                    filename: `Licencia_${orderData.licenseType.toUpperCase()}_${orderData.reference}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-                    jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'legacy'] }
-                };
-
-            let base64DataUri;
-            try {
-                base64DataUri = await html2pdf().from(container).set(opt).outputPdf('datauristring');
-            } finally {
-                container.classList.remove('printing-pdf');
-            }
-
-            console.log("☁️ Subiendo contrato PDF a la nube...");
-            pdfUrl = await window.uploadPDFToCloud(base64DataUri, opt.filename);
-            console.log("✅ Contrato subido con éxito:", pdfUrl);
-        } catch (pdfErr) {
-            console.error("Error al generar o subir el PDF del contrato de licencia:", pdfErr);
-            throw new Error(`El pago quedó registrado, pero el contrato PDF no se pudo preparar: ${pdfErr.message || 'error desconocido'}`);
+            pdfBase64 = await html2pdf().from(container).set({
+                margin: [15, 20, 15, 20],
+                filename: `Licencia_${orderData.licenseType.toUpperCase()}_${orderData.reference}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'], avoid: ['.contract-closure', '.non-exclusive-acceptance-wrapper', '.contract-signatures-wrapper', '.digital-seal-container', '.contract-heading-group'] }
+            }).outputPdf('datauristring');
+        } finally {
+            container.classList.remove('printing-pdf');
         }
 
-        if (typeof emailjs !== 'undefined') {
-            emailjs.init(publicKey);
-
-            const mp3 = beatData.mp3 || "";
-            const wav = beatData.wav || "";
-            const stems = beatData.stems || "";
-
-            const typeLabels = {
-                basic: 'Básica',
-                premium: 'Premium',
-                premium_plus: 'Premium Plus',
-                unlimited_flp: 'Ilimitada',
-                unlimited: 'Ilimitada',
-                exclusive: 'Exclusiva'
-            };
-
-            const type = orderData.licenseType || 'basic';
-            const linksText = `
-<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-    ${pdfUrl ? `
-    <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #edf2f7; text-align: center;">
-        <div style="font-size: 10px; text-transform: uppercase; color: #718096 !important; font-weight: 700; margin-bottom: 10px; letter-spacing: 1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Documento Oficial y Legal</div>
-        <a href="${pdfUrl}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #0055ee; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 700; border: 1px solid #0044cc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">📄 Descargar Contrato (PDF)</a>
-    </div>
-    ` : `
-    <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #edf2f7; text-align: center; color: #718096; font-size: 12px;">
-        Tu contrato y licencia oficial PDF serán procesados y firmados por el productor muy pronto.
-    </div>
-    `}
-    
-    <div>
-        <div style="font-size: 10px; text-transform: uppercase; color: #718096 !important; font-weight: 700; margin-bottom: 12px; letter-spacing: 1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Archivos de Audio de Alta Calidad</div>
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-            ${mp3 ? `
-            <tr style="border-bottom: 1px solid #edf2f7;">
-                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Instrumental MP3 (320kbps)</td>
-                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${mp3}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
-            </tr>
-            ` : ''}
-            ${wav && (type !== 'basic') ? `
-            <tr style="border-bottom: 1px solid #edf2f7;">
-                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Instrumental WAV (Master)</td>
-                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${wav}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
-            </tr>
-            ` : ''}
-            ${stems && (type !== 'basic' && type !== 'premium') ? `
-            <tr>
-                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Pistas Separadas (Stems)</td>
-                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${stems}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
-            </tr>
-            ` : ''}
-        </table>
-    </div>
-</div>
-            `;
-
-            const pdfFilename = `Licencia_${type.toUpperCase()}_${orderData.reference}.pdf`;
-            const templateParams = {
-                to_name: orderData.buyerName,
-                to_email: orderData.buyerEmail,
-                beat_name: orderData.beatName,
-                license_type: typeLabels[type] || type,
-                delivery_links: linksText,
-                producer_name: window.storeProducerConfig.aka || "Productor",
-                producer_email: window.storeProducerConfig.email || "",
-                pdf_filename: pdfFilename
-            };
-
-            await emailjs.send(serviceId, templateId, templateParams);
-            console.log("📧 Correo de entrega directa de PayPal enviado al comprador con éxito.");
-        }
+        const response = await fetch('/api/license-delivery', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Beatss-Status-Token': orderData.statusToken || ''
+            },
+            body: JSON.stringify({
+                paymentId,
+                statusToken: orderData.statusToken || '',
+                deliveryToken: orderData.deliveryToken || '',
+                contractReference: orderData.contractReference || orderData.reference,
+                licenseType: orderData.licenseType,
+                pdfBase64,
+                contractRendererVersion: 'buyer-contract-v1'
+            })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.error || 'No se pudo preparar el portal de entrega.');
+        checkoutDebug("📧 Portal seguro enviado al comprador.");
         return true;
     } catch (err) {
         console.error("Fallo al enviar correo automático de PayPal:", err);
+        window.recordEmailEvent?.({
+            category: 'license_delivery', status: 'failed', recipientEmail: orderData?.buyerEmail, recipientName: orderData?.buyerName,
+            subject: `Tu licencia de "${orderData?.beatName || ''}" - BEATSS`, beatName: orderData?.beatName,
+            reference: orderData?.reference, paymentId, templateId: window.storeProducerConfig?.emailjsTemplateId || '', errorMessage: err?.message || 'Error de EmailJS'
+        });
         return false;
     }
+}
+
+function appendCheckoutLegalSection(container, title, paragraphs = [], items = []) {
+    const heading = document.createElement('h3');
+    heading.textContent = title;
+    container.appendChild(heading);
+
+    paragraphs.forEach((copy) => {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = copy;
+        container.appendChild(paragraph);
+    });
+
+    if (items.length) {
+        const list = document.createElement('ul');
+        items.forEach((copy) => {
+            const item = document.createElement('li');
+            item.textContent = copy;
+            list.appendChild(item);
+        });
+        container.appendChild(list);
+    }
+}
+
+function renderCheckoutLegalDocument(kind) {
+    const title = document.getElementById('checkout-legal-title');
+    const kicker = document.getElementById('checkout-legal-kicker');
+    const body = document.getElementById('checkout-legal-body');
+    if (!title || !kicker || !body) return;
+
+    body.replaceChildren();
+
+    if (kind === 'license') {
+        const config = LICENSE_CONFIGS[checkoutSelectedLicense] || LICENSE_CONFIGS.basic;
+        const price = getCheckoutBasePrice();
+        title.textContent = `Licencia ${config.name}`;
+        kicker.textContent = 'Licencia seleccionada';
+
+        const notice = document.createElement('p');
+        notice.className = 'checkout-legal-notice';
+        notice.textContent = 'Este resumen te permite revisar la selección antes de pagar. El contrato PDF generado para la orden contiene las cláusulas completas y prevalece sobre este resumen.';
+        body.appendChild(notice);
+
+        appendCheckoutLegalSection(body, 'Alcance principal', [], [
+            `Precio actual: $${Number(price || 0).toFixed(2)} USD.`,
+            `Archivos incluidos: ${config.formats}.`,
+            `Reproducciones autorizadas: ${config.streams}.`,
+            `Copias físicas: ${config.physical}.`,
+            `Uso audiovisual: ${config.videos}; duración indicada: ${config.videoDuration}.`,
+            `Vigencia: ${config.years}.`
+        ]);
+        appendCheckoutLegalSection(body, 'Créditos y composición', [], [
+            `Crédito requerido: ${config.credits}.`,
+            `Participación autoral indicada: licenciatario ${config.writerShare}% / productor ${config.producerShare}%.`,
+            config.contentId
+                ? 'No se permite registrar el beat ni la nueva canción en Content ID o sistemas equivalentes sin autorización escrita.'
+                : 'El uso controlado de Content ID se rige por las obligaciones y excepciones de la licencia exclusiva.'
+        ]);
+        appendCheckoutLegalSection(body, 'Entrega', [
+            'Los archivos habilitados para esta licencia se entregan mediante los enlaces asociados a la orden aprobada. La disponibilidad de un formato depende de que el productor lo haya cargado correctamente.'
+        ]);
+        return;
+    }
+
+    title.textContent = 'Términos de Servicio';
+    kicker.textContent = 'Versión 14 de agosto de 2026';
+
+    const notice = document.createElement('p');
+    notice.className = 'checkout-legal-notice';
+    notice.textContent = 'Debes aceptar expresamente estos términos y la licencia seleccionada antes de iniciar el pago.';
+    body.appendChild(notice);
+
+    appendCheckoutLegalSection(body, '1. Servicio', [
+        'BEATSS facilita la selección, el pago, el registro y la entrega de licencias musicales ofrecidas por el productor identificado en la tienda. El productor es responsable del beat, de los derechos que ofrece y de los archivos de entrega.'
+    ]);
+    appendCheckoutLegalSection(body, '2. Compra y licencia', [
+        'El precio, los formatos, los límites de uso y la vigencia dependen de la licencia seleccionada. Antes de pagar puedes abrir “Ver licencia seleccionada”. Después de aprobarse la orden se genera el documento contractual correspondiente.'
+    ]);
+    appendCheckoutLegalSection(body, '3. Pago y confirmación', [
+        'La orden sólo se considera pagada cuando el proveedor de pago y BEATSS confirman la operación. Una pantalla de checkout abierta o una orden pendiente no equivalen a pago aprobado ni a licencia emitida.'
+    ]);
+    appendCheckoutLegalSection(body, '4. Datos y entrega', [
+        'Los datos proporcionados se utilizan para procesar la orden, emitir la licencia, entregar los archivos, prevenir fraude y atender obligaciones legales o de soporte. Debes introducir información correcta y un correo al que tengas acceso.'
+    ]);
+    appendCheckoutLegalSection(body, '5. Uso permitido', [
+        'No puedes exceder los límites de la licencia, revender los archivos originales, atribuirte la producción del beat ni usar sistemas de identificación de contenido cuando la licencia lo prohíba.'
+    ]);
+    appendCheckoutLegalSection(body, '6. Aceptación y registro', [
+        'Al marcar la casilla confirmas que pudiste abrir y revisar ambos documentos. La orden conserva la aceptación y su fecha como parte del registro transaccional.'
+    ]);
+}
+
+export function openCheckoutLegalDocument(kind = 'terms', trigger = null) {
+    const modal = document.getElementById('checkout-legal-modal');
+    if (!modal) return;
+
+    const normalizedKind = kind === 'license' ? 'license' : 'terms';
+    lastCheckoutLegalTrigger = trigger instanceof HTMLElement ? trigger : document.activeElement;
+    activeCheckoutLegalDocument = normalizedKind;
+    renderCheckoutLegalDocument(normalizedKind);
+    modal.hidden = false;
+    modal.removeAttribute('inert');
+    modal.setAttribute('aria-hidden', 'false');
+    modal.style.display = 'flex';
+    document.getElementById('btn-close-checkout-legal')?.focus();
+}
+
+export function closeCheckoutLegalDocument() {
+    const modal = document.getElementById('checkout-legal-modal');
+    if (!modal) return;
+
+    modal.style.display = 'none';
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    modal.setAttribute('inert', '');
+    activeCheckoutLegalDocument = null;
+    if (lastCheckoutLegalTrigger instanceof HTMLElement && lastCheckoutLegalTrigger.isConnected) {
+        lastCheckoutLegalTrigger.focus();
+    }
+}
+
+function checkoutSelectionFingerprint() {
+    if (checkoutSelectedBeatId) return `${checkoutSelectedBeatId}:${checkoutSelectedLicense}`;
+    return window.cart
+        .map(({ beatId, licenseType }) => `${beatId}:${licenseType}`)
+        .sort()
+        .join('|');
+}
+
+function getCheckoutTermsAcceptance() {
+    const checkbox = document.getElementById('store-chk-accept-terms');
+    if (!checkbox?.checked || !checkoutTermsAcceptance) return null;
+    if (checkoutTermsAcceptance.selectionFingerprint !== checkoutSelectionFingerprint()) return null;
+    return checkoutTermsAcceptance;
+}
+
+function syncCheckoutContinuationControls() {
+    const accepted = Boolean(getCheckoutTermsAcceptance());
+    document.querySelectorAll('[data-checkout-requires-terms]').forEach((button) => {
+        button.disabled = !accepted;
+        button.setAttribute('aria-disabled', String(!accepted));
+        button.title = accepted ? '' : 'Acepta los términos y la licencia para continuar.';
+    });
+}
+
+function resetCheckoutTermsAcceptance({ error = false } = {}) {
+    checkoutTermsAcceptance = null;
+    const checkbox = document.getElementById('store-chk-accept-terms');
+    if (checkbox) checkbox.checked = false;
+    setCheckoutTermsFeedback({ accepted: false, error });
+    syncCheckoutContinuationControls();
+}
+
+function requireCheckoutTermsAcceptance() {
+    if (getCheckoutTermsAcceptance()) return true;
+    onPaymentClickWithoutTerms();
+    return false;
+}
+
+function setCheckoutTermsFeedback({ accepted = false, error = false } = {}) {
+    const section = document.getElementById('checkout-terms-section');
+    const checkbox = document.getElementById('store-chk-accept-terms');
+    const errorMessage = document.getElementById('checkout-terms-error');
+    const state = document.getElementById('checkout-terms-state');
+
+    if (section) {
+        section.dataset.accepted = String(accepted);
+        section.dataset.error = String(error);
+    }
+    if (checkbox) checkbox.setAttribute('aria-invalid', String(error));
+    if (errorMessage) errorMessage.hidden = !error;
+    if (state) state.textContent = accepted ? 'Aceptado' : 'Pendiente';
 }
 
 export function onAcceptTermsChange() {
     const chk = document.getElementById('store-chk-accept-terms');
     const accepted = chk ? chk.checked : false;
 
-    const nextBtn = document.getElementById('btn-checkout-next');
     const payphoneContainer = document.getElementById('payphone-button');
     const paypalContainer = document.getElementById('store-paypal-button-container');
     const paypalOverlay = document.getElementById('store-paypal-overlay');
     const payphoneOverlay = document.getElementById('store-payphone-overlay');
+    const stripeButton = document.getElementById('btn-stripe-checkout');
+    const stripeOverlay = document.getElementById('store-stripe-overlay');
+
+    checkoutTermsAcceptance = accepted ? {
+        acceptedAt: new Date().toISOString(),
+        termsVersion: CHECKOUT_TERMS_VERSION,
+        selectionFingerprint: checkoutSelectionFingerprint()
+    } : null;
+    setCheckoutTermsFeedback({ accepted, error: false });
+    syncCheckoutContinuationControls();
 
     if (accepted) {
-        if (nextBtn) {
-            nextBtn.disabled = false;
-            nextBtn.style.opacity = '1';
-            nextBtn.style.pointerEvents = 'auto';
-        }
         if (payphoneContainer) {
             payphoneContainer.style.opacity = '1';
         }
@@ -2822,12 +3394,19 @@ export function onAcceptTermsChange() {
         }
         if (paypalOverlay) paypalOverlay.style.display = 'none';
         if (payphoneOverlay) payphoneOverlay.style.display = 'none';
-    } else {
-        if (nextBtn) {
-            nextBtn.disabled = true;
-            nextBtn.style.opacity = '0.5';
-            nextBtn.style.pointerEvents = 'none';
+        if (stripeButton) {
+            stripeButton.disabled = false;
+            stripeButton.style.opacity = '1';
+            stripeButton.style.pointerEvents = 'auto';
         }
+        if (stripeOverlay) stripeOverlay.style.display = 'none';
+        if (checkoutCurrentStep === 3 && getSelectedStorePaymentMethod() === 'deuna' && !currentDeunaPaymentId) {
+            void initiateDeunaDynamicPayment();
+        }
+        if (checkoutCurrentStep === 3 && getSelectedStorePaymentMethod() === 'payphone') {
+            void renderStorePayphoneButton();
+        }
+    } else {
         if (payphoneContainer) {
             payphoneContainer.style.opacity = '0.7';
         }
@@ -2836,28 +3415,30 @@ export function onAcceptTermsChange() {
         }
         if (paypalOverlay) paypalOverlay.style.display = 'block';
         if (payphoneOverlay) payphoneOverlay.style.display = 'block';
+        if (stripeButton) {
+            stripeButton.disabled = true;
+            stripeButton.style.opacity = '0.7';
+            stripeButton.style.pointerEvents = 'none';
+        }
+        if (stripeOverlay) stripeOverlay.style.display = 'block';
     }
 }
 
 export function onPaymentClickWithoutTerms() {
     if (typeof window.showToast === 'function') {
-        window.showToast('Debes leer y aceptar los Términos de Servicio y las condiciones de la Licencia para continuar.', true);
+        window.showToast('Debes aceptar los Términos de Servicio y la licencia seleccionada para continuar.', true);
     }
-    const label = document.querySelector('label[for="store-chk-accept-terms"]');
-    if (label) {
-        label.style.transition = 'all 0.2s';
-        label.style.color = '#ef4444';
-        label.style.textShadow = '0 0 8px rgba(239, 68, 68, 0.6)';
-        setTimeout(() => {
-            label.style.color = '#fff';
-            label.style.textShadow = 'none';
-        }, 1500);
-    }
+    setCheckoutTermsFeedback({ accepted: false, error: true });
+    const checkbox = document.getElementById('store-chk-accept-terms');
+    document.getElementById('checkout-terms-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    checkbox?.focus({ preventScroll: true });
 }
 
 // Bind to window for global/inline access
 window.onPaymentClickWithoutTerms = onPaymentClickWithoutTerms;
 window.onAcceptTermsChange = onAcceptTermsChange;
+window.openCheckoutLegalDocument = openCheckoutLegalDocument;
+window.closeCheckoutLegalDocument = closeCheckoutLegalDocument;
 window.addToCart = addToCart;
 window.removeFromCart = removeFromCart;
 window.updateCartItemLicense = updateCartItemLicense;
@@ -2869,6 +3450,7 @@ window.renderStoreBeats = renderStoreBeats;
 window.shareBeat = shareBeat;
 window.setupStoreFilters = setupStoreFilters;
 window.getCheckoutPrice = getCheckoutPrice;
+window.getCheckoutBasePrice = getCheckoutBasePrice;
 window.applyCheckoutCoupon = applyCheckoutCoupon;
 window.updateExclusivePrice = updateExclusivePrice;
 window.openBeatCheckoutModal = openBeatCheckoutModal;
@@ -2890,6 +3472,130 @@ window.renderStorePayPalButton = renderStorePayPalButton;
 window.submitBeatPurchasePayment = submitBeatPurchasePayment;
 window.autoDeliverBeatSale = autoDeliverBeatSale;
 
+export async function startStripeCheckout() {
+    if (window.storePaymentCapabilities?.stripe !== true) {
+        window.showToast?.('Stripe no está habilitado para este productor.', true);
+        return;
+    }
+    const legalAcceptance = getCheckoutTermsAcceptance();
+    if (!legalAcceptance) return onPaymentClickWithoutTerms();
+
+    const read = (id) => sanitizeInput(document.getElementById(id)?.value || '');
+    let buyerName = read('store-buyer-name');
+    let buyerEmail = read('store-buyer-email').toLowerCase();
+    let buyerPhone = read('store-buyer-phone');
+    let buyerDni = read('store-buyer-dni');
+    let buyerCity = read('store-buyer-city');
+    const buyerCountry = read('store-buyer-country');
+    const youtubeWhitelist = read('store-txt-youtube-whitelist');
+    const needsInvoice = Boolean(document.getElementById('store-chk-need-invoice')?.checked);
+    const invoiceRuc = read('store-invoice-ruc');
+    const invoiceCompany = read('store-invoice-company');
+    const invoiceAddress = read('store-invoice-address');
+    const invoiceEmail = read('store-invoice-email').toLowerCase();
+
+    if (!buyerName || !/^\S+@\S+\.\S+$/.test(buyerEmail)) {
+        window.showToast?.('Completa un nombre y un correo válido antes de continuar.', true);
+        return;
+    }
+    if (needsInvoice) {
+        if (!/^\d{13}$/.test(invoiceRuc) || !invoiceCompany || !invoiceAddress || !/^\S+@\S+\.\S+$/.test(invoiceEmail)) {
+            window.showToast?.('Completa correctamente los datos de facturación.', true);
+            return;
+        }
+        buyerDni = invoiceRuc;
+        buyerName = invoiceCompany;
+        buyerEmail = invoiceEmail;
+        buyerCity = invoiceAddress;
+    }
+
+    const items = checkoutSelectedBeatId
+        ? (() => {
+            const beat = findBeatById(checkoutSelectedBeatId);
+            return beat ? [{ beatId: checkoutSelectedBeatId, beatName: beat.name, licenseType: checkoutSelectedLicense, price: getCheckoutBasePrice() }] : [];
+        })()
+        : (window.cart || []).map(item => ({ beatId: item.beatId, beatName: item.beatName, licenseType: item.licenseType, price: Number(item.price) }));
+    if (!items.length) {
+        window.showToast?.('Selecciona al menos un beat antes de pagar.', true);
+        return;
+    }
+
+    const button = document.getElementById('btn-stripe-checkout');
+    const originalText = button?.textContent || 'Continuar con Stripe';
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Conectando con Stripe...';
+    }
+    try {
+        const response = await fetch('/api/payments/stripe/create-checkout-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                producerId: window.storeProducerUid,
+                buyerName, buyerEmail, buyerPhone, buyerDni, buyerCity, buyerCountry,
+                youtubeWhitelist, items, discountPercent: 0, couponCode: '',
+                invoiceRuc: needsInvoice ? invoiceRuc : '',
+                invoiceCompany: needsInvoice ? invoiceCompany : '',
+                invoiceAddress: needsInvoice ? invoiceAddress : '',
+                invoiceEmail: needsInvoice ? invoiceEmail : '',
+                needInvoice: needsInvoice,
+                acceptedTerms: true,
+                acceptanceTimestamp: legalAcceptance.acceptedAt,
+                termsVersion: legalAcceptance.termsVersion,
+                // Esta referencia sólo existe al entrar desde el portal de
+                // una licencia anterior. El servidor vuelve a validar el
+                // enlace firmado, el titular, la fecha de exclusiva y el
+                // precio; nunca confía en este contexto por sí solo.
+                upgradeFromPaymentId: window.checkoutUpgradeContext?.sourcePaymentId || '',
+                upgradeAccessToken: window.checkoutUpgradeContext?.accessToken || ''
+            })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.checkoutUrl) throw new Error(result.error || 'No se pudo iniciar Stripe.');
+        window.location.assign(result.checkoutUrl);
+    } catch (error) {
+        console.error('Stripe checkout start error:', error);
+        window.showToast?.(error.message || 'No se pudo iniciar el pago con Stripe.', true);
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+            onAcceptTermsChange();
+        }
+    }
+}
+
+function ensureStripeOverlay() {
+    let overlay = document.getElementById('stripe-processing-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'stripe-processing-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,15,28,.72);backdrop-filter:blur(10px);';
+        document.body.appendChild(overlay);
+    }
+    return overlay;
+}
+
+export function closeStripeOverlay() {
+    document.getElementById('stripe-processing-overlay')?.remove();
+    const url = new URL(window.location.href);
+    url.searchParams.delete('stripe_session_id');
+    url.searchParams.delete('stripe_cancelled');
+    window.history.replaceState({}, document.title, url.toString());
+}
+
+export async function checkStripeReturn() {
+    const sessionId = new URLSearchParams(window.location.search).get('stripe_session_id');
+    if (!sessionId) return;
+    // Compatibilidad para una sesión que use la antigua URL de retorno. La
+    // confirmación se hace en la pantalla pública, sin iniciar el Studio ni
+    // pedir acceso al comprador.
+    window.location.replace(`/compra/stripe?session_id=${encodeURIComponent(sessionId)}`);
+}
+
+window.startStripeCheckout = startStripeCheckout;
+window.checkStripeReturn = checkStripeReturn;
+window.closeStripeOverlay = closeStripeOverlay;
+
 export async function checkPayphoneRedirectResult() {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
@@ -2898,13 +3604,20 @@ export async function checkPayphoneRedirectResult() {
     if (id && clientTxId) {
         const pendingKey = 'payphone_pending_' + clientTxId;
         const pendingStateStr = localStorage.getItem(pendingKey);
-        if (!pendingStateStr) return;
+        if (!pendingStateStr) {
+            window.showToast?.('No pudimos recuperar la referencia local de PayPhone. No se intentó confirmar ni cobrar nuevamente.');
+            window.closePayphoneOverlay();
+            return;
+        }
         
         let state;
         try {
             state = JSON.parse(pendingStateStr);
         } catch (e) {
             console.error('Error parsing payphone pending state:', e);
+            localStorage.removeItem(pendingKey);
+            window.showToast?.('La referencia local de PayPhone no es válida. No se intentó confirmar ni cobrar nuevamente.');
+            window.closePayphoneOverlay();
             return;
         }
         
@@ -2924,131 +3637,47 @@ export async function checkPayphoneRedirectResult() {
         
         try {
             // Confirm transaction using PayPhone API
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             let response;
             let result;
+            // La confirmación siempre pasa por el backend: el token de PayPhone
+            // no se vuelve a enviar desde el navegador y el pago aprobado se
+            // registra junto con su trabajo SRI en una sola operación segura.
+            response = await fetch('/api/payments/payphone/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'confirm',
+                    id: parseInt(id, 10),
+                    clientTxId,
+                    statusToken: state.statusToken || ''
+                })
+            });
+            result = await response.json().catch(() => ({}));
             
-            if (isLocalhost) {
-                // Delegar al backend de forma segura para no exponer el token del productor y registrar la compra
-                response = await fetch('/api/payments/payphone/confirm', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        id: parseInt(id, 10),
-                        clientTxId: clientTxId,
-                        producerId: state.producerId,
-                        items: state.items,
-                        buyerName: state.buyerName,
-                        buyerEmail: state.buyerEmail,
-                        buyerPhone: state.buyerPhone,
-                        buyerDni: state.buyerDni,
-                        buyerCity: state.buyerCity,
-                        buyerCountry: state.buyerCountry,
-                        discountPercent: state.discountPercent || 0,
-                        couponCode: state.couponCode || '',
-                        acceptedTerms: state.acceptedTerms || true,
-                        acceptanceTimestamp: state.acceptanceTimestamp || new Date().toISOString()
-                    })
-                });
-                result = await response.json();
-            } else {
-                // Fallback: Confirmación clásica directa en el cliente (Producción estática / Vercel)
-                response = await fetch('https://pay.payphonetodoesposible.com/api/button/V2/Confirm', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'bearer ' + state.producerToken
-                    },
-                    body: JSON.stringify({
-                        id: parseInt(id, 10),
-                        clientTxId: clientTxId
-                    })
-                });
-                result = await response.json();
-            }
-            
-            console.log('PayPhone Confirmation response:', result);
-            
-            if (response.ok && (isLocalhost || result.transactionStatus === 'Approved' || result.statusCode === 3 || result.status === 'Approved')) {
-                // Payment is approved! Save transaction records and deliver licenses
-                window.storeProducerUid = state.producerId;
-                
-                let redirectPaymentId = null;
-                
-                if (isLocalhost) {
-                    // El backend ya registró en Firestore y localmente. Usamos clientTxId de referencia
-                    redirectPaymentId = clientTxId;
-                } else {
-                    const colRef = collection(db, "payments");
-                    for (const item of state.items) {
-                        const orderData = {
-                            type: 'beat_purchase',
-                            producerId: state.producerId,
-                            beatId: item.beatId,
-                            beatName: item.beatName,
-                            licenseType: item.licenseType,
-                            price: item.price,
-                            buyerName: state.buyerName,
-                            buyerEmail: state.buyerEmail,
-                            buyerPhone: state.buyerPhone,
-                            buyerDni: state.buyerDni,
-                            buyerCity: state.buyerCity,
-                            buyerCountry: state.buyerCountry,
-                            youtubeWhitelist: state.youtubeWhitelist || '',
-                            method: 'payphone',
-                            reference: clientTxId,
-                            receiptUrl: '',
-                            status: 'approved',
-                            discountPercent: state.discountPercent || 0,
-                            couponCode: state.couponCode || '',
-                            originalPrice: item.price,
-                            finalPrice: item.price * (1 - ((state.discountPercent || 0) / 100)),
-                            timestamp: new Date().toISOString(),
-                            acceptedTerms: state.acceptedTerms || true,
-                            acceptanceTimestamp: state.acceptanceTimestamp || new Date().toISOString()
-                        };
-                        
-                        const docRef = await addDoc(colRef, orderData);
-                        if (!redirectPaymentId) {
-                            redirectPaymentId = docRef.id;
-                        }
-                        await autoDeliverBeatSale(docRef.id, orderData);
-                    }
-                }
-                
-                // Si es un upgrade, ejecutar la actualización de licencia
-                if (window.checkoutUpgradeOriginalId) {
-                    try {
-                        const originalPaymentId = window.checkoutUpgradeOriginalId;
-                        const originalDocRef = doc(db, "payments", originalPaymentId);
-                        await updateDoc(originalDocRef, {
-                            licenseType: 'premium_plus',
-                            upgradePaymentId: redirectPaymentId || 'payphone-upgrade',
-                            upgradeTimestamp: new Date().toISOString()
-                        });
-                        const origSnap = await getDoc(originalDocRef);
-                        if (origSnap.exists()) {
-                            await autoDeliverBeatSale(originalPaymentId, origSnap.data());
-                        }
-                        redirectPaymentId = originalPaymentId;
-                        window.checkoutUpgradeOriginalId = null;
-                    } catch (ue) { console.error("Error actualizando upgrade en PayPhone:", ue); }
-                }
-                
+            if (response.ok && result.status === 'success' && Array.isArray(result.deliveries) && result.deliveries.length > 0) {
+                window.storeProducerUid = result.buyerData?.producerId || window.storeProducerUid;
+                await preparePaidLicenseDeliveries(result.deliveries, result.buyerData || {});
+                const firstDelivery = result.deliveries[0];
                 // Clear state
                 localStorage.removeItem(pendingKey);
+                currentPayphoneAttempt = null;
                 clearPurchasedItems();
                 
                 overlay.innerHTML = `
                     <div style="font-size: 60px; color: #4ade80; text-align: center; margin-bottom: 10px;">✓</div>
                     <div style="font-size: 20px; font-weight: 700; color: #4ade80; text-align: center; margin-bottom: 8px;">¡Pago aprobado con éxito!</div>
-                    <div style="font-size: 14px; color: #cdd; text-align: center; max-width: 320px; line-height: 1.4; margin-bottom: 20px; padding: 0 20px;">Tus archivos y contratos de licencia han sido enviados automáticamente a tu correo electrónico.</div>
-                    <button onclick="window.closePayphoneOverlay(); if ('${redirectPaymentId}') window.showAppView('download', { paymentId: '${redirectPaymentId}' });" style="padding: 12px 28px; background: #00ccff; border: none; border-radius: 8px; color: #000; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 204, 255, 0.3);">Descargar Archivos</button>
+                    <div style="font-size: 14px; color: #cdd; text-align: center; max-width: 320px; line-height: 1.4; margin-bottom: 20px; padding: 0 20px;">Tu pago, contrato y entrega segura están listos.</div>
+                    <button type="button" id="btn-payphone-open-download" style="padding: 12px 28px; background: #00ccff; border: none; border-radius: 8px; color: #000; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 204, 255, 0.3);">Descargar Archivos</button>
                 `;
+                document.getElementById('btn-payphone-open-download')?.addEventListener('click', () => {
+                    window.closePayphoneOverlay();
+                    window.showAppView?.('download', {
+                        paymentId: firstDelivery.paymentId,
+                        downloadToken: firstDelivery.downloadToken || ''
+                    });
+                });
             } else {
-                throw new Error(result.message || 'La transacción no fue aprobada');
+                throw new Error(result.error || result.message || 'La transacción no fue aprobada');
             }
         } catch (err) {
             console.error('Error confirming PayPhone transaction:', err);
@@ -3056,7 +3685,7 @@ export async function checkPayphoneRedirectResult() {
                 <div style="font-size: 60px; color: #ef4444; text-align: center; margin-bottom: 10px;">✗</div>
                 <div style="font-size: 18px; font-weight: 700; color: #ef4444; text-align: center; margin-bottom: 8px;">Error en la verificación</div>
                 <div style="font-size: 13px; color: #8a91a6; text-align: center; max-width: 280px; line-height: 1.4; margin-bottom: 20px; padding: 0 20px;">${err.message || 'No se pudo verificar el pago con PayPhone. Si el dinero fue debitado, contacta al productor.'}</div>
-                <button onclick="window.closePayphoneOverlay()" style="padding: 12px 28px; background: #3f4454; border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer; font-size: 14px;">Regresar a la tienda</button>
+                <button type="button" onclick="window.closePayphoneOverlay()" style="padding: 12px 28px; background: #3f4454; border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer; font-size: 14px;">Regresar a la tienda</button>
             `;
         }
     }
@@ -3075,7 +3704,7 @@ window.checkPayphoneRedirectResult = checkPayphoneRedirectResult;
 window.closePayphoneOverlay = closePayphoneOverlay;
 
 export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
-    console.log("📥 Cargando portal de descargas para el pago:", paymentId);
+    checkoutDebug("📥 Cargando portal de descargas para el pago:", paymentId);
     
     // Elementos de la interfaz
     const bannerPending = document.getElementById('buyer-download-pending-banner');
@@ -3118,16 +3747,23 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
         }
         
         const data = await response.json();
-        console.log("Datos de la orden cargados con éxito:", data);
+        checkoutDebug("Datos de la orden cargados con éxito:", data);
 
         const payment = data.payment;
+        const contractReference = resolveLicenseReference(payment);
         const beat = data.beat;
         const producer = data.producer;
         const signedLinks = data.signedLinks;
+        const deliveryToken = data.deliveryToken || '';
+        const priorLicenseUpgrade = data.priorLicenseUpgrade || { eligible: false, options: [] };
+        const paymentIsApproved = ['approved', 'completed'].includes(String(payment.status || '').toLowerCase());
 
         // 1. Mostrar/ocultar banner de pago pendiente
         if (payment.status === 'pending') {
             bannerPending.style.display = 'block';
+        } else if (!paymentIsApproved) {
+            bannerPending.style.display = 'block';
+            bannerPending.textContent = `Este pedido se encuentra en estado ${payment.status || 'no disponible'}.`;
         } else {
             bannerPending.style.display = 'none';
         }
@@ -3154,7 +3790,9 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
         }
         beatNameEl.textContent = beat.name;
         
-        const priceFormatted = parseFloat(payment.finalPrice !== undefined ? payment.finalPrice : payment.price).toFixed(2);
+        const priceFormatted = parseFloat(payment.totalLicensePaid !== undefined
+            ? payment.totalLicensePaid
+            : (payment.finalPrice !== undefined ? payment.finalPrice : payment.price)).toFixed(2);
         const licenseLabels = {
             basic: 'Licencia Básica',
             premium: 'Licencia Premium',
@@ -3174,7 +3812,7 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
         const btnLicense = document.createElement('button');
         btnLicense.className = 'w-full bg-white/5 border border-white/10 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-2';
         btnLicense.innerHTML = '<i data-lucide="file-text" class="w-4 h-4"></i> Descargar licencia';
-        if (payment.status === 'pending') {
+        if (!paymentIsApproved) {
             btnLicense.disabled = true;
             btnLicense.style.opacity = '0.5';
             btnLicense.style.cursor = 'not-allowed';
@@ -3184,29 +3822,74 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
                 btnLicense.disabled = true;
                 btnLicense.innerHTML = '<i data-lucide="loader" class="animate-spin w-4 h-4"></i> Generando PDF...';
                 if (window.safeCreateIcons) window.safeCreateIcons();
+                let element;
                 
                 try {
+                    if (!deliveryToken) {
+                        throw new Error('El enlace de entrega ya no es válido. Abre de nuevo el correo de compra.');
+                    }
                     // Cargar librería html2pdf.js si es necesario
                     if (typeof html2pdf === 'undefined') {
                         await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
                     }
+
+                    // El portal de descargas puede abrirse directamente sin
+                    // haber pasado por el Studio. Cargar el compilador de
+                    // contratos bajo demanda antes de generar la licencia.
+                    if (typeof window.compileContractData !== 'function') {
+                        await import('./editor.js');
+                    }
+                    if (typeof window.compileContractData !== 'function') {
+                        throw new Error('No se cargó el generador de contratos.');
+                    }
                     
-                    // Compilar el contrato
-                    const compiled = window.compileContractData(payment, producer, 'licencia_uso', window.currentLang || 'es');
-                    const element = document.getElementById('buyer-rendered-contract-content');
+                    if (!isValidLicenseReference(contractReference)) {
+                        throw new Error('Esta compra no tiene un código de referencia válido. La licencia no puede considerarse oficial; contacta al productor.');
+                    }
+
+                    // Compilar el contrato con la misma referencia que valida
+                    // el servidor antes de aceptar su almacenamiento.
+                    const officialPayment = { ...payment, reference: contractReference, contractReference };
+                    const compiled = window.compileContractData(officialPayment, producer, 'licencia_uso', window.currentLang || 'es');
+                    element = document.getElementById('buyer-rendered-contract-content');
+                    if (!element) {
+                        throw new Error('No se encontró el área de generación del contrato.');
+                    }
                     element.innerHTML = compiled.html;
                     element.classList.add('printing-pdf');
 
                     const opt = {
                         margin:       [15, 20, 15, 20],
-                        filename:     `Licencia_${payment.licenseType.toUpperCase()}_${payment.reference}.pdf`,
+                        filename:     `Licencia_${payment.licenseType.toUpperCase()}_${contractReference}.pdf`,
                         image:        { type: 'jpeg', quality: 0.98 },
                         html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
                         jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-                        pagebreak:    { mode: ['css', 'legacy'] }
+                        pagebreak:    { mode: ['css', 'legacy'], avoid: ['.contract-closure', '.non-exclusive-acceptance-wrapper', '.contract-signatures-wrapper', '.digital-seal-container', '.contract-heading-group'] }
                     };
 
-                    await html2pdf().from(element).set(opt).save();
+                    const pdfBase64 = await html2pdf().from(element).set(opt).outputPdf('datauristring');
+
+                    // El mismo PDF que descarga el comprador queda guardado
+                    // en el pedido. Así una vuelta posterior al portal no
+                    // depende de que el navegador que regresó de Stripe siga
+                    // abierto.
+                    const uploadResponse = await fetch('/api/confirm-purchase?action=upload-license-pdf', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ paymentId, deliveryToken, contractReference, pdfBase64 })
+                    });
+                    const uploadResult = await uploadResponse.json().catch(() => ({}));
+                    if (!uploadResponse.ok || !uploadResult.success) {
+                        throw new Error(uploadResult.error || 'No se pudo guardar la licencia oficial.');
+                    }
+
+                    const pdfBlob = await fetch(pdfBase64).then(response => response.blob());
+                    const pdfUrl = URL.createObjectURL(pdfBlob);
+                    const anchor = document.createElement('a');
+                    anchor.href = pdfUrl;
+                    anchor.download = opt.filename;
+                    anchor.click();
+                    setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
 
                     // Registrar descarga en Firestore a través del endpoint
                     const logHeaders = { 'Content-Type': 'application/json' };
@@ -3233,6 +3916,7 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
                         window.showToast("Error al descargar la licencia.", true);
                     }
                 } finally {
+                    element?.classList.remove('printing-pdf');
                     btnLicense.innerHTML = originalHtml;
                     btnLicense.disabled = false;
                     if (window.safeCreateIcons) window.safeCreateIcons();
@@ -3255,7 +3939,7 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
             const btnMp3 = document.createElement('button');
             btnMp3.className = 'w-full bg-white/5 border border-white/10 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-2';
             btnMp3.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i> Descargar archivo MP3';
-            if (payment.status === 'pending') {
+            if (!paymentIsApproved) {
                 btnMp3.disabled = true;
                 btnMp3.style.opacity = '0.5';
                 btnMp3.style.cursor = 'not-allowed';
@@ -3270,7 +3954,7 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
             const btnWav = document.createElement('button');
             btnWav.className = 'w-full bg-white/5 border border-white/10 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-2';
             btnWav.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i> Descargar archivo WAV';
-            if (payment.status === 'pending') {
+            if (!paymentIsApproved) {
                 btnWav.disabled = true;
                 btnWav.style.opacity = '0.5';
                 btnWav.style.cursor = 'not-allowed';
@@ -3285,7 +3969,7 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
             const btnStems = document.createElement('button');
             btnStems.className = 'w-full bg-white/5 border border-white/10 text-white py-2 px-4 rounded-lg text-sm font-semibold hover:bg-white/10 transition-all flex items-center justify-center gap-2';
             btnStems.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i> Descargar archivo Stems';
-            if (payment.status === 'pending') {
+            if (!paymentIsApproved) {
                 btnStems.disabled = true;
                 btnStems.style.opacity = '0.5';
                 btnStems.style.cursor = 'not-allowed';
@@ -3295,32 +3979,52 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
             buttonsContainer.appendChild(btnStems);
         }
 
+        // Una exclusiva posterior no borra los derechos ya vendidos. Cuando
+        // este enlace pertenece a una licencia anterior elegible, el titular
+        // puede ampliar solamente su misma obra, hasta Ilimitada. El precio y
+        // todos los requisitos se recalculan de nuevo en el servidor.
+        if (paymentIsApproved && priorLicenseUpgrade.eligible && priorLicenseUpgrade.accessToken) {
+            const tierLabels = {
+                premium: 'Premium',
+                premium_plus: 'Premium Plus',
+                unlimited_flp: 'Ilimitada'
+            };
+            for (const option of priorLicenseUpgrade.options || []) {
+                const btnUpgrade = document.createElement('button');
+                btnUpgrade.type = 'button';
+                btnUpgrade.className = 'w-full bg-violet-500/15 border border-violet-300/30 text-violet-100 py-2 px-4 rounded-lg text-sm font-semibold hover:bg-violet-500/25 transition-all flex items-center justify-center gap-2';
+                btnUpgrade.innerHTML = `<i data-lucide="arrow-up-circle" class="w-4 h-4"></i> Ampliar a ${tierLabels[option.targetLicenseType] || option.targetLicenseType} por $${Number(option.amountDue).toFixed(2)}`;
+                btnUpgrade.title = `Precio de licencia: $${Number(option.targetLicensePrice).toFixed(2)}. Se descuenta $${Number(option.creditApplied).toFixed(2)} ya pagados.`;
+                btnUpgrade.onclick = () => window.openPriorLicenseUpgradeCheckout({
+                    payment,
+                    beat,
+                    producer,
+                    option,
+                    accessToken: priorLicenseUpgrade.accessToken,
+                    paymentCapabilities: data.paymentCapabilities || {}
+                });
+                buttonsContainer.appendChild(btnUpgrade);
+            }
+        }
+
         // 5. Historial de descargas
         renderDownloadLogs(data.downloads, historyList);
 
-        // 6. Iniciar escuchador en tiempo real si el pago está pendiente
+        // 6. Consultar únicamente el estado público mínimo. El documento
+        // completo de Firestore contiene PII y nunca debe exponerse al invitado.
         if (payment.status === 'pending') {
-            const docRef = doc(db, "payments", paymentId);
-            const unsubscribe = onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    const latestData = docSnap.data();
-                    if (latestData.status === 'approved' || latestData.status === 'completed') {
-                        unsubscribe();
-                        console.log("⚡ El pago ha sido aprobado! Actualizando portal...");
-                        // Actualizar el banner para informarle al usuario
-                        bannerPending.innerHTML = `
-                            <div class="flex items-center gap-2 font-bold mb-1 text-green-400">
-                                <i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i>
-                                <span>¡Pago Aprobado!</span>
-                            </div>
-                            Tu pago ha sido aprobado. Hemos enviado tus enlaces de descarga y licencia por correo electrónico a <strong>${payment.buyerEmail}</strong>. Por favor, revisa tu bandeja de entrada o spam.
-                        `;
-                        bannerPending.className = "mb-6 p-4 rounded-xl border border-dashed border-green-500/20 bg-green-500/5 text-green-400 text-sm";
-                        if (window.safeCreateIcons) window.safeCreateIcons();
-                    }
+            const unsubscribe = startPaymentStatusPolling({
+                paymentId,
+                statusToken: downloadToken,
+                onApproved: async () => {
+                    checkoutDebug("⚡ El pago fue aprobado. Actualizando portal de entrega...");
+                    await loadBuyerDownloadPage(paymentId, downloadToken);
+                },
+                onTerminal: (result) => {
+                    bannerPending.textContent = `El pedido cambió a estado ${result.status}. Contacta al productor si necesitas ayuda.`;
+                    bannerPending.className = "mb-6 p-4 rounded-xl border border-dashed border-red-500/20 bg-red-500/5 text-red-700 text-sm";
                 }
             });
-            // Opcional: guardar la referencia a la desuscripción para evitar múltiples listeners
             if (window._buyerDownloadUnsubscribe) {
                 window._buyerDownloadUnsubscribe();
             }
@@ -3334,13 +4038,80 @@ export async function loadBuyerDownloadPage(paymentId, downloadToken = '') {
     } catch (error) {
         console.error("Fallo al cargar la página de descargas:", error);
         if (typeof window.showToast === 'function') {
-            window.showToast("Error al cargar la orden de compra.", true);
+            window.showToast("No pudimos validar este enlace de descarga.", true);
         }
-        beatNameEl.textContent = "Error";
-        beatMetaEl.textContent = "No pudimos validar tu enlace de descarga.";
-        buttonsContainer.innerHTML = '';
+        if (bannerPending) bannerPending.style.display = 'none';
+        if (producerNameEl) producerNameEl.textContent = 'BEATSS';
+        if (beatNameEl) beatNameEl.textContent = 'No encontramos esta entrega';
+        if (beatMetaEl) {
+            beatMetaEl.textContent = 'El enlace puede estar incompleto, vencido o no tener acceso a este pedido.';
+        }
+        if (orderRefEl) orderRefEl.textContent = '';
+        if (buttonsContainer) {
+            buttonsContainer.innerHTML = `
+                <button type="button" class="btn-primary buyer-download-recovery" onclick="window.location.assign('/tienda/sossa')">
+                    Ver tienda de Sossa
+                </button>
+            `;
+        }
+        if (historyList) {
+            historyList.innerHTML = '<div class="buyer-download-error" role="status">Si compraste este beat, abre el enlace original recibido por correo o solicita ayuda al productor.</div>';
+        }
+        if (window.safeCreateIcons) window.safeCreateIcons();
     }
 }
+
+export function openPriorLicenseUpgradeCheckout({ payment, beat, producer, option, accessToken, paymentCapabilities = {} }) {
+    if (!payment?.id || !beat?.id || !option?.targetLicenseType || !accessToken) {
+        window.showToast?.('No se pudo validar la ampliación de esta licencia.', true);
+        return;
+    }
+
+    checkoutSelectedBeatId = null;
+    checkoutSelectedLicense = option.targetLicenseType;
+    checkoutCurrentStep = 1;
+    resetCheckoutTermsAcceptance();
+    window.checkoutUpgradeContext = {
+        sourcePaymentId: payment.id,
+        accessToken,
+        targetLicenseType: option.targetLicenseType
+    };
+    window.storeProducerUid = payment.producerId;
+    window.storeProducerConfig = { ...(window.storeProducerConfig || {}), ...producer };
+    window.storePaymentCapabilities = { ...(window.storePaymentCapabilities || {}), ...paymentCapabilities };
+    window.cart = [{
+        beatId: beat.id,
+        licenseType: option.targetLicenseType,
+        price: Number(option.amountDue),
+        beatName: beat.name,
+        producerId: payment.producerId,
+        producerName: producer.aka || producer.name || 'Productor',
+        artwork: beat.artwork || '',
+        isPriorLicenseUpgrade: true
+    }];
+
+    const fill = (id, value) => {
+        const field = document.getElementById(id);
+        if (field && !field.value) field.value = String(value || '');
+    };
+    fill('store-buyer-name', payment.buyerName);
+    fill('store-buyer-email', payment.buyerEmail);
+    fill('store-buyer-phone', payment.buyerPhone);
+    fill('store-buyer-dni', payment.buyerDni);
+    fill('store-buyer-city', payment.buyerCity);
+    fill('store-buyer-country', payment.buyerCountry);
+
+    saveCartToStorage();
+    window.updateCartUI();
+    const modal = document.getElementById('beat-checkout-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        window.renderCartItems();
+        updateCheckoutStepView(1);
+    }
+}
+
+window.openPriorLicenseUpgradeCheckout = openPriorLicenseUpgradeCheckout;
 
 async function refreshDownloadHistory(paymentId, downloadToken = '') {
     try {
@@ -3514,10 +4285,10 @@ export function showUpsellModal(beatName, currentLicense, paymentId, producerId)
             </div>
             
             <div style="display:flex; flex-direction:column; gap:10px;">
-                <button id="upsell-accept-btn" style="width:100%; height:48px; background:linear-gradient(135deg, #a855f7 0%, #ec4899 100%); border:none; border-radius:12px; color:#fff; font-weight:800; font-size:14px; cursor:pointer; box-shadow:0 8px 24px rgba(168,85,247,0.3); transition:all 0.2s;">
+                <button type="button" id="upsell-accept-btn" style="width:100%; height:48px; background:linear-gradient(135deg, #a855f7 0%, #ec4899 100%); border:none; border-radius:12px; color:#fff; font-weight:800; font-size:14px; cursor:pointer; box-shadow:0 8px 24px rgba(168,85,247,0.3); transition:all 0.2s;">
                     ACEPTAR UPGRADE AHORA
                 </button>
-                <button id="upsell-decline-btn" style="width:100%; height:44px; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#8a91a6; font-weight:600; font-size:13px; cursor:pointer; transition:all 0.2s;">
+                <button type="button" id="upsell-decline-btn" style="width:100%; height:44px; background:none; border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:#8a91a6; font-weight:600; font-size:13px; cursor:pointer; transition:all 0.2s;">
                     No gracias, descargar mi archivo actual
                 </button>
             </div>
@@ -3557,75 +4328,22 @@ export function showUpsellModal(beatName, currentLicense, paymentId, producerId)
     };
 }
 
-window.openUpgradeCheckout = function(beatName, targetLicense, price, originalPaymentId, producerId) {
-    window.checkoutSelectedBeatId = null;
-    window.checkoutSelectedLicense = targetLicense;
-    
-    window.cart = [{
-        beatId: 'UPGRADE-' + originalPaymentId,
-        licenseType: targetLicense,
-        price: price,
-        beatName: `Actualización: ${beatName} (a Premium Plus)`,
-        producerId: producerId,
-        producerName: window.storeProducerConfig.aka || 'Productor',
-        artwork: ''
-    }];
-    
-    window.checkoutUpgradeOriginalId = originalPaymentId;
-    
-    saveCartToStorage();
-    window.updateCartUI();
-    
-    const modal = document.getElementById('beat-checkout-modal');
-    if (modal) {
-        modal.style.display = 'flex';
-        window.renderCartItems();
-    }
+window.openUpgradeCheckout = function() {
+    // Se conserva el nombre para compatibilidad con enlaces antiguos, pero ya
+    // no se permite fabricar una actualización desde el navegador. La única
+    // ruta válida es el portal de la licencia original, que aporta el enlace
+    // firmado y deja que el servidor compruebe la fecha de la exclusiva.
+    window.showToast?.('Las ampliaciones se habilitan desde el enlace original de la licencia cuando el beat tenga una exclusiva posterior.', true);
 };
 
 export function handleCheckoutCompletion(paymentId, items) {
-    if (!items || items.length === 0) {
-        window.showAppView('download', { paymentId });
-        return;
-    }
-    
-    const eligibleItem = items.find(item => item.licenseType === 'basic' || item.licenseType === 'premium');
-    
-    if (eligibleItem && !window.checkoutUpgradeOriginalId) {
-        window.showUpsellModal(eligibleItem.beatName, eligibleItem.licenseType, paymentId, window.storeProducerUid);
-    } else {
-        window.showAppView('download', { paymentId });
-    }
+    // Una ampliación no puede cambiar el pago original en el cliente. Toda
+    // compra, incluso la de upgrade, llega al portal desde su propia entrega.
+    window.showAppView('download', { paymentId });
 }
 
 export async function finalizePaymentSuccess(redirectPaymentId, itemsToProcess) {
     logCheckoutStep('payment_completed', { paymentId: redirectPaymentId, itemsCount: (itemsToProcess || []).length });
-    if (window.checkoutUpgradeOriginalId) {
-        try {
-            const originalPaymentId = window.checkoutUpgradeOriginalId;
-            const originalDocRef = doc(db, "payments", originalPaymentId);
-            
-            await updateDoc(originalDocRef, {
-                licenseType: 'premium_plus',
-                upgradePaymentId: redirectPaymentId || 'paypal-upgrade',
-                upgradeTimestamp: new Date().toISOString()
-            });
-            
-            const origSnap = await getDoc(originalDocRef);
-            if (origSnap.exists()) {
-                await autoDeliverBeatSale(originalPaymentId, origSnap.data());
-            }
-            
-            window.checkoutUpgradeOriginalId = null;
-            if (typeof window.showToast === 'function') window.showToast('⚡ ¡Actualización Premium Plus activada con éxito!');
-            
-            handleCheckoutCompletion(originalPaymentId, []);
-            return;
-        } catch (e) {
-            console.error("Error al procesar actualización de licencia:", e);
-        }
-    }
-    
     handleCheckoutCompletion(redirectPaymentId, itemsToProcess);
 }
 
@@ -3712,182 +4430,226 @@ export function updateStoreCheckoutSummary() {
 
 window.updateStoreCheckoutSummary = updateStoreCheckoutSummary;
 
-export async function initiateDeunaDynamicPayment() {
-    // 1. Validar datos del comprador en el formulario
-    const buyerName = sanitizeInput(document.getElementById('store-buyer-name').value);
-    const buyerEmail = sanitizeInput(document.getElementById('store-buyer-email').value);
-    const buyerPhone = sanitizeInput(document.getElementById('store-buyer-phone').value);
-    const buyerDni = sanitizeInput(document.getElementById('store-buyer-dni').value);
-    const buyerCity = sanitizeInput(document.getElementById('store-buyer-city').value);
-    const buyerCountry = sanitizeInput(document.getElementById('store-buyer-country').value);
-    const youtubeWhitelist = sanitizeInput(document.getElementById('store-txt-youtube-whitelist').value);
-    const needInvoice = document.getElementById('store-chk-need-invoice')?.checked;
-    
-    let finalBuyerName = buyerName;
-    let finalBuyerEmail = buyerEmail;
-    let finalBuyerDni = buyerDni;
-    let finalBuyerCity = buyerCity;
-    
-    if (needInvoice) {
-        const rucVal = sanitizeInput(document.getElementById('store-invoice-ruc').value);
-        const companyVal = sanitizeInput(document.getElementById('store-invoice-company').value);
-        const addressVal = sanitizeInput(document.getElementById('store-invoice-address').value);
-        const emailVal = sanitizeInput(document.getElementById('store-invoice-email').value);
-        
-        if (!rucVal || !companyVal || !addressVal || !emailVal) {
-            if (typeof window.showToast === 'function') window.showToast('Completa los datos de facturación en el paso anterior.', true);
-            window.updateCheckoutStepView(2);
-            return;
-        }
-        finalBuyerDni = rucVal;
-        finalBuyerName = companyVal;
-        finalBuyerEmail = emailVal;
-        finalBuyerCity = addressVal;
-    }
-    
-    if (!finalBuyerName || !finalBuyerEmail) {
-        if (typeof window.showToast === 'function') window.showToast('Por favor completa tus datos en el paso anterior.', true);
-        window.updateCheckoutStepView(2);
-        return;
-    }
-    
-    // Si ya hay un listener activo de una sesión previa, desuscribirse
-    if (deunaListenerUnsubscribe) {
-        deunaListenerUnsubscribe();
-        deunaListenerUnsubscribe = null;
-    }
-    
-    // Obtener item y precio final
-    let itemsToProcess = [];
-    if (checkoutSelectedBeatId) {
-        const beat = findBeatById(checkoutSelectedBeatId);
-        if (beat) {
-            itemsToProcess.push({
-                beatId: checkoutSelectedBeatId,
-                beatName: beat.name,
-                licenseType: checkoutSelectedLicense,
-                price: window.getCheckoutPrice()
-            });
-        }
-    } else {
-        itemsToProcess = window.cart.map(item => ({
-            beatId: item.beatId,
-            beatName: item.beatName,
-            licenseType: item.licenseType,
-            price: item.price
-        }));
-    }
-    
-    if (itemsToProcess.length === 0) return;
-    const item = itemsToProcess[0];
-    const discountPercent = window.checkoutDiscountPercent || 0;
-    const finalPrice = item.price * (1 - (discountPercent / 100));
-    
-    // Asegurar que la imagen del QR muestra el código estático oficial del productor (que sí es escaneable)
+function activateDeunaOrder(result) {
     const qrImage = document.getElementById('deuna-qr-image');
-    if (qrImage) {
-        const deunaPhone = window.storeProducerConfig.deunaPhone || "";
-        const cleanPhone = deunaPhone.replace(/\D/g, '');
-        if (window.storeProducerConfig.deunaQrBase64) {
-            qrImage.src = window.storeProducerConfig.deunaQrBase64;
-        } else {
-            qrImage.src = '/deuna-qr.jpg';
-        }
+    if (qrImage) qrImage.src = window.storeProducerConfig.deunaQrBase64 || '/deuna-qr.jpg';
+    const deunaPanel = document.getElementById('store-pay-deuna');
+    let mobilePayBtn = document.getElementById('deuna-mobile-pay-btn');
+    if (!mobilePayBtn && deunaPanel) {
+        mobilePayBtn = document.createElement('a');
+        mobilePayBtn.id = 'deuna-mobile-pay-btn';
+        mobilePayBtn.className = 'mt-3 block text-center bg-[#0001ac] hover:bg-[#00018a] text-white py-3 rounded-xl font-bold text-sm transition-all shadow-md';
+        mobilePayBtn.target = '_blank';
+        mobilePayBtn.rel = 'noopener noreferrer';
+        deunaPanel.appendChild(mobilePayBtn);
     }
-    
-    // Crear el documento de pago en Firestore con estado 'pending'
-    const colRef = collection(db, "payments");
-    const orderData = {
-        type: 'beat_purchase',
-        producerId: window.storeProducerUid,
-        beatId: item.beatId,
-        beatName: item.beatName,
-        licenseType: item.licenseType,
-        price: item.price,
-        buyerName: finalBuyerName,
-        buyerEmail: finalBuyerEmail,
-        buyerPhone: buyerPhone,
-        buyerDni: finalBuyerDni,
-        buyerCity: finalBuyerCity,
-        buyerCountry: buyerCountry,
-        youtubeWhitelist: youtubeWhitelist,
-        method: 'deuna',
-        reference: 'DEUNA-' + Date.now(),
-        receiptUrl: '',
-        status: 'pending',
-        discountPercent: discountPercent,
-        couponCode: window.checkoutAppliedCoupon || '',
-        originalPrice: item.price,
-        finalPrice: finalPrice,
-        timestamp: new Date().toISOString(),
-        acceptedTerms: true,
-        acceptanceTimestamp: new Date().toISOString()
-    };
-    
-    try {
-        const docRef = await addDoc(colRef, orderData);
-        currentDeunaPaymentId = docRef.id;
-        
-        const deunaPhone = window.storeProducerConfig.deunaPhone || "";
-        const cleanPhone = deunaPhone.replace(/\D/g, '');
-        const deeplink = `deuna://payment?phone=${cleanPhone}&amount=${finalPrice.toFixed(2)}&description=BEATSS-${docRef.id}`;
-        
-        // Añadir/Actualizar botón de pago móvil en el panel
-        let deunaPanel = document.getElementById('store-pay-deuna');
-        let mobilePayBtn = document.getElementById('deuna-mobile-pay-btn');
-        if (!mobilePayBtn && deunaPanel) {
-            mobilePayBtn = document.createElement('a');
-            mobilePayBtn.id = 'deuna-mobile-pay-btn';
-            mobilePayBtn.className = 'mt-3 block text-center bg-[#0001ac] hover:bg-[#00018a] text-white py-3 rounded-xl font-bold text-sm transition-all shadow-md';
-            mobilePayBtn.target = '_blank';
-            deunaPanel.appendChild(mobilePayBtn);
-        }
-        if (mobilePayBtn) {
-            mobilePayBtn.href = deeplink;
-            mobilePayBtn.innerHTML = '📲 Pagar desde la App Deuna!';
-            mobilePayBtn.style.display = 'block';
-        }
-        
-        // Agregar texto de estado "Esperando pago..."
-        let deunaStatusMsg = document.getElementById('deuna-status-message');
-        if (!deunaStatusMsg && deunaPanel) {
-            deunaStatusMsg = document.createElement('div');
-            deunaStatusMsg.id = 'deuna-status-message';
-            deunaStatusMsg.className = 'mt-2 text-xs font-mono text-center text-yellow-500 animate-pulse';
-            deunaPanel.appendChild(deunaStatusMsg);
-        }
-        if (deunaStatusMsg) {
-            deunaStatusMsg.innerHTML = '⏳ Esperando confirmación de pago en tiempo real...';
-        }
-        
-        // Iniciar escucha del documento en tiempo real
-        const docRefToListen = doc(db, "payments", docRef.id);
-        deunaListenerUnsubscribe = onSnapshot(docRefToListen, async (docSnap) => {
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.status === 'completed' || data.status === 'approved') {
-                    if (deunaListenerUnsubscribe) {
-                        deunaListenerUnsubscribe();
-                        deunaListenerUnsubscribe = null;
-                    }
-                    if (typeof window.showToast === 'function') window.showToast('¡Pago confirmado! Preparando tus archivos...');
-                    if (deunaStatusMsg) {
-                        deunaStatusMsg.innerHTML = '✅ ¡Pago Recibido! Enviando correo...';
-                        deunaStatusMsg.className = 'mt-2 text-xs font-mono text-center text-green-500 font-bold';
-                    }
-                    
-                    // Ejecutar entrega automática y limpiar carrito
-                    await autoDeliverBeatSale(docRef.id, data);
-                    clearPurchasedItems();
-                    document.getElementById('beat-checkout-modal').style.display = 'none';
-                    await finalizePaymentSuccess(docRef.id, itemsToProcess);
-                }
+    if (mobilePayBtn) {
+        mobilePayBtn.href = result.deeplink || '#';
+        mobilePayBtn.innerHTML = '📲 Pagar desde la App Deuna!';
+        mobilePayBtn.style.display = result.deeplink ? 'block' : 'none';
+    }
+    let deunaStatusMsg = document.getElementById('deuna-status-message');
+    if (!deunaStatusMsg && deunaPanel) {
+        deunaStatusMsg = document.createElement('div');
+        deunaStatusMsg.id = 'deuna-status-message';
+        deunaPanel.appendChild(deunaStatusMsg);
+    }
+    if (deunaStatusMsg) {
+        deunaStatusMsg.textContent = '⏳ Referencia protegida. Esperando confirmación de Deuna...';
+        deunaStatusMsg.className = 'mt-2 text-xs font-mono text-center text-yellow-500 animate-pulse';
+    }
+    if (deunaListenerUnsubscribe) deunaListenerUnsubscribe();
+    deunaListenerUnsubscribe = startPaymentStatusPolling({
+        paymentId: currentDeunaPaymentId,
+        statusToken: currentDeunaStatusToken,
+        onApproved: async (statusResult) => {
+            deunaListenerUnsubscribe = null;
+            if (typeof window.showToast === 'function') window.showToast('¡Pago confirmado! Preparando tus archivos...');
+            if (deunaStatusMsg) {
+                deunaStatusMsg.textContent = '✅ ¡Pago recibido! Preparando entrega...';
+                deunaStatusMsg.className = 'mt-2 text-xs font-mono text-center text-green-500 font-bold';
             }
+            const paymentId = currentDeunaPaymentId;
+            const orderData = currentDeunaOrderData;
+            const items = currentDeunaItems;
+            if (paymentId && orderData) await autoDeliverBeatSale(paymentId, {
+                ...orderData,
+                status: statusResult.status,
+                statusToken: currentDeunaStatusToken
+            });
+            clearPurchasedItems();
+            document.getElementById('beat-checkout-modal').style.display = 'none';
+            if (paymentId) await finalizePaymentSuccess(paymentId, items);
+            currentDeunaPaymentId = null;
+            currentDeunaStatusToken = '';
+            currentDeunaOrderData = null;
+            currentDeunaItems = [];
+            currentDeunaAttempt = null;
+        },
+        onTerminal: (statusResult) => {
+            deunaListenerUnsubscribe = null;
+            if (deunaStatusMsg) {
+                deunaStatusMsg.textContent = `El pago terminó con estado ${statusResult.status}.`;
+                deunaStatusMsg.className = 'mt-2 text-xs font-mono text-center text-red-600 font-bold';
+            }
+            currentDeunaPaymentId = null;
+            currentDeunaStatusToken = '';
+            currentDeunaOrderData = null;
+            currentDeunaItems = [];
+            currentDeunaAttempt = null;
+        },
+        onError: (error) => {
+            deunaListenerUnsubscribe = null;
+            console.warn('No se pudo confirmar el estado Deuna:', error?.message || error);
+        }
+    });
+}
+
+export async function initiateDeunaDynamicPayment() {
+    if (deunaInitializationPromise) return deunaInitializationPromise;
+    deunaInitializationPromise = (async () => {
+        if (!requireCheckoutTermsAcceptance()) return null;
+        let buyerName = sanitizeInput(document.getElementById('store-buyer-name').value);
+        let buyerEmail = sanitizeInput(document.getElementById('store-buyer-email').value);
+        const buyerPhone = sanitizeInput(document.getElementById('store-buyer-phone').value);
+        let buyerDni = sanitizeInput(document.getElementById('store-buyer-dni').value);
+        let buyerCity = sanitizeInput(document.getElementById('store-buyer-city').value);
+        const buyerCountry = sanitizeInput(document.getElementById('store-buyer-country').value);
+        const youtubeWhitelist = sanitizeInput(document.getElementById('store-txt-youtube-whitelist').value);
+        let invoiceRuc = '';
+        let invoiceCompany = '';
+        let invoiceAddress = '';
+        let invoiceEmail = '';
+        if (document.getElementById('store-chk-need-invoice')?.checked) {
+            invoiceRuc = sanitizeInput(document.getElementById('store-invoice-ruc').value);
+            invoiceCompany = sanitizeInput(document.getElementById('store-invoice-company').value);
+            invoiceAddress = sanitizeInput(document.getElementById('store-invoice-address').value);
+            invoiceEmail = sanitizeInput(document.getElementById('store-invoice-email').value);
+            if (!/^\d{13}$/.test(invoiceRuc) || !invoiceCompany || !invoiceAddress || !invoiceEmail) {
+                if (typeof window.showToast === 'function') window.showToast('Completa correctamente los datos de facturación.', true);
+                return null;
+            }
+            buyerDni = invoiceRuc;
+            buyerName = invoiceCompany;
+            buyerEmail = invoiceEmail;
+            buyerCity = invoiceAddress;
+        }
+        if (!buyerName || !buyerEmail) {
+            if (typeof window.showToast === 'function') window.showToast('Completa tus datos antes de crear el pago Deuna.', true);
+            return null;
+        }
+
+        const items = checkoutSelectedBeatId
+            ? [{ beatId: checkoutSelectedBeatId, licenseType: checkoutSelectedLicense }]
+            : window.cart.map(({ beatId, licenseType }) => ({ beatId, licenseType }));
+        if (items.length !== 1) {
+            if (typeof window.showToast === 'function') window.showToast('Deuna procesa un beat por pedido.', true);
+            return null;
+        }
+        const identity = JSON.stringify({
+            producerId: window.storeProducerUid,
+            item: items[0],
+            buyerEmail,
+            couponCode: window.checkoutAppliedCoupon || '',
+            invoiceRuc
         });
-        
-    } catch (err) {
-        console.error('Error iniciando pago Deuna:', err);
-        if (typeof window.showToast === 'function') window.showToast('Error al inicializar el pago dinámico de Deuna!.', true);
+        if (currentDeunaPaymentId && currentDeunaAttempt?.identity === identity && currentDeunaAttempt.result) {
+            activateDeunaOrder(currentDeunaAttempt.result);
+            return currentDeunaAttempt.result;
+        }
+        if (currentDeunaPaymentId && currentDeunaAttempt?.identity !== identity) {
+            if (deunaListenerUnsubscribe) deunaListenerUnsubscribe();
+            deunaListenerUnsubscribe = null;
+            currentDeunaPaymentId = null;
+            currentDeunaStatusToken = '';
+            currentDeunaOrderData = null;
+            currentDeunaItems = [];
+            currentDeunaAttempt = null;
+        }
+
+        currentDeunaAttempt = pendingAttempt(currentDeunaAttempt, identity);
+        if (!currentDeunaAttempt.statusCredential) {
+            currentDeunaAttempt.statusCredential = await createPaymentStatusCredential();
+        }
+        const result = await postPendingOrder({
+            action: 'create',
+            requestId: currentDeunaAttempt.requestId,
+            type: 'beat_purchase',
+            method: 'deuna',
+            producerId: window.storeProducerUid,
+            items,
+            buyerName,
+            buyerEmail,
+            buyerPhone,
+            buyerDni,
+            buyerCity,
+            buyerCountry,
+            youtubeWhitelist,
+            invoiceRuc,
+            invoiceCompany,
+            invoiceAddress,
+            invoiceEmail,
+            couponCode: window.checkoutAppliedCoupon || '',
+            statusTokenHash: currentDeunaAttempt.statusCredential.hash,
+            acceptedTerms: true,
+            acceptanceTimestamp: currentDeunaAttempt.acceptanceTimestamp,
+            termsVersion: currentDeunaAttempt.termsVersion
+        });
+        const payment = result.payments?.[0];
+        if (!payment) throw new Error('El servidor no devolvió la referencia Deuna.');
+        currentDeunaPaymentId = payment.paymentId;
+        currentDeunaStatusToken = currentDeunaAttempt.statusCredential.token;
+        currentDeunaItems = [payment];
+        currentDeunaOrderData = {
+            type: 'beat_purchase',
+            producerId: window.storeProducerUid,
+            beatId: payment.beatId,
+            beatName: payment.beatName,
+            licenseType: payment.licenseType,
+            price: payment.originalPrice,
+            originalPrice: payment.originalPrice,
+            finalPrice: payment.finalPrice,
+            buyerName,
+            buyerEmail,
+            buyerPhone,
+            buyerDni,
+            buyerCity,
+            buyerCountry,
+            youtubeWhitelist,
+            invoiceRuc,
+            invoiceCompany,
+            invoiceAddress,
+            invoiceEmail,
+            method: 'deuna',
+            reference: result.reference,
+            status: 'pending',
+            discountPercent: result.discountPercent,
+            couponCode: result.couponCode,
+            acceptedTerms: true,
+            acceptanceTimestamp: currentDeunaAttempt.acceptanceTimestamp,
+            timestamp: new Date().toISOString()
+        };
+        currentDeunaAttempt.result = result;
+        try {
+            sessionStorage.setItem(`beatss_pending_status_${currentDeunaPaymentId}`, currentDeunaStatusToken);
+        } catch (_) {}
+        activateDeunaOrder(result);
+        return result;
+    })();
+    try {
+        return await deunaInitializationPromise;
+    } catch (error) {
+        console.error('Error iniciando pago Deuna:', error);
+        if (typeof window.showToast === 'function') window.showToast(error.message || 'No se pudo iniciar Deuna.', true);
+        return null;
+    } finally {
+        deunaInitializationPromise = null;
     }
 }
 window.initiateDeunaDynamicPayment = initiateDeunaDynamicPayment;
+// Los logos y QR del checkout permanecen fuera de la red mientras el modal no
+// se usa. Este módulo se importa en la primera interacción de compra.
+document?.querySelectorAll?.('img[data-deferred-src]')?.forEach((image) => {
+    if (!image.getAttribute('src')) image.setAttribute('src', image.dataset.deferredSrc);
+    image.removeAttribute('data-deferred-src');
+});

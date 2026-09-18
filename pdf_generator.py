@@ -4,9 +4,10 @@ import tempfile
 import base64
 import hashlib
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
 from reportlab.pdfgen import canvas
 
 class NumberedCanvas(canvas.Canvas):
@@ -126,15 +127,24 @@ def markdown_to_flowables(md_text, styles):
             flowables.append(Spacer(1, 6))
             i += 1
             continue
+
+        # Los separadores Markdown no son contenido contractual: se dibujan
+        # como una línea editorial, en vez de imprimir literalmente "---".
+        if re.match(r'^(?:-{3,}|\*{3,}|_{3,})$', line):
+            flowables.append(Spacer(1, 3))
+            flowables.append(HRFlowable(width='100%', thickness=0.7, color=colors.HexColor('#d8c7ff')))
+            flowables.append(Spacer(1, 8))
+            i += 1
+            continue
             
         if line.startswith('### '):
             flowables.append(Paragraph(clean_inline_markdown(line[4:]), styles['H3Style']))
             flowables.append(Spacer(1, 6))
         elif line.startswith('## '):
-            flowables.append(Paragraph(clean_inline_markdown(line[3:]), styles['H2Style']))
+            flowables.append(Paragraph(clean_inline_markdown(line[3:]).upper(), styles['H2Style']))
             flowables.append(Spacer(1, 8))
         elif line.startswith('# '):
-            flowables.append(Paragraph(clean_inline_markdown(line[2:]), styles['H1Style']))
+            flowables.append(Paragraph(clean_inline_markdown(line[2:]).upper(), styles['H1Style']))
             flowables.append(Spacer(1, 10))
         else:
             flowables.append(Paragraph(clean_inline_markdown(line), styles['NormalStyle']))
@@ -158,10 +168,12 @@ def get_pdf_styles():
             'H1Style': ParagraphStyle(
                 'H1',
                 fontName='Helvetica-Bold',
-                fontSize=16,
-                leading=20,
-                textColor=colors.HexColor("#1a202c"),
-                spaceAfter=10,
+                fontSize=18,
+                leading=23,
+                textColor=colors.HexColor("#111112"),
+                alignment=TA_CENTER,
+                spaceBefore=6,
+                spaceAfter=22,
                 keepWithNext=True
             ),
             'H2Style': ParagraphStyle(
@@ -169,8 +181,9 @@ def get_pdf_styles():
                 fontName='Helvetica-Bold',
                 fontSize=12,
                 leading=16,
-                textColor=colors.HexColor("#2d3748"),
-                spaceAfter=8,
+                textColor=colors.HexColor("#7c3aed"),
+                spaceBefore=17,
+                spaceAfter=10,
                 keepWithNext=True
             ),
             'H3Style': ParagraphStyle(
@@ -267,11 +280,26 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
                 logo_temp_path = temp_logo.name
         except Exception as e:
             print(f"Warning: Failed to decode logoBase64: {e}")
+
+    # La previsualización de Sossa siempre incorpora su marca aunque no se
+    # haya cargado un logo manualmente. El PDF debe conservar esa identidad.
+    if not logo_temp_path:
+        producer_id = data_fields.get('producerId', 'sossa').lower()
+        aka_lower = data_fields.get('aka', 'sossa').lower()
+        if producer_id == 'sossa' or 'sossa' in aka_lower:
+            default_logo = os.path.join(os.path.dirname(__file__), 'public', 'logo.png')
+            if os.path.exists(default_logo):
+                logo_temp_path = default_logo
+
+    # Cabecera visual equivalente a la vista de impresión.
+    story.append(HRFlowable(width='100%', thickness=4, color=colors.HexColor('#7c3aed'), spaceBefore=0, spaceAfter=12))
             
     if logo_temp_path:
         try:
-            story.append(Image(logo_temp_path, height=45, width=120))
-            story.append(Spacer(1, 15))
+            logo = Image(logo_temp_path, height=38, width=76)
+            logo.hAlign = 'CENTER'
+            story.append(logo)
+            story.append(Spacer(1, 14))
         except Exception as e:
             print(f"Warning: Failed to add logo Image to story: {e}")
             
@@ -314,7 +342,10 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
             
     buyer_signature = data_fields.get('buyerSignatureBase64') or data_fields.get('buyerSignature') or ''
     buyer_img_path = None
-    needs_buyer = data_fields.get('needsBuyerSignature', True)
+    # Las licencias comerciales no exclusivas se aceptan mediante pago; solo
+    # los flujos que lo declaran explícitamente (exclusivas, split sheet o
+    # coproducción) deben mostrar una firma del comprador.
+    needs_buyer = data_fields.get('needsBuyerSignature', False)
     if needs_buyer and buyer_signature:
         try:
             if ',' in buyer_signature:
@@ -334,9 +365,9 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
             try:
                 row_images.append(Image(producer_img_path, width=120, height=45))
             except Exception:
-                row_images.append(Paragraph("<font name='Times-Italic' size=14 color='#1c1c1e'><i>" + data_fields.get('producerName', 'Joao David Dominguez') + "</i></font>", styles['SignatureValueStyle']))
+                row_images.append(Paragraph("<font name='Times-Italic' size=14 color='#1c1c1e'><i>" + data_fields.get('producerName', 'Productor') + "</i></font>", styles['SignatureValueStyle']))
         else:
-            row_images.append(Paragraph("<font name='Times-Italic' size=14 color='#1c1c1e'><i>" + data_fields.get('producerName', 'Joao David Dominguez') + "</i></font>", styles['SignatureValueStyle']))
+            row_images.append(Paragraph("<font name='Times-Italic' size=14 color='#1c1c1e'><i>" + data_fields.get('producerName', 'Productor') + "</i></font>", styles['SignatureValueStyle']))
 
         # Comprador
         if buyer_img_path:
@@ -361,15 +392,15 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
 
         # Fila 3: Nombre
         row_names = [
-            Paragraph(data_fields.get('producerName', 'Joao David Dominguez'), styles['SignatureValueStyle']),
+            Paragraph(data_fields.get('producerName', 'Productor'), styles['SignatureValueStyle']),
             Paragraph(data_fields.get('buyerName', 'Jair Yepez'), styles['SignatureValueStyle'])
         ]
 
         # Fila 4: Identificación (Auto-detectar RUC)
-        producer_id = str(data_fields.get('producerIdNum') or data_fields.get('producerId', '0803743111')).strip()
+        producer_id = str(data_fields.get('producerIdNum') or data_fields.get('producerId', '')).strip()
         producer_id_label = "RUC (Ecuador):" if len(producer_id) == 13 else "Identificación/RUT:"
         
-        buyer_id = str(data_fields.get('buyerId', '0803743111')).strip()
+        buyer_id = str(data_fields.get('buyerId', '')).strip()
         buyer_id_label = "RUC (Ecuador):" if len(buyer_id) == 13 else "Identificación/RUT:"
 
         row_ids = [
@@ -429,12 +460,22 @@ def generate_pdf_from_contract(filename, md_content, data_fields):
             except Exception as e:
                 print(f"Warning: Failed to format date in PDF: {e}")
                 
+        payment_method = str(data_fields.get('paymentMethod', '') or '')
+        electronic_payment = bool(re.search(r'(stripe|paypal|payphone|deuna|tarjeta|credit\s*card|card)', payment_method, re.IGNORECASE))
         if lang == 'en':
-            accept_title_text = "<b>✓ Accepted via Payment</b>"
-            accept_body_text = f"This agreement does not require a physical signature in accordance with the platform terms and conditions, and the payment registered electronically on <b>{date_display}</b> under reference: <b>{ref_code}</b>."
+            accept_title_text = "<b>✓ Accepted through electronic payment</b>" if electronic_payment else "<b>✓ Accepted after payment verification</b>"
+            accept_body_text = (
+                f"This agreement does not require a handwritten signature. Electronic payment was confirmed on <b>{date_display}</b> under reference <b>{ref_code}</b>."
+                if electronic_payment
+                else f"This agreement does not require a handwritten signature. The Producer verified the payment on <b>{date_display}</b> under reference <b>{ref_code}</b>."
+            )
         else:
-            accept_title_text = "<b>✓ Aceptado vía Pago</b>"
-            accept_body_text = f"Este acuerdo no requiere firma física de conformidad con los términos y condiciones de la plataforma y el pago registrado de manera electrónica el <b>{date_display}</b> bajo la referencia: <b>{ref_code}</b>."
+            accept_title_text = "<b>✓ Aceptado mediante pago electrónico</b>" if electronic_payment else "<b>✓ Aceptado mediante verificación del pago</b>"
+            accept_body_text = (
+                f"Este acuerdo no requiere firma manuscrita. El pago electrónico fue confirmado el <b>{date_display}</b> bajo el código de referencia <b>{ref_code}</b>."
+                if electronic_payment
+                else f"Este acuerdo no requiere firma manuscrita. El Productor verificó el pago el <b>{date_display}</b> bajo el código de referencia <b>{ref_code}</b>."
+            )
             
         accept_content = [
             Paragraph(accept_title_text, accept_style_title),

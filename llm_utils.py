@@ -2,9 +2,13 @@ from __future__ import annotations
 import os
 import sys
 import json
+import re
+import shutil
+import subprocess
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
 from abc import ABC, abstractmethod
 
 # Intentar cargar variables de entorno desde .env local
@@ -41,6 +45,52 @@ C_WHITE = "\033[37m"
 C_GRAY = "\033[90m"
 C_BLUE = "\033[34m"
 
+DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+DEFAULT_GEMINI_FALLBACK_MODEL = "gemini-3.6-flash"
+DEFAULT_OPENAI_MODEL = "gpt-5.5"
+DEFAULT_OPENCODE_MODEL = "deepseek/deepseek-v4-flash"
+_GEMINI_MODEL_PATTERN = re.compile(r"^gemini-[a-z0-9][a-z0-9.-]*$")
+_MODEL_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]*$")
+
+
+def get_gemini_model(env_var: str = "GEMINI_MODEL", default: str = DEFAULT_GEMINI_MODEL) -> str:
+    """Return a safe Gemini model identifier without exposing environment values."""
+    model_name = (os.getenv(env_var) or default).strip().lower()
+    if _GEMINI_MODEL_PATTERN.fullmatch(model_name):
+        return model_name
+    print(f"{C_YELLOW}⚠️ [LLM Router] Modelo Gemini inválido en {env_var}; usando el predeterminado.{C_RESET}")
+    return default
+
+
+def get_model_name(env_var: str, default: str) -> str:
+    """Return a safe generic model identifier without exposing environment values."""
+    model_name = (os.getenv(env_var) or default).strip()
+    if _MODEL_PATTERN.fullmatch(model_name):
+        return model_name
+    print(f"{C_YELLOW}⚠️ [LLM Router] Modelo inválido en {env_var}; usando el predeterminado.{C_RESET}")
+    return default
+
+
+def get_openai_compat_base_url() -> str | None:
+    """Validate an OpenAI-compatible base URL from trusted local configuration."""
+    base_url = (os.getenv("OPENAI_COMPAT_BASE_URL") or "").strip().rstrip("/")
+    if not base_url:
+        return None
+    parsed = urllib.parse.urlparse(base_url)
+    is_local = parsed.hostname in {"localhost", "127.0.0.1", "::1"}
+    if parsed.scheme not in {"https", "http"} or (parsed.scheme != "https" and not is_local):
+        print(f"{C_YELLOW}⚠️ [LLM Router] OPENAI_COMPAT_BASE_URL no es una URL HTTPS o local válida.{C_RESET}")
+        return None
+    if not parsed.netloc or parsed.query or parsed.fragment or parsed.username or parsed.password:
+        print(f"{C_YELLOW}⚠️ [LLM Router] OPENAI_COMPAT_BASE_URL contiene componentes no permitidos.{C_RESET}")
+        return None
+    return base_url
+
+
+def allow_cloud_fallback() -> bool:
+    """Cloud-provider failover is opt-in to avoid sending private context elsewhere."""
+    return (os.getenv("LLM_ALLOW_CLOUD_FALLBACK") or "false").strip().lower() in {"1", "true", "yes"}
+
 
 class LLMProvider(ABC):
     """Interfaz abstracta para proveedores de LLM."""
@@ -50,9 +100,10 @@ class LLMProvider(ABC):
         pass
 
 class GeminiProvider(LLMProvider):
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, model_name: str | None = None):
         self.api_key = api_key
-        self.url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        self.model_name = model_name or get_gemini_model()
+        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent"
 
     def generate_content(self, system_instruction: str, user_content: str, response_json: bool = False, options: dict | None = None) -> str | None:
         if not self.api_key:
@@ -71,7 +122,7 @@ class GeminiProvider(LLMProvider):
         
         headers = {"Content-Type": "application/json"}
         
-        max_retries = 5
+        max_retries = min(max(int(os.getenv("GEMINI_MAX_RETRIES", "3")), 1), 5)
         backoff_factor = 2
         initial_delay = 5  # segundos
         
@@ -108,6 +159,155 @@ class GeminiProvider(LLMProvider):
                 return None
                 
         print(f"\n{C_RED}❌ Se superó el número máximo de reintentos tras errores de Gemini.{C_RESET}")
+        return None
+
+
+class OpenAIProvider(LLMProvider):
+    """Official OpenAI Responses API provider for OpenAI API credentials."""
+
+    def __init__(self, api_key: str, model_name: str | None = None):
+        self.api_key = api_key
+        self.model_name = model_name or get_model_name("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
+        self.url = "https://api.openai.com/v1/responses"
+
+    def generate_content(self, system_instruction: str, user_content: str, response_json: bool = False, options: dict | None = None) -> str | None:
+        if not self.api_key:
+            print(f"\n{C_RED}❌ Error: No se configuró OPENAI_API_KEY para realizar la llamada a OpenAI.{C_RESET}")
+            return None
+
+        payload = {
+            "model": self.model_name,
+            "instructions": system_instruction,
+            "input": user_content,
+            "store": False,
+        }
+        if response_json:
+            payload["text"] = {"format": {"type": "json_object"}}
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        try:
+            req = urllib.request.Request(self.url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=90) as response:
+                return self._extract_output(json.loads(response.read().decode("utf-8")))
+        except urllib.error.HTTPError as error:
+            print(f"\n{C_RED}❌ Error del API de OpenAI ({error.code}).{C_RESET}")
+        except Exception as error:
+            print(f"\n{C_RED}❌ Error de red en OpenAIProvider: {error}{C_RESET}")
+        return None
+
+    @staticmethod
+    def _extract_output(response: dict) -> str | None:
+        output_text = response.get("output_text")
+        if isinstance(output_text, str) and output_text:
+            return output_text
+        for item in response.get("output", []):
+            for content in item.get("content", []):
+                if content.get("type") == "output_text" and isinstance(content.get("text"), str):
+                    return content["text"]
+        return None
+
+
+class OpenAICompatibleProvider(LLMProvider):
+    """Provider for self-hosted or third-party OpenAI-compatible chat APIs."""
+
+    def __init__(self, base_url: str, api_key: str = "", model_name: str | None = None):
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.model_name = model_name or get_model_name("OPENAI_COMPAT_MODEL", "local-model")
+        self.url = f"{self.base_url}/chat/completions"
+
+    def generate_content(self, system_instruction: str, user_content: str, response_json: bool = False, options: dict | None = None) -> str | None:
+        payload = {
+            "model": self.model_name,
+            "messages": [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": user_content},
+            ],
+            "temperature": 0.2,
+            "stream": False,
+        }
+        if response_json:
+            payload["response_format"] = {"type": "json_object"}
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        try:
+            req = urllib.request.Request(self.url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=90) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                return result["choices"][0]["message"]["content"]
+        except urllib.error.HTTPError as error:
+            print(f"\n{C_RED}❌ Error del proveedor OpenAI-compatible ({error.code}).{C_RESET}")
+        except Exception as error:
+            print(f"\n{C_RED}❌ Error en OpenAICompatibleProvider: {error}{C_RESET}")
+        return None
+
+
+class OpenCodeProvider(LLMProvider):
+    """Use an authenticated local OpenCode CLI without reading its credentials."""
+
+    def __init__(self, command: str | None = None):
+        self.command = command or shutil.which("opencode")
+        self.model_name = get_model_name("OPENCODE_MODEL", DEFAULT_OPENCODE_MODEL)
+        self.agent_name = (os.getenv("OPENCODE_AGENT") or "knowledge-steward").strip()
+        self.project_dir = os.path.dirname(os.path.abspath(__file__))
+
+    def generate_content(self, system_instruction: str, user_content: str, response_json: bool = False, options: dict | None = None) -> str | None:
+        if not self.command:
+            print(f"\n{C_RED}❌ OpenCode CLI no está disponible en PATH.{C_RESET}")
+            return None
+
+        requested_agent = (options or {}).get("opencode_agent", self.agent_name)
+        agent_name = str(requested_agent or self.agent_name).strip()
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,63}", agent_name):
+            print(f"\n{C_RED}❌ Nombre de agente OpenCode inválido.{C_RESET}")
+            return None
+
+        prompt = f"{system_instruction}\n\n--- SOLICITUD ACTUAL ---\n{user_content}"
+        command = [
+            self.command,
+            "run",
+            "--agent", agent_name,
+            "--model", self.model_name,
+            "--format", "json",
+            "--dir", self.project_dir,
+            prompt,
+        ]
+        try:
+            result = subprocess.run(
+                command,
+                cwd=self.project_dir,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+        except subprocess.TimeoutExpired:
+            print(f"\n{C_RED}❌ OpenCode agotó el tiempo de respuesta.{C_RESET}")
+            return None
+        except OSError as error:
+            print(f"\n{C_RED}❌ No se pudo iniciar OpenCode: {error}{C_RESET}")
+            return None
+
+        response_text = self._extract_text(result.stdout)
+        if response_text:
+            return response_text
+        print(f"\n{C_RED}❌ OpenCode no devolvió una respuesta utilizable (código {result.returncode}).{C_RESET}")
+        return None
+
+    @staticmethod
+    def _extract_text(output: str) -> str | None:
+        for line in reversed(output.splitlines()):
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if event.get("type") == "text":
+                text = event.get("part", {}).get("text")
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
         return None
 
 class OllamaProvider(LLMProvider):
@@ -254,13 +454,36 @@ class LLMManager:
     def _initialize_provider(self) -> LLMProvider | None:
         provider_name = os.getenv("LLM_PROVIDER", "auto").lower().strip()
         gemini_api_key = os.getenv("GEMINI_API_KEY")
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        openai_compat_base_url = get_openai_compat_base_url()
+
+        if provider_name == "opencode":
+            if not shutil.which("opencode"):
+                print(f"{C_RED}{C_BOLD}❌ Error: OpenCode CLI no está disponible para LLM_PROVIDER='opencode'.{C_RESET}")
+                return None
+            print(f"{C_GREEN}✅ [LLM Router] Usando OpenCode local (configurado explícitamente).{C_RESET}")
+            return OpenCodeProvider()
+
+        if provider_name == "openai":
+            if not openai_api_key:
+                print(f"{C_RED}{C_BOLD}❌ Error: OPENAI_API_KEY no configurada para LLM_PROVIDER='openai'.{C_RESET}")
+                return None
+            print(f"{C_GREEN}✅ [LLM Router] Usando OpenAI (configurado explícitamente).{C_RESET}")
+            return OpenAIProvider(openai_api_key)
+
+        if provider_name == "openai-compatible":
+            if not openai_compat_base_url:
+                print(f"{C_RED}{C_BOLD}❌ Error: OPENAI_COMPAT_BASE_URL no está configurada o no es válida.{C_RESET}")
+                return None
+            print(f"{C_GREEN}✅ [LLM Router] Usando proveedor OpenAI-compatible (configurado explícitamente).{C_RESET}")
+            return OpenAICompatibleProvider(openai_compat_base_url, os.getenv("OPENAI_COMPAT_API_KEY", ""))
 
         if provider_name == "gemini":
             if not gemini_api_key:
                 print(f"{C_RED}{C_BOLD}❌ Error: GEMINI_API_KEY no configurada para LLM_PROVIDER='gemini'.{C_RESET}")
                 return None
             print(f"{C_GREEN}✅ [LLM Router] Usando Gemini (configurado explícitamente).{C_RESET}")
-            return GeminiProvider(gemini_api_key)
+            return GeminiProvider(gemini_api_key, get_gemini_model())
         
         elif provider_name == "ollama":
             if not self._check_ollama_connectivity("http://localhost:11434"):
@@ -278,32 +501,37 @@ class LLMManager:
         
         elif provider_name == "auto" or not provider_name:
             print(f"{C_YELLOW}ℹ️ [LLM Router] Modo 'auto' activado. Intentando detectar proveedor...{C_RESET}")
-            
-            # 1. Intentar Gemini si la clave API está presente
+
+            if (os.getenv("OPENCODE_ENABLED") or "false").strip().lower() in {"1", "true", "yes"} and shutil.which("opencode"):
+                print(f"{C_GREEN}✅ [LLM Router] Usando OpenCode local (habilitado).{C_RESET}")
+                return OpenCodeProvider()
+
+            if openai_api_key:
+                print(f"{C_GREEN}✅ [LLM Router] Usando OpenAI (API Key detectada).{C_RESET}")
+                return OpenAIProvider(openai_api_key)
+
             if gemini_api_key:
                 print(f"{C_GREEN}✅ [LLM Router] Usando Gemini (API Key detectada).{C_RESET}")
-                return GeminiProvider(gemini_api_key)
-            
-            # 2. Intentar Ollama
+                return GeminiProvider(gemini_api_key, get_gemini_model())
+
+            if openai_compat_base_url:
+                print(f"{C_GREEN}✅ [LLM Router] Usando proveedor OpenAI-compatible (URL detectada).{C_RESET}")
+                return OpenAICompatibleProvider(openai_compat_base_url, os.getenv("OPENAI_COMPAT_API_KEY", ""))
+
             if self._check_ollama_connectivity("http://localhost:11434"):
                 print(f"{C_GREEN}✅ [LLM Router] Usando Ollama (servicio local detectado).{C_RESET}")
                 return OllamaProvider()
 
-            # 3. Intentar LM Studio
             if self._check_lm_studio_connectivity("http://localhost:1234"):
                 print(f"{C_GREEN}✅ [LLM Router] Usando LM Studio (servicio local detectado).{C_RESET}")
                 return LMStudioProvider()
             
-            print(f"{C_RED}❌ [LLM Router] No se pudo inicializar ningún proveedor de IA (Gemini, Ollama ni LM Studio) en modo 'auto'.{C_RESET}")
+            print(f"{C_RED}❌ [LLM Router] No se pudo inicializar ningún proveedor de IA en modo 'auto'.{C_RESET}")
             return None
         
         else:
-            print(f"{C_RED}❌ [LLM Router] Proveedor '{provider_name}' no reconocido. Intentando Gemini como fallback.{C_RESET}")
-            if gemini_api_key:
-                return GeminiProvider(gemini_api_key)
-            else:
-                print(f"{C_RED}❌ [LLM Router] GEMINI_API_KEY no configurada para fallback.{C_RESET}")
-                return None
+            print(f"{C_RED}❌ [LLM Router] Proveedor '{provider_name}' no reconocido.{C_RESET}")
+            return None
 
     def get_provider(self) -> LLMProvider | None:
         return self.llm_provider_instance
@@ -348,59 +576,71 @@ def get_static_keyword_response(user_content: str) -> str:
             "- **Precios / Ofertas / Descuentos** para estrategias comerciales."
         )
 
-def call_llm(system_instruction: str, user_content: str, response_json: bool = False, num_ctx: int | None = None) -> str | None:
+def call_llm(
+    system_instruction: str,
+    user_content: str,
+    response_json: bool = False,
+    num_ctx: int | None = None,
+    opencode_agent: str | None = None,
+) -> str | None:
     """
-    Función principal para interactuar con el LLM seleccionado.
-    Delega la llamada al proveedor configurado y cuenta con un sistema
-    de fallback dinámico de 3 niveles: Local/Cloud AI -> Local/Cloud AI -> Motor de Palabras Clave.
+    Call the selected provider with same-cloud and opt-in cloud fallbacks.
+    Private context never moves from one cloud provider to another unless the
+    local configuration explicitly enables LLM_ALLOW_CLOUD_FALLBACK.
     """
     provider = llm_manager.get_provider()
     
-    options = None
+    options = {}
     if num_ctx is not None:
-        options = {"num_ctx": num_ctx}
+        options["num_ctx"] = num_ctx
+    if opencode_agent:
+        options["opencode_agent"] = opencode_agent
+    if not options:
+        options = None
     
-    if not provider:
-        print(f"{C_RED}❌ [LLM Router] No hay proveedor de LLM disponible inicialmente. Intentando fallback a Gemini...{C_RESET}")
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
-        if gemini_api_key:
-            provider = GeminiProvider(gemini_api_key)
-        else:
-            # Si no hay proveedor y no hay key, intentar directo Ollama local
-            try:
-                provider = OllamaProvider()
-            except Exception:
-                pass
-            
-    # Intentar generar contenido con el proveedor seleccionado si está disponible
     response = None
     if provider:
         response = provider.generate_content(system_instruction, user_content, response_json, options=options)
-    
-    # Si falla y el proveedor no es Gemini (ej. Ollama o LM Studio no están levantados)
-    if response is None and not isinstance(provider, GeminiProvider):
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
-        if gemini_api_key:
-            print(f"\n{C_YELLOW}⚠️ [LLM Fallback] El proveedor local falló o no está disponible. Realizando fallback automático a Gemini Cloud...{C_RESET}")
+
+    if response is None and isinstance(provider, GeminiProvider):
+        fallback_model = get_gemini_model("GEMINI_FALLBACK_MODEL", DEFAULT_GEMINI_FALLBACK_MODEL)
+        if fallback_model != provider.model_name:
+            print(f"\n{C_YELLOW}⚠️ [LLM Fallback] Gemini no respondió; probando el modelo alterno configurado.{C_RESET}")
             try:
-                fallback_provider = GeminiProvider(gemini_api_key)
+                fallback_provider = GeminiProvider(os.getenv("GEMINI_API_KEY", ""), fallback_model)
                 response = fallback_provider.generate_content(system_instruction, user_content, response_json, options=options)
             except Exception as e:
-                print(f"{C_RED}❌ [LLM Fallback] Falló la inferencia de Gemini: {e}{C_RESET}")
-            
-    # Si falla y el proveedor es Gemini (ej. cuota agotada o 429), intentar fallback a Ollama local
-    if response is None and (isinstance(provider, GeminiProvider) or provider is None):
-        print(f"\n{C_YELLOW}⚠️ [LLM Fallback] El proveedor Gemini Cloud falló (o no estaba configurado). Realizando fallback automático a Ollama local...{C_RESET}")
+                print(f"{C_RED}❌ [LLM Fallback] Falló la inferencia alterna de Gemini: {e}{C_RESET}")
+
+    if response is None and allow_cloud_fallback():
+        cloud_fallbacks = []
+        if not isinstance(provider, OpenAIProvider) and os.getenv("OPENAI_API_KEY"):
+            cloud_fallbacks.append(OpenAIProvider(os.getenv("OPENAI_API_KEY", "")))
+        if not isinstance(provider, GeminiProvider) and os.getenv("GEMINI_API_KEY"):
+            cloud_fallbacks.append(GeminiProvider(os.getenv("GEMINI_API_KEY", ""), get_gemini_model()))
+        for cloud_provider in cloud_fallbacks:
+            print(f"\n{C_YELLOW}⚠️ [LLM Fallback] Probando un proveedor cloud alterno autorizado.{C_RESET}")
+            response = cloud_provider.generate_content(system_instruction, user_content, response_json, options=options)
+            if response:
+                break
+
+    if response is None and not isinstance(provider, OllamaProvider):
+        print(f"\n{C_YELLOW}⚠️ [LLM Fallback] Probando Ollama local.{C_RESET}")
         try:
-            # Crear e intentar inferencia con el proveedor Ollama
             ollama_provider = OllamaProvider()
             response = ollama_provider.generate_content(system_instruction, user_content, response_json, options=options)
             if response:
                 print(f"{C_GREEN}✅ [LLM Fallback] Inferencia exitosa mediante Ollama local ({ollama_provider.model_name}).{C_RESET}")
         except Exception as e:
             print(f"{C_RED}❌ [LLM Fallback] Falló la inferencia local de Ollama: {e}{C_RESET}")
-            
-    # Tercer nivel de fallback: Motor estático de coincidencia de palabras clave
+
+    if response is None and not isinstance(provider, LMStudioProvider):
+        print(f"\n{C_YELLOW}⚠️ [LLM Fallback] Probando LM Studio local.{C_RESET}")
+        try:
+            response = LMStudioProvider().generate_content(system_instruction, user_content, response_json, options=options)
+        except Exception as e:
+            print(f"{C_RED}❌ [LLM Fallback] Falló la inferencia local de LM Studio: {e}{C_RESET}")
+
     if response is None:
         print(f"\n{C_RED}⚠️ [LLM Fallback] Todos los proveedores de IA fallaron. Conmutando al motor estático de coincidencias de palabras clave.{C_RESET}")
         response = get_static_keyword_response(user_content)

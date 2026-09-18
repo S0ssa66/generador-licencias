@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BEATSS workspace theme fixture</title>
+    <!-- Match the direct private-route cascade. The body intentionally keeps
+         the legacy dark default to prove that the Studio is self-contained. -->
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/mobile.css">
+    <link rel="stylesheet" href="/settings-modern.css">
+    <link rel="stylesheet" href="/viewport-coherence.css">
+    <link rel="stylesheet" href="/workspace-theme.css">
+    <link rel="stylesheet" href="/dashboard-home.css">
+</head>
+<body>
+    <div class="app-container saas-workspace" id="app-container" data-active-tab="tab-home">
+        <main class="main-panel">
+            <header class="main-header">
+                <nav class="tabs workspace-primary-tabs" aria-label="Principal">
+                    <button class="tab-btn active">Inicio</button>
+                    <button class="tab-btn">Licencias</button>
+                    <button class="tab-btn">Beats</button>
+                    <button class="tab-btn">Pedidos</button>
+                </nav>
+            </header>
+            <section class="tab-content active" id="tab-home">
+                <div class="producer-home-shell">
+                    <section class="producer-home-welcome">
+                        <div class="producer-home-copy">
+                            <p class="producer-home-kicker"><span></span> BEATSS / ESPACIO DEL PRODUCTOR</p>
+                            <h1>Todo lo que necesitas para mover tu música.</h1>
+                            <p class="producer-home-intro">Crea licencias, organiza tus beats y revisa tus ventas desde un solo lugar.</p>
+                        </div>
+                        <div class="producer-home-flow"><small>TU FLUJO</small><strong>Catálogo → Licencia → Entrega</strong></div>
+                    </section>
+                    <section>
+                        <div class="producer-home-section-head"><div><p class="producer-home-kicker">PARA EMPEZAR</p><h2>¿Qué quieres hacer?</h2></div></div>
+                        <div class="producer-home-primary-grid">
+                            <button class="producer-home-action producer-home-action-primary"><span class="producer-home-action-copy"><strong>Crear una licencia</strong><small>Prepara el contrato y la entrega de un beat.</small></span><span>→</span></button>
+                            <button class="producer-home-action"><span class="producer-home-action-copy"><strong>Organizar mis beats</strong><small>Sube, edita y revisa tu catálogo.</small></span><span>→</span></button>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </main>
+        <aside class="sidebar sidebar-hidden" aria-hidden="true"></aside>
+    </div>
+    <output id="theme-probe" hidden></output>
+    <script>
+        requestAnimationFrame(() => {
+            const app = getComputedStyle(document.getElementById('app-container'));
+            const home = getComputedStyle(document.getElementById('tab-home'));
+            const cardElement = document.querySelector('.producer-home-action:not(.producer-home-action-primary)');
+            const card = getComputedStyle(cardElement);
+            const cardRect = cardElement.getBoundingClientRect();
+            document.getElementById('theme-probe').textContent = JSON.stringify({
+                appBackground: app.backgroundColor,
+                homeBackground: home.backgroundColor,
+                homeColor: home.color,
+                cardBackground: card.backgroundColor,
+                cardColor: card.color,
+                scheme: app.colorScheme,
+                viewportWidth: window.innerWidth,
+                documentWidth: document.documentElement.scrollWidth,
+                cardLeft: Math.round(cardRect.left),
+                cardRight: Math.round(cardRect.right)
+            });
+        });
+    </script>
+</body>
+</html>

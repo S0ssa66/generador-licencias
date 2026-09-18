@@ -3,7 +3,19 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+      return request.auth != null &&
+             'admin' in request.auth.token &&
+             request.auth.token.admin == true;
+    }
+
+    // Audio privado del productor. La URL con token se guarda en Firestore
+    // y solo el propietario puede crear, leer o borrar sus archivos.
+    match /beats/{userId}/{allPaths=**} {
+      allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow create, update: if ((request.auth != null && request.auth.uid == userId) || isAdmin())
+                            && request.resource.size < 500 * 1024 * 1024
+                            && request.resource.contentType.matches('audio/.*');
+      allow delete: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
 
     // Cada productor solo puede crear y administrar sus propios contratos.
@@ -14,6 +26,23 @@ service firebase.storage {
       allow create, update: if ((request.auth != null && request.auth.uid == userId) || isAdmin())
                             && request.resource.contentType == 'application/pdf'
                             && request.resource.size < 15 * 1024 * 1024;
+      allow delete: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+    }
+
+    // XML y RIDE fiscales: los escribe el proceso servidor y sólo se sirven
+    // desde endpoints autenticados que validan la propiedad de la compra.
+    match /sri/{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Comprobantes manuales de suscripción, aislados por usuario.
+    match /receipts/saas/{userId}/{fileName} {
+      allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow create: if resource == null &&
+                    request.auth != null && request.auth.uid == userId &&
+                    request.resource.size < 2 * 1024 * 1024 &&
+                    request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow update: if false;
       allow delete: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
   }

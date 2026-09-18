@@ -2,9 +2,11 @@ import os
 import sys
 import json
 import time
+import shutil
+import subprocess
 
 from llm_utils import (
-    call_gemini,
+    call_llm,
     clean_and_parse_json,
     C_RESET,
     C_BOLD,
@@ -26,14 +28,24 @@ from prompt_manager import (
     get_subagent_prompt,
     check_subagent_role_exists
 )
+from agent_registry import (
+    get_agent_contract,
+    get_agent_iteration_limit,
+    get_agent_profile,
+    get_agent_tools,
+    get_agent_write_policy,
+    get_canonical_role,
+)
 
 from memory_manager import (
     load_session_memory,
     save_session_memory,
+    append_session_turn,
     summarize_history_if_needed,
     load_subagent_memories,
     save_subagent_memory,
-    get_subagent_memory
+    get_subagent_memory,
+    get_relevant_context,
 )
 
 # Colores mapeados para cada subagente
@@ -54,42 +66,135 @@ AGENT_COLORS = {
     "audio_dsp_expert": C_YELLOW,
     "devops_admin": C_RED,
     "refactor_expert": C_CYAN,
-    "obsidian_expert": C_MAGENTA,
+    "knowledge_steward": C_MAGENTA,
     "token_optimizer": C_BLUE,
     "growth_hacker": C_MAGENTA,
     "rights_manager": C_RED,
     "branding_specialist": C_CYAN,
     "sri_tax_advisor": C_BLUE,
     "licensing_negotiator": C_YELLOW,
-    "beatstars_sync_expert": C_GREEN
+    "beatstars_sync_expert": C_GREEN,
+    "stripe_ops": C_CYAN
 }
+
+KNOWLEDGE_STEWARD_MONITOR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "scripts",
+    "knowledge-steward-monitor.mjs",
+)
 
 
 def GET_COLOR_FOR_ROL(rol):
     return AGENT_COLORS.get(rol.lower().strip(), C_WHITE)
 
 
-def get_safe_path(path):
-    """Resuelve y valida que la ruta se encuentre dentro de la bóveda de Obsidian (/Users/sossa/IA)."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    base_dir = os.path.dirname(script_dir)
-    
-    # Si empieza con "/" pero no con base_dir, tratar como relativo al proyecto quitando la barra
-    if path.startswith("/") and not path.startswith(base_dir):
-        alt_path = path.lstrip("/")
-        full_path = os.path.abspath(os.path.join(script_dir, alt_path))
-        if full_path.startswith(base_dir):
-            return full_path
+def agent_can_write(rol):
+    """Use the v2 contract instead of a global implicit write permission."""
+    return get_agent_write_policy(rol) == "approval_required"
 
-    path = os.path.normpath(path)
-    
-    if os.path.isabs(path):
-        if not path.startswith(base_dir):
-            return None
-        return path
-        
-    full_path = os.path.abspath(os.path.join(script_dir, path))
-    if not full_path.startswith(base_dir):
+
+def run_knowledge_steward_task_check(progress_callback=None, run_process=subprocess.run):
+    """Register accumulated changes and audit allowed docs once a task starts."""
+    node_binary = os.environ.get("NODE_BIN")
+    if not node_binary:
+        node_binary = next(
+            (
+                candidate
+                for candidate in (
+                    shutil.which("node"),
+                    "/opt/homebrew/bin/node",
+                    "/usr/local/bin/node",
+                )
+                if candidate and os.path.isfile(candidate)
+            ),
+            None,
+        )
+    if not node_binary or not os.path.isfile(KNOWLEDGE_STEWARD_MONITOR):
+        return {"status": "unavailable", "events": [], "audits": []}
+
+    environment = os.environ.copy()
+    environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + environment.get("PATH", "")
+    try:
+        result = run_process(
+            [node_binary, KNOWLEDGE_STEWARD_MONITOR],
+            cwd=PROJECT_ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=190,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        if progress_callback:
+            progress_callback("⚠️ Knowledge Steward no pudo revisar los cambios; la tarea continuará.")
+        return {"status": "failed", "events": [], "audits": [], "error": str(error)[:200]}
+
+    try:
+        payload = json.loads(result.stdout)
+    except (TypeError, json.JSONDecodeError):
+        payload = {"status": "failed", "events": [], "audits": []}
+
+    audits = payload.get("audits") if isinstance(payload.get("audits"), list) else []
+    completed = [audit for audit in audits if audit.get("status") == "completed"]
+    failed = [audit for audit in audits if audit.get("status") != "completed"]
+    if completed and progress_callback:
+        progress_callback("[Knowledge Steward] Cambios documentales registrados y auditados.")
+    if (failed or result.returncode != 0) and progress_callback:
+        progress_callback("⚠️ Knowledge Steward dejó la auditoría pendiente; la tarea continuará.")
+    return payload
+
+
+PROJECT_ROOT = os.path.realpath(os.path.dirname(os.path.abspath(__file__)))
+OBSIDIAN_ROOT = os.path.realpath(os.path.join(os.path.dirname(PROJECT_ROOT), "BeatSS-Obsidian"))
+# Model-facing tools never receive direct vault access. The Knowledge Steward
+# consumes the sanitized manifest produced by the local monitor instead.
+READ_ROOTS = (PROJECT_ROOT,)
+
+_HIDDEN_DIRS = {".git", "node_modules", ".venv", ".vercel", "dist", ".beatss_memory"}
+_SENSITIVE_BASENAMES = {
+    ".env",
+    ".env.local",
+    ".env.production",
+    ".env.development",
+    "firebase-adminsdk.json",
+    "session_memory.json",
+    "subagent_memories.json",
+}
+
+
+def _is_within(path, root):
+    try:
+        return os.path.commonpath([path, root]) == root
+    except ValueError:
+        return False
+
+
+def _is_sensitive_path(path):
+    path_parts = set(os.path.normpath(path).split(os.sep))
+    if path_parts & _HIDDEN_DIRS:
+        return True
+    basename = os.path.basename(path).lower()
+    if basename in _SENSITIVE_BASENAMES or basename.startswith(".env."):
+        return True
+    if basename.startswith("firebase-adminsdk") or basename.startswith("service-account"):
+        return True
+    if basename.endswith("_backup_sincronizado.json"):
+        return True
+    return basename.endswith((".pem", ".p12", ".pfx", ".key"))
+
+
+def get_safe_path(path, allow_write=False):
+    """Resolve model-facing paths only inside the active BEATSS checkout."""
+    if not isinstance(path, str) or not path.strip():
+        return None
+    candidate = path.strip()
+    if not os.path.isabs(candidate):
+        candidate = os.path.join(PROJECT_ROOT, candidate)
+    full_path = os.path.realpath(os.path.abspath(candidate))
+    allowed_roots = (PROJECT_ROOT,) if allow_write else READ_ROOTS
+    if not any(_is_within(full_path, root) for root in allowed_roots):
+        return None
+    if _is_sensitive_path(full_path):
         return None
     return full_path
 
@@ -166,9 +271,9 @@ def run_tool_list_dir(path):
         entries = os.listdir(safe_path)
         result = []
         for entry in entries:
-            if entry in [".git", "node_modules", ".venv", ".vercel", "dist", ".DS_Store"]:
-                continue
             entry_path = os.path.join(safe_path, entry)
+            if entry in _HIDDEN_DIRS or entry == ".DS_Store" or _is_sensitive_path(entry_path):
+                continue
             is_dir = os.path.isdir(entry_path)
             prefix = "[DIR] " if is_dir else "[FILE] "
             result.append(f"{prefix}{entry}")
@@ -178,7 +283,7 @@ def run_tool_list_dir(path):
 
 
 def run_tool_write_file(rol, path, content):
-    safe_path = get_safe_path(path)
+    safe_path = get_safe_path(path, allow_write=True)
     if not safe_path:
         return "Error: Acceso denegado. No puedes escribir archivos fuera del proyecto."
         
@@ -209,43 +314,54 @@ def run_tool_write_file(rol, path, content):
             
     try:
         os.makedirs(os.path.dirname(safe_path), exist_ok=True)
-        with open(safe_path, "w", encoding="utf-8") as f:
+        directory = os.path.dirname(safe_path)
+        os.makedirs(directory, exist_ok=True)
+        temporary_path = f"{safe_path}.agent-tmp"
+        with open(temporary_path, "w", encoding="utf-8") as f:
             f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary_path, safe_path)
         print(f"✓ Archivo {path} guardado exitosamente.")
         return f"Archivo '{path}' modificado exitosamente."
     except Exception as e:
         return f"Error al escribir el archivo: {str(e)}"
 
 
-def run_tool_search_grep(pattern):
-    """Busca un patrón de texto en todos los archivos del proyecto de forma rápida y segura."""
+def run_tool_search_grep(pattern, include_vault=False):
+    """Busca texto de forma segura en BEATSS y, opcionalmente, su bóveda."""
     if not pattern:
         return "Error: Debes proporcionar un patrón de búsqueda."
-    
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    search_roots = [PROJECT_ROOT]
+    if include_vault and OBSIDIAN_ROOT in READ_ROOTS:
+        search_roots.append(OBSIDIAN_ROOT)
     matches = []
     max_matches = 30
-    
-    for root, dirs, files in os.walk(base_dir):
-        dirs[:] = [d for d in dirs if d not in [".git", "node_modules", ".venv", ".vercel", "dist"]]
-        
-        for file in files:
-            if file.endswith((".png", ".jpg", ".jpeg", ".gif", ".pdf", ".zip", ".tar", ".gz", ".db", ".sqlite", ".DS_Store", "session_memory.json", "subagent_memories.json")):
-                continue
-                
-            full_path = os.path.join(root, file)
-            rel_path = os.path.relpath(full_path, base_dir)
-            
-            try:
-                with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
-                    for line_num, line in enumerate(f, 1):
-                        if pattern.lower() in line.lower():
-                            matches.append(f"{rel_path}:{line_num}: {line.strip()}")
-                            if len(matches) >= max_matches:
-                                return f"[Se muestran las primeras {max_matches} coincidencias para '{pattern}']:\n" + "\n".join(matches) + "\n... (más coincidencias encontradas)"
-            except Exception:
-                continue
-                
+
+    for base_dir in search_roots:
+        for root, dirs, files in os.walk(base_dir):
+            dirs[:] = [d for d in dirs if d not in _HIDDEN_DIRS]
+
+            for file in files:
+                full_path = os.path.join(root, file)
+                if file.endswith((".png", ".jpg", ".jpeg", ".gif", ".pdf", ".zip", ".tar", ".gz", ".db", ".sqlite", ".DS_Store")) or _is_sensitive_path(full_path):
+                    continue
+
+                rel_path = os.path.relpath(full_path, base_dir)
+                if base_dir == OBSIDIAN_ROOT:
+                    rel_path = f"BeatSS-Obsidian/{rel_path}"
+
+                try:
+                    with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+                        for line_num, line in enumerate(f, 1):
+                            if pattern.lower() in line.lower():
+                                matches.append(f"{rel_path}:{line_num}: {line.strip()}")
+                                if len(matches) >= max_matches:
+                                    return f"[Se muestran las primeras {max_matches} coincidencias para '{pattern}']:\n" + "\n".join(matches) + "\n... (más coincidencias encontradas)"
+                except Exception:
+                    continue
+
     if not matches:
         return f"No se encontraron coincidencias para '{pattern}' en el proyecto."
         
@@ -282,38 +398,42 @@ def format_conversation_for_llm(history):
     return formatted
 
 
-def execute_subagent_react_loop(rol, prompt_especifico, consulta):
+def execute_subagent_react_loop(rol, prompt_especifico, consulta, context=None):
     """Ejecuta el loop ReAct (Reasoning + Acting) para que el subagente use herramientas locales."""
-    memoria_persistente = get_subagent_memory(rol)
+    canonical_role = get_canonical_role(rol)
+    contract = get_agent_contract(rol)
+    if not canonical_role or not contract:
+        return f"Error: El rol de agente '{rol}' no pertenece al registro v2 de BEATSS."
+
+    memoria_persistente = get_subagent_memory(canonical_role, context)
     base_prompt = get_subagent_base_prompt()
     system_instruction = base_prompt.format(
-        rol=rol, 
+        rol=canonical_role,
         prompt_especifico=prompt_especifico,
-        memoria_persistente=memoria_persistente
+        memoria_persistente=memoria_persistente,
+        herramientas_permitidas=", ".join(contract["tools"]),
+        politica_escritura=contract["write_policy"],
     )
     
     conversation_history = [
         {"role": "user", "content": consulta}
     ]
     
-    # Configuración inteligente de iteraciones máximas por rol para evitar límites prematuros
-    agent_limits = {
-        'token_optimizer': 12,
-        'security_ops': 15,
-        'devops_admin': 12,
-        'refactor_expert': 12,
-        'default': 8
-    }
-    role_lower = rol.lower().strip()
-    default_limit = agent_limits.get('default', 8)
-    max_iterations = int(os.environ.get("MAX_REACT_ITERATIONS", str(agent_limits.get(role_lower, default_limit))))
+    role_lower = canonical_role
+    max_iterations = int(os.environ.get("MAX_REACT_ITERATIONS", str(get_agent_iteration_limit(role_lower))))
+    allowed_tools = set(get_agent_tools(role_lower))
     
     color = GET_COLOR_FOR_ROL(rol)
     
     for iteration in range(max_iterations):
         user_content = format_conversation_for_llm(conversation_history)
         
-        response_text = call_gemini(system_instruction, user_content, response_json=True)
+        response_text = call_llm(
+            system_instruction,
+            user_content,
+            response_json=True,
+            opencode_agent=get_agent_profile(role_lower),
+        )
         if not response_text:
             return f"Error al comunicarse con el Agente de {rol}."
             
@@ -321,30 +441,35 @@ def execute_subagent_react_loop(rol, prompt_especifico, consulta):
         if not agent_decision:
             return f"El Agente de {rol} falló al responder en formato estructurado:\n{response_text}"
             
-        pensamiento = agent_decision.get("pensamiento", "")
+        pensamiento = agent_decision.get("resumen_operativo", agent_decision.get("pensamiento", ""))
         tool_use = agent_decision.get("tool_use", {})
         tool_name = tool_use.get("tool", "none")
         tool_path = tool_use.get("path", "")
         tool_content = tool_use.get("content", "")
         
-        print(f"{color}[Agente {rol}] 🧠 Pensamiento: {C_GRAY}{pensamiento}{C_RESET}")
+        print(f"{color}[Agente {canonical_role}] Resumen: {C_GRAY}{pensamiento}{C_RESET}")
         
         if tool_name == "none" or not tool_name:
             nueva_memoria = agent_decision.get("actualizar_memoria")
             if nueva_memoria:
-                print(f"{color}[Agente {rol}] 💾 Recordando: {C_GRAY}{nueva_memoria}{C_RESET}")
-                save_subagent_memory(rol, nueva_memoria)
+                print(f"{color}[Agente {canonical_role}] 💾 Recordando: {C_GRAY}{nueva_memoria}{C_RESET}")
+                save_subagent_memory(canonical_role, nueva_memoria, context)
             
             return agent_decision.get("respuesta", "Operación completada.")
             
         if tool_name == "search_grep":
             pattern = tool_use.get("pattern", "")
-            print(f"{color}[Agente {rol}] 🛠  Herramienta: {C_BOLD}{tool_name}{C_RESET} ➔ Buscando: '{pattern}'{C_RESET}")
+            print(f"{color}[Agente {canonical_role}] 🛠  Herramienta: {C_BOLD}{tool_name}{C_RESET} ➔ Buscando: '{pattern}'{C_RESET}")
         else:
-            print(f"{color}[Agente {rol}] 🛠  Herramienta: {C_BOLD}{tool_name}{C_RESET} ➔ {C_CYAN}{tool_path}{C_RESET}")
+            print(f"{color}[Agente {canonical_role}] 🛠  Herramienta: {C_BOLD}{tool_name}{C_RESET} ➔ {C_CYAN}{tool_path}{C_RESET}")
         
         observation = ""
-        if tool_name == "read_file":
+        if tool_name not in allowed_tools:
+            observation = (
+                f"Error: La herramienta '{tool_name}' no está permitida para "
+                f"{canonical_role}. Herramientas permitidas: {', '.join(sorted(allowed_tools))}."
+            )
+        elif tool_name == "read_file":
             observation = run_tool_read_file(tool_path)
         elif tool_name == "read_file_lines":
             start_line = tool_use.get("start_line", 1)
@@ -352,11 +477,14 @@ def execute_subagent_react_loop(rol, prompt_especifico, consulta):
             observation = run_tool_read_file_lines(tool_path, start_line, end_line)
         elif tool_name == "search_grep":
             pattern = tool_use.get("pattern", "")
-            observation = run_tool_search_grep(pattern)
+            observation = run_tool_search_grep(pattern, include_vault=False)
         elif tool_name == "list_dir":
             observation = run_tool_list_dir(tool_path)
         elif tool_name == "write_file":
-            observation = run_tool_write_file(rol, tool_path, tool_content)
+            if not agent_can_write(canonical_role):
+                observation = f"Error: {canonical_role} opera en modo de solo lectura. Resume el cambio propuesto sin ejecutarlo."
+            else:
+                observation = run_tool_write_file(canonical_role, tool_path, tool_content)
         else:
             observation = f"Error: La herramienta '{tool_name}' no está disponible."
             
@@ -366,17 +494,33 @@ def execute_subagent_react_loop(rol, prompt_especifico, consulta):
     return f"Se alcanzó el límite de iteraciones (ReAct) del Agente de {rol} sin solución definitiva."
 
 
-def run_agent_pipeline(user_query, progress_callback=None):
+def run_agent_pipeline(
+    user_query,
+    progress_callback=None,
+    user_id="local",
+    task_id="interactive",
+    project_id="beatss",
+):
     """Ejecuta todo el pipeline de enrutamiento, delegación, ejecución ReAct y síntesis."""
+    context = {
+        "user_id": user_id,
+        "task_id": task_id,
+        "project_id": project_id,
+    }
     def log_progress(msg):
         if progress_callback:
             progress_callback(msg)
         else:
             print(msg)
 
+    # La revisión es bajo demanda: el Mac no mantiene un vigilante permanente.
+    # Sin cambios documentales permitidos, esta comprobación es local y no llama al LLM.
+    if str(project_id).lower().strip() == "beatss":
+        run_knowledge_steward_task_check(log_progress)
+
     # 1. Cargar historial y compresión
-    historial = load_session_memory()
-    memoria_historica_str = summarize_history_if_needed(historial)
+    historial = load_session_memory(context)
+    memoria_historica_str = summarize_history_if_needed(historial, context)
     
     historial_str = ""
     if historial:
@@ -386,6 +530,11 @@ def run_agent_pipeline(user_query, progress_callback=None):
         for turno in ultimos_turnos:
             historial_str += f"Usuario: {turno.get('usuario', '')}\nBEATSS: {turno.get('asistente', '')}\n\n"
         historial_str += "------------------------------------------------------\n\n"
+    recuerdos_relevantes = get_relevant_context(user_query, context)
+    if recuerdos_relevantes:
+        historial_str += "--- MEMORIA RELEVANTE RECUPERADA ---\n"
+        historial_str += recuerdos_relevantes
+        historial_str += "\n------------------------------------\n\n"
         
     user_input_con_historial = f"{historial_str}Consulta actual: {user_query}"
     
@@ -393,7 +542,12 @@ def run_agent_pipeline(user_query, progress_callback=None):
     
     # 2. Enrutador (Carga de prompt dinámico)
     router_prompt = get_router_prompt()
-    router_text = call_gemini(router_prompt, user_input_con_historial, response_json=True)
+    router_text = call_llm(
+        router_prompt,
+        user_input_con_historial,
+        response_json=True,
+        opencode_agent="beatss-orchestrator",
+    )
     if not router_text:
         return "Error al clasificar la consulta (Enrutador sin respuesta)."
         
@@ -404,14 +558,19 @@ def run_agent_pipeline(user_query, progress_callback=None):
     if router_decision.get("routing_decision") == "DIRECT":
         resp_directa = router_decision.get("respuesta_directa", "Hola. ¿En qué puedo ayudarte hoy?")
         historial.append({"usuario": user_query, "asistente": resp_directa})
-        save_session_memory(historial)
+        append_session_turn(user_query, resp_directa, context)
         return resp_directa
         
     log_progress("[Agente Principal] Analizando requerimiento y decidiendo delegación...")
     
     # 3. Agente Principal (Carga de prompt dinámico)
     main_agent_prompt = get_main_agent_prompt()
-    decision_text = call_gemini(main_agent_prompt, user_input_con_historial, response_json=True)
+    decision_text = call_llm(
+        main_agent_prompt,
+        user_input_con_historial,
+        response_json=True,
+        opencode_agent="beatss-orchestrator",
+    )
     if not decision_text:
         return "Error al analizar la consulta (Director sin respuesta)."
         
@@ -436,7 +595,7 @@ def run_agent_pipeline(user_query, progress_callback=None):
             log_progress(f"[Agente Principal] Delegando tarea ({idx}/{len(delegados)}) al Agente de {rol.upper()}...")
             
             prompt_especifico = get_subagent_prompt(rol)
-            resp_sub = execute_subagent_react_loop(rol.upper(), prompt_especifico, consulta)
+            resp_sub = execute_subagent_react_loop(rol.upper(), prompt_especifico, consulta, context)
             
             if resp_sub:
                 respuestas_subagentes.append(f"--- RESPUESTA DEL AGENTE DE {rol.upper()} ---\n{resp_sub}\n")
@@ -456,11 +615,16 @@ def run_agent_pipeline(user_query, progress_callback=None):
         subagent_responses=subagents_data
     )
     
-    final_response = call_gemini("Eres el Agente Principal de BEATSS.", synthesis_content, response_json=False)
+    final_response = call_llm(
+        "Eres el Agente Principal de BEATSS.",
+        synthesis_content,
+        response_json=False,
+        opencode_agent="beatss-orchestrator",
+    )
     
     if final_response:
         historial.append({"usuario": user_query, "asistente": final_response})
-        save_session_memory(historial)
+        append_session_turn(user_query, final_response, context)
         return final_response
     else:
         return "Error al consolidar la respuesta final."

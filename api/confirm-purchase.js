@@ -5,29 +5,31 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import crypto from 'crypto';
+import { enqueueSriJob } from './_sri_queue.js';
+import { isTrustedBeatssOrigin } from './_cors-origin.js';
+import { notifyPurchaseDelivery } from './_purchase-delivery.js';
+import { isBeatAvailableForSale, resolvePublicPreview } from '../server-handlers/beat-availability.js';
+import {
+    CURRENT_REFERENCE_VERSION,
+    createPublicContractReference,
+    isValidLicenseReference,
+    normalizeLicenseReference,
+    referenceTokenFromBytes,
+    resolveLicenseReference
+} from '../license-reference.js';
 
 export const config = {
     api: { bodyParser: { sizeLimit: '15mb' } }
 };
 
-const ALLOWED_ORIGINS = [
-    'https://beatss.app',
-    'https://www.beatss.app',
-    'https://generador-licencias.vercel.app'
-];
 const DEFAULT_APP_ORIGIN = 'https://beatss.app';
 const STORAGE_BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'licencias-musicales.firebasestorage.app';
+const REFERENCE_SECRET = process.env.LICENSE_REFERENCE_SIGNING_KEY || process.env.DOWNLOAD_SIGNING_KEY;
 
-function getCorsOrigin(req) {
-    const origin = req.headers.origin;
-    if (!origin) return 'https://beatss.app';
-    if (ALLOWED_ORIGINS.includes(origin) || 
-        origin.endsWith('.vercel.app') || 
-        origin.startsWith('http://localhost') || 
-        origin.startsWith('http://127.0.0.1')) {
-        return origin;
-    }
-    return 'https://beatss.app';
+function resolveAppOrigin(req) {
+    const origin = req?.headers?.origin;
+    if (origin && isTrustedBeatssOrigin(origin)) return origin;
+    return DEFAULT_APP_ORIGIN;
 }
 const SIGNING_SECRET = process.env.DOWNLOAD_SIGNING_KEY;
 if (!SIGNING_SECRET) {
@@ -42,8 +44,30 @@ function generateDownloadToken(paymentId) {
         .digest('hex');
 }
 
+function createPayPalContractReference({ paymentId, orderId, licenseType, issuedAt }) {
+    if (!REFERENCE_SECRET || String(REFERENCE_SECRET).length < 32) {
+        throw new Error('Falta una clave de firma segura para referencias contractuales.');
+    }
+    const token = referenceTokenFromBytes(
+        crypto
+            .createHmac('sha256', REFERENCE_SECRET)
+            .update(`beatss-contract-reference-v3:${paymentId}:${orderId}`)
+            .digest()
+    );
+    return createPublicContractReference({ licenseType, issuedAt, token });
+}
+
+function deterministicPayPalPaymentId(orderId, beatId, index) {
+    return `paypal_${crypto.createHash('sha256').update(`${orderId}:${beatId}:${index}`).digest('hex').slice(0, 40)}`;
+}
+
 function getSignedProxyUrl(rawUrl, appOrigin, paymentId, fileType) {
     if (!rawUrl) return '';
+    // Los proveedores alternativos se entregan con su URL directa. Limitarla
+    // a HTTPS evita incluir esquemas inseguros en el correo o portal del comprador.
+    if (!rawUrl.startsWith('https://') && !rawUrl.startsWith('/api/proxy-audio')) {
+        return '';
+    }
     let fileId = '';
     
     try {
@@ -97,8 +121,10 @@ function isValidDeliveryToken(paymentId, token) {
     }
 }
 
-function validatePdf(value) {
-    const encoded = String(value || '').replace(/^data:application\/pdf;base64,/, '');
+export function validatePdf(value) {
+    const raw = String(value || '').trim();
+    const dataUriPrefix = raw.match(/^data:application\/pdf[^,]*;base64,/i)?.[0] || '';
+    const encoded = (dataUriPrefix ? raw.slice(dataUriPrefix.length) : raw).replace(/\s+/g, '');
     if (!encoded || !/^[A-Za-z0-9+/=\s]+$/.test(encoded)) throw new Error('El contrato no contiene un PDF válido.');
     const pdf = Buffer.from(encoded, 'base64');
     if (pdf.length < 5 || pdf.length > 15 * 1024 * 1024 || !pdf.subarray(0, 4).equals(Buffer.from('%PDF'))) {
@@ -107,8 +133,12 @@ function validatePdf(value) {
     return pdf;
 }
 
+export function isSandboxEmailRecipient(value) {
+    return /^[^\s@]+@[^\s@]+\.test$/i.test(String(value || '').trim());
+}
+
 async function uploadLicensePdf(req, res) {
-    const { paymentId, deliveryToken, pdfBase64 } = req.body || {};
+    const { paymentId, deliveryToken, contractReference: submittedReference, pdfBase64 } = req.body || {};
     if (!SIGNING_SECRET) return res.status(503).json({ error: 'La entrega segura todavía no está configurada.' });
     if (!isValidDeliveryToken(paymentId, deliveryToken)) return res.status(401).json({ error: 'La autorización de entrega no es válida.' });
 
@@ -125,7 +155,16 @@ async function uploadLicensePdf(req, res) {
             return res.status(409).json({ error: 'El pago aún no está aprobado.' });
         }
 
-        const safeReference = String(payment.reference || paymentId).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const contractReference = resolveLicenseReference(payment);
+        const normalizedSubmittedReference = normalizeLicenseReference(submittedReference);
+        if (!isValidLicenseReference(contractReference)) {
+            return res.status(409).json({ error: 'La compra no tiene un código de referencia contractual válido; no se aceptó el PDF.' });
+        }
+        if (normalizedSubmittedReference && normalizedSubmittedReference !== contractReference) {
+            return res.status(409).json({ error: 'La referencia del PDF no coincide con la compra aprobada.' });
+        }
+
+        const safeReference = contractReference.replace(/[^a-zA-Z0-9_-]/g, '_');
         const objectPath = `licenses/${payment.producerId}/deliveries/${paymentId}/Licencia_${safeReference}.pdf`;
         const token = crypto.randomBytes(20).toString('hex');
         await getStorage().bucket(STORAGE_BUCKET).file(objectPath).save(pdf, {
@@ -135,35 +174,55 @@ async function uploadLicensePdf(req, res) {
         });
 
         const contractUrl = `https://firebasestorage.googleapis.com/v0/b/${STORAGE_BUCKET}/o/${encodeURIComponent(objectPath)}?alt=media&token=${token}`;
-        const appOrigin = getCorsOrigin(req);
-        const audioDownloadsUrl = `${appOrigin}/?download=${paymentId}&token=${generateDownloadToken(paymentId)}`;
-        await paymentRef.update({ contractPdfUrl: contractUrl, contractStoragePath: objectPath, deliveryStatus: 'pdf_ready', contractGeneratedAt: new Date().toISOString() });
+        const appOrigin = resolveAppOrigin(req);
+        const downloadToken = generateDownloadToken(paymentId);
+        const previousDeliveryStatus = String(payment.deliveryStatus || '');
+        const contractGeneratedAt = new Date().toISOString();
+        const contractUpdate = {
+            contractPdfUrl: contractUrl,
+            contractStoragePath: objectPath,
+            contractGeneratedAt,
+            contractReference,
+            contractValidity: 'valid',
+            contractRendererVersion: 'manual-contract-v1'
+        };
+        if (!['notifying', 'portal_sent', 'portal_ready_sandbox', 'sent', 'sandbox_complete'].includes(previousDeliveryStatus)) {
+            contractUpdate.deliveryStatus = 'pdf_ready';
+        }
+        await paymentRef.update(contractUpdate);
 
         const [publicConfigSnap, privateConfigSnap] = await Promise.all([
             db.collection('users').doc(payment.producerId).collection('config').doc('producer').get(),
             db.collection('users').doc(payment.producerId).collection('private_config').doc('producer').get()
         ]);
-        const producer = publicConfigSnap.exists ? publicConfigSnap.data() : {};
-        const privateConfig = privateConfigSnap.exists ? privateConfigSnap.data() : {};
-        const serviceId = privateConfig.emailjsServiceId || 'service_btb90z6';
-        const templateId = privateConfig.emailjsTemplateId || 'template_mlimkld';
-        const publicKey = privateConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
-        const deliveryLinks = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;"><div style="margin-bottom:20px;padding:18px;border:1px solid #e5e7eb;border-radius:10px;text-align:center;"><div style="font-size:11px;font-weight:700;letter-spacing:1px;color:#64748b;margin-bottom:10px;">DOCUMENTO OFICIAL</div><a href="${contractUrl}" target="_blank" style="display:inline-block;padding:12px 20px;background:#0055ee;color:#fff!important;text-decoration:none;border-radius:8px;font-weight:700;">📄 Descargar licencia PDF</a></div><div style="text-align:center;"><a href="${audioDownloadsUrl}" target="_blank" style="display:inline-block;padding:11px 18px;background:#f1f5f9;color:#0055ee!important;text-decoration:none;border-radius:8px;font-weight:700;">🎵 Acceder a archivos de audio</a></div></div>`;
-        const emailResponse = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ service_id: serviceId, template_id: templateId, user_id: publicKey, template_params: {
-                to_name: payment.buyerName, to_email: payment.buyerEmail, beat_name: payment.beatName,
-                license_type: payment.licenseType, delivery_links: deliveryLinks,
-                producer_name: producer.aka || producer.name || 'BEATSS', producer_email: producer.email || '',
-                pdf_filename: `Licencia_${safeReference}.pdf`, pdf_url: contractUrl
-            }})
+        const producer = {
+            ...(publicConfigSnap.exists ? publicConfigSnap.data() : {}),
+            ...(privateConfigSnap.exists ? privateConfigSnap.data() : {})
+        };
+        const notification = await notifyPurchaseDelivery({
+            db,
+            paymentId,
+            producer,
+            appOrigin,
+            downloadToken
         });
-        if (!emailResponse.ok) {
-            await paymentRef.update({ deliveryStatus: 'pdf_ready_email_failed', deliveryEmailErrorAt: new Date().toISOString() });
-            return res.status(502).json({ error: 'El contrato se guardó, pero el correo no pudo enviarse.' });
+        if (previousDeliveryStatus === 'portal_sent' && notification.complete) {
+            await paymentRef.update({ deliveryStatus: 'sent', deliveryCompletedAt: contractGeneratedAt });
+        } else if (previousDeliveryStatus === 'portal_ready_sandbox' && notification.complete) {
+            await paymentRef.update({ deliveryStatus: 'sandbox_complete', deliveryCompletedAt: contractGeneratedAt });
         }
-        await paymentRef.update({ deliveryStatus: 'sent', deliverySentAt: new Date().toISOString() });
-        return res.status(200).json({ success: true, contractUrl });
+        if (!notification.complete && !notification.inProgress) {
+            return res.status(notification.errorCode === 'EMAIL_NOT_CONFIGURED' ? 409 : 502).json({
+                error: notification.errorCode === 'EMAIL_NOT_CONFIGURED'
+                    ? 'El correo de entrega no está configurado para este productor.'
+                    : 'El contrato se guardó, pero el correo no pudo enviarse.'
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            contractUrl,
+            emailDelivery: notification.inProgress ? 'in_progress' : (notification.sandbox ? 'sandbox' : 'sent')
+        });
     } catch (error) {
         console.error('Error al preparar entrega de licencia:', error);
         return res.status(500).json({ error: 'No se pudo preparar la entrega oficial de la licencia.' });
@@ -207,18 +266,61 @@ async function verifyPayPalOrder(orderId, clientId, secret, isSandbox) {
     return await response.json();
 }
 
+const RATE_WINDOW_MS = 5 * 60 * 1000;
+const RATE_LIMIT = 15;
+const confirmRateWindows = new Map();
+
+export function resetConfirmRateLimit() {
+    confirmRateWindows.clear();
+}
+
+export function checkConfirmRateLimit(ip, now = Date.now(), limit = RATE_LIMIT, windowMs = RATE_WINDOW_MS) {
+    const record = confirmRateWindows.get(ip);
+    if (!record || now - record.start >= windowMs || now < record.start) {
+        confirmRateWindows.set(ip, { start: now, count: 1 });
+        return { allowed: true, retryAfterSeconds: 0 };
+    }
+    if (record.count >= limit) {
+        const retryAfterSeconds = Math.max(1, Math.ceil((record.start + windowMs - now) / 1000));
+        return { allowed: false, retryAfterSeconds };
+    }
+    record.count += 1;
+    return { allowed: true, retryAfterSeconds: 0 };
+}
+
+export function getClientIp(req) {
+    const headers = req?.headers || {};
+    const forwarded = headers['x-vercel-forwarded-for'] || headers['x-forwarded-for'] || req?.socket?.remoteAddress || 'unknown';
+    return String(Array.isArray(forwarded) ? forwarded.at(-1) : forwarded)
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean)
+        .at(-1)
+        ?.slice(0, 128) || 'unknown';
+}
+
 export default async function handler(req, res) {
-    // CORS headers - restringido al dominio propio
-    res.setHeader('Access-Control-Allow-Origin', getCorsOrigin(req));
+    const origin = req?.headers?.origin;
+    if (origin && isTrustedBeatssOrigin(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+    }
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     // Preflight
-    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method === 'OPTIONS') return res.status(204).end();
 
     // Solo POST
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Método no permitido' });
+    }
+
+    const ip = getClientIp(req);
+    const rate = checkConfirmRateLimit(ip);
+    if (!rate.allowed) {
+        res.setHeader('Retry-After', String(rate.retryAfterSeconds));
+        return res.status(429).json({ error: 'Demasiadas solicitudes. Inténtalo nuevamente en unos minutos.' });
     }
 
     if (req.query?.action === 'upload-license-pdf') {
@@ -247,7 +349,7 @@ export default async function handler(req, res) {
     try {
         initFirebaseAdmin();
         const db = getFirestore();
-        const appOrigin = getCorsOrigin(req);
+        const appOrigin = resolveAppOrigin(req);
 
         // 1. Obtener la configuración del productor (pública y privada)
         const publicConfigRef = db.collection('users').doc(producerId).collection('config').doc('producer');
@@ -265,12 +367,13 @@ export default async function handler(req, res) {
         const publicConfig = publicSnap.data();
         const privateConfig = privateSnap.exists ? privateSnap.data() : {};
 
-        // 2. Determinar credenciales de PayPal (Productor o fallback a la plataforma)
-        const activeClientId = publicConfig.paypalClientId || process.env.PAYPAL_CLIENT_ID;
-        const activeSecret = privateConfig.paypalClientSecret || process.env.PAYPAL_CLIENT_SECRET;
+        // 2. Cada tienda usa exclusivamente su propia cuenta PayPal. Un
+        // fallback global mezclaría cobros de productores distintos.
+        const activeClientId = privateConfig.paypalClientId || '';
+        const activeSecret = privateConfig.paypalClientSecret || '';
 
         if (!activeClientId || !activeSecret) {
-            return res.status(500).json({ error: 'El productor no tiene configurado PayPal y el servidor no tiene credenciales de fallback.' });
+            return res.status(409).json({ error: 'PayPal no está configurado para este productor.' });
         }
 
         const isSandbox = process.env.PAYPAL_MODE === 'sandbox' || activeClientId.startsWith('sb-') || activeClientId.includes('sandbox');
@@ -292,7 +395,7 @@ export default async function handler(req, res) {
             exclusive: 'Exclusiva'
         };
 
-        for (const item of items) {
+        for (const [itemIndex, item] of items.entries()) {
             // Obtener metadatos básicos del beat
             const beatRef = db.collection('users').doc(producerId).collection('beats').doc(item.beatId);
             const beatSnap = await beatRef.get();
@@ -301,10 +404,29 @@ export default async function handler(req, res) {
                 continue;
             }
             const beatData = beatSnap.data();
+            // Resolver primero la idempotencia: un reintento de un pedido ya
+            // pagado debe poder recuperar su entrega aunque luego el beat se
+            // haya retirado de la venta o vendido en exclusiva.
+            const paymentId = deterministicPayPalPaymentId(orderId, item.beatId, itemIndex);
+            const paymentRef = db.collection('payments').doc(paymentId);
+            const existingPaymentSnap = await paymentRef.get();
+            const existingPayment = existingPaymentSnap.exists ? (existingPaymentSnap.data() || {}) : null;
+
+            // PayPal debe respetar exactamente la misma disponibilidad que el
+            // escaparate y Stripe. Una exclusiva cerrada no admite nuevas
+            // licencias por esta ruta; las ampliaciones de titulares previos
+            // se validan exclusivamente en el Checkout Stripe protegido.
+            const previewFilesSnap = await beatRef.collection('private').doc('files').get();
+            const preview = resolvePublicPreview({
+                ...beatData,
+                preview: beatData.preview || (previewFilesSnap.exists ? previewFilesSnap.data()?.preview : '')
+            });
+            if (!existingPaymentSnap.exists && !isBeatAvailableForSale({ ...beatData, preview })) {
+                return res.status(409).json({ error: 'Uno de los beats seleccionados ya no está disponible.' });
+            }
 
             // Obtener archivos privados (high quality links)
-            const privateFilesRef = beatRef.collection('private').doc('files');
-            const privateFilesSnap = await privateFilesRef.get();
+            const privateFilesSnap = previewFilesSnap;
             let wavLink = '';
             let stemsLink = '';
 
@@ -315,8 +437,16 @@ export default async function handler(req, res) {
             }
 
             // Registrar el pago aprobado en Firestore usando Admin SDK (bypasseando reglas)
-            const paymentRef = db.collection('payments').doc();
-            const finalPrice = item.price * (1 - (discountPercent / 100));
+            const timestamp = existingPayment?.timestamp || new Date().toISOString();
+            const finalPrice = existingPayment
+                ? Number(existingPayment.finalPrice ?? existingPayment.price ?? 0)
+                : Number((item.price * (1 - (discountPercent / 100))).toFixed(2));
+            const contractReference = existingPayment
+                ? resolveLicenseReference(existingPayment)
+                : createPayPalContractReference({ paymentId, orderId, licenseType: item.licenseType, issuedAt: timestamp });
+            if (!isValidLicenseReference(contractReference)) {
+                throw new Error('El pago de PayPal no tiene una referencia contractual válida.');
+            }
             
             const paymentData = {
                 type: 'beat_purchase',
@@ -333,7 +463,11 @@ export default async function handler(req, res) {
                 buyerCountry: buyerCountry || '',
                 youtubeWhitelist: youtubeWhitelist || '',
                 method: 'paypal',
-                reference: orderId,
+                reference: contractReference,
+                contractReference,
+                referenceVersion: CURRENT_REFERENCE_VERSION,
+                referenceSource: 'paypal',
+                providerReference: orderId,
                 receiptUrl: '',
                 status: 'approved',
                 deliveryStatus: 'awaiting_contract',
@@ -341,10 +475,76 @@ export default async function handler(req, res) {
                 couponCode: couponCode,
                 originalPrice: item.price,
                 finalPrice: finalPrice,
-                timestamp: new Date().toISOString()
+                timestamp
             };
 
-            await paymentRef.set(paymentData);
+            if (!existingPaymentSnap.exists) await paymentRef.set(paymentData);
+
+            // Mantener el registro que consume el historial del productor.
+            // El documento de pago sigue siendo la fuente transaccional, pero
+            // esta copia permite que dashboard, reintentos y descargas usen el
+            // mismo paymentId sin depender del backup local.
+            if (!existingPaymentSnap.exists) await db.collection('users').doc(producerId).collection('licencias').doc(paymentRef.id).set({
+                id: paymentRef.id,
+                refCode: contractReference,
+                reference: contractReference,
+                contractReference,
+                referenceVersion: CURRENT_REFERENCE_VERSION,
+                referenceSource: 'paypal',
+                beatId: item.beatId,
+                beatName: item.beatName,
+                type: item.licenseType,
+                licenseType: item.licenseType,
+                value: finalPrice,
+                buyerName,
+                buyerEmail,
+                buyerPhone: buyerPhone || '',
+                buyerId: buyerDni || '',
+                buyerCity: buyerCity || '',
+                buyerCountry: buyerCountry || '',
+                formData: {
+                    buyerName,
+                    buyerEmail,
+                    buyerPhone: buyerPhone || '',
+                    buyerId: buyerDni || '',
+                    buyerCity: buyerCity || '',
+                    buyerCountry: buyerCountry || '',
+                    youtubeWhitelist: youtubeWhitelist || ''
+                },
+                paymentMethod: 'PayPal',
+                status: 'approved',
+                date: new Date().toISOString().slice(0, 10),
+                timestamp
+            }, { merge: true });
+
+            // La función serverless no puede mantener un worker Python. Deja
+            // el trabajo en Firestore para que el proceso SRI persistente lo
+            // firme, lo envíe y consulte su autorización.
+            if (!existingPaymentSnap.exists) {
+                try {
+                    await enqueueSriJob(db, {
+                        paymentId: paymentRef.id,
+                        producerId,
+                        publicConfig,
+                        privateConfig,
+                        requestedBy: 'paypal-confirm-purchase'
+                    });
+                } catch (sriQueueError) {
+                    // No convertir un problema de la cola SRI en un segundo
+                    // intento de cobro: el pago ya quedó registrado y se puede
+                    // reintentar desde el historial.
+                    console.error('No se pudo encolar la factura SRI:', sriQueueError.message);
+                    try {
+                        await paymentRef.update({
+                            sriEstado: 'ERROR_COLA',
+                            sriUltimoIntento: new Date().toISOString(),
+                            sriErrorMensaje: 'No se pudo crear el trabajo SRI; reintenta desde el historial.'
+                        });
+                    } catch (statusError) {
+                        console.error('No se pudo guardar el estado de la cola SRI:', statusError.message);
+                    }
+                }
+            }
 
             // Generar enlaces de descarga para este item
             const mp3 = getSignedProxyUrl(beatData.mp3 || "", appOrigin, paymentRef.id, 'mp3');
@@ -356,7 +556,7 @@ export default async function handler(req, res) {
 
             // Generar token de acceso para la página de descargas (sin necesidad de login)
             const downloadToken = generateDownloadToken(paymentRef.id);
-            const downloadUrl = `${appOrigin}/?download=${paymentRef.id}&token=${downloadToken}`;
+            const downloadUrl = `${appOrigin}/descargas/${encodeURIComponent(paymentRef.id)}?token=${encodeURIComponent(downloadToken)}`;
 
             let linksHtml = `
             <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #edf2f7; border-radius: 8px; background-color: #f8fafc;">
@@ -369,6 +569,7 @@ export default async function handler(req, res) {
                 paymentId: paymentRef.id,
                 beatName: item.beatName,
                 licenseType: item.licenseType,
+                reference: contractReference,
                 linksHtml: linksHtml,
                 deliveryToken: SIGNING_SECRET
                     ? crypto.createHmac('sha256', SIGNING_SECRET).update(`${paymentRef.id}:pdf-delivery`).digest('hex')
@@ -387,11 +588,11 @@ export default async function handler(req, res) {
         return res.status(200).json({
             success: true,
             paymentId: deliveredItems[0]?.paymentId || '',
-            deliveries: deliveredItems.map(({ paymentId, beatName, licenseType, deliveryToken }) => ({
+            deliveries: deliveredItems.map(({ paymentId, beatName, licenseType, reference, deliveryToken }) => ({
                 paymentId,
                 beatName,
                 licenseType,
-                reference: orderId,
+                reference,
                 deliveryToken
             })),
             message: 'Compra confirmada. Generando los contratos oficiales para la entrega.'

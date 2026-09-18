@@ -146,6 +146,24 @@ const chatbotData = {
     }
 };
 
+export function escapeChatHtml(text) {
+    return String(text || '').replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    })[m]);
+}
+
+export function formatChatMessage(text) {
+    const escaped = escapeChatHtml(text);
+    return escaped
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br/>');
+}
+
 class BEATSSChatbot {
     constructor() {
         this.isOpen = false;
@@ -212,7 +230,7 @@ class BEATSSChatbot {
             this.handleSend();
         });
 
-        if (window.lucide) window.lucide.createIcons();
+        if (window.lucide) window.lucide.createIcons({ root: container });
 
         // Render initial greeting and quick replies
         this.resetChat();
@@ -227,12 +245,17 @@ class BEATSSChatbot {
         this.isOpen = show !== null ? show : !this.isOpen;
 
         if (this.isOpen) {
+            // En el Studio el asistente permanece oculto por defecto para no
+            // invadir el espacio de trabajo. Una apertura explícita desde
+            // Soporte debe tener prioridad sobre esa regla administrativa.
+            document.body.classList.add('chatbot-force-visible');
             chatWindow.style.display = 'flex';
             openIcon.style.display = 'none';
             closeIcon.style.display = 'block';
             chatWindow.classList.add('active');
             document.getElementById('chatbot-input').focus();
         } else {
+            document.body.classList.remove('chatbot-force-visible');
             chatWindow.style.display = 'none';
             openIcon.style.display = 'block';
             closeIcon.style.display = 'none';
@@ -271,13 +294,8 @@ class BEATSSChatbot {
         const msg = document.createElement('div');
         msg.className = `chatbot-msg chatbot-msg-${sender}`;
         
-        // Formato simple Markdown para negritas
-        let formattedText = text
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/\n/g, '<br/>');
-
-        msg.innerHTML = formattedText;
+        // Saneamiento estricto contra DOM XSS y formato simple Markdown
+        msg.innerHTML = formatChatMessage(text);
         msgArea.appendChild(msg);
         msgArea.scrollTop = msgArea.scrollHeight;
     }
@@ -395,18 +413,19 @@ class BEATSSChatbot {
     }
 }
 
-// Instantiate and bind to window
-window.beatssChatbot = new BEATSSChatbot();
-
 export function initChatbot() {
-    window.beatssChatbot.init();
+    if (typeof window !== 'undefined' && window.beatssChatbot) {
+        window.beatssChatbot.init();
+    }
 }
 
-window.initChatbot = initChatbot;
-
-// Listener to check language changes dynamically
-window.addEventListener('languageChanged', () => {
-    if (window.beatssChatbot) {
-        window.beatssChatbot.updateLanguage();
-    }
-});
+// Instantiate and bind to window in browser environments
+if (typeof window !== 'undefined') {
+    window.beatssChatbot = new BEATSSChatbot();
+    window.initChatbot = initChatbot;
+    window.addEventListener('languageChanged', () => {
+        if (window.beatssChatbot) {
+            window.beatssChatbot.updateLanguage();
+        }
+    });
+}

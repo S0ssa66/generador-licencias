@@ -1,0 +1,102 @@
+/* Módulo experimental del Facturador SRI. Mantiene una superficie clara y
+   legible sin heredar los fondos oscuros del Studio anterior. */
+#tab-invoicing {
+    background: #f6f8fc;
+    color: #17233d;
+    padding: clamp(14px, 2vw, 22px);
+    overflow: auto;
+}
+
+#tab-invoicing[hidden] { display: none !important; }
+
+.sri-facturador-shell { max-width: 1440px; margin: 0 auto; }
+.sri-facturador-kicker {
+    display: flex; align-items: center; gap: 8px; color: #3157e8;
+    font: 700 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: .14em; text-transform: uppercase;
+}
+.sri-facturador-kicker::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #3157e8; }
+.sri-facturador-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; margin-bottom: 14px; }
+.sri-facturador-head h1 { margin: 5px 0 3px; font-size: clamp(26px, 2.45vw, 34px); line-height: 1.04; letter-spacing: -.04em; color: #17233d; }
+.sri-facturador-head p { margin: 0; color: #697993; font-size: 13px; }
+.sri-facturador-head-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.sri-facturador-btn { border: 1px solid #d9e1ef; background: #fff; color: #17233d; border-radius: 10px; min-height: 38px; padding: 0 12px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+.sri-facturador-btn:hover { border-color: #3157e8; color: #3157e8; }
+.sri-facturador-btn.primary { background: #3157e8; border-color: #3157e8; color: #fff; box-shadow: 0 8px 20px rgba(49,87,232,.18); }
+.sri-facturador-btn.primary:hover { background: #2348d5; color: #fff; }
+.sri-facturador-btn.danger { color: #b43646; }
+.sri-facturador-btn[disabled] { opacity: .55; cursor: wait; }
+.sri-facturador-btn svg, .sri-facturador-btn i { width: 17px; height: 17px; }
+
+.sri-facturador-status { display: flex; gap: 10px 12px; align-items: center; flex-wrap: wrap; background: #fff; border: 1px solid #dfe6f1; border-radius: 14px; padding: 12px 15px; margin-bottom: 12px; box-shadow: 0 6px 18px rgba(40,57,92,.05); }
+.sri-facturador-status-copy { flex: 1 1 340px; min-width: 0; }
+.sri-facturador-status-copy strong { display: inline; font-size: 14px; margin-right: 7px; }
+.sri-facturador-status-copy span { color: #697993; font-size: 12px; }
+.sri-facturador-pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 999px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.sri-facturador-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.sri-facturador-pill.ready { color: #137a53; background: #e7f7ef; }
+.sri-facturador-pill.warning { color: #9a6700; background: #fff5d6; }
+.sri-facturador-pill.off { color: #697993; background: #eef1f6; }
+.sri-facturador-pill.test { color: #3157e8; background: #e9efff; }
+.sri-facturador-pill.production { color: #8737a8; background: #f5e9fb; }
+.sri-facturador-ruc { color: #697993; font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.sri-facturador-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.sri-facturador-metric { background: #fff; border: 1px solid #dfe6f1; border-radius: 13px; padding: 11px 14px; min-height: 68px; box-shadow: 0 6px 18px rgba(40,57,92,.04); }
+.sri-facturador-metric small { display: block; color: #697993; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.sri-facturador-metric strong { display: block; margin-top: 4px; color: #17233d; font-size: 23px; letter-spacing: -.03em; }
+.sri-facturador-metric.accent { border-color: #c9d5ff; background: #f5f7ff; }
+.sri-facturador-metric.success { border-color: #c5ead8; background: #f3fcf7; }
+.sri-facturador-metric.warning { border-color: #f0dfb4; background: #fffaf0; }
+.sri-facturador-metric.danger { border-color: #f1c9d0; background: #fff7f8; }
+
+.sri-facturador-grid { display: grid; grid-template-columns: minmax(0, 1fr) 272px; gap: 12px; align-items: start; }
+.sri-facturador-card { background: #fff; border: 1px solid #dfe6f1; border-radius: 14px; box-shadow: 0 6px 18px rgba(40,57,92,.04); overflow: hidden; }
+.sri-facturador-card-head { padding: 12px 15px; border-bottom: 1px solid #edf1f7; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.sri-facturador-card-head h2 { margin: 0; font-size: 17px; letter-spacing: -.02em; }
+.sri-facturador-card-head p { margin: 4px 0 0; color: #697993; font-size: 12px; }
+.sri-facturador-filters { display: flex; gap: 8px; padding: 10px 15px; border-bottom: 1px solid #edf1f7; }
+.sri-facturador-filters input, .sri-facturador-filters select { min-height: 34px; border: 1px solid #d9e1ef; border-radius: 9px; background: #fbfcfe; color: #17233d; padding: 0 10px; outline: none; }
+.sri-facturador-filters input { flex: 1; min-width: 140px; }
+.sri-facturador-filters input:focus, .sri-facturador-filters select:focus { border-color: #3157e8; box-shadow: 0 0 0 3px rgba(49,87,232,.1); }
+.sri-facturador-table-wrap { overflow-x: auto; }
+.sri-facturador-table { width: 100%; border-collapse: collapse; min-width: 720px; }
+.sri-facturador-table th { color: #697993; font-size: 10px; text-align: left; text-transform: uppercase; letter-spacing: .08em; padding: 10px 15px; background: #fbfcfe; }
+.sri-facturador-table td { border-top: 1px solid #edf1f7; padding: 11px 15px; color: #17233d; font-size: 13px; vertical-align: middle; }
+.sri-facturador-table td small { color: #697993; display: block; margin-top: 3px; }
+.sri-facturador-ref { color: #3157e8; font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.sri-facturador-state { display: inline-flex; border-radius: 999px; padding: 6px 9px; font-size: 10px; font-weight: 800; letter-spacing: .03em; }
+.sri-facturador-state.authorized { color: #137a53; background: #e7f7ef; }
+.sri-facturador-state.pending { color: #9a6700; background: #fff5d6; }
+.sri-facturador-state.failed { color: #b43646; background: #fff0f2; }
+.sri-facturador-state.none { color: #697993; background: #eef1f6; }
+.sri-facturador-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.sri-facturador-row-actions button { border: 1px solid #d9e1ef; background: #fff; border-radius: 8px; padding: 6px 8px; color: #3157e8; font-size: 11px; font-weight: 800; cursor: pointer; }
+.sri-facturador-row-actions button:hover { border-color: #3157e8; background: #f5f7ff; }
+.sri-facturador-row-actions button.retry { color: #9a6700; }
+.sri-facturador-tracking { color: #9a6700; font-size: 11px; font-weight: 800; }
+.sri-facturador-empty { padding: 42px 22px; text-align: center; color: #697993; }
+.sri-facturador-empty strong { display: block; color: #17233d; margin-bottom: 5px; }
+.sri-facturador-help { padding: 14px; }
+.sri-facturador-help h3 { margin: 0 0 9px; font-size: 16px; }
+.sri-facturador-help p, .sri-facturador-help li { color: #697993; font-size: 13px; line-height: 1.55; }
+.sri-facturador-help ul { padding-left: 18px; margin-bottom: 11px; }
+.sri-facturador-privacy { border-top: 1px solid #edf1f7; padding-top: 10px; margin-top: 10px; }
+.sri-facturador-privacy strong { color: #3157e8; }
+
+@media (max-width: 1050px) { .sri-facturador-grid { grid-template-columns: 1fr; } }
+@media (max-width: 760px) {
+    #tab-invoicing {
+        padding: 16px 12px calc(115px + env(safe-area-inset-bottom, 20px)) !important;
+    }
+    .sri-facturador-head { display: block; }
+    .sri-facturador-head-actions { justify-content: flex-start; margin-top: 16px; }
+    .sri-facturador-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sri-facturador-filters { flex-direction: column; }
+    .sri-facturador-table th, .sri-facturador-table td { padding: 12px; }
+    .sri-facturador-row-actions button {
+        min-height: 44px;
+        padding: 10px 14px;
+        font-size: 12px;
+    }
+}

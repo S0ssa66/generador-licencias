@@ -3,28 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>Portal de Clearance — BEATSS Content ID</title>
-    <link rel="icon" type="image/png" href="/logo-sossa.png">
+    <link rel="icon" type="image/png" href="/logo.png">
     <link rel="manifest" href="/manifest.json">
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').then((reg) => {
-                    console.log('🚀 Service Worker de BEATSS registrado desde Clearance:', reg.scope);
-                }).catch((err) => {
-                    console.error('❌ Error al registrar el Service Worker:', err);
-                });
-            });
-        }
-    </script>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     
     <!-- Vanilla CSS / Custom Styles -->
     <link rel="stylesheet" href="/styles.css">
@@ -466,8 +453,9 @@
     </div>
 
     <!-- Firebase SDK Logic & App Bundle -->
+    <script type="module" src="./clearance-design.js"></script>
     <script type="module">
-        import { db, doc, getDoc, collection, addDoc } from './firebase.js';
+        import { renderPublicIcons } from './public-icons.js';
 
         let verifiedLicense = null;
         let producerId = '';
@@ -486,9 +474,19 @@
         const alertBox = document.getElementById('error-alert');
         const alertText = document.getElementById('error-text');
 
-        // Inicializar Lucide Icons
-        if (window.lucide) {
-            window.lucide.createIcons();
+        // Los iconos de Clearance se resuelven localmente, sin CDN externo.
+        renderPublicIcons(document);
+
+        async function requestClearance(action, payload) {
+            const response = await fetch('/api/clearance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ action, ...payload })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'No se pudo completar la solicitud.');
+            return data;
         }
 
         // Mostrar Alerta
@@ -556,30 +554,9 @@
             btnVerify.innerHTML = '<span class="spinner"></span> Validando...';
 
             try {
-                // 1. Obtener la licencia directamente
-                const licRef = doc(db, 'users', producerId, 'licencias', refCode);
-                const docSnap = await getDoc(licRef);
-
-                if (!docSnap.exists()) {
-                    showAlert('Licencia no encontrada. Verifica que el ID de Productor y el Código de Licencia sean correctos.');
-                    btnVerify.disabled = false;
-                    btnVerify.innerHTML = originalHtml;
-                    return;
-                }
-
-                verifiedLicense = docSnap.data();
-
-                // 2. Obtener AKA del productor (opcional, para visualización premium)
-                let producerAka = 'Productor Autorizado';
-                try {
-                    const prodConfigRef = doc(db, 'users', producerId, 'config', 'producer');
-                    const prodSnap = await getDoc(prodConfigRef);
-                    if (prodSnap.exists()) {
-                        producerAka = prodSnap.data().aka || prodSnap.data().name || producerAka;
-                    }
-                } catch(e) {
-                    console.warn('No se pudo cargar el AKA del productor:', e.message);
-                }
+                const result = await requestClearance('verify', { producerId, licenseRef: refCode });
+                verifiedLicense = result.license;
+                const producerAka = result.producerAka || 'Productor Autorizado';
 
                 // Llenar datos de la tarjeta de licencia
                 document.getElementById('lbl-beat').textContent = verifiedLicense.beatName || 'Beat';
@@ -607,11 +584,11 @@
 
             } catch (err) {
                 console.error('Error al verificar licencia:', err);
-                showAlert('Ocurrió un error en el servidor al intentar verificar tu licencia. Revisa tu conexión.');
+                showAlert(err.message || 'Ocurrió un error en el servidor al intentar verificar tu licencia. Revisa tu conexión.');
             } finally {
                 btnVerify.disabled = false;
                 btnVerify.innerHTML = originalHtml;
-                if (window.lucide) window.lucide.createIcons();
+                renderPublicIcons(document);
             }
         }
 
@@ -640,14 +617,12 @@
             btnWhitelist.innerHTML = '<span class="spinner"></span> Registrando...';
 
             try {
-                // Escribir en la subcolección whitelist del productor
-                const whitelistCollection = collection(db, 'users', producerId, 'whitelist');
-                await addDoc(whitelistCollection, {
-                    channelUrl: channelUrl,
-                    artistName: artistName,
-                    songName: songName,
+                await requestClearance('whitelist', {
+                    producerId,
                     licenseRef: refCode,
-                    createdAt: new Date().toISOString()
+                    channelUrl,
+                    artistName,
+                    songName
                 });
 
                 // Avanzar al paso 3 (Éxito)
@@ -655,11 +630,11 @@
 
             } catch (err) {
                 console.error('Error al agregar a la whitelist:', err);
-                showAlert('No se pudo añadir el canal a la lista blanca. Asegúrate de que el código de licencia sea el correcto.');
+                showAlert(err.message || 'No se pudo añadir el canal a la lista blanca. Asegúrate de que el código de licencia sea el correcto.');
             } finally {
                 btnWhitelist.disabled = false;
                 btnWhitelist.innerHTML = originalHtml;
-                if (window.lucide) window.lucide.createIcons();
+                renderPublicIcons(document);
             }
         }
 

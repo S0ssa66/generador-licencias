@@ -1,6 +1,7 @@
 import { getStripeFirebase } from '../api/_fulfill-beat-purchase.js';
 import { isBeatAvailableForSale, resolvePublicPreview } from './beat-availability.js';
 import { externalProducersEnabled, resolveProducerSalesMode, PAYMENT_MODES } from './producer-settlement.js';
+import { isTrustedBeatssOrigin } from '../api/_cors-origin.js';
 
 const MAX_PUBLIC_ARTWORK_BYTES = 1_500_000;
 const PUBLIC_ARTWORK_TYPES = new Map([
@@ -14,7 +15,7 @@ const PUBLIC_ARTWORK_TYPES = new Map([
 
 const PUBLIC_PRODUCER_FIELDS = new Set([
     'aka', 'name', 'storeSlug', 'email', 'phone', 'brandColor', 'logoBase64', 'defaultBeatArtwork',
-    'epkBio', 'epkCollabs', 'epkPro', 'epkSales', 'epkStreams', 'coupons',
+    'epkBio', 'epkCollabs', 'epkPro', 'epkSales', 'epkStreams',
     'bankPichinchaAcc', 'bankPichinchaName', 'bankPichinchaType',
     'bankGuayaquilAcc', 'bankGuayaquilName', 'bankGuayaquilType',
     'deunaName', 'deunaPhone', 'deunaQrBase64', 'paypalClientId', 'paypalEmail',
@@ -218,12 +219,88 @@ export function serializePublicCatalog(beats = []) {
     return { beats: catalogBeats, producers };
 }
 
+const COUPON_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const MAX_COUPON_ATTEMPTS = 12;
+const couponRateLimits = new Map();
+
+const CATALOG_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
+const MAX_CATALOG_ATTEMPTS = 60;
+const catalogRateLimits = new Map();
+
+const ARTWORK_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
+const MAX_ARTWORK_ATTEMPTS = 60;
+const artworkRateLimits = new Map();
+
+function getClientIp(req) {
+    const headers = req?.headers || {};
+    const forwarded = headers['x-vercel-forwarded-for'] || headers['x-forwarded-for'] || headers['x-real-ip'] || req?.socket?.remoteAddress || 'unknown';
+    return String(Array.isArray(forwarded) ? forwarded.at(-1) : forwarded).split(',').map((s) => s.trim()).filter(Boolean).at(-1)?.slice(0, 128) || 'unknown';
+}
+
+function checkRateLimit(store, ip, limit, windowMs, nowMs = Date.now()) {
+    const current = store.get(ip) || { start: nowMs, count: 0 };
+    if (!Number.isFinite(current.start) || nowMs - current.start >= windowMs || nowMs < current.start) {
+        store.set(ip, { start: nowMs, count: 1 });
+        return { allowed: true, retryAfterSeconds: 0 };
+    }
+    if (current.count >= limit) {
+        return {
+            allowed: false,
+            retryAfterSeconds: Math.max(1, Math.ceil((current.start + windowMs - nowMs) / 1000))
+        };
+    }
+    current.count += 1;
+    store.set(ip, current);
+    return { allowed: true, retryAfterSeconds: 0 };
+}
+
+export function checkCouponRateLimit(ip, nowMs = Date.now(), limit = MAX_COUPON_ATTEMPTS, windowMs = COUPON_RATE_LIMIT_WINDOW_MS) {
+    return checkRateLimit(couponRateLimits, ip, limit, windowMs, nowMs);
+}
+
+export function checkCatalogRateLimit(ip, nowMs = Date.now(), limit = MAX_CATALOG_ATTEMPTS, windowMs = CATALOG_RATE_LIMIT_WINDOW_MS) {
+    return checkRateLimit(catalogRateLimits, ip, limit, windowMs, nowMs);
+}
+
+export function checkArtworkRateLimit(ip, nowMs = Date.now(), limit = MAX_ARTWORK_ATTEMPTS, windowMs = ARTWORK_RATE_LIMIT_WINDOW_MS) {
+    return checkRateLimit(artworkRateLimits, ip, limit, windowMs, nowMs);
+}
+
+export function resetPublicStoreRateLimitsForTest() {
+    couponRateLimits.clear();
+    catalogRateLimits.clear();
+    artworkRateLimits.clear();
+}
+
 export default async function handler(req, res) {
-    if (req.method !== 'GET') return res.status(405).json({ error: 'Método no permitido.' });
+    const origin = req?.headers?.origin;
+    if (origin && isTrustedBeatssOrigin(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cache-Control', 'private, no-store');
+
+    if (req.method === 'OPTIONS') {
+        res.setHeader('Allow', 'GET, OPTIONS');
+        return res.status(204).end();
+    }
+    if (req.method !== 'GET') {
+        res.setHeader('Allow', 'GET, OPTIONS');
+        return res.status(405).json({ error: 'Método no permitido.' });
+    }
+
+    const ip = getClientIp(req);
     const route = String(req.query?.route || '').trim().toLowerCase();
     const artworkProducerId = cleanProducerId(req.query?.producer);
     if (route === 'public-artwork') {
         if (!artworkProducerId) return res.status(400).json({ error: 'Productor no válido.' });
+        const artworkRate = checkArtworkRateLimit(ip);
+        if (!artworkRate.allowed) {
+            res.setHeader('Retry-After', String(artworkRate.retryAfterSeconds));
+            return res.status(429).json({ error: 'Demasiadas solicitudes de portada. Espera unos minutos.' });
+        }
         try {
             const db = getStripeFirebase();
             const configDoc = await db.collection('users').doc(artworkProducerId).collection('config').doc('producer').get();
@@ -243,6 +320,40 @@ export default async function handler(req, res) {
     if (catalogMode && catalogMode !== 'global') return res.status(400).json({ error: 'Catálogo no válido.' });
     const alias = cleanProducerAlias(req.query?.producer);
     if (!catalogMode && !alias) return res.status(400).json({ error: 'Productor no válido.' });
+
+    const couponQuery = String(req.query?.coupon || '').trim().toUpperCase();
+    if (couponQuery) {
+        if (!alias) return res.status(400).json({ error: 'Productor no válido.' });
+        const rate = checkCouponRateLimit(ip);
+        if (!rate.allowed) {
+            res.setHeader('Retry-After', String(rate.retryAfterSeconds));
+            return res.status(429).json({ valid: false, error: 'Demasiados intentos de validación de cupones. Espera unos minutos.' });
+        }
+        try {
+            const db = getStripeFirebase();
+            const configDoc = await findProducerConfig(db, alias);
+            if (!configDoc) return res.status(404).json({ error: 'Productor no encontrado.' });
+            const producerId = configDoc.ref.parent.parent.id;
+            const privateConfigDoc = await db.collection('users').doc(producerId).collection('private_config').doc('producer').get();
+            const coupons = Array.isArray(configDoc.data()?.coupons)
+                ? configDoc.data().coupons
+                : (Array.isArray(privateConfigDoc.data()?.coupons) ? privateConfigDoc.data().coupons : []);
+            const found = coupons.find((c) => String(c?.code || '').trim().toUpperCase() === couponQuery);
+            if (found && Number.isInteger(Number(found.discount)) && Number(found.discount) >= 1 && Number(found.discount) <= 99) {
+                return res.status(200).json({ valid: true, code: couponQuery, discount: Number(found.discount) });
+            }
+            return res.status(200).json({ valid: false, error: 'Cupón no válido o expirado.' });
+        } catch (error) {
+            console.error('Coupon validation error:', error.message);
+            return res.status(500).json({ error: 'Error al validar cupón.' });
+        }
+    }
+
+    const catalogRate = checkCatalogRateLimit(ip);
+    if (!catalogRate.allowed) {
+        res.setHeader('Retry-After', String(catalogRate.retryAfterSeconds));
+        return res.status(429).json({ error: 'Demasiadas consultas de catálogo. Espera unos minutos.' });
+    }
 
     try {
         const db = getStripeFirebase();

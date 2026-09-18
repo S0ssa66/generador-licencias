@@ -1,0 +1,1273 @@
+/*
+ * BEATSS — Licenses & Orders
+ * Shared operational surface for the private workspace. This layer loads
+ * after the legacy themes so dark translucent tokens cannot leak into the
+ * light Studio.
+ */
+
+#app-container.saas-workspace .operations-page.active {
+    display: block !important;
+    min-height: 0;
+    padding: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    background: #f4f5f8 !important;
+    color: #172238 !important;
+}
+
+#app-container.saas-workspace .operations-load-status {
+    width: 100%;
+    margin: -2px 0 18px;
+    padding: 11px 14px;
+    border: 1px solid #dbe3f1;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #5f6f8b;
+    font-size: 13px;
+}
+
+#app-container.saas-workspace .operations-load-status[data-state="loading"] {
+    border-color: #cfd9ff;
+    background: #f7f9ff;
+    color: #3157e8;
+}
+
+#app-container.saas-workspace .operations-load-status[data-state="error"] {
+    border-color: #f2c7c7;
+    background: #fff8f8;
+    color: #a43a3a;
+}
+
+#app-container.saas-workspace:has(.operations-page.active),
+#app-container.saas-workspace:has(.operations-page.active) .main-panel {
+    background: #f6f8fc !important;
+}
+
+#app-container.saas-workspace .operations-page :is([hidden], .operations-metrics[hidden], .operations-grid[hidden], .operations-empty[hidden], .chart-container[hidden], .orders-table-panel[hidden]) {
+    display: none !important;
+}
+
+/* Legacy Ledger rules use two IDs plus !important for these grids. Keep the
+   semantic hidden attribute authoritative in both redesigned views. */
+#app-container.saas-workspace #tab-history.operations-page [hidden],
+#app-container.saas-workspace #tab-sales.operations-page [hidden] {
+    display: none !important;
+}
+
+#app-container.saas-workspace .operations-shell {
+    width: min(calc(100% - clamp(36px, 4vw, 72px)), 1480px);
+    margin: 0 auto;
+    padding: clamp(30px, 3.2vw, 54px) 0 64px;
+    font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#app-container.saas-workspace .operations-hero {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 30px;
+    align-items: center;
+    min-height: 184px;
+    box-sizing: border-box;
+    padding: clamp(28px, 3vw, 46px);
+    overflow: hidden;
+    border: 1px solid #dbe2ee;
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 92% 8%, rgba(49, 87, 232, .15), transparent 31%),
+        linear-gradient(135deg, #ffffff 0%, #ffffff 68%, #eef2ff 100%);
+    box-shadow: 0 18px 40px rgba(23, 34, 56, .07);
+}
+
+#app-container.saas-workspace .operations-hero::after {
+    position: absolute;
+    right: -42px;
+    bottom: -74px;
+    width: 210px;
+    height: 210px;
+    border: 1px solid rgba(49, 87, 232, .16);
+    border-radius: 50%;
+    content: '';
+    pointer-events: none;
+}
+
+#app-container.saas-workspace .operations-hero--orders {
+    background:
+        radial-gradient(circle at 90% 10%, rgba(90, 212, 154, .17), transparent 31%),
+        linear-gradient(135deg, #ffffff 0%, #ffffff 68%, #f0fbf6 100%);
+}
+
+#app-container.saas-workspace .operations-hero-copy {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+}
+
+#app-container.saas-workspace .operations-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 13px;
+    color: #3157e8 !important;
+    font: 750 10px/1.3 "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+}
+
+#app-container.saas-workspace .operations-eyebrow > span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3157e8;
+    box-shadow: 0 0 0 5px #eef2ff;
+}
+
+#app-container.saas-workspace .operations-hero h1 {
+    max-width: 760px;
+    margin: 0;
+    color: #172238 !important;
+    font-size: clamp(34px, 3.4vw, 54px);
+    font-weight: 780;
+    line-height: 1.02;
+    letter-spacing: -.055em;
+    text-wrap: balance;
+}
+
+#app-container.saas-workspace .operations-hero-copy > p:last-child {
+    max-width: 680px;
+    margin: 17px 0 0;
+    color: #66738a !important;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+#app-container.saas-workspace .operations-privacy-badge,
+#app-container.saas-workspace .operations-hero-actions {
+    position: relative;
+    z-index: 1;
+}
+
+#app-container.saas-workspace .operations-privacy-badge {
+    display: grid;
+    grid-template-columns: 42px auto;
+    gap: 12px;
+    align-items: center;
+    min-width: 230px;
+    padding: 16px 18px;
+    border: 1px solid #d8e0ed;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .82);
+    box-shadow: 0 10px 24px rgba(23, 34, 56, .06);
+}
+
+#app-container.saas-workspace .operations-privacy-badge > svg {
+    box-sizing: border-box;
+    width: 42px;
+    height: 42px;
+    padding: 11px;
+    border-radius: 12px;
+    background: #eef2ff;
+    color: #3157e8;
+}
+
+#app-container.saas-workspace .operations-privacy-badge span {
+    display: grid;
+    gap: 3px;
+}
+
+#app-container.saas-workspace .operations-privacy-badge strong {
+    color: #172238;
+    font-size: 12px;
+}
+
+#app-container.saas-workspace .operations-privacy-badge small {
+    color: #788499;
+    font-size: 10px;
+}
+
+#app-container.saas-workspace .operations-hero-actions {
+    display: grid;
+    justify-items: end;
+    gap: 13px;
+}
+
+#app-container.saas-workspace .operations-live-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #25734d;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+#app-container.saas-workspace .operations-live-status > i {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #31b874;
+    box-shadow: 0 0 0 5px rgba(49, 184, 116, .12);
+}
+
+#app-container.saas-workspace .operations-hero-actions .btn {
+    min-height: 46px;
+    border-color: #d5ddea !important;
+    border-radius: 11px !important;
+    background: #ffffff !important;
+    color: #172238 !important;
+    box-shadow: 0 8px 18px rgba(23, 34, 56, .07) !important;
+}
+
+#app-container.saas-workspace .operations-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(260px, .8fr) minmax(560px, 1.7fr);
+    gap: 18px !important;
+    align-items: center !important;
+    margin: 22px 0 18px;
+    padding: 14px !important;
+    border: 1px solid #dbe2ee !important;
+    border-radius: 18px;
+    background: #ffffff !important;
+    box-shadow: 0 12px 28px rgba(23, 34, 56, .055);
+}
+
+#app-container.saas-workspace .operations-search {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 50px;
+    box-sizing: border-box;
+    padding: 0 15px !important;
+    border: 1px solid #d7deea !important;
+    border-radius: 12px !important;
+    background: #f8f9fc !important;
+    box-shadow: none !important;
+}
+
+#app-container.saas-workspace .operations-search:focus-within {
+    border-color: #3157e8 !important;
+    background: #ffffff !important;
+    box-shadow: 0 0 0 4px rgba(49, 87, 232, .1) !important;
+}
+
+#app-container.saas-workspace .operations-search > svg {
+    width: 18px;
+    height: 18px;
+    color: #718096;
+}
+
+#app-container.saas-workspace .operations-search input {
+    color: #172238 !important;
+    font-size: 13px;
+}
+
+#app-container.saas-workspace .operations-search input::placeholder {
+    color: #8d99aa !important;
+}
+
+#app-container.saas-workspace .operations-actions {
+    display: flex !important;
+    flex: none !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    min-width: 0;
+}
+
+#app-container.saas-workspace .operations-actions .btn {
+    min-height: 44px !important;
+    height: auto !important;
+    padding: 10px 13px !important;
+    border-radius: 10px !important;
+    font-size: 11px !important;
+    font-weight: 750 !important;
+    line-height: 1.2;
+    white-space: nowrap;
+    box-shadow: none !important;
+}
+
+#app-container.saas-workspace .operations-actions .btn-primary {
+    border-color: #3157e8 !important;
+    background: #3157e8 !important;
+    color: #ffffff !important;
+}
+
+#app-container.saas-workspace .operations-actions .btn-secondary {
+    border-color: #d7deea !important;
+    background: #ffffff !important;
+    color: #25324a !important;
+}
+
+#app-container.saas-workspace .operations-actions .btn-danger-outline {
+    border-color: #f1c8c3 !important;
+    background: #fff8f7 !important;
+    color: #bd4338 !important;
+}
+
+#app-container.saas-workspace .operations-actions .btn :is(svg, i) {
+    width: 16px;
+    height: 16px;
+}
+
+#app-container.saas-workspace .operations-metrics {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+    margin: 0 0 18px !important;
+    padding: 0 !important;
+}
+
+#app-container.saas-workspace .operations-metrics--orders {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    margin-top: 22px !important;
+}
+
+#app-container.saas-workspace .operations-metric {
+    position: relative;
+    display: grid !important;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 14px !important;
+    min-height: 126px;
+    box-sizing: border-box;
+    padding: 22px !important;
+    overflow: hidden;
+    border: 1px solid #dbe2ee !important;
+    border-radius: 18px !important;
+    background: #ffffff !important;
+    color: #172238 !important;
+    box-shadow: 0 12px 28px rgba(23, 34, 56, .06) !important;
+}
+
+#app-container.saas-workspace .operations-metric::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--metric-accent, #3157e8);
+    content: '';
+}
+
+#app-container.saas-workspace .operations-metric:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--metric-accent, #3157e8) 35%, #dbe2ee) !important;
+    box-shadow: 0 17px 34px rgba(23, 34, 56, .085) !important;
+}
+
+#app-container.saas-workspace .operations-metric[data-tone="blue"] { --metric-accent: #3157e8; --metric-soft: #eef2ff; }
+#app-container.saas-workspace .operations-metric[data-tone="violet"] { --metric-accent: #8057d8; --metric-soft: #f4efff; }
+#app-container.saas-workspace .operations-metric[data-tone="orange"] { --metric-accent: #e68142; --metric-soft: #fff2e9; }
+#app-container.saas-workspace .operations-metric[data-tone="mint"] { --metric-accent: #269b69; --metric-soft: #eaf9f2; }
+
+#app-container.saas-workspace .operations-metric .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--metric-soft) !important;
+    color: var(--metric-accent) !important;
+}
+
+#app-container.saas-workspace .operations-metric .stat-details {
+    min-width: 0;
+    gap: 3px;
+}
+
+#app-container.saas-workspace .operations-metric .stat-label {
+    color: #66738a !important;
+    font: 700 9px/1.35 "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: .08em;
+}
+
+#app-container.saas-workspace .operations-metric .stat-value {
+    margin: 0;
+    color: #172238 !important;
+    font-size: clamp(23px, 2vw, 30px);
+    line-height: 1.05;
+    letter-spacing: -.045em;
+}
+
+#app-container.saas-workspace .operations-metric .stat-sublabel {
+    overflow: hidden;
+    color: #637188 !important;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace .operations-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.7fr) minmax(300px, .7fr) !important;
+    gap: 18px !important;
+    align-items: start;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#app-container.saas-workspace .operations-panel {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid #dbe2ee !important;
+    border-radius: 20px;
+    background: #ffffff !important;
+    color: #172238 !important;
+    box-shadow: 0 14px 32px rgba(23, 34, 56, .06);
+}
+
+#app-container.saas-workspace .orders-table-panel {
+    margin-top: 18px;
+}
+
+#app-container.saas-workspace .operations-panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    min-height: 76px;
+    box-sizing: border-box;
+    padding: 17px 20px;
+    border-bottom: 1px solid #e4e9f1;
+    background: linear-gradient(180deg, #ffffff, #fbfcfe);
+}
+
+#app-container.saas-workspace .operations-panel-heading p {
+    margin: 0 0 4px;
+    color: #3157e8 !important;
+    font: 700 9px/1.2 "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: .1em;
+}
+
+#app-container.saas-workspace .operations-panel-heading h2 {
+    margin: 0;
+    color: #172238 !important;
+    font-size: 17px;
+    font-weight: 780;
+    letter-spacing: -.025em;
+}
+
+#app-container.saas-workspace .operations-panel-heading > svg {
+    box-sizing: border-box;
+    width: 38px;
+    height: 38px;
+    padding: 9px;
+    border-radius: 11px;
+    background: #eef2ff;
+    color: #3157e8;
+}
+
+#app-container.saas-workspace .operations-panel-note {
+    color: #7b8799;
+    font-size: 10px;
+    text-align: right;
+}
+
+#app-container.saas-workspace .operations-table-wrap,
+#app-container.saas-workspace #tab-history .operations-table-wrap {
+    min-width: 0 !important;
+    padding: 6px 14px 14px !important;
+    overflow-x: auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+}
+
+#app-container.saas-workspace .operations-page .history-table {
+    width: 100% !important;
+    min-width: 820px !important;
+    table-layout: auto !important;
+    border-collapse: separate !important;
+    border-spacing: 0;
+    color: #172238 !important;
+}
+
+#app-container.saas-workspace .operations-page .history-table th {
+    padding: 14px 12px !important;
+    border-bottom: 1px solid #e1e7ef !important;
+    color: #728096 !important;
+    font: 700 9px/1.3 "IBM Plex Mono", ui-monospace, monospace !important;
+    letter-spacing: .075em !important;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace .operations-page .history-table td {
+    padding: 14px 12px !important;
+    border-bottom: 1px solid #edf0f5 !important;
+    color: #25324a !important;
+    font-size: 11px !important;
+    line-height: 1.45;
+}
+
+#app-container.saas-workspace .operations-page .history-table tbody tr {
+    background: #ffffff !important;
+    transition: background-color .16s ease;
+}
+
+#app-container.saas-workspace .operations-page .history-table tbody tr:hover {
+    background: #f7f9ff !important;
+}
+
+#app-container.saas-workspace .operations-page .history-table tbody tr:last-child td {
+    border-bottom: 0 !important;
+}
+
+#app-container.saas-workspace .operations-page .history-table :is(strong, [style*="color: #fff"], [style*="color:#fff"]) {
+    color: #172238 !important;
+}
+
+#app-container.saas-workspace .operations-page .history-table [style*="color: #8a91a6"] {
+    color: #748196 !important;
+}
+
+#app-container.saas-workspace .operations-page .ref-code-cell {
+    color: #3157e8 !important;
+}
+
+#app-container.saas-workspace .operations-chart-panel {
+    min-height: 312px;
+}
+
+#app-container.saas-workspace .operations-chart-panel .chart-container {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    box-sizing: border-box;
+    padding: 18px;
+}
+
+#app-container.saas-workspace .operations-empty {
+    display: grid;
+    justify-items: center;
+    min-height: 330px;
+    box-sizing: border-box;
+    margin-top: 18px;
+    padding: 52px 24px;
+    border: 1px dashed #cbd5e4;
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 50% 0%, rgba(49, 87, 232, .08), transparent 38%),
+        #ffffff !important;
+    color: #172238 !important;
+    text-align: center;
+}
+
+#app-container.saas-workspace .operations-empty-icon {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 20px;
+    border-radius: 18px;
+    background: #eef2ff;
+    color: #3157e8;
+}
+
+#app-container.saas-workspace .operations-empty-icon svg {
+    width: 27px;
+    height: 27px;
+}
+
+#app-container.saas-workspace .operations-empty .operations-eyebrow {
+    margin-bottom: 8px;
+    justify-content: center;
+}
+
+#app-container.saas-workspace .operations-empty h2 {
+    margin: 0;
+    color: #172238 !important;
+    font-size: 24px;
+    font-weight: 780;
+    letter-spacing: -.035em;
+}
+
+#app-container.saas-workspace .operations-empty > p:last-child {
+    max-width: 540px;
+    margin: 11px 0 0;
+    color: #66738a !important;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+@media (max-width: 1180px) {
+    #app-container.saas-workspace .operations-toolbar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #app-container.saas-workspace .operations-actions {
+        justify-content: flex-start !important;
+    }
+
+    #app-container.saas-workspace .operations-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    #app-container.saas-workspace .operations-metrics--orders {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    #app-container.saas-workspace .operations-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+}
+
+@media (max-width: 760px) {
+    #app-container.saas-workspace .operations-page.active {
+        min-height: calc(100dvh - 82px) !important;
+    }
+
+    #app-container.saas-workspace .operations-page.active {
+        padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+    }
+
+    #app-container.saas-workspace .operations-shell {
+        width: calc(100% - 24px);
+        padding: 18px 0 calc(115px + env(safe-area-inset-bottom, 20px)) !important;
+    }
+
+    #app-container.saas-workspace .operations-hero {
+        display: block;
+        min-height: 0;
+        padding: 25px 21px;
+        border-radius: 20px;
+    }
+
+    #app-container.saas-workspace .operations-hero h1 {
+        font-size: clamp(31px, 10vw, 42px);
+    }
+
+    #app-container.saas-workspace .operations-hero-copy > p:last-child {
+        font-size: 12px;
+    }
+
+    #app-container.saas-workspace .operations-privacy-badge,
+    #app-container.saas-workspace .operations-hero-actions {
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 22px;
+    }
+
+    #app-container.saas-workspace .operations-hero-actions {
+        justify-items: stretch;
+    }
+
+    #app-container.saas-workspace .operations-live-status {
+        justify-content: flex-start;
+    }
+
+    #app-container.saas-workspace .operations-hero-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    #app-container.saas-workspace .operations-toolbar,
+    #app-container.saas-workspace #tab-history .operations-toolbar {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        margin: 14px 0 !important;
+        padding: 10px !important;
+        border-radius: 16px;
+    }
+
+    #app-container.saas-workspace #tab-history .operations-search {
+        min-height: 48px !important;
+        padding: 0 12px !important;
+    }
+
+    #app-container.saas-workspace #tab-history .operations-actions {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 7px !important;
+    }
+
+    #app-container.saas-workspace #tab-history .operations-actions .btn {
+        min-height: 46px !important;
+        padding: 9px 7px !important;
+        white-space: normal;
+    }
+
+    #app-container.saas-workspace #tab-history #btn-add-manual,
+    #app-container.saas-workspace #tab-history #btn-import-beatstars-csv {
+        grid-column: 1 / -1 !important;
+    }
+
+    #app-container.saas-workspace .operations-metrics,
+    #app-container.saas-workspace .operations-metrics--orders {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    #app-container.saas-workspace .operations-metric {
+        min-height: 105px;
+        padding: 18px !important;
+    }
+
+    #app-container.saas-workspace .operations-panel {
+        border-radius: 17px;
+    }
+
+    #app-container.saas-workspace .operations-panel-heading {
+        align-items: flex-start;
+        min-height: 70px;
+        padding: 15px;
+    }
+
+    #app-container.saas-workspace .operations-panel-note {
+        max-width: 125px;
+    }
+
+    #app-container.saas-workspace .operations-table-wrap,
+    #app-container.saas-workspace #tab-history .operations-table-wrap {
+        padding: 10px !important;
+        overflow: visible !important;
+    }
+
+    #app-container.saas-workspace .operations-page .history-table {
+        min-width: 0 !important;
+    }
+
+    #app-container.saas-workspace .operations-page .history-table thead {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace #tab-history.operations-page .history-table tbody,
+    #app-container.saas-workspace #tab-sales.operations-page .history-table tbody {
+        display: grid !important;
+        gap: 10px;
+    }
+
+    #app-container.saas-workspace #tab-history.operations-page .history-table tbody tr,
+    #app-container.saas-workspace #tab-sales.operations-page .history-table tbody tr {
+        display: grid !important;
+        width: 100% !important;
+        box-sizing: border-box;
+        overflow: hidden;
+        border: 1px solid #e0e6ef;
+        border-radius: 14px;
+        background: #ffffff !important;
+    }
+
+    #app-container.saas-workspace #tab-history.operations-page .history-table td,
+    #app-container.saas-workspace #tab-history.operations-page .history-table td:nth-child(n),
+    #app-container.saas-workspace #tab-history.operations-page .history-table td.actions-cell,
+    #app-container.saas-workspace #tab-sales.operations-page .history-table td,
+    #app-container.saas-workspace #tab-sales.operations-page .history-table td:nth-child(n),
+    #app-container.saas-workspace #tab-sales.operations-page .history-table td.actions-cell {
+        display: grid !important;
+        grid-template-columns: minmax(92px, .38fr) minmax(0, 1fr);
+        gap: 12px;
+        align-items: center;
+        width: 100% !important;
+        box-sizing: border-box;
+        padding: 11px 12px !important;
+        text-align: right !important;
+        white-space: normal !important;
+    }
+
+    #app-container.saas-workspace #tab-history.operations-page .history-table td > *,
+    #app-container.saas-workspace #tab-sales.operations-page .history-table td > * {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    #app-container.saas-workspace .operations-page .history-table td::before {
+        color: #748196 !important;
+        content: attr(data-label);
+        font: 700 8px/1.3 "IBM Plex Mono", ui-monospace, monospace;
+        letter-spacing: .07em;
+        text-align: left;
+        text-transform: uppercase;
+    }
+
+    #app-container.saas-workspace .operations-page .history-table td.actions-cell::before {
+        content: 'Acciones';
+    }
+
+    #app-container.saas-workspace #tab-history.operations-page .history-table td.actions-cell,
+    #app-container.saas-workspace #tab-sales.operations-page .history-table td.actions-cell {
+        grid-template-columns: repeat(3, 44px) !important;
+        justify-content: end;
+        min-height: 58px;
+    }
+
+    #app-container.saas-workspace #tab-history.operations-page .history-table td.actions-cell::before,
+    #app-container.saas-workspace #tab-sales.operations-page .history-table td.actions-cell::before {
+        display: none;
+    }
+
+    #app-container.saas-workspace #tab-history.operations-page .history-table td.actions-cell > *,
+    #app-container.saas-workspace #tab-sales.operations-page .history-table td.actions-cell > * {
+        margin-left: 0 !important;
+    }
+
+    #app-container.saas-workspace .operations-empty {
+        min-height: 300px;
+        padding: 38px 20px;
+        border-radius: 18px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #app-container.saas-workspace .operations-metric,
+    #app-container.saas-workspace .operations-page .history-table tbody tr {
+        transition: none !important;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   BEATSS Operations 2.0
+   A genuinely new visual layer for Licenses and Orders. The palette is
+   deliberately limited to BEATSS blue, navy and neutral surfaces. Success
+   and destructive colors remain reserved for actual states and actions.
+   --------------------------------------------------------------------- */
+
+@media (min-width: 761px) {
+    #app-container.saas-workspace .main-header,
+    #app-container.saas-workspace[data-active-tab="tab-home"] .main-header {
+        min-height: 88px !important;
+        height: 88px !important;
+        padding: 0 clamp(22px, 2.5vw, 44px) !important;
+        border-bottom: 1px solid #e5eaf3 !important;
+        background: rgba(255, 255, 255, .96) !important;
+        box-shadow: 0 8px 30px rgba(31, 49, 86, .055) !important;
+        backdrop-filter: blur(18px) saturate(120%) !important;
+    }
+
+    #app-container.saas-workspace .workspace-primary-tabs {
+        gap: 6px;
+    }
+
+    #app-container.saas-workspace .main-header .tab-btn {
+        min-height: 46px !important;
+        height: 46px !important;
+        padding: 0 15px !important;
+        border: 0 !important;
+        border-radius: 13px !important;
+        background: transparent !important;
+        color: #62708a !important;
+        font-size: 13px !important;
+        font-weight: 750 !important;
+        box-shadow: none !important;
+        transition: color .3s ease-out, background-color .3s ease-out, transform .3s ease-out !important;
+    }
+
+    #app-container.saas-workspace .main-header .tab-btn:hover {
+        transform: translateY(-1px);
+        background: #f0f4ff !important;
+        color: #234bd6 !important;
+    }
+
+    #app-container.saas-workspace .main-header .tab-btn.active {
+        transform: none;
+        border: 0 !important;
+        background: #3157e8 !important;
+        color: #ffffff !important;
+        box-shadow: 0 9px 20px rgba(49, 87, 232, .22) !important;
+    }
+
+    #app-container.saas-workspace .main-header .tab-btn .badge {
+        border: 0 !important;
+        background: #edf1f8 !important;
+        color: #66748d !important;
+    }
+
+    #app-container.saas-workspace .main-header .tab-btn.active .badge {
+        background: rgba(255, 255, 255, .2) !important;
+        color: #ffffff !important;
+    }
+
+    #app-container.saas-workspace .workspace-secondary-nav summary {
+        min-height: 46px;
+        padding: 0 16px;
+        border-color: #dce3ef;
+        border-radius: 13px;
+        background: #ffffff;
+        color: #41506b;
+        box-shadow: 0 5px 14px rgba(31, 49, 86, .045);
+        transition: color .3s ease-out, border-color .3s ease-out, background-color .3s ease-out !important;
+    }
+
+    #app-container.saas-workspace .workspace-secondary-nav summary:hover,
+    #app-container.saas-workspace .workspace-secondary-nav[open] summary {
+        border-color: #aabaf8;
+        background: #f5f7ff;
+        color: #234bd6;
+    }
+}
+
+#app-container.saas-workspace .operations-page.active {
+    background:
+        radial-gradient(circle at 8% 0%, rgba(49, 87, 232, .055), transparent 27rem),
+        #f6f8fc !important;
+}
+
+#app-container.saas-workspace .operations-shell {
+    width: min(calc(100% - clamp(40px, 5vw, 88px)), 1460px);
+    padding: clamp(34px, 3.4vw, 58px) 0 72px;
+}
+
+#app-container.saas-workspace .operations-hero {
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr) auto;
+    gap: 20px;
+    align-items: center;
+    min-height: 0;
+    padding: 4px 2px 28px;
+    overflow: visible;
+    border: 0;
+    border-bottom: 1px solid #dfe5ef;
+    border-radius: 0;
+    background: transparent !important;
+    box-shadow: none;
+}
+
+#app-container.saas-workspace .operations-hero::after {
+    display: none;
+}
+
+#app-container.saas-workspace .operations-hero-mark {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #4166ee, #234bd6);
+    color: #ffffff;
+    box-shadow: 0 14px 28px rgba(49, 87, 232, .22);
+}
+
+#app-container.saas-workspace .operations-hero-mark svg {
+    width: 25px;
+    height: 25px;
+}
+
+#app-container.saas-workspace .operations-eyebrow {
+    margin: 0 0 7px;
+    color: #3157e8 !important;
+    font: 750 10px/1.3 "IBM Plex Mono", ui-monospace, monospace;
+    letter-spacing: .13em;
+}
+
+#app-container.saas-workspace .operations-hero h1 {
+    max-width: none;
+    color: #15213a !important;
+    font-size: clamp(35px, 3.2vw, 51px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.055em;
+}
+
+#app-container.saas-workspace .operations-hero-copy > p:last-child {
+    max-width: 720px;
+    margin: 11px 0 0;
+    color: #69768d !important;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+#app-container.saas-workspace .operations-privacy-badge {
+    min-width: 0;
+    padding: 12px 14px;
+    border-color: #dce3ef;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgba(31, 49, 86, .05);
+}
+
+#app-container.saas-workspace .operations-privacy-badge > svg {
+    width: 38px;
+    height: 38px;
+    padding: 10px;
+    border-radius: 11px;
+    background: #edf2ff;
+    color: #3157e8;
+}
+
+#app-container.saas-workspace .operations-hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+#app-container.saas-workspace .operations-live-status {
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid #dce3ef;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #465570;
+    font-size: 11px;
+    box-shadow: 0 5px 14px rgba(31, 49, 86, .04);
+}
+
+#app-container.saas-workspace .operations-live-status > i {
+    width: 7px;
+    height: 7px;
+    background: #3157e8;
+    box-shadow: 0 0 0 4px rgba(49, 87, 232, .11);
+}
+
+#app-container.saas-workspace .operations-hero-actions .btn {
+    min-height: 44px;
+    padding: 0 17px !important;
+    border-color: #3157e8 !important;
+    border-radius: 12px !important;
+    background: #3157e8 !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 20px rgba(49, 87, 232, .18) !important;
+}
+
+#app-container.saas-workspace .operations-toolbar {
+    margin: 22px 0 16px;
+    padding: 12px !important;
+    border-color: #e0e6f0 !important;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .94) !important;
+    box-shadow: 0 12px 32px rgba(31, 49, 86, .055);
+}
+
+#app-container.saas-workspace .operations-search {
+    min-height: 48px;
+    border-color: transparent !important;
+    background: #f3f6fb !important;
+}
+
+#app-container.saas-workspace .operations-search:focus-within {
+    border-color: #3157e8 !important;
+    box-shadow: 0 0 0 4px rgba(49, 87, 232, .1) !important;
+}
+
+#app-container.saas-workspace .operations-actions .btn {
+    min-height: 42px !important;
+    border-radius: 11px !important;
+}
+
+#app-container.saas-workspace .operations-actions .btn-primary {
+    background: #3157e8 !important;
+    box-shadow: 0 7px 16px rgba(49, 87, 232, .16) !important;
+}
+
+#app-container.saas-workspace .operations-actions .btn-secondary {
+    border-color: #dce3ef !important;
+    color: #34425d !important;
+}
+
+#app-container.saas-workspace .operations-metrics,
+#app-container.saas-workspace .operations-metrics--orders {
+    display: grid !important;
+    gap: 0 !important;
+    margin: 18px 0 !important;
+    padding: 8px !important;
+    overflow: hidden;
+    border: 1px solid #e0e6f0;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 14px 34px rgba(31, 49, 86, .06);
+}
+
+#app-container.saas-workspace .operations-metric,
+#app-container.saas-workspace .operations-metric[data-tone] {
+    --metric-accent: #3157e8;
+    --metric-soft: #edf2ff;
+    min-height: 112px;
+    padding: 20px !important;
+    border: 0 !important;
+    border-right: 1px solid #e8ecf3 !important;
+    border-radius: 14px !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    transition: background-color .3s ease-out, transform .3s ease-out !important;
+}
+
+#app-container.saas-workspace .operations-metric:last-child {
+    border-right: 0 !important;
+}
+
+#app-container.saas-workspace .operations-metric::before {
+    display: none;
+}
+
+#app-container.saas-workspace .operations-metric:hover {
+    transform: translateY(-2px);
+    background: #f7f9ff !important;
+}
+
+#app-container.saas-workspace .operations-metric .stat-icon {
+    background: #edf2ff !important;
+    color: #3157e8 !important;
+}
+
+#app-container.saas-workspace .operations-metric .stat-label {
+    color: #748198 !important;
+}
+
+#app-container.saas-workspace .operations-metric .stat-value {
+    color: #15213a !important;
+}
+
+#app-container.saas-workspace .operations-panel {
+    border-color: #e0e6f0 !important;
+    border-radius: 20px;
+    box-shadow: 0 16px 38px rgba(31, 49, 86, .065);
+}
+
+#app-container.saas-workspace .orders-table-panel {
+    margin-top: 18px;
+}
+
+#app-container.saas-workspace .operations-panel-heading {
+    min-height: 82px;
+    padding: 19px 22px;
+    border-bottom-color: #e8ecf3;
+    background: #ffffff;
+}
+
+#app-container.saas-workspace .operations-panel-heading p {
+    color: #3157e8 !important;
+}
+
+#app-container.saas-workspace .operations-panel-heading h2 {
+    color: #15213a !important;
+    font-size: 19px;
+}
+
+#app-container.saas-workspace .operations-panel-heading > svg {
+    background: #edf2ff;
+    color: #3157e8;
+}
+
+#app-container.saas-workspace .operations-panel-note {
+    color: #7a879c;
+}
+
+#app-container.saas-workspace .operations-table-wrap,
+#app-container.saas-workspace #tab-history .operations-table-wrap {
+    padding: 0 16px 16px !important;
+}
+
+#app-container.saas-workspace .operations-page .history-table th {
+    padding: 15px 12px !important;
+    border-bottom-color: #e2e7ef !important;
+    color: #738097 !important;
+    background: #f8f9fc;
+}
+
+#app-container.saas-workspace .operations-page .history-table td {
+    padding: 17px 12px !important;
+    color: #33415b !important;
+}
+
+#app-container.saas-workspace .operations-page .history-table tbody tr:hover {
+    background: #f5f8ff !important;
+}
+
+#app-container.saas-workspace .operations-empty {
+    border-color: #cbd6ec;
+    background: #ffffff !important;
+    box-shadow: 0 14px 34px rgba(31, 49, 86, .055);
+}
+
+#app-container.saas-workspace .operations-empty-icon {
+    background: #edf2ff;
+    color: #3157e8;
+}
+
+@media (max-width: 1180px) and (min-width: 761px) {
+    #app-container.saas-workspace .operations-hero {
+        grid-template-columns: 58px minmax(0, 1fr);
+    }
+
+    #app-container.saas-workspace .operations-privacy-badge,
+    #app-container.saas-workspace .operations-hero-actions {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    #app-container.saas-workspace .operations-metric {
+        border-right: 0 !important;
+        border-bottom: 1px solid #e8ecf3 !important;
+    }
+
+    #app-container.saas-workspace .operations-metric:nth-last-child(-n+2),
+    #app-container.saas-workspace .operations-metrics--orders .operations-metric:last-child {
+        border-bottom: 0 !important;
+    }
+}
+
+@media (max-width: 760px) {
+    #app-container.saas-workspace .operations-shell {
+        width: calc(100% - 24px);
+        padding-top: 22px;
+    }
+
+    #app-container.saas-workspace .operations-hero {
+        display: grid;
+        grid-template-columns: 48px minmax(0, 1fr);
+        gap: 14px;
+        padding: 4px 2px 22px;
+        border-radius: 0;
+    }
+
+    #app-container.saas-workspace .operations-hero-mark {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+    }
+
+    #app-container.saas-workspace .operations-hero-mark svg {
+        width: 21px;
+        height: 21px;
+    }
+
+    #app-container.saas-workspace .operations-hero h1 {
+        font-size: clamp(30px, 9.5vw, 39px);
+    }
+
+    #app-container.saas-workspace .operations-hero-copy > p:last-child {
+        font-size: 12px;
+    }
+
+    #app-container.saas-workspace .operations-privacy-badge,
+    #app-container.saas-workspace .operations-hero-actions {
+        grid-column: 1 / -1;
+        width: 100%;
+        margin-top: 3px;
+    }
+
+    #app-container.saas-workspace .operations-hero-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        justify-items: stretch;
+    }
+
+    #app-container.saas-workspace .operations-live-status,
+    #app-container.saas-workspace .operations-hero-actions .btn {
+        width: 100%;
+        box-sizing: border-box;
+        justify-content: center;
+    }
+
+    #app-container.saas-workspace .operations-metrics,
+    #app-container.saas-workspace .operations-metrics--orders {
+        gap: 0 !important;
+        padding: 7px !important;
+    }
+
+    #app-container.saas-workspace .operations-metric,
+    #app-container.saas-workspace .operations-metric[data-tone] {
+        min-height: 98px;
+        border-right: 0 !important;
+        border-bottom: 1px solid #e8ecf3 !important;
+        border-radius: 12px !important;
+    }
+
+    #app-container.saas-workspace .operations-metric:last-child {
+        border-bottom: 0 !important;
+    }
+
+    #app-container.saas-workspace .operations-toolbar {
+        margin-top: 16px !important;
+    }
+
+    #app-container.saas-workspace .operations-panel-heading {
+        min-height: 74px;
+    }
+}

@@ -15,10 +15,13 @@ service-account*.json
 serviceAccount*.json
 .venv/
 venv/
+.local/
 __pycache__/
 *.pyc
 session_memory.json
 subagent_memories.json
+.beatss_memory/
+.knowledge_steward_reports/
 
 .env*
 
@@ -26,6 +29,10 @@ subagent_memories.json
 *.db
 *.bak
 *.log
+* 2.*
+* 3.*
+* copy.*
+* copy*.*
 
 # Added by ggshield
 .cache_ggshield
@@ -36,3 +43,28 @@ subagent_memories.json
 # Graphify artifacts
 graphify-out/
 docs/Codigo_Beatss/
+
+# Local migration helper with historical Google OAuth material. Keep it out of
+# commits; production credentials belong only in the deployment environment.
+scratch/update_gdrive_config.py
+.vercel
+
+# Exportaciones locales de BeatStars: audio pesado y metadatos temporales.
+# Nunca forman parte del repositorio ni de un despliegue.
+.migration/
+
+# Local OS & tool artifacts
+.DS_Store
+*.DS_Store
+.opencode/
+.playwright-cli/
+.vercel_python_packages/
+BeatSS.app/
+output/
+outputs/
+tmp/
+work/
+scratch/check_gdrive_config.py
+scratch/test_guest_upload.js
+preview-selector-pagos.png
+BeatSS Launcher.applescript

@@ -53,7 +53,7 @@ class CustomHandler(HandlerGetMixin, HandlerPostMixin, http.server.SimpleHTTPReq
         local_token = os.environ.get('LOCAL_AUTH_TOKEN')
         if not local_token:
             return False
-        auth_header = self.headers.get('Authorization')
+        auth_header = self.headers.get('X-Local-Auth') or self.headers.get('Authorization')
         if not auth_header:
             return False
         if not auth_header.startswith('Bearer '):
@@ -111,11 +111,41 @@ class CustomHandler(HandlerGetMixin, HandlerPostMixin, http.server.SimpleHTTPReq
         super().end_headers()
 
     def translate_path(self, path):
-        from urllib.parse import urlparse
+        from urllib.parse import unquote, urlparse
         parsed = urlparse(path)
         if parsed.path.startswith('/temp_audio_cache/'):
             filename = os.path.basename(parsed.path)
             return os.path.join(DIRECTORY, 'temp_audio_cache', filename)
+
+        # Las vistas privadas son rutas de una SPA. En producción Vercel hace
+        # el rewrite automáticamente; el servidor local también debe devolver
+        # el documento principal para que `/mis-beats`, `/dashboard`, etc.
+        # funcionen al abrirlos directamente desde el teléfono.
+        spa_routes = {
+            '/studio', '/licencias', '/mis-beats', '/dashboard', '/pedidos',
+            '/contabilidad', '/content-id', '/catalogo'
+        }
+        spa_path = parsed.path.rstrip('/') or '/'
+        public_spa_prefixes = ('/tienda/', '/compra/', '/descargas/')
+        if spa_path in spa_routes or spa_path.startswith(public_spa_prefixes):
+            dist_index = os.path.join(DIRECTORY, 'dist', 'index.html')
+            source_index = os.path.join(DIRECTORY, 'index.html')
+            return dist_index if os.path.isfile(dist_index) else source_index
+
+        # El servidor local prefiere `dist` cuando existe una compilación, pero
+        # los estilos enlazados como archivos raíz no son assets importados por
+        # Vite y por tanto no siempre se copian a `dist`. Si falta allí,
+        # servimos únicamente el archivo equivalente del proyecto fuente. Esto
+        # evita que el navegador cargue HTML compilado sin el sistema visual.
+        source_path = os.path.abspath(os.path.join(DIRECTORY, unquote(parsed.path).lstrip('/')))
+        try:
+            inside_source = os.path.commonpath([source_path, DIRECTORY]) == DIRECTORY
+        except ValueError:
+            inside_source = False
+        if inside_source and os.path.isfile(source_path):
+            dist_path = super().translate_path(path)
+            if not os.path.isfile(dist_path):
+                return source_path
         return super().translate_path(path)
 
     def do_OPTIONS(self):
@@ -228,7 +258,7 @@ if __name__ == '__main__':
         print("[*] Organizador de Obsidian desactivado.")
 
     # Lanzar el worker de contingencia del SRI en segundo plano
-    if os.environ.get('ENABLE_SRI_CONTINGENCY_WORKER', '').lower() == 'true':
+    if os.environ.get('ENABLE_SRI_CONTINGENCY_WORKER', 'true').lower() == 'true':
         try:
             import sri_contingency
             sri_contingency.start_contingency_worker()

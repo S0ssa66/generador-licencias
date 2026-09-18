@@ -22,33 +22,33 @@ def get_admin_config():
                 if key.endswith('_producer_config') and val:
                     config_data = json.loads(val) if isinstance(val, str) else val
                     return {
-                        "paypalClientId": config_data.get("paypalClientId", "AaZODyYne1mAl_ujEEAr5tP2hRcm2ii_1QSzAhexfXKMdue-aVQRX_kbPLUgmpm1ZimxFSWpejImUU1-"),
+                        "paypalClientId": config_data.get("paypalClientId", ""),
                         "paypalClientSecret": config_data.get("paypalClientSecret", ""),
                         "paypalPlanIdPro": config_data.get("paypalPlanIdPro", ""),
                         "paypalPlanIdElite": config_data.get("paypalPlanIdElite", ""),
                         "payphoneClientId": config_data.get("payphoneClientId", ""),
                         "payphoneAppId": config_data.get("payphoneAppId", ""),
-                        "deunaPhone": config_data.get("deunaPhone", "+593961201184"),
-                        "deunaName": config_data.get("deunaName", "Joao David Dominguez Sosa"),
-                        "bankPichinchaAcc": config_data.get("bankPichinchaAcc", "2205256268"),
-                        "bankPichinchaName": config_data.get("bankPichinchaName", "Joao Dominguez"),
-                        "bankPichinchaDni": config_data.get("bankPichinchaDni", "080374311")
+                        "deunaPhone": config_data.get("deunaPhone", ""),
+                        "deunaName": config_data.get("deunaName", ""),
+                        "bankPichinchaAcc": config_data.get("bankPichinchaAcc", ""),
+                        "bankPichinchaName": config_data.get("bankPichinchaName", ""),
+                        "bankPichinchaDni": config_data.get("bankPichinchaDni", "")
                     }
         except Exception as e:
             print(f"[-] Error al cargar config de administrador: {e}")
     # Valores de contingencia / fallback
     return {
-        "paypalClientId": "AaZODyYne1mAl_ujEEAr5tP2hRcm2ii_1QSzAhexfXKMdue-aVQRX_kbPLUgmpm1ZimxFSWpejImUU1-",
+        "paypalClientId": "",
         "paypalClientSecret": "",
         "paypalPlanIdPro": "",
         "paypalPlanIdElite": "",
         "payphoneClientId": "",
         "payphoneAppId": "",
-        "deunaPhone": "+593961201184",
-        "deunaName": "Joao David Dominguez Sosa",
-        "bankPichinchaAcc": "2205256268",
-        "bankPichinchaName": "Joao Dominguez",
-        "bankPichinchaDni": "080374311"
+        "deunaPhone": "",
+        "deunaName": "",
+        "bankPichinchaAcc": "",
+        "bankPichinchaName": "",
+        "bankPichinchaDni": ""
     }
 
 

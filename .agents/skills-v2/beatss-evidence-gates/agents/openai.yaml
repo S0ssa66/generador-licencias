@@ -1,0 +1,4 @@
+interface:
+  display_name: "BEATSS Evidence Gates"
+  short_description: "Verificación antes de afirmar resultados"
+  default_prompt: "Use $beatss-evidence-gates to verify this BEATSS result."

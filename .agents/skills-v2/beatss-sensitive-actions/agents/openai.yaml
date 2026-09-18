@@ -1,0 +1,4 @@
+interface:
+  display_name: "BEATSS Sensitive Actions"
+  short_description: "Filtros para pagos datos y envíos"
+  default_prompt: "Use $beatss-sensitive-actions to assess this sensitive BEATSS action."

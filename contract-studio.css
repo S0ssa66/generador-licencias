@@ -1,0 +1,1027 @@
+/* Contract Studio: focused, low-friction contract creation workspace. */
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] {
+    grid-template-columns: minmax(0, 1fr) clamp(368px, 21vw, 408px) !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar {
+    width: clamp(368px, 21vw, 408px) !important;
+    min-width: clamp(368px, 21vw, 408px) !important;
+    box-shadow: -8px 0 24px rgba(23, 34, 56, .04) !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar-header {
+    min-height: 76px !important;
+    padding: 14px 16px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar-header::after {
+    content: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar-header .logo-icon {
+    width: 38px !important;
+    height: 38px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar-header .subtitle {
+    margin-top: 2px !important;
+    letter-spacing: .08em !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] #plan-badge-container {
+    display: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .header-actions {
+    position: static !important;
+    right: auto !important;
+    bottom: auto !important;
+    flex: 0 0 auto !important;
+    gap: 2px !important;
+    margin-left: 12px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .header-actions .btn-icon-only {
+    width: 32px !important;
+    height: 32px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar-header .logo-area {
+    min-width: 0 !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar-header .logo-area > div:last-child {
+    min-width: 0 !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar-header .subtitle {
+    max-width: 190px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .header-actions #btn-global-catalog,
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .header-actions #btn-theme-toggle,
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .header-actions #btn-switch-user {
+    display: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .studio-wizard-nav {
+    gap: 6px !important;
+    padding: 10px 12px !important;
+    background: #fff !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-tab {
+    min-height: 44px !important;
+    gap: 7px !important;
+    padding: 7px 8px !important;
+    border: 1px solid transparent !important;
+    border-radius: 9px !important;
+    box-shadow: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-tab:hover {
+    background: #f5f7fa !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-tab.is-active {
+    color: var(--ledger-blue) !important;
+    border-color: #cfdcf4 !important;
+    background: #edf3ff !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-index {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 10px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-copy {
+    font-size: 10px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-copy small {
+    display: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-stage {
+    padding: 14px 12px 18px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-stage > .wizard-panel[data-wizard-active="true"] {
+    animation: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-intro {
+    gap: 3px !important;
+    margin-bottom: 12px !important;
+    padding-bottom: 11px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-eyebrow {
+    font-size: 9px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-intro h2 {
+    font-size: 18px !important;
+    line-height: 1.2 !important;
+    text-wrap: balance;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-intro p {
+    max-width: 34ch;
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+    text-wrap: pretty;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] #step-1 > .grid {
+    gap: 7px !important;
+    grid-auto-rows: 58px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .license-btn {
+    position: relative;
+    height: 58px !important;
+    min-height: 58px !important;
+    padding: 10px 42px 10px 12px !important;
+    border: 1px solid #dce2eb !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .license-btn:hover {
+    border-color: #aebbd0 !important;
+    background: #f8fafc !important;
+    transform: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .license-btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    width: 18px;
+    height: 18px;
+    border: 1px solid #bac4d3;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    background: #fff;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .license-btn.active,
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .license-btn[aria-pressed="true"] {
+    border-color: #7da4e8 !important;
+    background: #f2f6ff !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .license-btn.active::after,
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .license-btn[aria-pressed="true"]::after {
+    border: 5px solid var(--ledger-blue);
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .license-btn .lic-name {
+    font-size: 13px !important;
+    line-height: 1.25 !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .license-btn .lic-desc {
+    margin-top: 3px !important;
+    font-size: 10px !important;
+    line-height: 1.25 !important;
+    letter-spacing: .04em !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar-footer {
+    padding: 0 !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-progress-actions {
+    gap: 8px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-back-button,
+#app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-next-button {
+    min-height: 44px !important;
+    border-radius: 9px !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* El cierre de Entrega debe caber sin convertir el pie en media pantalla.
+   Dos columnas reducen el desplazamiento, pero cada control mantiene una
+   superficie tactil de 44 px. */
+#app-container.saas-workspace[data-active-tab="tab-preview"] #delivery-actions,
+#app-container.saas-workspace[data-active-tab="editor"] #delivery-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding: 10px 12px max(10px, env(safe-area-inset-bottom)) !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] #delivery-actions > button,
+#app-container.saas-workspace[data-active-tab="tab-preview"] #delivery-actions .action-row > button,
+#app-container.saas-workspace[data-active-tab="editor"] #delivery-actions > button,
+#app-container.saas-workspace[data-active-tab="editor"] #delivery-actions .action-row > button {
+    width: 100% !important;
+    min-height: 44px !important;
+    margin: 0 !important;
+    padding: 0 10px !important;
+    border-radius: 9px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    box-shadow: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] #delivery-actions > button svg,
+#app-container.saas-workspace[data-active-tab="tab-preview"] #delivery-actions .action-row > button svg,
+#app-container.saas-workspace[data-active-tab="editor"] #delivery-actions > button svg,
+#app-container.saas-workspace[data-active-tab="editor"] #delivery-actions .action-row > button svg {
+    width: 18px !important;
+    height: 18px !important;
+    flex: 0 0 18px !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] #delivery-actions > .action-row,
+#app-container.saas-workspace[data-active-tab="editor"] #delivery-actions > .action-row {
+    display: contents !important;
+    margin: 0 !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-preview"] #delivery-actions :is(#btn-docusign, #btn-send-signed-delivery, #btn-clear-fields),
+#app-container.saas-workspace[data-active-tab="editor"] #delivery-actions :is(#btn-docusign, #btn-send-signed-delivery, #btn-clear-fields) {
+    grid-column: 1 / -1 !important;
+}
+
+#app-container.saas-workspace .wizard-back-button[hidden],
+#app-container.saas-workspace .wizard-next-button[hidden],
+#app-container.saas-workspace #delivery-actions[hidden],
+#delivery-actions[hidden] {
+    display: none !important;
+}
+
+#app-container.saas-workspace #tab-preview.active {
+    gap: 12px !important;
+    padding: 16px 18px 20px !important;
+    background: #f4f6f9 !important;
+}
+
+#app-container.saas-workspace #tab-preview .contract-toolbar {
+    position: relative;
+    z-index: 3;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 10px 12px !important;
+    border: 1px solid #dce2eb !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+
+#app-container.saas-workspace #tab-preview .contract-toolbar > * {
+    min-width: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+.contract-toolbar-heading,
+.contract-toolbar-actions,
+.contract-toolbar-heading > div {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.contract-toolbar-heading {
+    gap: 10px;
+}
+
+.contract-toolbar-heading > div {
+    align-items: flex-start;
+    flex-direction: column;
+}
+
+.contract-toolbar-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 9px;
+    color: #245ca7 !important;
+    background: #edf3ff;
+}
+
+.contract-toolbar-icon svg {
+    width: 17px;
+    height: 17px;
+}
+
+.contract-toolbar-heading h2 {
+    margin: 0;
+    color: #172238;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1.25;
+    text-wrap: balance;
+}
+
+.contract-toolbar-heading p {
+    margin: 2px 0 0;
+    color: #6b778c;
+    font-size: 11px;
+    line-height: 1.35;
+    text-wrap: pretty;
+}
+
+.contract-toolbar-actions {
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+#app-container.saas-workspace #tab-preview .preview-mode-switch {
+    display: flex !important;
+    width: auto !important;
+    padding: 3px !important;
+    border: 1px solid #dce2eb !important;
+    border-radius: 9px !important;
+    background: #f5f7fa !important;
+}
+
+#app-container.saas-workspace #tab-preview .preview-mode-switch .mode-btn {
+    min-height: 32px !important;
+    padding: 0 11px !important;
+    border: 0 !important;
+    border-radius: 7px !important;
+    color: #657188 !important;
+    background: transparent !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
+}
+
+#app-container.saas-workspace #tab-preview .preview-mode-switch .mode-btn.active {
+    color: #172238 !important;
+    background: #fff !important;
+    box-shadow: 0 1px 2px rgba(23, 34, 56, .09) !important;
+}
+
+.contract-options {
+    position: relative;
+}
+
+.contract-options > summary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    gap: 7px;
+    padding: 0 11px;
+    border: 1px solid #d6dde8;
+    border-radius: 9px;
+    color: #334158;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+}
+
+.contract-options > summary::-webkit-details-marker {
+    display: none;
+}
+
+.contract-options > summary svg {
+    width: 15px;
+    height: 15px;
+}
+
+.contract-options > summary:hover,
+.contract-options[open] > summary {
+    border-color: #9aabc3;
+    background: #f8fafc;
+}
+
+.contract-options-chevron {
+    width: 13px !important;
+    height: 13px !important;
+}
+
+.contract-options[open] .contract-options-chevron {
+    transform: rotate(180deg);
+}
+
+.contract-options-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: min(410px, calc(100vw - 40px));
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid #d9e0e9;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 14px 36px rgba(23, 34, 56, .14);
+}
+
+.contract-option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+}
+
+.contract-option-template {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.contract-option-template label {
+    grid-column: 1 / -1;
+}
+
+.contract-option-group label,
+.contract-option-label {
+    color: #677287 !important;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+#app-container.saas-workspace #tab-preview #contract-template-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border: 1px solid #d7dee8 !important;
+    border-radius: 8px !important;
+    color: #253147 !important;
+    background: #fff !important;
+    font-size: 11px !important;
+    font-weight: 650 !important;
+}
+
+#app-container.saas-workspace #tab-preview #btn-edit-templates {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: auto !important;
+    height: 38px !important;
+    gap: 6px !important;
+    padding: 0 11px !important;
+    border: 1px solid #d7dee8 !important;
+    border-radius: 8px !important;
+    color: #334158 !important;
+    background: #f8fafc !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+}
+
+#app-container.saas-workspace #tab-preview #btn-edit-templates svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.contract-choice-group,
+.contract-zoom-group {
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 3px;
+    border: 1px solid #dce2eb;
+    border-radius: 8px;
+    background: #f5f7fa;
+}
+
+#app-container.saas-workspace #tab-preview .contract-choice-group .btn,
+#app-container.saas-workspace #tab-preview .contract-zoom-group .btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+    height: 30px !important;
+    flex: 1 1 0 !important;
+    padding: 0 8px !important;
+    border: 0 !important;
+    border-radius: 6px !important;
+    color: #69758a !important;
+    background: transparent;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    box-shadow: none !important;
+}
+
+#app-container.saas-workspace #tab-preview .contract-choice-group .btn.is-selected,
+#app-container.saas-workspace #tab-preview .contract-choice-group .btn[style*="var(--accent)"] {
+    color: #fff !important;
+    background: #245ca7 !important;
+}
+
+.contract-zoom-group {
+    gap: 1px;
+}
+
+#app-container.saas-workspace #tab-preview .contract-zoom-group .btn {
+    flex: 0 0 30px !important;
+    padding: 0 !important;
+}
+
+#app-container.saas-workspace #tab-preview .contract-zoom-group #btn-zoom-fit {
+    flex: 1 1 auto !important;
+    padding: 0 7px !important;
+}
+
+#app-container.saas-workspace #tab-preview .contract-zoom-group .material-symbols-outlined {
+    font-size: 17px !important;
+}
+
+#app-container.saas-workspace #tab-preview #zoom-value {
+    min-width: 38px !important;
+    color: #253147 !important;
+    font-size: 10px !important;
+    font-weight: 750 !important;
+    text-align: center !important;
+}
+
+#app-container.saas-workspace #tab-preview .preview-container {
+    min-height: 560px !important;
+    flex: 1 1 auto !important;
+    padding: clamp(18px, 3vw, 40px) !important;
+    border: 1px solid #dce2eb !important;
+    border-radius: 12px !important;
+    background: #e9edf3 !important;
+    box-shadow: none !important;
+}
+
+#app-container.saas-workspace #tab-preview .paper {
+    width: min(100%, 780px) !important;
+    margin: 0 auto !important;
+    border: 1px solid #d6dce5 !important;
+    box-shadow: 0 8px 24px rgba(23, 34, 56, .09) !important;
+}
+
+@media (max-width: 980px) {
+    #app-container.saas-workspace[data-active-tab="tab-preview"] {
+        grid-template-columns: minmax(0, 1fr) 372px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar {
+        width: 372px !important;
+        min-width: 372px !important;
+    }
+
+    .contract-toolbar-heading p {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    #app-container.saas-workspace[data-active-tab="tab-preview"] {
+        display: block !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        min-height: 0 !important;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 8px)) !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar-header,
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar-header {
+        min-height: 66px !important;
+        padding: 10px 12px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar-header::after {
+        content: none !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .header-actions {
+        position: static !important;
+        right: auto !important;
+        bottom: auto !important;
+        flex: 0 0 auto !important;
+        gap: 2px !important;
+        margin-left: 10px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar-header .logo-area,
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar-header .logo-area > div:last-child {
+        min-width: 0 !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar-header .subtitle {
+        max-width: 190px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] #plan-badge-container {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .header-actions .btn-icon-only,
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .header-actions .btn-icon-only {
+        width: 30px !important;
+        height: 30px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .header-actions #btn-global-catalog,
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .header-actions #btn-theme-toggle,
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .header-actions #btn-switch-user,
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .header-actions #btn-global-catalog,
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .header-actions #btn-theme-toggle,
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .header-actions #btn-switch-user {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .studio-wizard-nav {
+        gap: 6px !important;
+        padding: 8px 10px !important;
+        background: #fff !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-step-tab {
+        min-height: 42px !important;
+        gap: 7px !important;
+        padding: 6px 7px !important;
+        border: 1px solid transparent !important;
+        border-radius: 9px !important;
+        box-shadow: none !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-step-tab.is-active {
+        color: var(--ledger-blue) !important;
+        border-color: #cfdcf4 !important;
+        background: #edf3ff !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-step-index {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 10px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-step-copy {
+        font-size: 10px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-step-copy small {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar-scroll {
+        display: block !important;
+        flex: 1 1 0% !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 10px 12px 20px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-stage {
+        padding: 4px 2px 14px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-stage > .wizard-panel[data-wizard-active="true"] {
+        display: flex !important;
+        flex-direction: column !important;
+        animation: none !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-step-intro {
+        gap: 3px !important;
+        margin-bottom: 12px !important;
+        padding-bottom: 10px !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-step-intro h2 {
+        font-size: 17px !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        line-height: 1.25 !important;
+        text-wrap: balance;
+        margin: 0 !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-step-intro p {
+        max-width: 36ch;
+        font-size: 12px !important;
+        color: #64748b !important;
+        line-height: 1.35 !important;
+        text-wrap: pretty;
+        margin: 0 !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] #step-1 > .grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        grid-auto-rows: auto !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .license-btn {
+        position: relative !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        width: 100% !important;
+        min-height: 60px !important;
+        height: auto !important;
+        padding: 10px 46px 10px 14px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        background: #ffffff !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+        transform: none !important;
+        cursor: pointer !important;
+        -webkit-tap-highlight-color: transparent !important;
+        transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .license-btn::after {
+        content: '' !important;
+        position: absolute !important;
+        top: 50% !important;
+        right: 14px !important;
+        width: 20px !important;
+        height: 20px !important;
+        border: 2px solid #cbd5e1 !important;
+        border-radius: 50% !important;
+        transform: translateY(-50%) !important;
+        background: #ffffff !important;
+        box-sizing: border-box !important;
+        transition: all .15s ease !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .license-btn.active,
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .license-btn[aria-pressed="true"] {
+        border-color: #3157e8 !important;
+        background: #f0f5ff !important;
+        box-shadow: 0 2px 10px rgba(49, 87, 232, 0.12) !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .license-btn.active::after,
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .license-btn[aria-pressed="true"]::after {
+        border: 6px solid #3157e8 !important;
+        background: #ffffff !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .license-btn .lic-name {
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        line-height: 1.25 !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .license-btn.active .lic-name {
+        color: #1e3a8a !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .license-btn .lic-desc {
+        margin-top: 2px !important;
+        font-size: 11px !important;
+        font-weight: 500 !important;
+        color: #64748b !important;
+        line-height: 1.25 !important;
+        letter-spacing: .02em !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar .license-btn.active .lic-desc {
+        color: #2563eb !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-panel input,
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-panel select,
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-panel textarea {
+        min-height: 44px !important;
+        border-radius: 10px !important;
+        font-size: 15px !important;
+        padding: 9px 12px !important;
+        border: 1px solid #d1d5db !important;
+        background: #ffffff !important;
+        color: #111827 !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-panel input:focus,
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-panel select:focus,
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-panel textarea:focus {
+        border-color: #3157e8 !important;
+        outline: none !important;
+        box-shadow: 0 0 0 3px rgba(49, 87, 232, 0.15) !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .sidebar-footer {
+        position: relative !important;
+        bottom: auto !important;
+        flex: 0 0 auto !important;
+        margin: 0 !important;
+        padding: 8px 12px !important;
+        background: #ffffff !important;
+        border-top: 1px solid #e2e8f0 !important;
+        box-shadow: 0 -4px 18px rgba(23, 35, 61, .06) !important;
+        z-index: 501 !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-progress-actions {
+        display: grid !important;
+        grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr) !important;
+        gap: 8px !important;
+        padding: 0 !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-progress-actions[data-editor-step-state="1"] {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-progress-actions[data-editor-step-state="3"] {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-next-button,
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-back-button {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 48px !important;
+        border-radius: 12px !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        padding: 0 16px !important;
+        box-shadow: none !important;
+        transform: none !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-back-button[hidden],
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-next-button[hidden],
+    #app-container.saas-workspace[data-active-tab="editor"] #delivery-actions[hidden] {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-next-button {
+        background: #3157e8 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(49, 87, 232, 0.25) !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-next-button span,
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-next-button svg {
+        color: #ffffff !important;
+        stroke: currentColor !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="editor"] .wizard-back-button {
+        background: #f1f5f9 !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #334155 !important;
+    }
+
+    #app-container.saas-workspace #tab-preview.active {
+        gap: 8px !important;
+        padding: 8px 8px calc(82px + env(safe-area-inset-bottom)) !important;
+    }
+
+    #app-container.saas-workspace #tab-preview .contract-toolbar {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        padding: 9px !important;
+        border-radius: 10px !important;
+    }
+
+    .contract-toolbar-heading,
+    .contract-toolbar-actions {
+        width: 100%;
+    }
+
+    .contract-toolbar-heading p {
+        display: block;
+        max-width: 34ch;
+    }
+
+    .contract-toolbar-actions {
+        justify-content: space-between;
+    }
+
+    #app-container.saas-workspace #tab-preview .preview-mode-switch {
+        flex: 1 1 auto !important;
+    }
+
+    #app-container.saas-workspace #tab-preview .preview-mode-switch .mode-btn {
+        flex: 1 1 0 !important;
+    }
+
+    .contract-options-panel {
+        position: fixed;
+        z-index: 30;
+        top: auto;
+        right: 8px;
+        bottom: calc(76px + env(safe-area-inset-bottom));
+        left: 8px;
+        grid-template-columns: 1fr 1fr;
+        width: auto;
+        max-height: min(520px, calc(100dvh - 112px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    #app-container.saas-workspace #tab-preview .preview-container {
+        min-height: 440px !important;
+        padding: 10px !important;
+        border-radius: 10px !important;
+    }
+
+    #app-container.saas-workspace #tab-preview .paper {
+        width: 100% !important;
+        min-width: 0 !important;
+        padding: clamp(20px, 7vw, 34px) !important;
+    }
+}
+
+@media (max-width: 430px) {
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar-header .logo-icon {
+        width: 34px !important;
+        height: 34px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-copy {
+        display: inline !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-step-tab {
+        justify-content: center !important;
+        padding: 6px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .wizard-stage {
+        padding: 12px 10px 16px !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-preview"] .sidebar .license-btn {
+        min-height: 54px !important;
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
+    }
+
+    .contract-toolbar-icon {
+        display: none;
+    }
+
+    .contract-toolbar-heading p {
+        font-size: 10px;
+    }
+
+    .contract-options-panel {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .contract-option-template {
+        grid-column: auto;
+        grid-template-columns: 1fr;
+    }
+
+    .contract-option-template label {
+        grid-column: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #app-container.saas-workspace #tab-preview *,
+    #app-container.saas-workspace #tab-preview *::before,
+    #app-container.saas-workspace #tab-preview *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+    }
+}

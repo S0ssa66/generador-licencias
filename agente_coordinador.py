@@ -6,7 +6,7 @@ import sys
 
 # Re-exponer para compatibilidad con scripts externos
 from agent_manager import run_agent_pipeline
-from memory_manager import SESSION_MEMORY_FILE, SUBAGENT_MEMORIES_FILE
+from memory_manager import clear_context_memory
 
 from llm_utils import (
     C_RESET,
@@ -26,7 +26,7 @@ def main():
     print(f"\n{C_CYAN}{C_BOLD}================================================================{C_RESET}")
     print(f"{C_CYAN}{C_BOLD}   BEATSS - SISTEMA DE ORQUESTACIÓN MULTI-AGENTE AUTÓNOMO      {C_RESET}")
     print(f"{C_CYAN}{C_BOLD}================================================================{C_RESET}")
-    print(f"{C_GRAY}Gemini API conectada (soporte de 21 subagentes, memorias y search_grep).{C_RESET}")
+    print(f"{C_GRAY}OpenCode + DeepSeek V4 Flash (10 agentes v2, permisos aislados y evidencia obligatoria).{C_RESET}")
     print(f"Escribe tus requerimientos. Los agentes recordarán el historial de conversación.")
     print(f"Comandos especiales: {C_GREEN}'limpiar'{C_RESET} (reinicia memorias de sesión y subagentes) o {C_RED}'salir'{C_RESET}.\n")
 
@@ -38,11 +38,12 @@ def main():
                 break
             
             if user_input.strip().lower() in ["limpiar", "reset", "clear"]:
-                if os.path.exists(SESSION_MEMORY_FILE):
-                    os.remove(SESSION_MEMORY_FILE)
-                if os.path.exists(SUBAGENT_MEMORIES_FILE):
-                    os.remove(SUBAGENT_MEMORIES_FILE)
-                print(f"\n{C_GREEN}✓ Memorias del Agent OS (sesión y subagentes) reiniciadas correctamente.{C_RESET}\n")
+                confirm = input("¿Confirmas limpiar la memoria de esta sesión? (s/n): ").strip().lower()
+                if confirm == "s":
+                    clear_context_memory()
+                    print(f"\n{C_GREEN}✓ Memoria de esta sesión reiniciada. La memoria legacy quedó intacta.{C_RESET}\n")
+                else:
+                    print(f"\n{C_YELLOW}Operación cancelada; no se eliminó ninguna memoria.{C_RESET}\n")
                 continue
             
             if not user_input.strip():

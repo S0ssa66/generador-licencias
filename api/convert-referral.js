@@ -4,23 +4,49 @@
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { isTrustedBeatssOrigin } from './_cors-origin.js';
 
-const ALLOWED_ORIGINS = [
-    'https://beatss.app',
-    'https://www.beatss.app',
-    'https://generador-licencias.vercel.app'
-];
-
-function getCorsOrigin(req) {
-    const origin = req.headers.origin;
-    if (!origin) return 'https://beatss.app';
-    if (ALLOWED_ORIGINS.includes(origin) || 
-        origin.endsWith('.vercel.app') || 
-        origin.startsWith('http://localhost') || 
-        origin.startsWith('http://127.0.0.1')) {
-        return origin;
+function configureCors(req, res) {
+    const origin = req.headers?.origin;
+    res.setHeader('Vary', 'Origin');
+    if (origin && isTrustedBeatssOrigin(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
     }
-    return 'https://beatss.app';
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
+
+const RATE_WINDOW_MS = 5 * 60 * 1000;
+const RATE_LIMIT = 10;
+const convertReferralRateWindows = new Map();
+
+export function resetConvertReferralRateLimit() {
+    convertReferralRateWindows.clear();
+}
+
+export function checkConvertReferralRateLimit(ip, now = Date.now(), limit = RATE_LIMIT, windowMs = RATE_WINDOW_MS) {
+    const record = convertReferralRateWindows.get(ip);
+    if (!record || now - record.start >= windowMs || now < record.start) {
+        convertReferralRateWindows.set(ip, { start: now, count: 1 });
+        return { allowed: true, retryAfterSeconds: 0 };
+    }
+    if (record.count >= limit) {
+        const retryAfterSeconds = Math.max(1, Math.ceil((record.start + windowMs - now) / 1000));
+        return { allowed: false, retryAfterSeconds };
+    }
+    record.count += 1;
+    return { allowed: true, retryAfterSeconds: 0 };
+}
+
+export function getSanitizedClientIp(req) {
+    const headers = req?.headers || {};
+    const forwarded = headers['x-vercel-forwarded-for'] || headers['x-forwarded-for'] || req?.socket?.remoteAddress || 'unknown';
+    return String(Array.isArray(forwarded) ? forwarded.at(-1) : forwarded)
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean)
+        .at(-1)
+        ?.slice(0, 128) || 'unknown';
 }
 
 function initFirebaseAdmin() {
@@ -35,14 +61,24 @@ function initFirebaseAdmin() {
 }
 
 export default async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', getCorsOrigin(req));
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    configureCors(req, res);
+    res.setHeader('Cache-Control', 'private, no-store');
 
-    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method === 'OPTIONS') {
+        res.setHeader('Allow', 'POST, OPTIONS');
+        return res.status(204).end();
+    }
 
     if (req.method !== 'POST') {
+        res.setHeader('Allow', 'POST, OPTIONS');
         return res.status(405).json({ error: 'Método no permitido' });
+    }
+
+    const clientIp = getSanitizedClientIp(req);
+    const rateCheck = checkConvertReferralRateLimit(clientIp);
+    if (!rateCheck.allowed) {
+        res.setHeader('Retry-After', String(rateCheck.retryAfterSeconds));
+        return res.status(429).json({ error: 'Demasiadas solicitudes de conversión. Por favor espera unos minutos.' });
     }
 
     const { uid } = req.body;
@@ -91,6 +127,37 @@ export default async function handler(req, res) {
         const referrerId = referralData.referrerId;
         if (!referrerId) {
             return res.status(400).json({ error: 'Falta el ID del referente en el registro de referidos.' });
+        }
+
+        if (referrerId === uid) {
+            return res.status(400).json({ error: 'Auto-referido no permitido.' });
+        }
+
+        // Verificar que el referido cuente con al menos una compra aprobada en la plataforma
+        const paymentsSnap = await db.collection('payments')
+            .where('buyerUid', '==', uid)
+            .where('status', 'in', ['approved', 'completed', 'paid'])
+            .limit(1)
+            .get();
+
+        if (paymentsSnap.empty) {
+            const userSnap = await db.collection('users').doc(uid).get();
+            const userEmail = userSnap.exists ? (userSnap.data()?.email || '') : '';
+            let hasApprovedPayment = false;
+            if (userEmail) {
+                const emailPaymentSnap = await db.collection('payments')
+                    .where('buyerEmail', '==', userEmail)
+                    .where('status', 'in', ['approved', 'completed', 'paid'])
+                    .limit(1)
+                    .get();
+                hasApprovedPayment = !emailPaymentSnap.empty;
+            }
+            if (!hasApprovedPayment) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El referido no tiene compras aprobadas necesarias para activar la recompensa.'
+                });
+            }
         }
 
         // 2. Marcar conversión en el documento de referido
@@ -144,8 +211,7 @@ export default async function handler(req, res) {
     } catch (error) {
         console.error('❌ Error al convertir referido:', error);
         return res.status(500).json({
-            error: 'Error interno del servidor',
-            details: error.message
+            error: 'Error interno del servidor al convertir referido.'
         });
     }
 }

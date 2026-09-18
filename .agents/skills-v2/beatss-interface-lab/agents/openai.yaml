@@ -1,0 +1,4 @@
+interface:
+  display_name: "BEATSS Interface Lab"
+  short_description: "Diseño nuevo sin heredar estructuras viejas"
+  default_prompt: "Use $beatss-interface-lab to invent a new BEATSS interface."

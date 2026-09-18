@@ -1,0 +1,115 @@
+/*
+ * BEATSS — Private workspace foundation
+ *
+ * The authenticated Studio must be self-contained. It cannot inherit its
+ * palette from the public landing bundle because direct private URLs skip
+ * that bundle. Keep these tokens scoped to the Studio so public pages remain
+ * independent and legacy dark defaults cannot leak into private views.
+ */
+
+#app-container.saas-workspace {
+    color-scheme: light;
+
+    --workspace-canvas: #f4f5f8;
+    --workspace-paper: #ffffff;
+    --workspace-ink: #172238;
+    --workspace-muted: #5c687c;
+    --workspace-line: #dfe4ec;
+    --workspace-blue: #3157e8;
+    --workspace-blue-soft: #e9eeff;
+
+    /* Compatibility aliases for private views that already use Ledger
+       semantics. Their source of truth now lives in the private bundle. */
+    --ledger-canvas: var(--workspace-canvas);
+    --ledger-paper: var(--workspace-paper);
+    --ledger-ink: var(--workspace-ink);
+    --ledger-muted: var(--workspace-muted);
+    --ledger-line: var(--workspace-line);
+    --ledger-blue: var(--workspace-blue);
+    --ledger-blue-soft: var(--workspace-blue-soft);
+    --ledger-orange: #ff6b42;
+    --ledger-orange-soft: #fff0eb;
+    --ledger-mint: #b7f0d4;
+    --ledger-radius: 18px;
+
+    /* Override the deprecated global dark theme only inside the Studio. */
+    --bg-app: var(--workspace-canvas);
+    --bg-sidebar: var(--workspace-paper);
+    --bg-card: var(--workspace-paper);
+    --bg-input: var(--workspace-paper);
+    --bg-surface: var(--workspace-canvas);
+    --text-primary: var(--workspace-ink);
+    --text-secondary: var(--workspace-muted);
+    --text-muted: var(--workspace-muted);
+    --border-color: var(--workspace-line);
+    --border-focus: var(--workspace-blue);
+    --accent: var(--workspace-blue);
+    --accent-hover: #2247d4;
+
+    background: var(--workspace-canvas) !important;
+    color: var(--workspace-ink) !important;
+}
+
+#app-container.saas-workspace .main-panel,
+#app-container.saas-workspace .tab-content {
+    background-color: var(--workspace-canvas) !important;
+    color: var(--workspace-ink) !important;
+}
+
+#app-container.saas-workspace #tab-home {
+    background: var(--workspace-canvas) !important;
+    color: var(--workspace-ink) !important;
+}
+
+#app-container.saas-workspace .main-header {
+    border-color: var(--workspace-line) !important;
+    background: rgba(255, 255, 255, .96) !important;
+    color: var(--workspace-ink) !important;
+}
+
+#app-container.saas-workspace .sidebar,
+#app-container.saas-workspace .sidebar-header,
+#app-container.saas-workspace .sidebar-scroll,
+#app-container.saas-workspace .sidebar-actions {
+    border-color: var(--workspace-line) !important;
+    background-color: var(--workspace-paper) !important;
+    color: var(--workspace-ink) !important;
+}
+
+#app-container.saas-workspace :is(input, select, textarea) {
+    color-scheme: light;
+}
+
+#app-container.saas-workspace,
+#app-container.saas-workspace * {
+    scrollbar-color: #9eacd0 #edf1f7;
+}
+
+#app-container.saas-workspace::-webkit-scrollbar,
+#app-container.saas-workspace *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#app-container.saas-workspace::-webkit-scrollbar-track,
+#app-container.saas-workspace *::-webkit-scrollbar-track {
+    background: #edf1f7;
+}
+
+#app-container.saas-workspace::-webkit-scrollbar-thumb,
+#app-container.saas-workspace *::-webkit-scrollbar-thumb {
+    border: 2px solid #edf1f7;
+    border-radius: 999px;
+    background: #9eacd0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #app-container.saas-workspace *,
+    #app-container.saas-workspace *::before,
+    #app-container.saas-workspace *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}

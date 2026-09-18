@@ -18,12 +18,12 @@ globalThis.document = {
 
 async function test() {
     const modules = [
-        '../dashboard/history.js',
-        '../dashboard/contacts.js',
-        '../dashboard/csv_importer.js',
-        '../dashboard/charts.js',
-        '../dashboard/accounting.js',
-        '../dashboard/sales.js'
+        '../dashboard_modules/history.js',
+        '../dashboard_modules/contacts.js',
+        '../dashboard_modules/csv_importer.js',
+        '../dashboard_modules/charts.js',
+        '../dashboard_modules/accounting.js',
+        '../dashboard_modules/sales.js'
     ];
     for (const m of modules) {
         try {

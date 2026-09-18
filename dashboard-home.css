@@ -1,0 +1,842 @@
+/*
+ * BEATSS — Producer home
+ *
+ * A calm starting point for the private workspace. It only styles the new
+ * home tab; the existing editor, catalog, history and payment flows keep
+ * their original IDs and handlers.
+ */
+
+#app-container.saas-workspace[data-active-tab="tab-home"] {
+    grid-template-columns: minmax(0, 1fr) 0 !important;
+    overflow-x: clip !important;
+}
+
+/* Cambiar de pestaña es un cambio de contexto, no una animación de layout.
+   La transición heredada dejaba durante 350 ms el panel anterior ocupando
+   parte del ancho del nuevo y producía el efecto de vistas mezcladas. */
+#app-container.saas-workspace {
+    transition: none !important;
+}
+
+#app-container.saas-workspace::before,
+#app-container.saas-workspace::after {
+    display: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-home"] .sidebar {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateX(16px);
+}
+
+#app-container.saas-workspace .sidebar.sidebar-hidden > * {
+    display: none !important;
+}
+
+#app-container.saas-workspace[data-active-tab="tab-home"] .main-header {
+    min-height: 92px !important;
+    height: 92px !important;
+}
+
+/* El menú secundario sale por debajo de la cabecera. `backdrop-filter` crea
+   un contexto de apilado propio y, sin una prioridad explícita, la pestaña
+   activa se pintaba encima del desplegable aunque este tuviera z-index. */
+#app-container.saas-workspace .main-header {
+    position: relative;
+    z-index: 60;
+    overflow: visible;
+}
+
+#app-container.saas-workspace .workspace-primary-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: max-content;
+}
+
+#app-container.saas-workspace .main-header > .tabs {
+    flex: 1 1 auto;
+    min-width: 0 !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+#app-container.saas-workspace .workspace-secondary-nav {
+    position: relative;
+    flex: 0 0 auto;
+    margin-left: 0;
+}
+
+#app-container.saas-workspace .workspace-secondary-nav summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--ledger-line);
+    border-radius: 9px;
+    background: var(--ledger-paper);
+    color: var(--ledger-muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace .workspace-secondary-nav summary::-webkit-details-marker {
+    display: none;
+}
+
+#app-container.saas-workspace .workspace-secondary-nav summary:hover,
+#app-container.saas-workspace .workspace-secondary-nav[open] summary {
+    border-color: #aebdfb;
+    color: var(--ledger-ink);
+}
+
+#app-container.saas-workspace .workspace-secondary-nav summary svg {
+    width: 16px;
+    height: 16px;
+}
+
+#app-container.saas-workspace .workspace-secondary-menu {
+    position: absolute;
+    z-index: 61;
+    top: calc(100% + 8px);
+    right: 0;
+    display: grid;
+    width: min(304px, calc(100vw - 32px));
+    min-width: 280px;
+    gap: 4px;
+    padding: 8px;
+    border: 1px solid var(--ledger-line);
+    border-radius: 13px;
+    background: var(--ledger-paper);
+    box-shadow: 0 14px 30px rgba(23, 34, 56, .14);
+}
+
+#app-container.saas-workspace .workspace-secondary-menu :is(.tab-btn, .workspace-menu-action) {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: 44px;
+    height: 44px !important;
+    padding: 0 12px !important;
+    border-radius: 9px !important;
+    border: 1px solid transparent !important;
+    color: var(--ledger-ink) !important;
+    font-size: 13px !important;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: left;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace .workspace-secondary-menu :is(.tab-btn, .workspace-menu-action) svg {
+    width: 18px !important;
+    height: 18px !important;
+    flex: 0 0 18px;
+    color: var(--ledger-muted);
+}
+
+#app-container.saas-workspace .workspace-secondary-menu :is(.tab-btn, .workspace-menu-action) > span {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace .workspace-secondary-menu :is(.tab-btn, .workspace-menu-action):hover,
+#app-container.saas-workspace .workspace-secondary-menu :is(.tab-btn, .workspace-menu-action):focus-visible,
+#app-container.saas-workspace .workspace-secondary-menu .tab-btn.active {
+    background: var(--ledger-blue-soft);
+    color: var(--ledger-blue) !important;
+}
+
+#app-container.saas-workspace .workspace-secondary-menu :is(.tab-btn, .workspace-menu-action):hover svg,
+#app-container.saas-workspace .workspace-secondary-menu :is(.tab-btn, .workspace-menu-action):focus-visible svg,
+#app-container.saas-workspace .workspace-secondary-menu .tab-btn.active svg {
+    color: var(--ledger-blue);
+}
+
+#app-container.saas-workspace .workspace-secondary-menu .tab-btn.active {
+    box-shadow: none !important;
+    border-color: transparent !important;
+}
+
+/* Una sola barra de navegación compacta. Las capas anteriores reservaban
+   hasta 140 px de alto y empujaban las últimas pestañas fuera del panel. */
+@media (min-width: 761px) {
+    #app-container.saas-workspace .main-header,
+    #app-container.saas-workspace[data-active-tab="tab-home"] .main-header {
+        min-height: 82px !important;
+        height: 82px !important;
+        gap: 8px !important;
+        padding: 0 clamp(18px, 2vw, 28px) !important;
+    }
+
+    #app-container.saas-workspace .main-header > .tabs {
+        padding: 0 !important;
+        scrollbar-width: none;
+    }
+
+    #app-container.saas-workspace .main-header > .tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    #app-container.saas-workspace .main-header .tab-btn {
+        min-height: 40px !important;
+        height: 40px !important;
+        padding: 0 11px !important;
+        gap: 7px !important;
+        font-size: 13px !important;
+    }
+}
+
+#app-container.saas-workspace #tab-home[hidden] {
+    display: none !important;
+}
+
+#app-container.saas-workspace #tab-home.active {
+    display: block !important;
+    min-height: 0;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 0 !important;
+}
+
+.producer-home-shell {
+    width: min(1120px, calc(100% - 64px));
+    margin: 0 auto;
+    padding: clamp(40px, 5vw, 72px) 0 76px;
+}
+
+.producer-home-welcome,
+.producer-home-section-head,
+.producer-home-guide {
+    display: flex;
+    justify-content: space-between;
+    gap: 32px;
+}
+
+.producer-home-welcome {
+    align-items: flex-end;
+    padding-bottom: clamp(34px, 4vw, 56px);
+    border-bottom: 1px solid var(--ledger-line);
+}
+
+.producer-home-copy {
+    max-width: 650px;
+}
+
+.producer-home-kicker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+    color: var(--ledger-muted);
+    font: 600 10px/1.25 var(--font-mono);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.producer-home-kicker span {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: var(--ledger-blue);
+}
+
+.producer-home-copy h1 {
+    max-width: 13ch;
+    margin: 0;
+    color: var(--ledger-ink);
+    font-family: var(--font-title);
+    font-size: clamp(38px, 5vw, 64px);
+    font-weight: 800;
+    letter-spacing: -.07em;
+    line-height: .98;
+    text-wrap: balance;
+}
+
+.producer-home-intro {
+    max-width: 520px;
+    margin: 20px 0 0;
+    color: var(--ledger-muted);
+    font-size: 16px;
+    line-height: 1.6;
+    text-wrap: pretty;
+}
+
+.producer-home-flow {
+    min-width: 226px;
+    padding: 15px 16px;
+    border: 1px solid var(--ledger-line);
+    border-radius: 14px;
+    background: var(--ledger-paper);
+}
+
+.producer-home-flow span,
+.producer-home-flow strong {
+    display: block;
+}
+
+.producer-home-flow span {
+    margin-bottom: 9px;
+    color: var(--ledger-muted);
+    font: 600 10px/1.2 var(--font-mono);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.producer-home-flow strong {
+    color: var(--ledger-ink);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.producer-home-flow i {
+    margin: 0 4px;
+    color: var(--ledger-blue);
+    font-style: normal;
+}
+
+.producer-home-section-head {
+    align-items: flex-end;
+    margin: clamp(36px, 4vw, 54px) 0 18px;
+}
+
+.producer-home-section-head .producer-home-kicker {
+    margin-bottom: 8px;
+}
+
+.producer-home-section-head h2,
+.producer-home-guide h2 {
+    margin: 0;
+    color: var(--ledger-ink);
+    font-family: var(--font-title);
+    font-size: clamp(23px, 2.4vw, 31px);
+    font-weight: 800;
+    letter-spacing: -.055em;
+    line-height: 1.05;
+    text-wrap: balance;
+}
+
+.producer-home-section-head > p {
+    max-width: 330px;
+    margin: 0;
+    color: var(--ledger-muted);
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: right;
+    text-wrap: pretty;
+}
+
+.producer-home-primary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.producer-home-action {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    min-height: 132px;
+    padding: 22px;
+    border: 1px solid var(--ledger-line);
+    border-radius: 16px;
+    background: var(--ledger-paper);
+    color: var(--ledger-ink);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .18s ease, background-color .18s ease, transform .18s ease;
+}
+
+.producer-home-action:hover {
+    border-color: #aebdfb;
+    background: #fbfcff;
+    transform: translateY(-2px);
+}
+
+.producer-home-action:focus-visible,
+.producer-home-tool:focus-visible {
+    outline: 3px solid rgba(49, 87, 232, .3);
+    outline-offset: 3px;
+}
+
+.producer-home-action-primary {
+    border-color: var(--ledger-blue);
+    background: var(--ledger-blue);
+    color: #fff;
+}
+
+.producer-home-action-primary:hover {
+    border-color: #2247d4;
+    background: #2247d4;
+}
+
+.producer-home-action-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--ledger-blue-soft);
+    color: var(--ledger-blue);
+}
+
+.producer-home-action-primary .producer-home-action-icon {
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+}
+
+.producer-home-action-icon svg {
+    width: 21px;
+    height: 21px;
+}
+
+.producer-home-action-copy,
+.producer-home-action-copy strong,
+.producer-home-action-copy small {
+    display: block;
+}
+
+.producer-home-action-copy strong {
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.producer-home-action-copy small {
+    max-width: 31ch;
+    margin-top: 7px;
+    color: var(--ledger-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.producer-home-action-primary .producer-home-action-copy small {
+    color: #eef2ff;
+}
+
+.producer-home-action-arrow {
+    align-self: center;
+    color: var(--ledger-blue);
+    font-size: 21px;
+}
+
+.producer-home-action-primary .producer-home-action-arrow {
+    color: #fff;
+}
+
+.producer-home-tools {
+    padding-top: 2px;
+}
+
+.producer-home-tool-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.producer-home-tool {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 11px;
+    min-height: 118px;
+    padding: 17px 15px;
+    border: 1px solid var(--ledger-line);
+    border-radius: 14px;
+    background: var(--ledger-paper);
+    color: var(--ledger-ink);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .18s ease, background-color .18s ease, transform .18s ease;
+}
+
+.producer-home-tool:hover {
+    border-color: #aebdfb;
+    background: #fbfcff;
+    transform: translateY(-2px);
+}
+
+.producer-home-tool > svg {
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    color: var(--ledger-blue);
+}
+
+.producer-home-tool span,
+.producer-home-tool strong,
+.producer-home-tool small {
+    display: block;
+}
+
+.producer-home-tool strong {
+    font-size: 13px;
+    line-height: 1.3;
+}
+
+.producer-home-tool small {
+    margin-top: 6px;
+    color: var(--ledger-muted);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.producer-home-tool b {
+    color: var(--ledger-blue);
+    font-size: 17px;
+    font-weight: 500;
+}
+
+.producer-home-guide {
+    align-items: flex-start;
+    margin-top: clamp(42px, 5vw, 68px);
+    padding: 25px 0 0;
+    border-top: 1px solid var(--ledger-line);
+}
+
+.producer-home-guide-intro {
+    max-width: 280px;
+}
+
+.producer-home-guide-intro .producer-home-kicker {
+    margin-bottom: 9px;
+}
+
+.producer-home-guide-intro > p:last-child {
+    margin: 14px 0 0;
+    color: var(--ledger-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.producer-home-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    flex: 1;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.producer-home-steps li {
+    display: flex;
+    gap: 12px;
+    min-height: 74px;
+    padding: 0 17px;
+    border-left: 1px solid var(--ledger-line);
+}
+
+.producer-home-steps li > span {
+    color: var(--ledger-blue);
+    font: 600 10px/1.3 var(--font-mono);
+}
+
+.producer-home-steps strong,
+.producer-home-steps small {
+    display: block;
+}
+
+.producer-home-steps strong {
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.producer-home-steps small {
+    margin-top: 6px;
+    color: var(--ledger-muted);
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+@media (max-width: 760px) {
+    #app-container.saas-workspace .workspace-secondary-nav {
+        display: none;
+    }
+
+    .producer-home-shell {
+        width: min(100% - 36px, 680px);
+        padding-top: 34px;
+    }
+
+    .producer-home-welcome,
+    .producer-home-guide {
+        display: block;
+    }
+
+    .producer-home-flow {
+        width: fit-content;
+        margin-top: 24px;
+    }
+
+    .producer-home-tool-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .producer-home-guide-intro {
+        max-width: none;
+        margin-bottom: 24px;
+    }
+
+    .producer-home-steps {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    #app-container.saas-workspace[data-active-tab="tab-home"] .main-header {
+        min-height: 62px !important;
+        height: 62px !important;
+    }
+
+    .producer-home-shell {
+        width: calc(100% - 28px);
+        padding: 28px 0 calc(115px + env(safe-area-inset-bottom, 20px)) !important;
+    }
+
+    .producer-home-welcome {
+        padding-bottom: 30px;
+    }
+
+    .producer-home-copy h1 {
+        max-width: 11ch;
+        font-size: clamp(34px, 11vw, 48px);
+    }
+
+    .producer-home-intro {
+        font-size: 14px;
+    }
+
+    .producer-home-section-head {
+        display: block;
+        margin-top: 34px;
+    }
+
+    .producer-home-section-head > p {
+        margin-top: 10px;
+        text-align: left;
+    }
+
+    .producer-home-primary-grid,
+    .producer-home-tool-grid,
+    .producer-home-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .producer-home-action {
+        min-height: 112px;
+        padding: 17px;
+    }
+
+    .producer-home-tool {
+        min-height: 84px;
+    }
+
+    .producer-home-guide {
+        padding-top: 22px;
+    }
+
+    .producer-home-steps li {
+        min-height: 0;
+        padding: 13px 0;
+        border-top: 1px solid var(--ledger-line);
+        border-left: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    /* Estas decoraciones se extienden fuera del viewport y provocan un
+       scroll horizontal fantasma en todas las pestañas, no solo en Inicio. */
+    #app-container.saas-workspace::before,
+    #app-container.saas-workspace::after {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-home"] {
+        display: block !important;
+        height: 100dvh !important;
+        min-height: 100dvh !important;
+        padding-bottom: 0 !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-home"] .sidebar {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace[data-active-tab="tab-home"] .main-panel {
+        display: flex !important;
+        width: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* La navegación inferior es la única navegación de pestañas en teléfono.
+   El selector heredado duplicaba Inicio y quitaba altura útil al contenido. */
+@media (max-width: 760px) {
+    #app-container.saas-workspace:has(.ledger-mobile-nav) .main-header {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace:has(.ledger-mobile-nav) {
+        padding-bottom: 0 !important;
+    }
+
+    #app-container.saas-workspace:has(.ledger-mobile-nav) .main-panel {
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #app-container.saas-workspace:has(.ledger-mobile-nav) .tab-content.active {
+        min-height: 0 !important;
+    }
+
+    /* En móvil el scroll fluido lo gestiona .main-panel; tab-home.active
+       no debe atrapar gestos táctiles con scroll anidado. */
+    #app-container.saas-workspace #tab-home.active {
+        overflow-y: visible !important;
+        overflow-x: hidden !important;
+        height: auto !important;
+    }
+
+    /* Historial: anular los flex-basis de escritorio que se interpretaban
+       como alturas de 280 y 520 px al apilar los controles en teléfono. */
+    #app-container.saas-workspace #tab-history .history-controls {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 10px !important;
+        padding: 12px !important;
+    }
+
+    #app-container.saas-workspace #tab-history .search-box {
+        flex: none !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 46px !important;
+        padding: 0 13px !important;
+    }
+
+    #app-container.saas-workspace #tab-history .history-actions {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        flex: none !important;
+        width: 100% !important;
+        gap: 8px !important;
+    }
+
+    #app-container.saas-workspace #tab-history .history-actions .btn {
+        min-width: 0 !important;
+        min-height: 48px !important;
+        height: auto !important;
+        padding: 10px 8px !important;
+        white-space: normal !important;
+        line-height: 1.25 !important;
+    }
+
+    #app-container.saas-workspace #tab-history #btn-import-beatstars-csv,
+    #app-container.saas-workspace #tab-history #btn-clear-history {
+        grid-column: 1 / -1 !important;
+    }
+
+    /* Historial: la tabla de escritorio tenía un ancho mínimo de 760 px y
+       dejaba el contenido cortado en una pantalla de 320–390 px. */
+    #app-container.saas-workspace #tab-history .history-stats-cards {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    #app-container.saas-workspace #tab-history .history-main-layout {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    #app-container.saas-workspace #tab-history .history-list-wrapper {
+        overflow-x: hidden !important;
+    }
+
+    #app-container.saas-workspace #tab-history .history-table {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    #app-container.saas-workspace #tab-history .history-table thead {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace #tab-history .history-table tbody,
+    #app-container.saas-workspace #tab-history .history-table tbody tr {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    #app-container.saas-workspace #tab-history .history-table tbody tr {
+        box-sizing: border-box !important;
+    }
+
+    #app-container.saas-workspace #tab-history .history-table td {
+        display: flex !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    #app-container.saas-workspace #tab-history .history-table td.actions-cell {
+        display: flex !important;
+        width: 100% !important;
+    }
+
+    /* Content ID: los dos paneles deben apilarse y la tabla no puede imponer
+       el min-width inline de la versión de escritorio. */
+    #app-container.saas-workspace #tab-whitelist > div:has(#form-add-whitelist) {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 14px !important;
+        width: 100% !important;
+    }
+
+    #app-container.saas-workspace #tab-whitelist > div:has(#form-add-whitelist) > div {
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    #app-container.saas-workspace #tab-whitelist table.history-table {
+        width: 100% !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
+    }
+
+    #app-container.saas-workspace #tab-whitelist table.history-table th,
+    #app-container.saas-workspace #tab-whitelist table.history-table td {
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .producer-home-action,
+    .producer-home-tool {
+        transition: none;
+    }
+
+    .producer-home-action:hover,
+    .producer-home-tool:hover {
+        transform: none;
+    }
+}

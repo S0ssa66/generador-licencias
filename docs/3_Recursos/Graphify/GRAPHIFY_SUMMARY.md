@@ -12,7 +12,10 @@ dirigidas en el código o en Graphify para detalles; no cargues `graph.json` ni
 - Su reporte corresponde al commit histórico `92fc36d2`; debe tratarse como
   orientación, no como una representación garantizada del código actual.
 - Graphify se ejecuta manualmente. Los hooks de Git no lo reconstruyen.
-- La copia navegable de Obsidian está en `docs/3_Recursos/Codigo_Beatss/`.
+- La bóveda operativa de Obsidian está en
+  `/Users/sossa/Documents/Codex/BeatSS-Obsidian`.
+- Las copias derivadas de Graphify deben vivir en `graphify-out/obsidian-copy/`
+  o en `99_Derivado/Graphify/` dentro de la bóveda.
 
 ## Arquitectura útil
 
@@ -49,4 +52,5 @@ regenerables o exportaciones de Graphify y crean ruido o ciclos.
 2. Investigar el módulo concreto con `rg` o una consulta Graphify puntual.
 3. Implementar y verificar el cambio.
 4. Regenerar Graphify solo si hubo una modificación arquitectónica importante.
-5. Si se necesita Obsidian, sincronizar con `./sync_graphify_to_beatss_obsidian.sh`.
+5. Si se necesita una copia derivada para Obsidian, sincronizar con
+   `./sync_graphify_to_beatss_obsidian.sh` usando un destino explícito y permitido.

@@ -5,7 +5,9 @@ service cloud.firestore {
 
     // Función auxiliar para verificar si el usuario es administrador.
     function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+      return request.auth != null &&
+             'admin' in request.auth.token &&
+             request.auth.token.admin == true;
     }
 
     // Función auxiliar para validar datos de contacto públicos (leads)
@@ -33,6 +35,46 @@ service cloud.firestore {
              (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() < 50));
     }
 
+    // Los pagos de suscripción manuales requieren sesión y quedan pendientes
+    // hasta que un administrador valide el comprobante.
+    function isValidSubscriptionPayment() {
+      let data = request.resource.data;
+      return request.auth != null &&
+             data.keys().hasOnly([
+               'type', 'userId', 'userEmail', 'aka', 'method', 'reference',
+               'status', 'plan', 'receiptUrl', 'timestamp', 'needInvoice',
+               'invoiceRuc', 'invoiceCompany', 'invoiceAddress', 'invoiceEmail'
+             ]) &&
+             data.keys().hasAll([
+               'type', 'userId', 'userEmail', 'method', 'reference',
+               'status', 'plan', 'receiptUrl', 'timestamp'
+             ]) &&
+             data.type == 'subscription_payment' &&
+             data.userId == request.auth.uid &&
+             data.userEmail is string && data.userEmail == request.auth.token.email && data.userEmail.size() < 254 &&
+             data.aka is string && data.aka.size() < 160 &&
+             data.method in ['PayPal', 'Deuna!', 'Banco Pichincha', 'Banco Guayaquil', 'PayPhone'] &&
+             data.reference is string && data.reference.size() > 0 && data.reference.size() < 160 &&
+             data.status == 'pending' &&
+             data.plan in ['pro', 'enterprise'] &&
+             data.receiptUrl is string && data.receiptUrl.size() > 0 && data.receiptUrl.size() < 2048 &&
+             data.receiptUrl.matches('https://firebasestorage.googleapis.com/v0/b/[^/]+/o/receipts%2Fsaas%2F.*') &&
+             data.timestamp is string && data.timestamp.size() < 80 &&
+             (!('needInvoice' in data) || data.needInvoice is bool) &&
+             (!('invoiceRuc' in data) || (data.invoiceRuc is string && data.invoiceRuc.size() == 13)) &&
+             (!('invoiceCompany' in data) || (data.invoiceCompany is string && data.invoiceCompany.size() < 160)) &&
+             (!('invoiceAddress' in data) || (data.invoiceAddress is string && data.invoiceAddress.size() < 240)) &&
+             (!('invoiceEmail' in data) || (data.invoiceEmail is string && data.invoiceEmail.size() < 254)) &&
+             (!('needInvoice' in data) || data.needInvoice == false || (
+               data.needInvoice == true &&
+               data.keys().hasAll(['invoiceRuc', 'invoiceCompany', 'invoiceAddress', 'invoiceEmail']) &&
+               data.invoiceRuc.size() == 13 &&
+               data.invoiceCompany.size() > 0 &&
+               data.invoiceAddress.size() > 0 &&
+               data.invoiceEmail.size() > 0
+             ));
+    }
+
     // Regla para la contabilidad consolidada de Sossa Admin (Collection Group query)
     match /{path=**}/licencias/{document} {
       allow read: if isAdmin();
@@ -43,27 +85,18 @@ service cloud.firestore {
       allow read: if true;
     }
 
-    // Regla para solicitudes de pago local y compras de beats (creación y lectura por invitados y administradores)
+    // Las compras públicas se crean exclusivamente en el servidor. El cliente
+    // autenticado solo puede registrar un comprobante manual de suscripción.
     match /payments/{paymentId} {
-      allow create: if (
-                       // Compra de usuario autenticado
-                       (request.auth != null && (
-                         !('userId' in request.resource.data) || request.auth.uid == request.resource.data.userId
-                       )) ||
-                       // Compra de invitado (anónimo) en el catálogo de marketplace
-                       (request.auth == null)
-                     ) &&
-                     request.resource.data.type in ['beat_purchase', 'exclusive_offer'] &&
-                     request.resource.data.status == 'pending';
+      allow create: if isValidSubscriptionPayment();
       
-      // Permitir 'get' (lectura individual por ID) para que el frontend del invitado escuche el cambio de estado en tiempo real
+      // El estado para invitados se consulta mediante /api/payments/status,
+      // que exige una credencial opaca y nunca devuelve PII.
       allow get: if (request.auth != null && (
-                      !('userId' in resource.data) || 
-                      resource.data.userId == request.auth.uid || 
+                      (('userId' in resource.data) && resource.data.userId == request.auth.uid) ||
                       resource.data.producerId == request.auth.uid || 
                       isAdmin()
-                    )) ||
-                    (request.auth == null);
+                    ));
       
       // Restringir el listado ('list') de pagos solo a los involucrados autenticados
       allow list: if request.auth != null && (
@@ -76,20 +109,10 @@ service cloud.firestore {
                       request.auth != null && (
                         isAdmin() || 
                         (resource.data.producerId == request.auth.uid && 
-                         request.resource.data.status in ['cancelled', 'cancelado'] && 
+                         resource.data.status == 'pending' &&
+                         request.resource.data.status in ['approved', 'rejected', 'cancelled', 'cancelado'] &&
                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
                       )
-                    ) || (
-                      request.auth == null &&
-                      resource.data.status == 'pending' &&
-                      request.resource.data.status == 'pending' &&
-                      request.resource.data.finalPrice == resource.data.finalPrice &&
-                      request.resource.data.beatId == resource.data.beatId &&
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                        'buyerName', 'buyerEmail', 'buyerPhone', 'buyerDni',
-                        'buyerCity', 'buyerCountry', 'youtubeWhitelist',
-                        'receiptUrl', 'acceptedTerms', 'acceptanceTimestamp'
-                      ])
                     );
       allow delete: if false;
     }
@@ -97,8 +120,11 @@ service cloud.firestore {
     // Regla para referidos (referrals)
     match /referrals/{referralId} {
       allow read: if request.auth != null && (resource.data.referrerId == request.auth.uid || isAdmin());
-      allow create: if request.auth != null && request.auth.uid == referralId;
-      allow update: if request.auth != null && (request.auth.uid == referralId || isAdmin());
+      allow create: if request.auth != null && 
+                       request.auth.uid == referralId &&
+                       request.resource.data.referrerId != request.auth.uid &&
+                       (!('converted' in request.resource.data) || request.resource.data.converted == false);
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -139,24 +165,35 @@ service cloud.firestore {
         (request.resource.data.plan == 'inicial' && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['planActivatedAt', 'expirationPro', 'redeemedCodes']))
       );
 
-      // Reglas para subcolección config/producer (acceso público de lectura, escritura privada)
+      // La configuración del productor contiene identidad y preferencias del
+      // negocio. La tienda pública accede a una proyección saneada del servidor.
       match /config/producer {
-        allow read: if true;
-        allow create: if request.auth != null && request.auth.uid == userId && (
+        allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+        allow create: if request.auth != null && request.auth.uid == userId &&
+          !request.resource.data.keys().hasAny(['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsTemplatePendingId', 'emailjsPublicKey', 'paypalClientSecret', 'sriP12Password', 'sriP12Base64', 'sriSecuencial', 'audioTagBase64', 'bankPichinchaAcc', 'bankPichinchaDni', 'bankPichinchaName', 'bankPichinchaType', 'bankGuayaquilAcc', 'bankGuayaquilDni', 'bankGuayaquilName', 'bankGuayaquilType', 'deunaName', 'deunaPhone', 'deunaQrBase64', 'paypalClientId', 'paypalEmail', 'paypalPlanIdPro', 'paypalPlanIdElite', 'paypalPlanIdCreator', 'paypalPlanIdProArtist', 'payphoneAppId', 'payphoneClientId', 'payphonePhone', 'stripePublishableKey', 'stripeConnectAccountId', 'id', 'address', 'birthdate', 'sriRuc', 'sriRazonSocial', 'sriNombreComercial', 'sriDirMatriz', 'sriEstab', 'sriPtoEmi', 'sriAmbiente', 'sriRimpe', 'sriContabilidad', 'sriIvaTarifa', 'sriIvaIncluido', 'sriRucProveedor']) && (
           !request.resource.data.keys().hasAny(['plan', 'expirationPro', 'redeemedCodes']) || 
           request.resource.data.plan == 'inicial'
         );
-        allow update: if isAdmin() || (
+        // Se permite eliminar campos heredados para migrarlos a private_config,
+        // pero el documento resultante nunca puede conservarlos ni recrearlos.
+        allow update: if !request.resource.data.keys().hasAny(['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsTemplatePendingId', 'emailjsPublicKey', 'paypalClientSecret', 'sriP12Password', 'sriP12Base64', 'sriSecuencial', 'audioTagBase64', 'bankPichinchaAcc', 'bankPichinchaDni', 'bankPichinchaName', 'bankPichinchaType', 'bankGuayaquilAcc', 'bankGuayaquilDni', 'bankGuayaquilName', 'bankGuayaquilType', 'deunaName', 'deunaPhone', 'deunaQrBase64', 'paypalClientId', 'paypalEmail', 'paypalPlanIdPro', 'paypalPlanIdElite', 'paypalPlanIdCreator', 'paypalPlanIdProArtist', 'payphoneAppId', 'payphoneClientId', 'payphonePhone', 'stripePublishableKey', 'stripeConnectAccountId', 'id', 'address', 'birthdate', 'sriRuc', 'sriRazonSocial', 'sriNombreComercial', 'sriDirMatriz', 'sriEstab', 'sriPtoEmi', 'sriAmbiente', 'sriRimpe', 'sriContabilidad', 'sriIvaTarifa', 'sriIvaIncluido', 'sriRucProveedor']) && (isAdmin() || (
           request.auth != null && request.auth.uid == userId && (
             (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['plan', 'expirationPro', 'redeemedCodes'])) ||
             (request.resource.data.plan == 'inicial' && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['expirationPro', 'redeemedCodes']))
           )
-        );
+        ));
       }
 
       // Reglas para subcolección private_config/producer
       match /private_config/producer {
         allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      }
+
+      // La firma electrónica y su contraseña no pueden volver al navegador,
+      // ni siquiera al propietario. Sólo los procesos server-side con Admin
+      // SDK acceden a este documento.
+      match /private_config/sri {
+        allow read, write: if false;
       }
 
       // Reglas para subcolecciones normales
@@ -186,10 +223,15 @@ service cloud.firestore {
       }
 
       match /contacts/{contactId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-        allow create: if request.auth != null &&
-                      (request.auth.uid == userId || isAdmin()) &&
-                      isValidContact();
+        allow read, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
+        allow create, update: if request.auth != null &&
+                              (request.auth.uid == userId || isAdmin()) &&
+                              isValidContact();
+      }
+
+      // Historial privado de correos y archivos entregados por el productor.
+      match /email_logs/{logId} {
+        allow read, create, update, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
       }
     }
   }

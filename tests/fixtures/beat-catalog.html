@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BEATSS Beat Catalog Fixture</title>
+    <link rel="stylesheet" href="../../beat-catalog.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #f4f5f8; font-family: Arial, sans-serif; }
+        :root { --ledger-ink:#172238; --ledger-muted:#69758a; --ledger-blue:#3157e8; --ledger-blue-soft:#eef2ff; --ledger-line:#dfe5ef; --workspace-canvas:#f4f5f8; }
+        #tab-beats { min-height: 100dvh; }
+        .beats-list-section { display:flex; flex-direction:column; gap:20px; }
+        .beats-form-section { display:flex; }
+        .sticky-form-card { width:100%; min-height:360px; padding:24px; }
+        .fixture-form { display:grid; place-items:center; min-height:310px; text-align:center; color:#69758a; }
+        .fixture-form strong { display:block; color:#172238; font-size:20px; margin-bottom:8px; }
+        @media (max-width:760px) { html, body { width:390px; max-width:100%; } .beats-form-section { display:none; } }
+    </style>
+</head>
+<body>
+<div id="app-container" class="saas-workspace">
+<section id="tab-beats">
+    <div class="beats-tab-container">
+        <div class="beats-list-section">
+            <section class="beat-catalog-toolbar">
+                <div class="beat-catalog-heading">
+                    <span class="beat-catalog-heading-icon">♫</span>
+                    <div><p>BEATSS / CATÁLOGO PRIVADO</p><h1>Mis beats</h1><span>Organiza portadas, metadatos y archivos listos para licenciar.</span></div>
+                    <button class="btn" id="tab-btn-add-beat">＋ <span>Subir nuevo beat</span></button>
+                </div>
+                <div class="beat-catalog-filters">
+                    <label class="beat-catalog-search"><span hidden>Buscar</span><span aria-hidden="true">⌕</span><input type="search" placeholder="Buscar por nombre, escala o género…"></label>
+                    <label class="beat-catalog-select"><span>Género</span><select><option>Todos los géneros</option></select></label>
+                    <label class="beat-catalog-select"><span>Escala</span><select><option>Todas las escalas</option></select></label>
+                </div>
+                <div class="beat-catalog-stats"><span><strong>7</strong>Total</span><span><strong>4</strong>Con MP3</span><span><strong>7</strong>Con WAV</span><span><strong>3</strong>Con Stems</span></div>
+            </section>
+            <div id="tab-beats-grid" class="beat-catalog-grid">
+                <article class="tab-beat-card">
+                    <div class="tab-beat-artwork-container"><img src="../../public/beat-thumbnail-sossa.jpg" class="tab-beat-artwork" alt="Portada de Now"><span class="tab-beat-cover-label">BEATSS</span><button class="tab-beat-play-btn" aria-label="Reproducir Now">▶</button></div>
+                    <div class="tab-beat-info"><span class="tab-beat-kicker">INSTRUMENTAL</span><button class="tab-beat-title">Now</button><div class="tab-beat-meta"><span><strong>88</strong>&nbsp;BPM</span><span>Gm</span><span>Dancehall</span></div><div class="tab-beat-tags-container"><span class="tab-beat-tag">#DARK</span><span class="tab-beat-tag">#CLUB</span></div><div class="tab-beat-file-row"><span class="tab-beat-file-status is-missing">− MP3</span><span class="tab-beat-file-status is-ready">✓ WAV</span><span class="tab-beat-file-status is-missing">− STEMS</span></div></div>
+                    <div class="tab-beat-actions"><button class="btn tab-beat-use">Usar en licencia</button><button class="btn tab-beat-edit" aria-label="Editar Now">✎</button><button class="btn tab-beat-delete" aria-label="Eliminar Now">⌫</button></div>
+                </article>
+                <article class="tab-beat-card">
+                    <div class="tab-beat-artwork-container"><img src="../../public/beat-thumbnail-sossa.jpg" class="tab-beat-artwork" alt="Portada de Magic"><span class="tab-beat-cover-label">BEATSS</span><button class="tab-beat-play-btn" aria-label="Reproducir Magic">▶</button></div>
+                    <div class="tab-beat-info"><span class="tab-beat-kicker">INSTRUMENTAL</span><button class="tab-beat-title">Magic</button><div class="tab-beat-meta"><span><strong>91</strong>&nbsp;BPM</span><span>F min</span><span>Dancehall</span></div><div class="tab-beat-tags-container"><span class="tab-beat-tag">#MELODIC</span></div><div class="tab-beat-file-row"><span class="tab-beat-file-status is-ready">✓ MP3</span><span class="tab-beat-file-status is-ready">✓ WAV</span><span class="tab-beat-file-status is-ready">✓ STEMS</span></div></div>
+                    <div class="tab-beat-actions"><button class="btn tab-beat-use">Usar en licencia</button><button class="btn tab-beat-edit" aria-label="Editar Magic">✎</button><button class="btn tab-beat-delete" aria-label="Eliminar Magic">⌫</button></div>
+                </article>
+            </div>
+        </div>
+        <aside class="beats-form-section"><div class="sticky-form-card"><div class="fixture-form"><div><strong>Selecciona un beat</strong>Su información aparecerá aquí para editarla.</div></div></div></aside>
+    </div>
+</section>
+</div>
+</body>
+</html>

@@ -8,7 +8,7 @@ const files = [
     'catalog.js',
     'checkout.js',
     'editor.js',
-    'dashboard.js'
+    'dashboard-module.js'
 ];
 
 const standardGlobals = new Set([

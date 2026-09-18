@@ -1,26 +1,160 @@
-// api/payments/config.js — Vercel Serverless Function
-// Retorna la configuración pública de pagos del administrador (sossa)
-
 import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { isTrustedBeatssOrigin } from '../_cors-origin.js';
+import { hasCompleteSriConfig } from '../_sri_queue.js';
 
 const ADMIN_UID = 'paXbnNbHMMPC31X3hf0oTUx4bbr2';
-const ALLOWED_ORIGINS = [
-    'https://beatss.app',
-    'https://www.beatss.app',
-    'https://generador-licencias.vercel.app'
-];
 
-function getCorsOrigin(req) {
-    const origin = req.headers.origin;
-    if (!origin) return 'https://beatss.app';
-    if (ALLOWED_ORIGINS.includes(origin) || 
-        origin.endsWith('.vercel.app') || 
-        origin.startsWith('http://localhost') || 
-        origin.startsWith('http://127.0.0.1')) {
-        return origin;
+function configureCors(req, res) {
+    const origin = req.headers?.origin;
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Cache-Control', 'private, no-store');
+    if (origin && isTrustedBeatssOrigin(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
     }
-    return 'https://beatss.app';
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
+
+const RATE_WINDOW_MS = 5 * 60 * 1000;
+const RATE_LIMIT = 60;
+const paymentConfigRateWindows = new Map();
+
+export function resetPaymentConfigRateLimit() {
+    paymentConfigRateWindows.clear();
+}
+
+export function checkPaymentConfigRateLimit(ip, now = Date.now(), limit = RATE_LIMIT, windowMs = RATE_WINDOW_MS) {
+    const record = paymentConfigRateWindows.get(ip);
+    if (!record || now - record.start >= windowMs || now < record.start) {
+        paymentConfigRateWindows.set(ip, { start: now, count: 1 });
+        return { allowed: true, retryAfterSeconds: 0 };
+    }
+    if (record.count >= limit) {
+        const retryAfterSeconds = Math.max(1, Math.ceil((record.start + windowMs - now) / 1000));
+        return { allowed: false, retryAfterSeconds };
+    }
+    record.count += 1;
+    return { allowed: true, retryAfterSeconds: 0 };
+}
+
+export function getSanitizedClientIp(req) {
+    const headers = req?.headers || {};
+    const forwarded = headers['x-vercel-forwarded-for'] || headers['x-forwarded-for'] || req?.socket?.remoteAddress || 'unknown';
+    return String(Array.isArray(forwarded) ? forwarded.at(-1) : forwarded)
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean)
+        .at(-1)
+        ?.slice(0, 128) || 'unknown';
+}
+
+export function serializePublicPaymentConfig(config = {}) {
+    return {
+        paypalClientId: String(config.paypalClientId || '').slice(0, 512),
+        paypalPlanIdPro: String(config.paypalPlanIdPro || '').slice(0, 160),
+        paypalPlanIdElite: String(config.paypalPlanIdElite || '').slice(0, 160),
+        paypalPlanIdCreator: String(config.paypalPlanIdCreator || '').slice(0, 160),
+        paypalPlanIdProArtist: String(config.paypalPlanIdProArtist || '').slice(0, 160),
+        payphoneClientId: String(config.payphoneClientId || '').slice(0, 2048),
+        payphoneAppId: String(config.payphoneAppId || '').slice(0, 160),
+        deunaPhone: String(config.deunaPhone || '').replace(/[^\d+]/g, '').slice(0, 20),
+        deunaName: String(config.deunaName || '').replace(/<[^>]*>/g, '').trim().slice(0, 160),
+        bankPichinchaName: String(config.bankPichinchaName || '').replace(/<[^>]*>/g, '').trim().slice(0, 160)
+    };
+}
+
+export function paymentCapabilities(env = process.env) {
+    return {
+        deuna: String(env.DEUNA_WEBHOOK_SECRET || '').length >= 32
+    };
+}
+
+function sriProfileForOwner(config = {}) {
+    const pick = key => String(config[key] || '').slice(0, 512);
+    return {
+        sriRuc: pick('sriRuc'),
+        sriRazonSocial: pick('sriRazonSocial'),
+        sriNombreComercial: pick('sriNombreComercial'),
+        sriDirMatriz: pick('sriDirMatriz'),
+        sriEstab: pick('sriEstab'),
+        sriPtoEmi: pick('sriPtoEmi'),
+        sriAmbiente: pick('sriAmbiente'),
+        sriRimpe: pick('sriRimpe'),
+        sriContabilidad: pick('sriContabilidad'),
+        sriIvaTarifa: pick('sriIvaTarifa'),
+        sriIvaIncluido: config.sriIvaIncluido !== false,
+        sriRucProveedor: pick('sriRucProveedor'),
+        sriAutoQueueEnabled: config.sriAutoQueueEnabled === true,
+        sriSignatureConfigured: Boolean(String(config.sriP12Base64 || '').trim() && String(config.sriP12Password || process.env.SRI_FIRMA_PASSWORD || '').trim())
+    };
+}
+
+function sriWorkerReadiness(worker = {}) {
+    const heartbeat = worker?.lastHeartbeatAt?.toDate?.() || new Date(worker?.lastHeartbeatAt || 0);
+    const heartbeatMs = Number.isFinite(heartbeat.getTime()) ? heartbeat.getTime() : 0;
+    const stale = !heartbeatMs || (Date.now() - heartbeatMs) > 10 * 60 * 1000;
+    return {
+        // Sólo se entrega salud operativa, nunca rutas internas, tokens ni
+        // detalles del certificado. El dashboard necesita saber si es seguro
+        // prometer que una cola realmente será procesada.
+        sriWorkerHealthy: !stale,
+        sriWorkerLastHeartbeatAt: heartbeatMs ? heartbeat.toISOString() : '',
+        sriWorkerPendingCount: Math.max(0, Number(worker?.pendingCount || 0) || 0)
+    };
+}
+
+function sanitizeSriUpdate(raw = {}) {
+    const stringKeys = [
+        'sriRuc', 'sriRazonSocial', 'sriNombreComercial', 'sriDirMatriz',
+        'sriEstab', 'sriPtoEmi', 'sriAmbiente', 'sriRimpe',
+        'sriContabilidad', 'sriIvaTarifa', 'sriRucProveedor'
+    ];
+    const output = {};
+    for (const key of stringKeys) {
+        if (Object.prototype.hasOwnProperty.call(raw, key)) output[key] = String(raw[key] || '').trim().slice(0, 512);
+    }
+    if (Object.prototype.hasOwnProperty.call(raw, 'sriIvaIncluido')) output.sriIvaIncluido = raw.sriIvaIncluido === true;
+    if (Object.prototype.hasOwnProperty.call(raw, 'sriAutoQueueEnabled')) output.sriAutoQueueEnabled = raw.sriAutoQueueEnabled === true;
+    // Nunca se devuelve ninguno de estos valores al navegador. Vacío significa
+    // “conservar el existente”, para evitar borrar una firma por accidente.
+    const certificate = String(raw.sriP12Base64 || '').trim();
+    // Un certificado PKCS#12 normal ocupa pocos MB. Limitar la carga evita que
+    // esta ruta autenticada se use como almacenamiento arbitrario.
+    if (certificate.length > 3_000_000) throw Object.assign(new Error('El certificado SRI supera el tamaño permitido.'), { status: 413 });
+    if (certificate) output.sriP12Base64 = certificate;
+    if (String(raw.sriP12Password || '').trim()) output.sriP12Password = String(raw.sriP12Password);
+    return output;
+}
+
+const SRI_SECRET_KEYS = ['sriP12Base64', 'sriP12Password', 'sriSecuencial'];
+
+async function readSriPrivateConfig(db, producerId) {
+    const legacyRef = db.collection('users').doc(producerId).collection('private_config').doc('producer');
+    const sriRef = db.collection('users').doc(producerId).collection('private_config').doc('sri');
+    const [sriSnap, legacySnap] = await Promise.all([sriRef.get(), legacyRef.get()]);
+    const dedicated = sriSnap.exists ? sriSnap.data() : {};
+    const legacy = legacySnap.exists ? legacySnap.data() : {};
+    const migrated = {};
+    for (const key of SRI_SECRET_KEYS) {
+        if (!dedicated[key] && legacy[key]) migrated[key] = legacy[key];
+    }
+    if (Object.keys(migrated).length) {
+        const batch = db.batch();
+        batch.set(sriRef, migrated, { merge: true });
+        batch.update(legacyRef, Object.fromEntries(Object.keys(migrated).map(key => [key, FieldValue.delete()])));
+        await batch.commit();
+    }
+    return { ...legacy, ...dedicated, ...migrated };
+}
+
+async function requireOwnerSession(req) {
+    const authorization = String(req.headers?.authorization || '');
+    if (!authorization.startsWith('Bearer ')) throw Object.assign(new Error('Sesión requerida.'), { status: 401 });
+    const decoded = await getAuth().verifyIdToken(authorization.slice(7));
+    if (!decoded?.uid) throw Object.assign(new Error('Sesión inválida.'), { status: 401 });
+    return decoded;
 }
 
 // Inicializar Firebase Admin (solo una vez)
@@ -36,58 +170,78 @@ function initFirebaseAdmin() {
 }
 
 export default async function handler(req, res) {
-    // CORS headers - restringido al dominio propio
-    res.setHeader('Access-Control-Allow-Origin', getCorsOrigin(req));
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    const origin = req.headers?.origin;
+    configureCors(req, res);
 
     // Preflight
-    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method === 'OPTIONS') return res.status(204).end();
 
-    // Solo GET
-    if (req.method !== 'GET') {
+    if (origin && !isTrustedBeatssOrigin(origin)) {
+        return res.status(403).json({ error: 'Origen no permitido.' });
+    }
+
+    if (!['GET', 'POST'].includes(req.method)) {
         return res.status(405).json({ error: 'Método no permitido' });
+    }
+
+    const clientIp = getSanitizedClientIp(req);
+    const rateCheck = checkPaymentConfigRateLimit(clientIp);
+    if (!rateCheck.allowed) {
+        res.setHeader('Retry-After', String(rateCheck.retryAfterSeconds));
+        return res.status(429).json({ error: 'Demasiadas solicitudes de configuración de pagos. Por favor espera unos minutos.' });
     }
 
     try {
         initFirebaseAdmin();
         const db = getFirestore();
 
-        // Cargar configuración del productor administrador (sossa)
-        const docRef = db.collection('users').doc(ADMIN_UID).collection('config').doc('producer');
-        const snap = await docRef.get();
-
-        if (!snap.exists) {
-            // Fallback de contingencia si no se encuentra en la BD
-            return res.status(200).json({
-                paypalClientId: 'AaZODyYne1mAl_ujEEAr5tP2hRcm2ii_1QSzAhexfXKMdue-aVQRX_kbPLUgmpm1ZimxFSWpejImUU1-',
-                paypalPlanIdPro: '',
-                paypalPlanIdElite: '',
-                payphoneClientId: '',
-                payphoneAppId: '',
-                deunaPhone: '+593961201184',
-                deunaName: 'Joao David Dominguez Sosa',
-                bankPichinchaName: 'Joao Dominguez'
-            });
+        if (req.method === 'POST') {
+            const decoded = await requireOwnerSession(req);
+            const action = String(req.body?.action || '');
+            const producerId = String(req.body?.producerId || decoded.uid);
+            if (producerId !== decoded.uid && decoded.admin !== true) return res.status(403).json({ error: 'No puedes modificar esta configuración.' });
+            const sriRef = db.collection('users').doc(producerId).collection('private_config').doc('sri');
+            const privateConfig = await readSriPrivateConfig(db, producerId);
+            if (action === 'sri-profile') {
+                const workerSnap = await db.collection('system').doc('sri_worker').get();
+                return res.status(200).json({
+                    sri: {
+                        ...sriProfileForOwner(privateConfig),
+                        ...sriWorkerReadiness(workerSnap.exists ? workerSnap.data() : {})
+                    }
+                });
+            }
+            if (action === 'save-sri-config') {
+                const update = sanitizeSriUpdate(req.body?.sri || {});
+                await sriRef.set(update, { merge: true });
+                const saved = { ...privateConfig, ...update };
+                return res.status(200).json({ sri: sriProfileForOwner(saved), configured: hasCompleteSriConfig({}, saved) });
+            }
+            return res.status(400).json({ error: 'Acción SRI no válida.' });
         }
 
-        const config = snap.data();
+        // Cargar configuración del productor administrador (sossa)
+        const producerRef = db.collection('users').doc(ADMIN_UID);
+        const [snap, privateSnap] = await Promise.all([
+            producerRef.collection('config').doc('producer').get(),
+            producerRef.collection('private_config').doc('producer').get()
+        ]);
+
+        if (!snap.exists) {
+            return res.status(404).json({ error: 'Configuración de pagos no encontrada.' });
+        }
+
         return res.status(200).json({
-            paypalClientId: config.paypalClientId || 'AaZODyYne1mAl_ujEEAr5tP2hRcm2ii_1QSzAhexfXKMdue-aVQRX_kbPLUgmpm1ZimxFSWpejImUU1-',
-            paypalPlanIdPro: config.paypalPlanIdPro || '',
-            paypalPlanIdElite: config.paypalPlanIdElite || '',
-            payphoneClientId: config.payphoneClientId || '',
-            payphoneAppId: config.payphoneAppId || '',
-            deunaPhone: config.deunaPhone || '+593961201184',
-            deunaName: config.deunaName || 'Joao David Dominguez Sosa',
-            bankPichinchaName: config.bankPichinchaName || 'Joao Dominguez'
+            ...serializePublicPaymentConfig({
+                ...snap.data(),
+                ...(privateSnap.exists ? privateSnap.data() : {})
+            }),
+            capabilities: paymentCapabilities()
         });
 
     } catch (error) {
-        console.error('❌ Error al obtener config de pagos:', error);
-        return res.status(500).json({
-            error: 'Error interno del servidor',
-            details: error.message
-        });
+        console.error('Payment config error:', error?.code || 'INTERNAL_ERROR');
+        const status = Number.isInteger(error?.status) ? error.status : 500;
+        return res.status(status).json({ error: status === 500 ? 'Error interno del servidor.' : error.message });
     }
 }

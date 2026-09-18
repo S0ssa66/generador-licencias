@@ -1,0 +1,23 @@
+{
+  "name": "beatss-beatstars-drive-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Migración controlada de exportaciones BeatStars al Drive central y catálogo privado de BEATSS.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "beatss-beatstars-drive-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js",
+    "inspect": "npx @modelcontextprotocol/inspector node src/index.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "^3.24.2"
+  }
+}

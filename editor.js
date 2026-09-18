@@ -1,5 +1,13 @@
 import { LICENSE_CONFIGS, SEED_LICENSES, DEFAULT_TEMPLATES } from './config.js';
 import { TRANSLATIONS, UI_TRANSLATIONS } from './i18n.js';
+import {
+    createManualContractReference,
+    getLicenseReferenceVersion,
+    INVALID_REFERENCE_PREVIEW,
+    isValidLicenseReference,
+    normalizeLicenseReference,
+    resolveLicenseReference
+} from './license-reference.js';
 import { 
     auth,
     googleProvider,
@@ -35,6 +43,78 @@ const initDefaultDate = (...args) => window.initDefaultDate(...args);
 const safeSetItem = (...args) => window.safeSetItem(...args);
 const safeGetItem = (...args) => window.safeGetItem(...args);
 const safeCreateIcons = (...args) => window.safeCreateIcons(...args);
+const showToast = (...args) => window.showToast?.(...args);
+
+// `editor.js` es un ES module independiente de `main.js`: sus variables
+// léxicas no se comparten. Estos puentes leen el estado vigente desde window
+// en cada acceso, incluso cuando la configuración se actualiza después de que
+// el editor ya fue cargado.
+const producerConfig = new Proxy({}, {
+    get(_target, property) {
+        return (window.producerConfig || {})[property];
+    },
+    set(_target, property, value) {
+        const config = window.producerConfig || {};
+        config[property] = value;
+        window.producerConfig = config;
+        return true;
+    }
+});
+
+const licenseHistory = new Proxy([], {
+    get(_target, property) {
+        const history = Array.isArray(window.licenseHistory) ? window.licenseHistory : [];
+        const value = Reflect.get(history, property, history);
+        return typeof value === 'function' ? value.bind(history) : value;
+    },
+    set(_target, property, value) {
+        const history = Array.isArray(window.licenseHistory) ? window.licenseHistory : [];
+        Reflect.set(history, property, value, history);
+        window.licenseHistory = history;
+        return true;
+    }
+});
+
+function getEditorLanguage() {
+    return window.currentLang === 'en' ? 'en' : 'es';
+}
+
+// El editor se carga como un modulo independiente. Por eso no puede depender
+// de la variable lexical `activeTemplates` declarada en main.js: las variables
+// de un ES module no son visibles dentro de otro. Mantener una copia propia con
+// las plantillas base garantiza que el primer contrato pueda renderizarse aun
+// antes de terminar la carga de personalizaciones del productor.
+let activeTemplates = DEFAULT_TEMPLATES.map(template => ({ ...template }));
+if (typeof window !== 'undefined') {
+    window.activeTemplates = activeTemplates;
+}
+
+export function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+if (typeof window !== 'undefined') {
+    window.escapeHtml = escapeHtml;
+}
+
+function getRequiredManualReference() {
+    const input = document.getElementById('ref-code');
+    const reference = normalizeLicenseReference(input?.value);
+    if (isValidLicenseReference(reference)) {
+        if (input && input.value !== reference) input.value = reference;
+        return reference;
+    }
+
+    showToast('Asigna un código de referencia válido antes de generar, guardar o enviar una licencia. Un borrador sin referencia no es un documento oficial.', true);
+    input?.focus();
+    return '';
+}
+
 
 // Helper to dynamically load external scripts inside module scope
 function loadScript(src) {
@@ -52,6 +132,14 @@ function loadScript(src) {
     });
 }
 
+async function ensureGoogleIdentityServices() {
+    if (window.google?.accounts?.oauth2) return;
+    await loadScript('https://accounts.google.com/gsi/client');
+    if (!window.google?.accounts?.oauth2) {
+        throw new Error('Google Identity Services no cargó. Verifica tu conexión a Internet.');
+    }
+}
+
 
 // ==================== EDITOR BLOCK 1 ====================
 function selectLicenseType(type) {
@@ -61,9 +149,12 @@ function selectLicenseType(type) {
     // Actualizar campos principales
     document.getElementById('license-value').value = config.price;
     
-    // Auto-generar código de referencia
-    const refCode = generateReferenceCode(type);
-    document.getElementById('ref-code').value = refCode;
+    // Una licencia ya iniciada conserva su referencia al cambiar de nivel. Si
+    // el formulario es nuevo, se asigna el formato público v2 antes de emitir.
+    const referenceInput = document.getElementById('ref-code');
+    if (referenceInput && !isValidLicenseReference(referenceInput.value)) {
+        referenceInput.value = generateReferenceCode(type);
+    }
 
     // Actualizar cláusulas avanzadas
     document.getElementById('clause-formats').value = config.formats;
@@ -101,25 +192,16 @@ function selectLicenseType(type) {
     generatePreview();
 }
 
-// Generar código de referencia formal y entendible en español
+// Generar el código público que verá el cliente. No incluye correos, IDs de
+// pago ni el ID interno de Firestore; esos datos se trazan por separado.
 function generateReferenceCode(type) {
-    const today = new Date();
-    const dateStr = today.getFullYear().toString() + 
-                    String(today.getMonth() + 1).padStart(2, '0') + 
-                    String(today.getDate()).padStart(2, '0');
-    const random = Math.floor(1000 + Math.random() * 9000);
-    
-    // Mapear los tipos de licencia a abreviaciones claras en español
-    const typeMap = {
-        basic: 'BAS',           // Básica
-        premium: 'PREM',        // Premium
-        premium_plus: 'PPLUS',  // Premium Plus
-        unlimited_flp: 'ULIM', // Ilimitada
-        exclusive: 'EXCL'       // Exclusiva
-    };
-    
-    const typeCode = typeMap[type] || 'PERS'; // PERS para Personalizada
-    return `LIC-${typeCode}-${dateStr}-${random}`;
+    try {
+        return createManualContractReference({ licenseType: type });
+    } catch (error) {
+        console.error('No se pudo crear una referencia segura:', error);
+        showToast('No se pudo generar un código seguro. Actualiza el navegador antes de emitir una licencia.', true);
+        return '';
+    }
 }
 
 // Convertir número a texto en español para contratos legales
@@ -403,8 +485,91 @@ function parseMarkdownToHTML(markdown) {
     return html.join('\n');
 }
 
+// html2pdf respeta con mayor fiabilidad un contenedor real que la regla
+// break-after aplicada únicamente al encabezado. Agrupar cada título con su
+// primer bloque evita títulos huérfanos sin forzar una cláusula larga completa
+// a una sola página.
+function protectContractPageBreaks(html) {
+    if (!html || typeof document === 'undefined') return html;
+    const template = document.createElement('template');
+    template.innerHTML = `<div>${html}</div>`;
+    const root = template.content.firstElementChild;
+    if (!root) return html;
+
+    [...root.querySelectorAll('h2, h3')].forEach(heading => {
+        if (heading.closest('.contract-heading-group')) return;
+        const next = heading.nextElementSibling;
+        if (!next) return;
+        const group = document.createElement('div');
+        group.className = 'contract-heading-group';
+        heading.before(group);
+        group.append(heading, next);
+    });
+
+    return root.innerHTML;
+}
+
+const ELECTRONIC_PAYMENT_RE = /(stripe|paypal|payphone|deuna|tarjeta|credit\s*card|card)/i;
+
+function isElectronicContractPayment(paymentMethod) {
+    return ELECTRONIC_PAYMENT_RE.test(String(paymentMethod || ''));
+}
+
+function formatContractPaymentMethod(paymentMethod, lang = 'es') {
+    const raw = String(paymentMethod || '').trim();
+    const normalized = raw.toLowerCase();
+    const provider = normalized.includes('stripe') ? 'Stripe'
+        : normalized.includes('paypal') ? 'PayPal'
+            : normalized.includes('payphone') ? 'PayPhone'
+                : normalized.includes('deuna') ? 'Deuna!'
+                    : /(tarjeta|credit\s*card|card)/i.test(raw) ? (lang === 'en' ? 'card' : 'tarjeta')
+                        : raw;
+
+    if (!isElectronicContractPayment(raw)) {
+        if (lang === 'en' && normalized === 'transferencia bancaria') return 'Bank transfer';
+        return raw;
+    }
+    return lang === 'en'
+        ? `Electronic payment through ${provider}`
+        : `Pago electrónico mediante ${provider}`;
+}
+
+function getContractVerificationCopy(paymentMethod, formattedDate, refCode, lang = 'es', needsBuyerSignature = false, hasBuyerSignature = false) {
+    const electronic = isElectronicContractPayment(paymentMethod);
+    if (lang === 'en') {
+        return {
+            acceptanceTitle: electronic ? '✓ Accepted through electronic payment' : '✓ Accepted after payment verification',
+            acceptanceBody: electronic
+                ? `This agreement does not require a handwritten signature. Electronic payment was confirmed on <strong>${formattedDate}</strong> under reference <strong class="font-data-mono">${refCode}</strong>.`
+                : `This agreement does not require a handwritten signature. The Producer verified the payment on <strong>${formattedDate}</strong> under reference <strong class="font-data-mono">${refCode}</strong>.`,
+            sealStatus: hasBuyerSignature
+                ? 'Status: electronically signed and valid'
+                : needsBuyerSignature
+                    ? 'Status: pending Licensee signature'
+                    : electronic
+                        ? 'Status: valid license · electronic payment confirmed'
+                        : 'Status: valid license · payment verified by the Producer'
+        };
+    }
+
+    return {
+        acceptanceTitle: electronic ? '✓ Aceptado mediante pago electrónico' : '✓ Aceptado mediante verificación del pago',
+        acceptanceBody: electronic
+            ? `Este acuerdo no requiere firma manuscrita. El pago electrónico fue confirmado el <strong>${formattedDate}</strong> bajo el código de referencia <strong class="font-data-mono">${refCode}</strong>.`
+            : `Este acuerdo no requiere firma manuscrita. El Productor verificó el pago el <strong>${formattedDate}</strong> bajo el código de referencia <strong class="font-data-mono">${refCode}</strong>.`,
+        sealStatus: hasBuyerSignature
+            ? 'Estado: firmado electrónicamente y vigente'
+            : needsBuyerSignature
+                ? 'Estado: pendiente de firma del Licenciatario'
+                : electronic
+                    ? 'Estado: licencia vigente · pago electrónico confirmado'
+                    : 'Estado: licencia vigente · pago verificado por el Productor'
+    };
+}
+
 async function loadTemplates() {
     activeTemplates = DEFAULT_TEMPLATES.map(t => ({ ...t }));
+    window.activeTemplates = activeTemplates;
     
     if (!window.currentUser) {
         console.warn("No hay usuario autenticado, usando plantillas por defecto.");
@@ -503,6 +668,7 @@ function loadTemplateToEditor(templateId) {
 
 // COMPILAR CONTRATO (Generación de contenido de texto Markdown y HTML)
 function compileContract() {
+    const currentLang = getEditorLanguage();
     const type = getActiveLicenseType();
     const isExclusive = type === 'exclusive';
     
@@ -516,7 +682,7 @@ function compileContract() {
     const buyerCity = document.getElementById('buyer-city').value.trim() || "[Ciudad]";
     const buyerCountry = document.getElementById('buyer-country').value.trim() || "[País]";
     const value = parseFloat(document.getElementById('license-value').value) || 0;
-    const refCode = document.getElementById('ref-code').value.trim() || "[Código Referencia]";
+    const refCode = normalizeLicenseReference(document.getElementById('ref-code').value) || INVALID_REFERENCE_PREVIEW;
     const effectiveDate = document.getElementById('effective-date').value;
     const dateFormatted = (currentLang === 'en' ? formatFechaIngles(effectiveDate) : formatFechaEspanol(effectiveDate)) || "[Fecha]";
     const isSossaProducer = (producerConfig.aka && producerConfig.aka.toLowerCase().includes('sossa')) || 
@@ -530,26 +696,7 @@ function compileContract() {
     }
 
     const paymentMethod = document.getElementById('payment-method').value;
-    let displayPaymentMethod = paymentMethod;
-    if (isSossaProducer && ['PayPal', 'Tarjeta de Crédito', 'deuna', 'Deuna!', 'payphone', 'PayPhone', 'Stripe'].includes(paymentMethod)) {
-        displayPaymentMethod = currentLang === 'en'
-            ? "Authorized electronic payment processing (Stripe, PayPal, PayPhone, Deuna!)"
-            : "Procesamiento electrónico de pago autorizado (Stripe, PayPal, PayPhone, Deuna!)";
-    } else if (currentLang === 'en') {
-        const paymentTranslations = {
-            'PayPal': 'PayPal',
-            'Transferencia Bancaria': 'Bank Transfer',
-            'Tarjeta de Crédito': 'Credit Card',
-            'Western Union': 'Western Union',
-            'Otro': 'Other',
-            'deuna': 'Deuna!',
-            'Deuna!': 'Deuna!',
-            'payphone': 'PayPhone',
-            'PayPhone': 'PayPhone',
-            'Stripe': 'Stripe'
-        };
-        displayPaymentMethod = paymentTranslations[paymentMethod] || paymentMethod;
-    }
+    const displayPaymentMethod = formatContractPaymentMethod(paymentMethod, currentLang);
     
     // Cláusulas editadas
     const formats = document.getElementById('clause-formats').value.trim() || "[Formatos]";
@@ -598,20 +745,31 @@ function compileContract() {
             ? 'As this is an Exclusive License, the Licensee is authorized to execute standard digital distribution and use the Content ID system in a controlled manner on their final version (the New Song), provided they strictly refrain from claiming exclusive ownership or monetization rights over the instrumental track itself, and they are obligated to whitelist any pre-existing legitimate non-exclusive derivative songs created by other licensees prior to this agreement.'
             : 'Al tratarse de una Licencia Exclusiva, el Licenciatario está facultado para la distribución digital estándar y el uso del sistema Content ID de manera controlada sobre su versión final (la Nueva Canción) siempre y cuando se abstenga estrictamente de reclamar la propiedad exclusiva o la monetización de la pista instrumental en sí misma, quedando obligado a incluir en lista blanca (*whitelist*) cualquier canción derivada legítima no exclusiva preexistente creada por otros licenciatarios antes de este acuerdo.');
 
+    const clause_prior_license_upgrade_rules = isExclusive
+        ? (currentLang === 'en'
+            ? '**4.1. Prior Licenses and Reserved Upgrade Right.** This Exclusive License is granted subject to any valid non-exclusive license issued before its Effective Date. Each prior Licensee retains the authorized use of the same New Song under their original license and may, even after this exclusive sale, purchase upgrades of that license up to the Unlimited License. This reservation does not authorize new non-exclusive licenses, new derivative songs, assignments, sublicenses, or another exclusive license. The Exclusive Licensee must respect those prior uses and whitelist them in any content-identification system.'
+            : '**4.1. Licencias Previas y Derecho de Ampliación Reservado.** Esta Licencia Exclusiva se concede sujeta a toda licencia no exclusiva válida emitida antes de su Fecha de Entrada en Vigor. Cada Licenciatario previo conserva el uso autorizado de la misma Nueva Canción bajo su licencia original y podrá, aun después de esta venta exclusiva, adquirir ampliaciones de esa licencia hasta la Licencia Ilimitada. Esta reserva no autoriza nuevas licencias no exclusivas, nuevas canciones derivadas, cesiones, sublicencias ni otra licencia exclusiva. El Licenciatario Exclusivo deberá respetar tales usos previos y mantenerlos en lista blanca en cualquier sistema de identificación de contenido.')
+        : (currentLang === 'en'
+            ? '**4.1. Later Exclusive Sale and Reserved Upgrade.** If the Producer later grants an Exclusive License for the Beat, this prior non-exclusive license is not revoked. The Licensee may continue exploiting the same New Song within the terms of this Agreement and may purchase upgrades of this license up to the Unlimited License. The upgrade is personal to the original Licensee and applies only to the same Beat and New Song; it does not authorize a new derivative song, an assignment, a sublicense, or an exclusive license.'
+            : '**4.1. Exclusiva Posterior y Ampliación Reservada.** Si el Productor concede posteriormente una Licencia Exclusiva sobre el Beat, esta licencia no exclusiva previa no queda revocada. El Licenciatario podrá continuar explotando la misma Nueva Canción dentro de los términos de este Contrato y podrá adquirir ampliaciones de esta licencia hasta la Licencia Ilimitada. La ampliación es personal para el Licenciatario original y aplica únicamente al mismo Beat y a la misma Nueva Canción; no autoriza una nueva canción derivada, cesión, sublicencia ni licencia exclusiva.');
+
     // Configurar variables de reemplazo
 
     // 1. Declaración legal del productor (persona natural y nombre artístico)
     let producer_legal_declaration = "";
     let producer_legal_declaration_en = "";
     if (isSossaProducer) {
-        producer_legal_declaration = `**Sossa**, nombre artístico de **Joao David Dominguez**, quien actúa como persona natural y titular de los derechos objeto de esta licencia`;
-        producer_legal_declaration_en = `**Sossa**, the professional name of **Joao David Dominguez**, acting as a natural person and holder of the rights covered by this license`;
+        const prodName = producerConfig.name || producerConfig.aka || "Productor";
+        const prodAka = producerConfig.aka || prodName;
+        producer_legal_declaration = `**${prodAka}**, nombre artístico de **${prodName}**, quien actúa como persona natural y titular de los derechos objeto de esta licencia`;
+        producer_legal_declaration_en = `**${prodAka}**, the professional name of **${prodName}**, acting as a natural person and holder of the rights covered by this license`;
     } else {
-        const prodName = producerConfig.name || "Joao David Dominguez";
-        const prodAka = producerConfig.aka || "Sossa";
-        const prodId = producerConfig.id || "0803743111";
-        producer_legal_declaration = `**${prodName}**, conocido profesionalmente en la industria musical como **${prodAka}**, con documento de identidad Nro. ${prodId}`;
-        producer_legal_declaration_en = `**${prodName}**, professionally known in the music industry as **${prodAka}**, with ID/Passport No. ${prodId}`;
+        const prodName = producerConfig.name || "Productor";
+        const prodAka = producerConfig.aka || prodName;
+        const identityText = producerConfig.id ? `, con documento de identidad Nro. ${producerConfig.id}` : '';
+        const identityTextEn = producerConfig.id ? `, with ID/Passport No. ${producerConfig.id}` : '';
+        producer_legal_declaration = `**${prodName}**, conocido profesionalmente en la industria musical como **${prodAka}**${identityText}`;
+        producer_legal_declaration_en = `**${prodName}**, professionally known in the music industry as **${prodAka}**${identityTextEn}`;
     }
 
     // 2. Jurisdicción y ley aplicable
@@ -655,19 +813,19 @@ function compileContract() {
     } else {
         clause_rescission_title = "Opción de Rescisión del Licenciante (Cláusula de Salvaguarda)";
         clause_rescission_title_en = "Licensor's Termination Option (Safeguard Clause)";
-        clause_rescission_body = `El Licenciante se reserva la facultad discrecional y la opción exclusiva, ejecutable dentro de los primeros **tres (3) años** a partir de la firma de este Contrato, de dar por terminado el presente acuerdo de forma anticipada y unilateral mediante notificación escrita. Para que esta rescisión surta efecto, el Licenciante pagará al Licenciatario una indemnización equivalente al **${terminationFee}**. Tras la notificación y el pago de dicha penalidad, el Licenciatario dispondrá de un plazo máximo de siete (7) días para dar de baja y retirar la Nueva Canción de todos los canales de distribución físicos y digitales del mercado. El Licenciatario acepta expresamente que el pago de dicha penalidad constituye una indemnización total, única y final por la terminación del contrato, y renuncia irrevocablemente a reclamar cualquier otro valor, compensación o indemnización por concepto de daños, pérdidas, gastos de promoción, marketing, producción de videoclips o cualquier otra inversión realizada en relación con la Nueva Canción.`;
+        clause_rescission_body = `El Licenciante se reserva la facultad discrecional y la opción exclusiva, ejecutable dentro de los primeros **tres (3) años** a partir de la firma de este Contrato, de dar por terminado el presente acuerdo de forma anticipada y unilateral mediante notificación escrita. Para que esta rescisión surta efecto, el Licenciante pagará al Licenciatario una indemnización equivalente a **${terminationFee}**. Tras la notificación y el pago de dicha penalidad, el Licenciatario dispondrá de un plazo máximo de siete (7) días para dar de baja y retirar la Nueva Canción de todos los canales de distribución físicos y digitales del mercado. El Licenciatario acepta expresamente que el pago de dicha penalidad constituye una indemnización total, única y final por la terminación del contrato, y renuncia irrevocablemente a reclamar cualquier otro valor, compensación o indemnización por concepto de daños, pérdidas, gastos de promoción, marketing, producción de videoclips o cualquier otra inversión realizada en relación con la Nueva Canción.`;
         clause_rescission_body_en = `The Licensor reserves the discretionary power and exclusive option, executable within the first **three (3) years** from the signing of this Contract, to terminate this agreement early and unilaterally by written notice. For this termination to take effect, the Licensor will pay the Licensee compensation equivalent to **${terminationFee}**. Following notification and payment of said penalty, the Licensee will have a period of seven (7) days to take down and withdraw the New Song from all physical and digital distribution channels in the market. The Licensee expressly agrees that the payment of said penalty constitutes a full, sole, and final compensation for the termination of the agreement, and irrevocably waives the right to claim any other value, compensation, or damages for promotion, marketing, video production expenses, or any other investment made in connection with the New Song.`;
     }
 
     const vars = {
-        producer_name: producerConfig.name || "Joao David Dominguez",
-        producer_aka: producerConfig.aka || "Sossa",
-        producer_id: producerConfig.id || "0803743111",
-        producer_email: producerConfig.email || "masterjuego25@gmail.com",
+        producer_name: producerConfig.name || "Productor",
+        producer_aka: producerConfig.aka || producerConfig.name || "Productor",
+        producer_id: producerConfig.id || "",
+        producer_email: producerConfig.email || "",
         producer_phone: producerConfig.phone || "",
         producer_pro: producerConfig.pro || "BMI",
-        producer_ipi: producerConfig.ipi || "01170943066",
-        producer_publisher: producerConfig.publisher || "Songtrust",
+        producer_ipi: producerConfig.ipi || "",
+        producer_publisher: producerConfig.publisher || "",
         
         buyer_name: buyerName,
         buyer_id: buyerId,
@@ -704,6 +862,7 @@ function compileContract() {
         license_exclusivity_lower: isExclusive ? (currentLang === 'en' ? 'exclusive' : 'exclusiva') : (currentLang === 'en' ? 'non-exclusive' : 'no exclusiva'),
         clause_rescission_rules: clause_rescission_rules,
         clause_content_id_rules: clause_content_id_rules,
+        clause_prior_license_upgrade_rules: clause_prior_license_upgrade_rules,
 
         // Variables legales del productor
         producer_legal_declaration: producer_legal_declaration,
@@ -742,6 +901,12 @@ function compileContract() {
         const tagLower = tag.toLowerCase();
         return tagLower in vars ? vars[tagLower] : match;
     });
+    // Las plantillas personalizadas antiguas pueden no contener todavía el
+    // marcador nuevo. La licencia comercial no pierde esta salvaguarda por
+    // usar una personalización visual del productor.
+    if (activeTemplateId === 'licencia_uso' && !templateMarkdown.includes('{{clause_prior_license_upgrade_rules}}')) {
+        md += `\n\n---\n\n${clause_prior_license_upgrade_rules}`;
+    }
 
     // Compilar HTML
     const t = TRANSLATIONS[currentLang] || {};
@@ -753,12 +918,12 @@ function compileContract() {
             : (isMonarco
                 ? `<div style="font-size: 24px; font-weight: bold; color: #111112; padding: 10px; text-align: center; font-family: 'Montserrat', sans-serif;">CG MONARCO</div>` 
                 : (isSossa 
-                    ? `<div style="text-align: center; margin-bottom: 15px;"><img src="/logo-sossa.png" alt="SOSSA Logo" class="doc-logo" style="max-height: 80px; width: auto; margin: 0 auto; display: block;"></div>`
-                    : `<div style="font-size: 24px; font-weight: bold; color: #111112; padding: 10px; text-align: center; font-family: 'Montserrat', sans-serif;">${(producerConfig.aka || 'PRODUCTOR').toUpperCase()}</div>`
+                    ? `<div style="text-align: center; margin-bottom: 15px;"><img src="/logo.png" alt="SOSSA Logo" class="doc-logo" style="max-height: 80px; width: auto; margin: 0 auto; display: block;"></div>`
+                    : `<div style="font-size: 24px; font-weight: bold; color: #111112; padding: 10px; text-align: center; font-family: 'Montserrat', sans-serif;">${escapeHtml((producerConfig.aka || 'PRODUCTOR').toUpperCase())}</div>`
                   )
               );
 
-    const bodyHtml = parseMarkdownToHTML(md);
+    const bodyHtml = protectContractPageBreaks(parseMarkdownToHTML(md));
 
     // Determinar firmas requeridas
     const needsBuyerSignature = (activeTemplateId === 'split_sheet' || activeTemplateId === 'coproduccion' || isExclusive);
@@ -776,7 +941,7 @@ function compileContract() {
     
     let signatureRoleL = t.producerRole || 'El Licenciante (Productor)';
     let signatureNameL = producerConfig.name;
-    let signatureIdL = `${idLabelL} ${producerConfig.id || "0803743111"}`;
+    let signatureIdL = producerConfig.id ? `${idLabelL} ${producerConfig.id}` : idLabelL;
     let signatureAkaL = `AKA: ${producerConfig.aka}`;
     
     if (activeTemplateId === 'coproduccion') {
@@ -796,25 +961,36 @@ function compileContract() {
     let signatureSectionHtml = '';
     
     if (needsBuyerSignature) {
+        const safeRoleL = escapeHtml(signatureRoleL);
+        const safeNameL = escapeHtml(signatureNameL);
+        const safeIdL = escapeHtml(signatureIdL);
+        const safeAkaL = escapeHtml(signatureAkaL);
+        const safeRoleR = escapeHtml(signatureRoleR);
+        const safeNameR = escapeHtml(signatureNameR);
+        const safeIdR = escapeHtml(signatureIdR);
+        const safeDocusign = escapeHtml(t.buyerSignatureDocusign || 'Firma vía DocuSign');
+        const safeProducerAka = escapeHtml(producerConfig.aka || '');
+        const safeProducerName = escapeHtml(producerConfig.name || '');
+
         const signatureLeftHtml = `
             <div class="signature-block">
                 <div class="signature-img-wrap">
                     ${producerConfig.signature
-                        ? `<img src="${producerConfig.signature}" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                        ? `<img src="${producerConfig.signature}" alt="Firma ${safeProducerAka}" class="signature-img">`
                         : (isMonarco 
-                            ? `<img src="/firma-cgmonarco.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
+                            ? `<img src="/firma-cgmonarco.png" alt="Firma ${safeProducerAka}" class="signature-img">`
                             : (isSossa
-                                ? `<img src="/firma-sossa.png" alt="Firma ${producerConfig.aka}" class="signature-img">`
-                                : `<div class="signature-placeholder" style="font-family:'Brush Script MT', cursive; font-size:28px; color:var(--accent); text-align:center; padding-top:5px; width:150px; margin:0 auto;">${producerConfig.name}</div>`
+                                ? `<img src="/firma-sossa.png" alt="Firma ${safeProducerAka}" class="signature-img">`
+                                : `<div class="signature-placeholder" style="font-family:'Brush Script MT', cursive; font-size:28px; color:var(--accent); text-align:center; padding-top:5px; width:150px; margin:0 auto;">${safeProducerName}</div>`
                               )
                           )
                     }
                 </div>
                 <div class="signature-line"></div>
-                <div class="signature-role">${signatureRoleL}</div>
-                <div class="signature-name">${signatureNameL}</div>
-                <div class="signature-aka">${signatureIdL}</div>
-                <div class="signature-aka">${signatureAkaL}</div>
+                <div class="signature-role">${safeRoleL}</div>
+                <div class="signature-name">${safeNameL}</div>
+                <div class="signature-aka">${safeIdL}</div>
+                <div class="signature-aka">${safeAkaL}</div>
             </div>
         `;
         
@@ -824,10 +1000,10 @@ function compileContract() {
                     <!-- Espacio en blanco reservado para alineación de firmas -->
                 </div>
                 <div class="signature-line"></div>
-                <div class="signature-role">${signatureRoleR}</div>
-                <div class="signature-name">${signatureNameR}</div>
-                <div class="signature-aka">${signatureIdR}</div>
-                <div class="signature-aka">${t.buyerSignatureDocusign || 'Firma vía DocuSign'}</div>
+                <div class="signature-role">${safeRoleR}</div>
+                <div class="signature-name">${safeNameR}</div>
+                <div class="signature-aka">${safeIdR}</div>
+                <div class="signature-aka">${safeDocusign}</div>
             </div>
         `;
 
@@ -841,22 +1017,25 @@ function compileContract() {
         const formattedDate = new Date(effectiveDate + 'T12:00:00').toLocaleDateString(currentLang === 'en' ? 'en-US' : 'es-ES', {
             year: 'numeric', month: 'long', day: 'numeric'
         });
+        const verificationCopy = getContractVerificationCopy(paymentMethod, formattedDate, refCode, currentLang);
         signatureSectionHtml = `
             <div class="signature-section non-exclusive-acceptance" style="margin-top: 30px; display: flex; justify-content: center; width: 100%;">
                 <div style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 15px 30px; background: rgba(16, 185, 129, 0.02); text-align: center; max-width: 500px; width: 100%;">
-                    <div style="font-size: 18px; color: #10b981; font-weight: 800; margin-bottom: 5px;">✓ Aceptado vía Pago</div>
+                    <div style="font-size: 18px; color: #10b981; font-weight: 800; margin-bottom: 5px;">${verificationCopy.acceptanceTitle}</div>
                     <div style="font-size: 11px; color: #636366; line-height: 1.4;">
-                        Este acuerdo no requiere firma física de conformidad con los términos y condiciones de la plataforma y el pago registrado de manera electrónica el <strong>${formattedDate}</strong> bajo la referencia: <strong class="font-data-mono">${refCode}</strong>.
+                        ${verificationCopy.acceptanceBody}
                     </div>
                 </div>
             </div>
         `;
     }
 
+    const verificationCopy = getContractVerificationCopy(paymentMethod, dateFormatted, refCode, currentLang, needsBuyerSignature, false);
+
     let html = `
         <div class="contract-doc">
             ${isSossa 
-                ? `<div class="contract-watermark" style="background-image: url('/logo-sossa.png');"></div>` 
+                ? `<div class="contract-watermark" style="background-image: url('/logo.png');"></div>`
                 : (!window.currentUserIsPro ? `<div class="contract-watermark free-watermark"></div>` : '')
             }
             <div class="doc-header" style="text-align: center; margin-bottom: 30px;">
@@ -876,18 +1055,18 @@ function compileContract() {
                     <div class="digital-seal">
                         <div class="seal-icon">✓</div>
                         <div class="seal-text">
-                            <strong>${t.sealVerified || 'DOCUMENTO INTEGRAL VERIFICADO'}</strong><br>
+                            <strong>${t.sealVerified || 'DOCUMENTO VERIFICADO'}</strong><br>
                             ${t.sealRef || 'Ref:'} ${refCode}<br>
-                            ${t.sealStatus || 'Estado: Firmado y Vigente'}
+                            ${verificationCopy.sealStatus}
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <hr style="margin: 15px 0;">
-            
-            <div class="doc-footer" style="text-align: center; font-size: 11px; color: #8a91a6;">
-                <p><em>${t.footerText || 'Este documento fue generado por la plataforma BEATSS.'} ${tierName} — ${producerConfig.aka} ${effectiveDate ? new Date(effectiveDate + 'T00:00:00').getFullYear() : new Date().getFullYear()}.</em></p>
+
+                <hr style="margin: 15px 0;">
+
+                <div class="doc-footer" style="text-align: center; font-size: 11px; color: #8a91a6;">
+                    <p><em>${t.footerText || 'Este documento fue generado por la plataforma BEATSS.'} ${tierName} — ${producerConfig.aka} ${effectiveDate ? new Date(effectiveDate + 'T00:00:00').getFullYear() : new Date().getFullYear()}.</em></p>
+                </div>
             </div>
         </div>
     `;
@@ -897,16 +1076,40 @@ function compileContract() {
 
 // Actualizar la previsualización en vivo en la pantalla
 function generatePreview() {
-    const { md, html } = compileContract();
-    
-    // Inyectar en el HTML renderizado
-    document.getElementById('rendered-contract-content').innerHTML = html;
-    
-    // Inyectar en el contenedor de Markdown
-    document.getElementById('markdown-contract-content').textContent = md;
-    
-    // Guardar borrador del formulario
-    saveFormDraft();
+    const renderedContent = document.getElementById('rendered-contract-content');
+    const markdownContent = document.getElementById('markdown-contract-content');
+    if (!renderedContent || !markdownContent) return false;
+
+    try {
+        const { md, html } = compileContract();
+
+        // Inyectar en el HTML renderizado
+        document.getElementById('rendered-contract-content').innerHTML = html;
+
+        // Inyectar en el contenedor de Markdown
+        markdownContent.textContent = md;
+    } catch (error) {
+        console.error('[BEATSS] No se pudo generar la vista previa del contrato:', error);
+        const fallback = document.createElement('section');
+        const title = document.createElement('strong');
+        const message = document.createElement('p');
+        fallback.className = 'contract-preview-error';
+        title.textContent = 'No se pudo generar la vista previa.';
+        message.textContent = 'Revisa los datos del contrato e inténtalo nuevamente. El documento no se descargará mientras la vista previa no esté lista.';
+        fallback.append(title, message);
+        renderedContent.replaceChildren(fallback);
+        markdownContent.textContent = '';
+        showToast('No se pudo generar la vista previa del contrato. Revisa los datos e inténtalo de nuevo.', true);
+        return false;
+    }
+
+    // Un fallo de guardado local no debe borrar un documento ya renderizado.
+    try {
+        saveFormDraft();
+    } catch (error) {
+        console.warn('[BEATSS] No se pudo guardar el borrador del contrato:', error);
+    }
+    return true;
 }
 window.generatePreview = generatePreview;
 
@@ -936,7 +1139,9 @@ function validateLicenseForm() {
 
 // Descargar el contrato en PDF usando html2pdf.js
 async function downloadPDF() {
-    const refCode = document.getElementById('ref-code').value.trim();
+    const refCode = getRequiredManualReference();
+    if (!refCode) return;
+    const currentLang = getEditorLanguage();
     const isNew = !licenseHistory.some(l => l.refCode === refCode);
     if (isNew && checkPlanLimitExceeded('descargar esta nueva licencia')) {
         return;
@@ -965,7 +1170,7 @@ async function downloadPDF() {
     const beatName = document.getElementById('beat-name').value.trim() || "Beat";
     const buyerName = document.getElementById('buyer-name').value.trim() || "Comprador";
     const type = getActiveLicenseType();
-    const finalRef = refCode || "REF";
+    const finalRef = refCode;
     
     // Auto-guardar en historial al descargar si tiene nombre de comprador
     const buyerNameField = document.getElementById('buyer-name').value.trim();
@@ -1016,12 +1221,13 @@ async function downloadPDF() {
                 buyerCountry: buyerCountry,
                 value: value,
                 date: date,
+                paymentMethod: document.getElementById('payment-method').value,
                 licenseType: type,
                 markdownText: md,
                 producerId: window.currentUser || 'sossa',
-                producerName: pConfig.name || "Joao David Dominguez",
-                aka: pConfig.aka || "Sossa",
-                producerIdNum: pConfig.id || "0803743111",
+                producerName: pConfig.name || "Productor",
+                aka: pConfig.aka || pConfig.name || "Productor",
+                producerIdNum: pConfig.id || "",
                 producerRole: (activeTemplateId === 'coproduccion') ? 'Productor Principal' : 'El Licenciante (Productor)',
                 buyerRole: (activeTemplateId === 'coproduccion') ? 'Coproductor / Colaborador' : (activeTemplateId === 'split_sheet' ? 'Autor/Letra/Voz' : 'El Licenciatario (Usuario)'),
                 producerSignatureBase64: pConfig.signature || "",
@@ -1078,14 +1284,11 @@ async function downloadPDF() {
                     image: { type: 'jpeg', quality: 0.98 },
                     html2canvas: { scale: 2, useCORS: true, letterRendering: true },
                     jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
-                    pagebreak: { mode: ['css', 'legacy'] }
+                    pagebreak: { mode: ['css', 'legacy'], avoid: ['.contract-closure', '.non-exclusive-acceptance-wrapper', '.contract-signatures-wrapper', '.digital-seal-container', '.contract-heading-group'] }
                 };
                 element.classList.add('printing-pdf');
-                const paper = document.getElementById('license-paper');
-                if (paper) paper.classList.add('printing-pdf');
                 await html2pdf().from(element).set(fallbackOpt).save();
                 showToast('PDF descargado desde la vista del contrato. El respaldo local se actualizará al reiniciar BeatSS.');
-                if (paper) paper.classList.remove('printing-pdf');
                 element.classList.remove('printing-pdf');
             } catch (fallbackErr) {
                 console.error('Error en la descarga de respaldo del navegador:', fallbackErr);
@@ -1104,12 +1307,10 @@ async function downloadPDF() {
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
             jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-            pagebreak:    { mode: ['css', 'legacy'] }
+            pagebreak:    { mode: ['css', 'legacy'], avoid: ['.contract-closure', '.non-exclusive-acceptance-wrapper', '.contract-signatures-wrapper', '.digital-seal-container', '.contract-heading-group'] }
         };
         
         element.classList.add('printing-pdf');
-        const paper = document.getElementById('license-paper');
-        if (paper) paper.classList.add('printing-pdf');
         
         if (typeof html2pdf === 'undefined') {
             try {
@@ -1133,7 +1334,6 @@ async function downloadPDF() {
             showToast('Error al generar el PDF', true);
         } finally {
             element.classList.remove('printing-pdf');
-            if (paper) paper.classList.remove('printing-pdf');
             btn.innerHTML = originalText;
             btn.disabled = false;
             safeCreateIcons();
@@ -1526,11 +1726,14 @@ function parsePdfText(text, fileDate) {
 
     // ── CÓDIGO DE REFERENCIA ──────────────────────────────────────
     let refCode = '';
-    const refMatch = t.match(/Invoice\s*#\s*([A-Za-z0-9_\-]+)/i) ||
-                     t.match(/C[oó]digo de Referencia[^#]*#\s*([A-Za-z0-9_\-]+)/i) ||
-                     t.match(/(LIC-[A-Z]+-\d{8}-\d+)/i);
+    const refMatch = t.match(/Invoice\s*#\s*([A-Za-z0-9._\-]+)/i) ||
+                     t.match(/C[oó]digo de Referencia[^#]*#\s*([A-Za-z0-9._\-]+)/i) ||
+                     t.match(/\b(BS3-\d{8}-(?:BAS|PRE|PPL|ILM|EXC|GEN)-(?:[23456789ABCDEFGHJKMNPQRSTVWXYZ]{4}-){4}[23456789ABCDEFGHJKMNPQRSTVWXYZ]{4}|BS-\d{8}-(?:BAS|PRE|PPL|ILM|EXC|GEN)-[A-Z0-9]{6,12}|LIC-[A-Z]+-\d{8}-\d+)\b/i);
     if (refMatch) refCode = refMatch[1].trim();
-    if (!refCode) refCode = generateReferenceCode(type);
+    // Un PDF histórico sin referencia no se convierte artificialmente en una
+    // licencia válida al importarlo. Debe regularizarse con una adenda/registro
+    // verificable, no con un código nuevo creado al leerlo.
+    if (!isValidLicenseReference(refCode)) return null;
 
     // ── MÉTODO DE PAGO ────────────────────────────────────────────
     let paymentMethod = 'Transferencia Bancaria';
@@ -1602,11 +1805,12 @@ function parsePdfFilename(filename, fileDate) {
     let name = filename.replace(/\.pdf$/i, '');
     let type = 'basic', refCode = '', beatName = '', buyerName = '', date = fileDate;
 
-    // Formato: Licencia_PREMIUM_LIC-PREM-20260525-2872 - Beat - Comprador
+    // Formato actual: Licencia_PREMIUM_BS3-20260913-PRE-7K2M-9Q4D-H6J8-ABCD-EFGH - Beat - Comprador.
+    // Se conservan también los formatos BS-* y LIC-* usados anteriormente.
     const m1 = name.match(
-        /^Licencia[_ ](BASICA|B[AÁ]SICA|PREMIUM|ILIMITADA|EXCLUSIVA)[_ ](LIC-[A-Z]+-\d{8}-\d+)\s*-\s*(.+?)\s*-\s*(.+)$/i
+        /^Licencia[_ ](BASICA|B[AÁ]SICA|PREMIUM(?:[_ ]PLUS)?|ILIMITADA|EXCLUSIVA)[_ ]([A-Za-z0-9][A-Za-z0-9._-]{2,159})\s*-\s*(.+?)\s*-\s*(.+)$/i
     );
-    if (m1) {
+    if (m1 && isValidLicenseReference(m1[2])) {
         type = mapTypeWord(m1[1]); refCode = m1[2].trim();
         beatName = m1[3].trim(); buyerName = m1[4].trim();
         date = extractDateFromRefCode(refCode) || fileDate;
@@ -1615,7 +1819,7 @@ function parsePdfFilename(filename, fileDate) {
 
     // Formato: Licencia_PREMIUM_LIC-PREM-20260525-2872_Pa_Un_Lao_Comprador
     const parts = name.split('_');
-    const refIdx = parts.findIndex(p => /^LIC-[A-Z]+-\d{8}-\d+$/i.test(p));
+    const refIdx = parts.findIndex(p => isValidLicenseReference(p));
     if (refIdx !== -1) {
         refCode = parts[refIdx];
         type = mapTypeWord(parts[refIdx - 1] || '');
@@ -1654,7 +1858,11 @@ function mapTypeWord(w) {
 function buildLicenseRecord(refCode, date, beatName, buyerName, type) {
     const config = LICENSE_CONFIGS[type] || LICENSE_CONFIGS.basic;
     return {
-        refCode, date, beatName, buyerName, type,
+        refCode,
+        contractReference: refCode,
+        reference: refCode,
+        referenceVersion: getLicenseReferenceVersion(refCode),
+        date, beatName, buyerName, type,
         value: config.price,
         paymentMethod: 'Transferencia Bancaria',
         formData: {
@@ -1733,6 +1941,9 @@ async function sendToDocuSign() {
         return;
     }
 
+    const contractReference = getRequiredManualReference();
+    if (!contractReference) return;
+
     // Validaciones de formulario necesarias
     if (!validateLicenseForm()) {
         return;
@@ -1790,7 +2001,7 @@ async function sendToDocuSign() {
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
         jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-        pagebreak:    { mode: ['css', 'legacy'] }
+        pagebreak:    { mode: ['css', 'legacy'], avoid: ['.contract-closure', '.non-exclusive-acceptance-wrapper', '.contract-signatures-wrapper', '.digital-seal-container', '.contract-heading-group'] }
     };
 
     element.classList.add('printing-pdf');
@@ -1884,7 +2095,7 @@ async function postEnvelopeToDocuSign(token, base64Str) {
         const buyerEmail = document.getElementById('buyer-email').value.trim();
         const beatName = document.getElementById('beat-name').value.trim() || "Beat";
         const type = getActiveLicenseType();
-        const refCode = document.getElementById('ref-code').value.trim() || "REF";
+        const refCode = contractReference;
 
         btn.innerHTML = '<i data-lucide="loader" class="animate-spin"></i> Enviando sobre...';
         safeCreateIcons();
@@ -2001,64 +2212,181 @@ window.dataURLtoBlob = dataURLtoBlob;
 // INTEGRACIÓN GOOGLE DRIVE
 // ============================================================
 
+let platformGDriveClientId = '';
+let platformGDriveExpectedEmail = 'sossamusic@gmail.com';
+let beatStarsMigrationTicket = '';
+
+function setBeatStarsMigrationStatus(message, color = '#8a91a6') {
+    const statusEl = document.getElementById('cfg-beatstars-migration-status');
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.style.color = color;
+}
+
+function clearBeatStarsMigrationTicket() {
+    beatStarsMigrationTicket = '';
+    const ticketInput = document.getElementById('cfg-beatstars-migration-ticket');
+    const copyButton = document.getElementById('btn-copy-beatstars-migration-ticket');
+    if (ticketInput) ticketInput.value = '';
+    if (copyButton) copyButton.disabled = true;
+}
+
+async function createBeatStarsMigrationTicket() {
+    const createButton = document.getElementById('btn-create-beatstars-migration-ticket');
+    if (!auth.currentUser) {
+        showToast('Inicia sesión de nuevo para crear una clave de migración.', true);
+        return;
+    }
+    const originalLabel = createButton?.innerHTML;
+    try {
+        if (createButton) {
+            createButton.disabled = true;
+            createButton.textContent = 'Creando clave temporal...';
+        }
+        clearBeatStarsMigrationTicket();
+        setBeatStarsMigrationStatus('Verificando tu sesión y preparando la autorización temporal...');
+        const idToken = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/beatstars-migration', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ action: 'create_ticket' })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ticket) {
+            throw new Error(data.error || 'No se pudo crear la clave temporal.');
+        }
+        beatStarsMigrationTicket = String(data.ticket);
+        const ticketInput = document.getElementById('cfg-beatstars-migration-ticket');
+        const copyButton = document.getElementById('btn-copy-beatstars-migration-ticket');
+        if (ticketInput) ticketInput.value = beatStarsMigrationTicket;
+        if (copyButton) copyButton.disabled = false;
+        const expiry = new Date(Number(data.expiresAt));
+        const expiryLabel = Number.isNaN(expiry.getTime())
+            ? '20 minutos'
+            : expiry.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setBeatStarsMigrationStatus(`Clave lista y oculta. Cópiala para el MCP; vence a las ${expiryLabel}.`, '#48bb78');
+        showToast('Clave temporal creada. Cópiala sólo en la configuración local del MCP.');
+    } catch (error) {
+        clearBeatStarsMigrationTicket();
+        setBeatStarsMigrationStatus(error.message || 'No se pudo crear la clave temporal.', '#e53e3e');
+        showToast(error.message || 'No se pudo crear la clave temporal.', true);
+    } finally {
+        if (createButton) {
+            createButton.disabled = false;
+            createButton.innerHTML = originalLabel || 'Crear clave temporal';
+            safeCreateIcons();
+        }
+    }
+}
+
+async function copyBeatStarsMigrationTicket() {
+    if (!beatStarsMigrationTicket) {
+        showToast('Primero crea una clave temporal de migración.', true);
+        return;
+    }
+    try {
+        await navigator.clipboard.writeText(beatStarsMigrationTicket);
+        showToast('Clave temporal copiada. Pégala sólo en la variable local BEATSS_MIGRATION_KEY del MCP.');
+    } catch (error) {
+        showToast('No se pudo copiar la clave. Intenta crear una nueva.', true);
+    }
+}
+
 // Cargar estado de la cuenta central de Google Drive (Admin)
 async function loadPlatformGDriveStatus() {
     const statusEl = document.getElementById('cfg-gdrive-central-status');
+    const linkButton = document.getElementById('btn-link-central-gdrive');
     if (!statusEl) return;
     statusEl.textContent = 'Verificando estado...';
+    statusEl.style.color = '#8a91a6';
+    if (linkButton) linkButton.disabled = true;
     try {
+        if (!auth.currentUser) {
+            platformGDriveClientId = '';
+            statusEl.textContent = 'Inicia sesión como administrador para verificar Google Drive.';
+            statusEl.style.color = '#e53e3e';
+            if (linkButton) linkButton.disabled = true;
+            return;
+        }
         const idToken = await auth.currentUser.getIdToken();
         const res = await fetch('/api/gdrive-status', {
             headers: { 'Authorization': `Bearer ${idToken}` }
         });
         const data = await res.json();
-        // Rellenar Client ID si está disponible
-        const idInput = document.getElementById('cfg-gdrive-client-id');
-        if (idInput && data.clientId) {
-            idInput.value = data.clientId;
-        }
-        
-        const secretInput = document.getElementById('cfg-gdrive-client-secret');
-        if (secretInput) {
-            if (data.hasSecret) {
-                secretInput.placeholder = '•••••••••••••••••••••••• (Guardado)';
-            } else {
-                secretInput.placeholder = 'Ingresa el Client Secret de Google Cloud';
-            }
-        }
+        platformGDriveClientId = '';
+        platformGDriveExpectedEmail = res.ok
+            ? String(data.expectedEmail || 'sossamusic@gmail.com').trim().toLowerCase()
+            : 'sossamusic@gmail.com';
 
         if (res.ok && data.linked) {
-            statusEl.innerHTML = `<span style="color: #48bb78; font-weight: 600;">✓ Vinculado a:</span> ${data.email}`;
+            statusEl.textContent = `✓ Vinculado de forma segura a ${data.email}`;
+            statusEl.style.color = '#48bb78';
+            if (linkButton) linkButton.textContent = `Volver a vincular ${data.email}`;
+        } else if (res.ok && !data.oauthReady) {
+            statusEl.textContent = 'Falta configurar Google OAuth en el servidor.';
+            statusEl.style.color = '#e6a23c';
         } else {
-            statusEl.innerHTML = `<span style="color: #e53e3e; font-weight: 600;">✗ No vinculado</span>`;
+            statusEl.textContent = `No vinculado. Autoriza la cuenta ${data.expectedEmail || 'sossamusic@gmail.com'}.`;
+            statusEl.style.color = '#e53e3e';
+        }
+
+        if (linkButton) {
+            linkButton.disabled = !res.ok || !data.oauthReady;
+            if (!data.linked && data.oauthReady) {
+                linkButton.textContent = `Vincular ${data.expectedEmail || 'sossamusic@gmail.com'}`;
+            }
         }
     } catch (e) {
         console.error('Error al cargar estado de Drive Central:', e);
-        statusEl.textContent = 'Error al obtener estado.';
+        platformGDriveClientId = '';
+        statusEl.textContent = 'No se pudo verificar Google Drive en este momento.';
+        statusEl.style.color = '#e53e3e';
+        if (linkButton) linkButton.disabled = true;
     }
 }
 
 // Iniciar flujo de vinculación OAuth (Admin)
-function initPlatformGDriveOAuth() {
-    const clientId = document.getElementById('cfg-gdrive-client-id').value.trim();
-    const clientSecret = document.getElementById('cfg-gdrive-client-secret').value.trim();
-    if (!clientId) {
-        showToast('Por favor, ingresa el Client ID de Google para vincular.', true);
+async function initPlatformGDriveOAuth() {
+    if (!auth.currentUser) {
+        showToast('Inicia sesión de nuevo para administrar Google Drive.', true);
         return;
     }
-    const secretInput = document.getElementById('cfg-gdrive-client-secret');
-    const isSecretSaved = secretInput && secretInput.placeholder && secretInput.placeholder.includes('Guardado');
-    if (!clientSecret && !isSecretSaved) {
-        showToast('Por favor, ingresa el Client Secret de Google para vincular.', true);
+
+    try {
+        const idToken = await auth.currentUser.getIdToken();
+        const oauthResponse = await fetch('/api/gdrive-oauth-client', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const oauthData = await oauthResponse.json();
+        if (!oauthResponse.ok || !oauthData.clientId) {
+            throw new Error(oauthData.error || 'Google OAuth todavía no está configurado en el servidor.');
+        }
+        platformGDriveClientId = String(oauthData.clientId).trim();
+        platformGDriveExpectedEmail = String(oauthData.expectedEmail || 'sossamusic@gmail.com').trim().toLowerCase();
+    } catch (error) {
+        platformGDriveClientId = '';
+        showToast(error.message || 'No se pudo preparar la vinculación con Google.', true);
         return;
     }
-    
+
+    try {
+        await ensureGoogleIdentityServices();
+    } catch (error) {
+        showToast(error.message, true);
+        return;
+    }
+
     showToast('☁️ Abriendo ventana de Google para vinculación central...');
     
     const client = google.accounts.oauth2.initCodeClient({
-        client_id: clientId,
-        scope: 'https://www.googleapis.com/auth/drive.file',
+        client_id: platformGDriveClientId,
+        scope: 'openid email https://www.googleapis.com/auth/drive.file',
         ux_mode: 'popup',
+        login_hint: platformGDriveExpectedEmail,
+        select_account: true,
         callback: async (response) => {
             if (response.error) {
                 showToast('Error de Google: ' + response.error, true);
@@ -2076,16 +2404,17 @@ function initPlatformGDriveOAuth() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${idToken}`
+                        'Authorization': `Bearer ${idToken}`,
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({
-                        code: code,
-                        clientId: clientId,
-                        clientSecret: clientSecret
-                    })
+                    body: JSON.stringify({ code })
                 });
                 const resData = await res.json();
                 if (res.ok && resData.success) {
+                    window.producerConfig = window.producerConfig || {};
+                    window.producerConfig.storageProvider = 'gdrive-central';
+                    const storageSelect = document.getElementById('cfg-storage-provider');
+                    if (storageSelect) storageSelect.value = 'gdrive-central';
                     showToast(`¡Google Drive Central vinculado con éxito a ${resData.email}!`);
                     loadPlatformGDriveStatus();
                 } else {
@@ -2097,6 +2426,17 @@ function initPlatformGDriveOAuth() {
                 showToast('Error de red al conectar con el servidor', true);
                 loadPlatformGDriveStatus();
             }
+        },
+        error_callback: (error) => {
+            const type = String(error?.type || 'desconocido');
+            if (type === 'popup_closed') {
+                showToast('Cerraste la ventana de Google antes de autorizar.', true);
+            } else if (type === 'popup_failed_to_open') {
+                showToast('Chrome bloqueó la ventana de Google. Permite ventanas emergentes y vuelve a intentarlo.', true);
+            } else {
+                showToast(`No se pudo abrir la autorización de Google (${type}).`, true);
+            }
+            loadPlatformGDriveStatus();
         }
     });
     client.requestCode();
@@ -2109,25 +2449,32 @@ function updateGoogleLoginLinkStatus() {
     if (!statusEl || !btnLink) return;
 
     const user = auth.currentUser;
-    if (user) {
-        const googleProv = user.providerData.find(p => p.providerId === 'google.com');
-        if (googleProv) {
-            statusEl.innerHTML = `<span style="color: #48bb78; font-weight: 600;">✓ Vinculado a:</span> ${googleProv.email || user.email}`;
-            btnLink.innerHTML = `<i data-lucide="link-2-off" style="width: 14px; height: 14px;"></i> Desvincular Cuenta`;
-            btnLink.className = "btn btn-secondary";
-            btnLink.style.background = "rgba(239, 68, 68, 0.1)";
-            btnLink.style.borderColor = "rgba(239, 68, 68, 0.2)";
-            btnLink.style.color = "#ef4444";
-        } else {
-            statusEl.innerHTML = `<span style="color: #e53e3e; font-weight: 600;">✗ No vinculado</span><br><span style="font-size: 10px; color: #8a91a6;">Vincula tu cuenta de Google para iniciar sesión con un solo clic.</span>`;
-            btnLink.innerHTML = `<i data-lucide="link" style="width: 14px; height: 14px;"></i> Vincular Cuenta de Google`;
-            btnLink.className = "btn btn-secondary";
-            btnLink.style.background = "rgba(255, 255, 255, 0.05)";
-            btnLink.style.borderColor = "var(--border-color)";
-            btnLink.style.color = "#fff";
-        }
+    if (!user) {
+        statusEl.textContent = 'Inicia sesión para administrar el acceso con Google.';
+        statusEl.style.color = '#e53e3e';
+        btnLink.disabled = true;
         safeCreateIcons();
+        return;
     }
+
+    btnLink.disabled = false;
+    const googleProv = user.providerData.find(p => p.providerId === 'google.com');
+    if (googleProv) {
+        statusEl.innerHTML = `<span style="color: #48bb78; font-weight: 600;">✓ Vinculado a:</span> ${googleProv.email || user.email}`;
+        btnLink.innerHTML = `<i data-lucide="link-2-off" style="width: 14px; height: 14px;"></i> Desvincular Cuenta`;
+        btnLink.className = "btn btn-secondary";
+        btnLink.style.background = "rgba(239, 68, 68, 0.1)";
+        btnLink.style.borderColor = "rgba(239, 68, 68, 0.2)";
+        btnLink.style.color = "#ef4444";
+    } else {
+        statusEl.innerHTML = `<span style="color: #e53e3e; font-weight: 600;">✗ No vinculado</span><br><span style="font-size: 10px; color: #8a91a6;">Vincula tu cuenta de Google para iniciar sesión con un solo clic.</span>`;
+        btnLink.innerHTML = `<i data-lucide="link" style="width: 14px; height: 14px;"></i> Vincular Cuenta de Google`;
+        btnLink.className = "btn btn-secondary";
+        btnLink.style.background = "rgba(255, 255, 255, 0.05)";
+        btnLink.style.borderColor = "var(--border-color)";
+        btnLink.style.color = "#fff";
+    }
+    safeCreateIcons();
 }
 
 // Iniciar flujo para vincular/desvincular cuenta de Google de inicio de sesión
@@ -2180,9 +2527,7 @@ async function getGdriveToken() {
 
     const clientId = producerConfig.gdriveClientId;
     if (!clientId) throw new Error('Google Drive Client ID no configurado.');
-    if (typeof google === 'undefined' || !google.accounts) {
-        throw new Error('Google Identity Services no cargó. Verifica tu conexión a Internet.');
-    }
+    await ensureGoogleIdentityServices();
 
     showToast('☁️ Abriendo ventana de Google Drive... (acepta el permiso en el popup)');
 
@@ -2472,9 +2817,61 @@ function getDeliveryErrorMessage(error) {
     return 'No fue posible contactar el servicio de correo. Revisa tu conexión y la configuración de EmailJS.';
 }
 
-// Enviar correo de entrega usando EmailJS (subiendo PDF a la nube cuando esté disponible)
-async function sendEmailDelivery() {
-    const refCode = document.getElementById('ref-code').value.trim();
+function resolveRegisteredBeatForDelivery(beatName) {
+    const normalized = String(beatName || '').trim().toLocaleLowerCase('es');
+    const matches = (window.localBeats || []).filter((beat) =>
+        String(beat?.name || '').trim().toLocaleLowerCase('es') === normalized
+    );
+    if (matches.length !== 1 || !matches[0]?.id) {
+        throw new Error(matches.length > 1
+            ? 'Hay varios beats con ese nombre. Abre la venta desde Pedidos para identificar la compra exacta.'
+            : 'Este beat no está registrado en tu catálogo. Regístralo antes de enviar archivos privados.');
+    }
+    return matches[0];
+}
+
+async function submitSecureLicenseDelivery({ paymentId = '', pdfBase64, contractRendererVersion = 'studio-contract-v1' }) {
+    if (!auth.currentUser) throw new Error('Inicia sesión en BeatSS para enviar una licencia segura.');
+    const beatName = document.getElementById('beat-name').value.trim();
+    const beat = paymentId ? null : resolveRegisteredBeatForDelivery(beatName);
+    const idToken = await auth.currentUser.getIdToken();
+    const response = await fetch('/api/license-delivery', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            paymentId,
+            beatId: beat?.id || '',
+            beatName,
+            buyerName: document.getElementById('buyer-name').value.trim(),
+            buyerEmail: document.getElementById('buyer-email').value.trim(),
+            buyerPhone: document.getElementById('buyer-phone').value.trim(),
+            buyerDni: document.getElementById('buyer-id').value.trim(),
+            buyerCity: document.getElementById('buyer-city').value.trim(),
+            buyerCountry: document.getElementById('buyer-country').value.trim(),
+            licenseType: getActiveLicenseType(),
+            value: Number(document.getElementById('license-value').value) || 0,
+            paymentMethod: document.getElementById('payment-method').value,
+            effectiveDate: document.getElementById('effective-date').value,
+            contractReference: getRequiredManualReference(),
+            contractRendererVersion,
+            pdfBase64
+        })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.success) {
+        throw new Error(result.error || 'No se pudo crear el portal privado de entrega.');
+    }
+    return result;
+}
+
+// Envía el contrato y un único portal firmado. Nunca incluye las URLs privadas
+// de MP3, WAV o stems dentro del correo.
+async function sendEmailDelivery(paymentId = '') {
+    const refCode = getRequiredManualReference();
+    if (!refCode) return false;
     const isNew = !licenseHistory.some(l => l.refCode === refCode);
     if (isNew && checkPlanLimitExceeded('enviar esta nueva licencia por correo')) {
         return false;
@@ -2485,32 +2882,19 @@ async function sendEmailDelivery() {
         return false;
     }
 
+    if (!auth.currentUser) {
+        showToast('Inicia sesión en BeatSS antes de enviar una licencia.', true);
+        return false;
+    }
+
     // Guardar contacto automáticamente
     autoSaveContact();
     
     // Auto-guardar en historial al enviar por correo
     saveCurrentLicenseToHistory(true);
 
-    const serviceId = producerConfig.emailjsServiceId || 'service_btb90z6';
-    const templateId = producerConfig.emailjsTemplateId || 'template_mlimkld';
-    const publicKey = producerConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
-
     const btn = document.getElementById('btn-send-email');
     const originalText = btn.innerHTML;
-
-    if (typeof emailjs === 'undefined') {
-        try {
-            btn.innerHTML = '⏳ Cargando EmailJS...';
-            btn.disabled = true;
-            await loadScript('https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js');
-        } catch (e) {
-            showToast('El cargador de EmailJS no está disponible. Conéctate a Internet.', true);
-            return false;
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    }
 
     if (typeof html2pdf === 'undefined') {
         try {
@@ -2542,7 +2926,7 @@ async function sendEmailDelivery() {
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
             jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' },
-            pagebreak:    { mode: ['css', 'legacy'] }
+            pagebreak:    { mode: ['css', 'legacy'], avoid: ['.contract-closure', '.non-exclusive-acceptance-wrapper', '.contract-signatures-wrapper', '.digital-seal-container', '.contract-heading-group'] }
         };
 
         element.classList.add('printing-pdf');
@@ -2554,108 +2938,41 @@ async function sendEmailDelivery() {
         }
         updateProgressStep('step-pdf', 'Completado', true);
         
-        // 2. Subir el PDF a la nube
+        // 2. El servidor registra la compra, guarda el PDF y envía únicamente
+        // el portal firmado. Las rutas privadas nunca salen del servidor.
         updateProgressStep('step-cloud', 'Procesando...', false);
-        
         const type = getActiveLicenseType();
-        const refCode = document.getElementById('ref-code').value.trim() || "REF";
         const beatName = document.getElementById('beat-name').value.trim() || "Beat";
         const buyerName = document.getElementById('buyer-name').value.trim() || "Comprador";
         const buyerEmail = document.getElementById('buyer-email').value.trim();
         const pdfFilename = `Licencia_${type.toUpperCase()}_${refCode} - ${beatName} - ${buyerName}.pdf`;
-        
-        let pdfUrl = "";
-        try {
-            pdfUrl = await uploadPDFToCloud(base64DataUri, pdfFilename);
-            updateProgressStep('step-cloud', 'Completado', true);
-        } catch (uploadError) {
-            console.error('Error al subir PDF:', uploadError);
-            updateProgressStep('step-cloud', 'Error', false, true);
-            updateProgressStep('step-email', 'Cancelado', false, true);
-            showProgressError(
-                'Entrega no enviada',
-                `${uploadError.message || 'No fue posible guardar el contrato PDF.'} Para evitar una entrega incompleta, el correo no se envió.`
-            );
-            return false;
-        }
-
-        // 3. Inicializar EmailJS con la llave pública
-        emailjs.init(publicKey);
-
-        // 4. Preparar los enlaces de descarga en base al tipo de licencia
-        const mp3 = document.getElementById('audio-link-mp3').value.trim();
-        const wav = document.getElementById('audio-link-wav').value.trim();
-        const stems = document.getElementById('audio-link-stems').value.trim();
-
-        const typeLabels = {
-            basic: 'Básica',
-            premium: 'Premium',
-            premium_plus: 'Premium Plus',
-            unlimited_flp: 'Ilimitada',
-            unlimited: 'Ilimitada',
-            exclusive: 'Exclusiva'
-        };
-
-        const producerDisplayName = producerConfig.aka || producerConfig.name || "Productor";
-        let linksText = `
-<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-    ${pdfUrl ? `
-    <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #edf2f7; text-align: center;">
-        <div style="font-size: 10px; text-transform: uppercase; color: #718096 !important; font-weight: 700; margin-bottom: 10px; letter-spacing: 1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Documento Oficial y Legal</div>
-        <a href="${pdfUrl}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #0055ee; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 700; border: 1px solid #0044cc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">📄 Descargar Contrato (PDF)</a>
-    </div>
-    ` : ''}
-    
-    <div>
-        <div style="font-size: 10px; text-transform: uppercase; color: #718096 !important; font-weight: 700; margin-bottom: 12px; letter-spacing: 1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Archivos de Audio de Alta Calidad</div>
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-            ${mp3 ? `
-            <tr style="border-bottom: 1px solid #edf2f7;">
-                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Instrumental MP3 (320kbps)</td>
-                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${mp3}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
-            </tr>
-            ` : ''}
-            ${wav && (type !== 'basic') ? `
-            <tr style="border-bottom: 1px solid #edf2f7;">
-                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Instrumental WAV (Master)</td>
-                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${wav}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
-            </tr>
-            ` : ''}
-            ${stems && (type !== 'basic' && type !== 'premium') ? `
-            <tr>
-                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Pistas Separadas (Stems)</td>
-                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${stems}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
-            </tr>
-            ` : ''}
-        </table>
-    </div>
-</div>
-        `;
-
-        const templateParams = {
-            to_name: buyerName,
-            to_email: buyerEmail,
-            beat_name: beatName,
-            license_type: typeLabels[type] || type,
-            delivery_links: linksText,
-            producer_name: producerConfig.aka || producerConfig.name || "BEATSS",
-            producer_email: producerConfig.email,
-            pdf_filename: pdfFilename,
-            pdf_url: pdfUrl
-        };
-
-        // 5. Enviar usando emailjs.send
         updateProgressStep('step-email', 'Procesando...', false);
-
-        const response = await emailjs.send(serviceId, templateId, templateParams);
+        const delivery = await submitSecureLicenseDelivery({ paymentId, pdfBase64: base64DataUri });
+        updateProgressStep('step-cloud', 'Completado', true);
+        window.recordEmailEvent?.({
+            category: 'license_delivery', status: 'sent', recipientEmail: buyerEmail, recipientName: buyerName,
+            subject: `Tu licencia de "${beatName}" - BEATSS`, beatName, reference: refCode, licenseType: type,
+            paymentId: delivery.paymentId,
+            templateId: producerConfig.emailjsTemplateId || '',
+            resources: [{ kind: 'portal', label: 'Portal privado de compra', filename: pdfFilename }]
+        });
         updateProgressStep('step-email', 'Completado', true);
         
-        showProgressSuccess('¡Entrega Enviada!', 'El comprador recibió el correo con el contrato PDF y los archivos de audio.');
-        console.log('SUCCESS!', response.status, response.text);
+        showProgressSuccess('¡Entrega Enviada!', 'El comprador recibió un portal privado con el contrato y los archivos autorizados.');
         return true;
 
     } catch (err) {
         console.error('Error al enviar correo por EmailJS:', err);
+        window.recordEmailEvent?.({
+            category: 'license_delivery', status: 'failed',
+            recipientEmail: document.getElementById('buyer-email')?.value?.trim(),
+            recipientName: document.getElementById('buyer-name')?.value?.trim(),
+            subject: `Tu licencia de "${document.getElementById('beat-name')?.value?.trim() || 'Beat'}" - BEATSS`,
+            beatName: document.getElementById('beat-name')?.value?.trim(), reference: refCode,
+            licenseType: getActiveLicenseType(),
+            templateId: producerConfig.emailjsTemplateId || '',
+            errorMessage: err?.message || 'Error de EmailJS'
+        });
         showProgressError('Fallo en el Envío', getDeliveryErrorMessage(err));
         
         const steps = ['step-pdf', 'step-cloud', 'step-email'];
@@ -2868,7 +3185,10 @@ function clearFormFields() {
         if (container) {
             container.innerHTML = '';
         }
-        
+
+        // Una nueva licencia jamás reutiliza la referencia de la anterior.
+        // Las referencias históricas sólo se cargan desde su propio registro.
+        document.getElementById('ref-code').value = '';
         selectLicenseType('basic');
         showToast('Campos del formulario limpiados');
     }
@@ -2881,6 +3201,8 @@ function clearFormFields() {
 // VERIFICAR FIRMA DOCUSIGN Y ENVIAR ENTREGA COMPLETA (PDF FIRMADO + LINKS)
 // ==========================================================================
 async function checkAndSendSignedDelivery() {
+    const contractReference = getRequiredManualReference();
+    if (!contractReference) return false;
     const btn = document.getElementById('btn-send-signed-delivery');
     const originalText = btn.innerHTML;
 
@@ -2900,10 +3222,10 @@ async function checkAndSendSignedDelivery() {
         return;
     }
 
-    // Validar credenciales de EmailJS
-    const serviceId  = producerConfig.emailjsServiceId || 'service_btb90z6';
-    const templateId = producerConfig.emailjsTemplateId || 'template_mlimkld';
-    const publicKey  = producerConfig.emailjsPublicKey || 'Xwfa8Ai2WcXXGThLI';
+    if (!auth.currentUser) {
+        showToast('Inicia sesión en BeatSS antes de enviar la entrega firmada.', true);
+        return false;
+    }
 
     btn.innerHTML = '<i data-lucide="loader" class="animate-spin"></i> Verificando firma...';
     btn.disabled = true;
@@ -2966,85 +3288,16 @@ async function checkAndSendSignedDelivery() {
             reader.readAsDataURL(pdfBlob);
         });
 
-        const beatName = document.getElementById('beat-name').value.trim() || 'Beat';
-        const type     = getActiveLicenseType();
-        const refCode  = document.getElementById('ref-code').value.trim() || 'REF';
-        const filename = `Contrato_FIRMADO_${type.toUpperCase()}_${refCode}.pdf`;
-
-        let cloudUrl = '';
-        try {
-            cloudUrl = await uploadPDFToCloud(dataUri, filename);
-            updateProgressStep('step-cloud', 'Completado', true);
-        } catch (uploadErr) {
-            console.warn('No se pudo subir el PDF firmado a la nube:', uploadErr);
-            updateProgressStep('step-cloud', 'Error (Se omitirá)', false, true);
-        }
-
-        // 3. Enviar email de entrega via EmailJS
+        // 3. Guardar y enviar a través del portal firmado del comprador.
         updateProgressStep('step-email', 'Procesando...', false);
-
-        const mp3   = document.getElementById('audio-link-mp3').value.trim();
-        const wav   = document.getElementById('audio-link-wav').value.trim();
-        const stems = document.getElementById('audio-link-stems').value.trim();
-
-        const typeLabels = {
-            basic: 'Básica', premium: 'Premium',
-            premium_plus: 'Premium Plus', unlimited_flp: 'Ilimitada',
-            unlimited: 'Ilimitada', exclusive: 'Exclusiva'
-        };
-
-        const producerDisplayName = producerConfig.aka || producerConfig.name || "Productor";
-        let linksText = `
-<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-    ${cloudUrl ? `
-    <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #edf2f7; text-align: center;">
-        <div style="font-size: 10px; text-transform: uppercase; color: #718096 !important; font-weight: 700; margin-bottom: 10px; letter-spacing: 1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Contrato Oficial Firmado</div>
-        <a href="${cloudUrl}" target="_blank" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 700; border: 1px solid #0f9f67; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">✅ Descargar Contrato Firmado (PDF)</a>
-    </div>
-    ` : ''}
-    
-    <div>
-        <div style="font-size: 10px; text-transform: uppercase; color: #718096 !important; font-weight: 700; margin-bottom: 12px; letter-spacing: 1.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Archivos de Audio de Alta Calidad</div>
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-            ${mp3 ? `
-            <tr style="border-bottom: 1px solid #edf2f7;">
-                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Instrumental MP3 (320kbps)</td>
-                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${mp3}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
-            </tr>
-            ` : ''}
-            ${wav && (type !== 'basic') ? `
-            <tr style="border-bottom: 1px solid #edf2f7;">
-                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Instrumental WAV (Master)</td>
-                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${wav}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
-            </tr>
-            ` : ''}
-            ${stems && (type !== 'basic' && type !== 'premium') ? `
-            <tr>
-                <td width="70%" style="padding: 12px 0; font-size: 13px; color: #1a202c !important; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; word-wrap: break-word;"><span style="color: #10b981; font-weight: bold; margin-right: 6px;">✔</span> Pistas Separadas (Stems)</td>
-                <td width="30%" align="right" style="padding: 12px 0; text-align: right;"><a href="${stems}" target="_blank" style="display: inline-block; padding: 6px 12px; background-color: #f1f5f9; color: #0055ee !important; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">Descargar</a></td>
-            </tr>
-            ` : ''}
-        </table>
-    </div>
-</div>
-        `;
-
-        emailjs.init(publicKey);
-        const templateParams = {
-            to_name:        buyerName,
-            to_email:       buyerEmail,
-            beat_name:      beatName,
-            license_type:   typeLabels[type] || type,
-            delivery_links: linksText,
-            producer_name:  producerConfig.aka || producerConfig.name || "BEATSS",
-            producer_email: producerConfig.email,
-            pdf_filename:   filename
-        };
-
-        await emailjs.send(serviceId, templateId, templateParams);
+        await submitSecureLicenseDelivery({
+            pdfBase64: dataUri,
+            contractRendererVersion: 'docusign-signed-v1'
+        });
+        updateProgressStep('step-cloud', 'Completado', true);
         updateProgressStep('step-email', 'Completado', true);
         
-        showProgressSuccess('¡Entrega Completada!', 'El comprador recibió el PDF firmado y sus archivos de audio.');
+        showProgressSuccess('¡Entrega Completada!', 'El comprador recibió un portal privado con el PDF firmado y sus archivos autorizados.');
         console.log('Entrega con PDF firmado enviada. EnvelopeId:', envelopeId);
 
         btn.style.display = 'none';
@@ -3107,6 +3360,9 @@ window.cleanHtmlError = cleanHtmlError;
 window.postEnvelopeToDocuSign = postEnvelopeToDocuSign;
 window.loadPlatformGDriveStatus = loadPlatformGDriveStatus;
 window.initPlatformGDriveOAuth = initPlatformGDriveOAuth;
+window.createBeatStarsMigrationTicket = createBeatStarsMigrationTicket;
+window.copyBeatStarsMigrationTicket = copyBeatStarsMigrationTicket;
+window.clearBeatStarsMigrationTicket = clearBeatStarsMigrationTicket;
 window.updateGoogleLoginLinkStatus = updateGoogleLoginLinkStatus;
 window.linkGoogleAccountForLogin = linkGoogleAccountForLogin;
 window.getCentralGdriveToken = getCentralGdriveToken;
@@ -3135,18 +3391,20 @@ export function showProgressModal(title, subtitle, step1Text = "Generar PDF de L
     
     // Hide close button
     const closeBtn = document.getElementById('btn-close-progress');
-    closeBtn.style.display = 'none';
+    if (closeBtn) closeBtn.hidden = true;
     
     // Reset spinner / icon
     const spinnerContainer = document.getElementById('progress-spinner-container');
     spinnerContainer.innerHTML = `
-        <div style="position: relative; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
-            <div style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid rgba(0, 102, 255, 0.1); border-top-color: var(--accent); animation: spin 1s linear infinite; position: absolute;"></div>
-            <i data-lucide="mail" style="width: 28px; height: 28px; color: var(--accent);"></i>
+        <div class="email-progress-modal__spinner">
+            <div class="email-progress-modal__spinner-ring"></div>
+            <i data-lucide="mail" aria-hidden="true"></i>
         </div>
     `;
     
+    modal.hidden = false;
     modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
     if (typeof safeCreateIcons === 'function') safeCreateIcons();
     else if (typeof window.safeCreateIcons === 'function') window.safeCreateIcons();
 }
@@ -3154,13 +3412,13 @@ export function showProgressModal(title, subtitle, step1Text = "Generar PDF de L
 export function resetProgressStep(stepId, iconName, labelText) {
     const stepEl = document.getElementById(stepId);
     if (!stepEl) return;
-    stepEl.style.color = '#626475';
+    stepEl.dataset.progressState = 'waiting';
     stepEl.innerHTML = `
-        <span style="display: flex; align-items: center; gap: 8px;">
-            <i data-lucide="${iconName}" style="width: 16px; height: 16px; color: #626475;"></i>
+        <span class="email-progress-modal__step-label">
+            <i data-lucide="${iconName}" aria-hidden="true"></i>
             <span>${labelText}</span>
         </span>
-        <span class="step-status" style="font-weight: 700;">Esperando...</span>
+        <span class="step-status">Esperando...</span>
     `;
 }
 
@@ -3171,35 +3429,11 @@ export function updateProgressStep(stepId, statusText, isCompleted, isError = fa
     const statusEl = stepEl.querySelector('.step-status');
     const iconEl = stepEl.querySelector('i');
     
-    if (isError) {
-        stepEl.style.color = 'var(--danger)';
-        if (statusEl) {
-            statusEl.textContent = statusText;
-            statusEl.style.color = 'var(--danger)';
-        }
-        if (iconEl) {
-            iconEl.style.color = 'var(--danger)';
-            iconEl.setAttribute('data-lucide', 'alert-triangle');
-        }
-    } else if (isCompleted) {
-        stepEl.style.color = '#f5f5f9';
-        if (statusEl) {
-            statusEl.textContent = statusText;
-            statusEl.style.color = 'var(--success)';
-        }
-        if (iconEl) {
-            iconEl.style.color = 'var(--success)';
-            iconEl.setAttribute('data-lucide', 'check-circle-2');
-        }
-    } else {
-        stepEl.style.color = '#f5f5f9';
-        if (statusEl) {
-            statusEl.textContent = statusText;
-            statusEl.style.color = 'var(--accent)';
-        }
-        if (iconEl) {
-            iconEl.style.color = 'var(--accent)';
-        }
+    const progressState = isError ? 'error' : (isCompleted ? 'completed' : 'active');
+    stepEl.dataset.progressState = progressState;
+    if (statusEl) statusEl.textContent = statusText;
+    if (iconEl) {
+        iconEl.setAttribute('data-lucide', isError ? 'alert-triangle' : (isCompleted ? 'check-circle-2' : 'loader'));
     }
     if (typeof safeCreateIcons === 'function') safeCreateIcons();
     else if (typeof window.safeCreateIcons === 'function') window.safeCreateIcons();
@@ -3208,8 +3442,8 @@ export function updateProgressStep(stepId, statusText, isCompleted, isError = fa
 export function showProgressSuccess(title, subtitle) {
     const spinnerContainer = document.getElementById('progress-spinner-container');
     spinnerContainer.innerHTML = `
-        <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(0, 230, 118, 0.1); border: 2px solid var(--success); display: flex; align-items: center; justify-content: center; animation: scaleUp 0.3s ease-out;">
-            <i data-lucide="check" style="width: 40px; height: 40px; color: var(--success);"></i>
+        <div class="email-progress-modal__result-mark email-progress-modal__result-mark--success">
+            <i data-lucide="check" aria-hidden="true"></i>
         </div>
     `;
     
@@ -3217,7 +3451,7 @@ export function showProgressSuccess(title, subtitle) {
     document.getElementById('progress-subtitle').textContent = subtitle;
     
     const closeBtn = document.getElementById('btn-close-progress');
-    closeBtn.style.display = 'inline-flex';
+    if (closeBtn) closeBtn.hidden = false;
     
     if (typeof safeCreateIcons === 'function') safeCreateIcons();
     else if (typeof window.safeCreateIcons === 'function') window.safeCreateIcons();
@@ -3226,8 +3460,8 @@ export function showProgressSuccess(title, subtitle) {
 export function showProgressError(title, subtitle) {
     const spinnerContainer = document.getElementById('progress-spinner-container');
     spinnerContainer.innerHTML = `
-        <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255, 79, 112, 0.1); border: 2px solid var(--danger); display: flex; align-items: center; justify-content: center;">
-            <i data-lucide="x" style="width: 40px; height: 40px; color: var(--danger);"></i>
+        <div class="email-progress-modal__result-mark email-progress-modal__result-mark--error">
+            <i data-lucide="x" aria-hidden="true"></i>
         </div>
     `;
     
@@ -3235,10 +3469,20 @@ export function showProgressError(title, subtitle) {
     document.getElementById('progress-subtitle').textContent = subtitle;
     
     const closeBtn = document.getElementById('btn-close-progress');
-    closeBtn.style.display = 'inline-flex';
+    if (closeBtn) closeBtn.hidden = false;
     
     if (typeof safeCreateIcons === 'function') safeCreateIcons();
     else if (typeof window.safeCreateIcons === 'function') window.safeCreateIcons();
+}
+
+// El cierre vive junto al modal para que siga funcionando incluso si la
+// inicialización general de main.js se retrasa o falla después de una entrega.
+export function closeEmailProgressModal() {
+    const modal = document.getElementById('email-progress-modal');
+    if (!modal) return;
+    modal.hidden = true;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
 }
 
 window.showProgressModal = showProgressModal;
@@ -3246,14 +3490,6 @@ window.resetProgressStep = resetProgressStep;
 window.updateProgressStep = updateProgressStep;
 window.showProgressSuccess = showProgressSuccess;
 window.showProgressError = showProgressError;
-// El cierre vive junto al modal para que siga funcionando incluso si la
-// inicialización general de main.js se retrasa o falla después de una entrega.
-export function closeEmailProgressModal() {
-    const modal = document.getElementById('email-progress-modal');
-    if (!modal) return;
-    modal.style.display = 'none';
-}
-
 window.closeEmailProgressModal = closeEmailProgressModal;
 
 export function compileContractData(orderData, producerConfig, templateId = 'licencia_uso', lang = 'es') {
@@ -3279,8 +3515,14 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
     const buyerPhone = source.buyerPhone || sourceFormData.buyerPhone || "";
     const buyerCity = source.buyerCity || sourceFormData.buyerCity || "[Ciudad]";
     const buyerCountry = source.buyerCountry || sourceFormData.buyerCountry || "[País]";
-    const value = parseFloat(source.finalPrice !== undefined ? source.finalPrice : (source.value ?? source.price ?? defaultConfig.price)) || 0;
-    const refCode = source.reference || source.refCode || "[Código Referencia]";
+    const value = parseFloat(source.totalLicensePaid !== undefined
+        ? source.totalLicensePaid
+        : (source.finalPrice !== undefined ? source.finalPrice : (source.value ?? source.price ?? defaultConfig.price))) || 0;
+    // El PDF público nunca puede presentar una referencia inventada. La vista
+    // puede señalar un borrador pendiente, pero las rutas de entrega bloquean
+    // su generación hasta que exista una referencia persistida.
+    const canonicalReference = resolveLicenseReference(source);
+    const refCode = canonicalReference || INVALID_REFERENCE_PREVIEW;
     const dateCandidate = source.contractEffectiveDate || source.date || source.purchaseConfirmedAt || source.timestamp;
     const effectiveDate = dateCandidate
         ? String(dateCandidate).slice(0, 10)
@@ -3300,28 +3542,11 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
         }
     }
 
-    const paymentMethod = source.method || source.paymentMethod || "PayPal";
-    
-    let displayPaymentMethod = paymentMethod;
-    if (isSossaProducer && ['PayPal', 'Tarjeta de Crédito', 'deuna', 'Deuna!', 'payphone', 'PayPhone', 'Stripe'].includes(paymentMethod)) {
-        displayPaymentMethod = lang === 'en'
-            ? "Authorized electronic payment processing (Stripe, PayPal, PayPhone, Deuna!)"
-            : "Procesamiento electrónico de pago autorizado (Stripe, PayPal, PayPhone, Deuna!)";
-    } else if (lang === 'en') {
-        const paymentTranslations = {
-            'PayPal': 'PayPal',
-            'Transferencia Bancaria': 'Bank Transfer',
-            'Tarjeta de Crédito': 'Credit Card',
-            'Western Union': 'Western Union',
-            'Otro': 'Other',
-            'deuna': 'Deuna!',
-            'Deuna!': 'Deuna!',
-            'payphone': 'PayPhone',
-            'PayPhone': 'PayPhone',
-            'Stripe': 'Stripe'
-        };
-        displayPaymentMethod = paymentTranslations[paymentMethod] || paymentMethod;
-    }
+    const paymentMethod = source.paymentMethod || source.method || "PayPal";
+    const normalizedPaymentMethod = String(paymentMethod).toLowerCase() === 'stripe'
+        ? 'Stripe'
+        : paymentMethod;
+    const displayPaymentMethod = formatContractPaymentMethod(normalizedPaymentMethod, lang);
     
     const formats = source.formats || sourceFormData.formats || defaultConfig.formats || "[Formatos]";
     const streams = source.streams || sourceFormData.streams || defaultConfig.streams || "[Límite Streams]";
@@ -3335,7 +3560,7 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
     const credits = source.credits || sourceFormData.credits || `Prod. por ${producerConfig.aka || 'Sossa'}`;
     const contentIdProhibited = source.contentIdProhibited !== undefined 
         ? source.contentIdProhibited 
-        : (defaultConfig.contentId !== undefined ? !defaultConfig.contentId : true);
+        : (defaultConfig.contentId !== undefined ? defaultConfig.contentId : true);
 
     const valueLetters = lang === 'en' ? numberToEnglishWords(value) : numeroALetras(value);
     const tierName = LICENSE_CONFIGS[type] 
@@ -3367,18 +3592,29 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
             ? 'As this is an Exclusive License, the Licensee is authorized to execute standard digital distribution and use the Content ID system in a controlled manner on their final version (the New Song), provided they strictly refrain from claiming exclusive ownership or monetization rights over the instrumental track itself, and they are obligated to whitelist any pre-existing legitimate non-exclusive derivative songs created by other licensees prior to this agreement.'
             : 'Al tratarse de una Licencia Exclusiva, el Licenciatario está facultado para la distribución digital estándar y el uso del sistema Content ID de manera controlada sobre su versión final (la Nueva Canción) siempre y cuando se abstenga estrictamente de reclamar la propiedad exclusiva o la monetización de la pista instrumental en sí misma, quedando obligado a incluir en lista blanca (*whitelist*) cualquier canción derivada legítima no exclusiva preexistente creada por otros licenciatarios antes de este acuerdo.');
 
+    const clause_prior_license_upgrade_rules = isExclusive
+        ? (lang === 'en'
+            ? '**4.1. Prior Licenses and Reserved Upgrade Right.** This Exclusive License is granted subject to any valid non-exclusive license issued before its Effective Date. Each prior Licensee retains the authorized use of the same New Song under their original license and may, even after this exclusive sale, purchase upgrades of that license up to the Unlimited License. This reservation does not authorize new non-exclusive licenses, new derivative songs, assignments, sublicenses, or another exclusive license. The Exclusive Licensee must respect those prior uses and whitelist them in any content-identification system.'
+            : '**4.1. Licencias Previas y Derecho de Ampliación Reservado.** Esta Licencia Exclusiva se concede sujeta a toda licencia no exclusiva válida emitida antes de su Fecha de Entrada en Vigor. Cada Licenciatario previo conserva el uso autorizado de la misma Nueva Canción bajo su licencia original y podrá, aun después de esta venta exclusiva, adquirir ampliaciones de esa licencia hasta la Licencia Ilimitada. Esta reserva no autoriza nuevas licencias no exclusivas, nuevas canciones derivadas, cesiones, sublicencias ni otra licencia exclusiva. El Licenciatario Exclusivo deberá respetar tales usos previos y mantenerlos en lista blanca en cualquier sistema de identificación de contenido.')
+        : (lang === 'en'
+            ? '**4.1. Later Exclusive Sale and Reserved Upgrade.** If the Producer later grants an Exclusive License for the Beat, this prior non-exclusive license is not revoked. The Licensee may continue exploiting the same New Song within the terms of this Agreement and may purchase upgrades of this license up to the Unlimited License. The upgrade is personal to the original Licensee and applies only to the same Beat and New Song; it does not authorize a new derivative song, an assignment, a sublicense, or an exclusive license.'
+            : '**4.1. Exclusiva Posterior y Ampliación Reservada.** Si el Productor concede posteriormente una Licencia Exclusiva sobre el Beat, esta licencia no exclusiva previa no queda revocada. El Licenciatario podrá continuar explotando la misma Nueva Canción dentro de los términos de este Contrato y podrá adquirir ampliaciones de esta licencia hasta la Licencia Ilimitada. La ampliación es personal para el Licenciatario original y aplica únicamente al mismo Beat y a la misma Nueva Canción; no autoriza una nueva canción derivada, cesión, sublicencia ni licencia exclusiva.');
+
     // 1. Declaración legal del productor (persona natural y nombre artístico)
     let producer_legal_declaration = "";
     let producer_legal_declaration_en = "";
     if (isSossaProducer) {
-        producer_legal_declaration = `**Sossa**, nombre artístico de **Joao David Dominguez**, quien actúa como persona natural y titular de los derechos objeto de esta licencia`;
-        producer_legal_declaration_en = `**Sossa**, the professional name of **Joao David Dominguez**, acting as a natural person and holder of the rights covered by this license`;
+        const prodName = producerConfig.name || producerConfig.aka || "Productor";
+        const prodAka = producerConfig.aka || prodName;
+        producer_legal_declaration = `**${prodAka}**, nombre artístico de **${prodName}**, quien actúa como persona natural y titular de los derechos objeto de esta licencia`;
+        producer_legal_declaration_en = `**${prodAka}**, the professional name of **${prodName}**, acting as a natural person and holder of the rights covered by this license`;
     } else {
-        const prodName = producerConfig.name || "Joao David Dominguez";
-        const prodAka = producerConfig.aka || "Sossa";
-        const prodId = producerConfig.id || "0803743111";
-        producer_legal_declaration = `**${prodName}**, conocido profesionalmente en la industria musical como **${prodAka}**, con documento de identidad Nro. ${prodId}`;
-        producer_legal_declaration_en = `**${prodName}**, professionally known in the music industry as **${prodAka}**, with ID/Passport No. ${prodId}`;
+        const prodName = producerConfig.name || "Productor";
+        const prodAka = producerConfig.aka || prodName;
+        const identityText = producerConfig.id ? `, con documento de identidad Nro. ${producerConfig.id}` : '';
+        const identityTextEn = producerConfig.id ? `, with ID/Passport No. ${producerConfig.id}` : '';
+        producer_legal_declaration = `**${prodName}**, conocido profesionalmente en la industria musical como **${prodAka}**${identityText}`;
+        producer_legal_declaration_en = `**${prodName}**, professionally known in the music industry as **${prodAka}**${identityTextEn}`;
     }
 
     // 2. Jurisdicción y ley aplicable
@@ -3422,19 +3658,19 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
     } else {
         clause_rescission_title = "Opción de Rescisión del Licenciante (Cláusula de Salvaguarda)";
         clause_rescission_title_en = "Licensor's Termination Option (Safeguard Clause)";
-        clause_rescission_body = `El Licenciante se reserva la facultad discrecional y la opción exclusiva, ejecutable dentro de los primeros **tres (3) años** a partir de la firma de este Contrato, de dar por terminado el presente acuerdo de forma anticipada y unilateral mediante notificación escrita. Para que esta rescisión surta efecto, el Licenciante pagará al Licenciatario una indemnización equivalente al **${terminationFee}**. Tras la notificación y el pago de dicha penalidad, el Licenciatario dispondrá de un plazo máximo de siete (7) días para dar de baja y retirar la Nueva Canción de todos los canales de distribución físicos y digitales del mercado. El Licenciatario acepta expresamente que el pago de dicha penalidad constituye una indemnización total, única y final por la terminación del contrato, y renuncia irrevocablemente a reclamar cualquier otro valor, compensación o indemnización por concepto de daños, pérdidas, gastos de promoción, marketing, producción de videoclips o cualquier otra inversión realizada en relación con la Nueva Canción.`;
+        clause_rescission_body = `El Licenciante se reserva la facultad discrecional y la opción exclusiva, ejecutable dentro de los primeros **tres (3) años** a partir de la firma de este Contrato, de dar por terminado el presente acuerdo de forma anticipada y unilateral mediante notificación escrita. Para que esta rescisión surta efecto, el Licenciante pagará al Licenciatario una indemnización equivalente a **${terminationFee}**. Tras la notificación y el pago de dicha penalidad, el Licenciatario dispondrá de un plazo máximo de siete (7) días para dar de baja y retirar la Nueva Canción de todos los canales de distribución físicos y digitales del mercado. El Licenciatario acepta expresamente que el pago de dicha penalidad constituye una indemnización total, única y final por la terminación del contrato, y renuncia irrevocablemente a reclamar cualquier otro valor, compensación o indemnización por concepto de daños, pérdidas, gastos de promoción, marketing, producción de videoclips o cualquier otra inversión realizada en relación con la Nueva Canción.`;
         clause_rescission_body_en = `The Licensor reserves the discretionary power and exclusive option, executable within the first **three (3) years** from the signing of this Contract, to terminate this agreement early and unilaterally by written notice. For this termination to take effect, the Licensor will pay the Licensee compensation equivalent to **${terminationFee}**. Following notification and payment of said penalty, the Licensee will have a period of seven (7) days to take down and withdraw the New Song from all physical and digital distribution channels in the market. The Licensee expressly agrees that the payment of said penalty constitutes a full, sole, and final compensation for the termination of the agreement, and irrevocably waives the right to claim any other value, compensation, or damages for promotion, marketing, video production expenses, or any other investment made in connection with the New Song.`;
     }
 
     const vars = {
-        producer_name: producerConfig.name || "Joao David Dominguez",
-        producer_aka: producerConfig.aka || "Sossa",
-        producer_id: producerConfig.id || "0803743111",
-        producer_email: producerConfig.email || "masterjuego25@gmail.com",
+        producer_name: producerConfig.name || "Productor",
+        producer_aka: producerConfig.aka || producerConfig.name || "Productor",
+        producer_id: producerConfig.id || "",
+        producer_email: producerConfig.email || "",
         producer_phone: producerConfig.phone || "",
         producer_pro: producerConfig.pro || "BMI",
-        producer_ipi: producerConfig.ipi || "01170943066",
-        producer_publisher: producerConfig.publisher || "Songtrust",
+        producer_ipi: producerConfig.ipi || "",
+        producer_publisher: producerConfig.publisher || "",
         buyer_name: buyerName,
         buyer_id: buyerId,
         buyer_email: buyerEmail,
@@ -3467,6 +3703,7 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
         license_exclusivity_lower: isExclusive ? (lang === 'en' ? 'exclusive' : 'exclusiva') : (lang === 'en' ? 'non-exclusive' : 'no exclusiva'),
         clause_rescission_rules: clause_rescission_rules,
         clause_content_id_rules: clause_content_id_rules,
+        clause_prior_license_upgrade_rules: clause_prior_license_upgrade_rules,
         
         // Nuevas variables inyectadas dinámicamente
         producer_legal_declaration: producer_legal_declaration,
@@ -3488,22 +3725,27 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
         const tagLower = tag.toLowerCase();
         return tagLower in vars ? vars[tagLower] : match;
     });
+    if (templateId === 'licencia_uso' && !templateMarkdown.includes('{{clause_prior_license_upgrade_rules}}')) {
+        md += `\n\n---\n\n${clause_prior_license_upgrade_rules}`;
+    }
 
     const t = TRANSLATIONS[lang] || {};
     const isMonarco = (producerConfig.aka && producerConfig.aka.toLowerCase().includes('monarco'));
-    const isSossa = (producerConfig.aka && producerConfig.aka.toLowerCase().includes('sossa'));
-    const hasCustomLogo = producerConfig.logoBase64;
+    const isStudioAdmin = typeof window !== 'undefined' && window.currentUserIsAdmin === true;
+    const isStudioPro = typeof window !== 'undefined' && window.currentUserIsPro === true;
+    const isSossa = isStudioAdmin || (producerConfig.aka && producerConfig.aka.toLowerCase().includes('sossa'));
+    const hasCustomLogo = Boolean(producerConfig.logoBase64 && (producerConfig.plan === 'elite' || isStudioAdmin));
     const logoHtml = hasCustomLogo
             ? `<div style="text-align: center; margin-bottom: 15px;"><img src="${producerConfig.logoBase64}" alt="Logo" class="doc-logo" style="max-height: 80px; width: auto; margin: 0 auto; display: block;"></div>`
             : (isMonarco
                 ? `<div style="font-size: 24px; font-weight: bold; color: #111112; padding: 10px; text-align: center; font-family: 'Montserrat', sans-serif;">CG MONARCO</div>` 
                 : (isSossa 
-                    ? `<div style="text-align: center; margin-bottom: 15px;"><img src="/logo-sossa.png" alt="SOSSA Logo" class="doc-logo" style="max-height: 80px; width: auto; margin: 0 auto; display: block;"></div>`
+                    ? `<div style="text-align: center; margin-bottom: 15px;"><img src="/logo.png" alt="SOSSA Logo" class="doc-logo" style="max-height: 80px; width: auto; margin: 0 auto; display: block;"></div>`
                     : `<div style="font-size: 24px; font-weight: bold; color: #111112; padding: 10px; text-align: center; font-family: 'Montserrat', sans-serif;">${(producerConfig.aka || 'PRODUCTOR').toUpperCase()}</div>`
                   )
               );
 
-    const bodyHtml = parseMarkdownToHTML(md);
+    const bodyHtml = protectContractPageBreaks(parseMarkdownToHTML(md));
     const needsBuyerSignature = (templateId === 'split_sheet' || templateId === 'coproduccion' || isExclusive);
     
     // Auto-detectar etiqueta RUC si tiene 13 dígitos
@@ -3519,7 +3761,7 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
     
     let signatureRoleL = t.producerRole || 'El Licenciante (Productor)';
     let signatureNameL = producerConfig.name;
-    let signatureIdL = `${idLabelL} ${producerConfig.id || "0803743111"}`;
+    let signatureIdL = producerConfig.id ? `${idLabelL} ${producerConfig.id}` : idLabelL;
     let signatureAkaL = `AKA: ${producerConfig.aka}`;
 
     let signatureRoleR = t.buyerRole || 'El Licenciatario (Cliente)';
@@ -3582,39 +3824,67 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
         const formattedDate = new Date(effectiveDate + 'T12:00:00').toLocaleDateString(lang === 'en' ? 'en-US' : 'es-ES', {
             year: 'numeric', month: 'long', day: 'numeric'
         });
+        const verificationCopy = getContractVerificationCopy(normalizedPaymentMethod, formattedDate, refCode, lang);
         signaturesSectionHtml = `
             <div class="non-exclusive-acceptance-wrapper" style="display: flex; justify-content: center; width: 100%; page-break-inside: avoid; break-inside: avoid;">
                 <div style="border: 2px dashed rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 15px 30px; background: rgba(16, 185, 129, 0.02); text-align: center; max-width: 500px; width: 100%;">
-                    <div style="font-size: 18px; color: #10b981; font-weight: 800; margin-bottom: 5px;">✓ Aceptado vía Pago</div>
+                    <div style="font-size: 18px; color: #10b981; font-weight: 800; margin-bottom: 5px;">${verificationCopy.acceptanceTitle}</div>
                     <div style="font-size: 11px; color: #636366; line-height: 1.4;">
-                        Este acuerdo no requiere firma física de conformidad con los términos y condiciones de la plataforma y el pago registrado de manera electrónica el <strong>${formattedDate}</strong> bajo la referencia: <strong class="font-data-mono">${refCode}</strong>.
+                        ${verificationCopy.acceptanceBody}
                     </div>
                 </div>
             </div>
         `;
     }
 
-    const html = `
-        <div class="contract-doc-header">
-            ${logoHtml}
-            <h3>${activeTemplate.name ? activeTemplate.name.toUpperCase() : 'CONTRATO DE LICENCIA DE USO'}</h3>
-            <div class="doc-header-meta">
-                <span><strong>${t.refCodeLabel || 'REF:'}</strong> <span class="font-data-mono">${refCode}</span></span>
-                <span style="margin: 0 10px;">|</span>
-                <span><strong>${t.dateLabel || 'Fecha:'}</strong> ${dateFormatted}</span>
-            </div>
-        </div>
-        
-        <div class="contract-doc-body">
-            ${bodyHtml}
-        </div>
+    const hasBuyerSignature = Boolean(orderData.buyerSignature || orderData.buyerSignatureBase64);
+    const verificationCopy = getContractVerificationCopy(
+        normalizedPaymentMethod,
+        dateFormatted,
+        refCode,
+        lang,
+        needsBuyerSignature,
+        hasBuyerSignature
+    );
 
-        <div class="contract-closure" style="page-break-inside: avoid !important; break-inside: avoid !important;">
-            ${signaturesSectionHtml}
+    // Se conserva el mismo marco visual usado por el editor manual. Así la
+    // licencia descargada después de un pago Stripe y la previsualización del
+    // Studio son el mismo documento, no dos formatos distintos.
+    const html = `
+        <div class="contract-doc">
+            ${isSossa
+                ? `<div class="contract-watermark" style="background-image: url('/logo.png');"></div>`
+                : (!isStudioPro ? `<div class="contract-watermark free-watermark"></div>` : '')
+            }
+            <div class="doc-header" style="text-align: center; margin-bottom: 30px;">
+                <div class="doc-logo-container" style="margin-bottom: 15px;">
+                    ${logoHtml}
+                </div>
+            </div>
+            <div class="doc-body">
+                ${bodyHtml}
+            </div>
+            <div class="contract-closure">
+                ${signaturesSectionHtml}
+                <div class="digital-seal-container" style="margin-top: 25px;">
+                    <div class="digital-seal">
+                        <div class="seal-icon">✓</div>
+                        <div class="seal-text">
+                            <strong>${t.sealVerified || 'DOCUMENTO VERIFICADO'}</strong><br>
+                            ${t.sealRef || 'Ref:'} ${refCode}<br>
+                            ${verificationCopy.sealStatus}
+                        </div>
+                    </div>
+                </div>
+                <hr style="margin: 15px 0;">
+                <div class="doc-footer" style="text-align: center; font-size: 11px; color: #8a91a6;">
+                    <p><em>${t.footerText || 'Este documento fue generado por la plataforma BEATSS.'} ${tierName} — ${producerConfig.aka} ${effectiveDate ? new Date(effectiveDate + 'T00:00:00').getFullYear() : new Date().getFullYear()}.</em></p>
+                </div>
+            </div>
         </div>
     `;
 
-    return { md, html, needsBuyerSignature };
+    return { md, html, needsBuyerSignature, reference: canonicalReference, referenceValid: Boolean(canonicalReference) };
 }
 
 window.compileContractData = compileContractData;

@@ -1,0 +1,57 @@
+.git/
+.vercel/
+.agents/
+.opencode/
+.vercel_python_packages/
+BeatSS.app/
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+.venv/
+venv/
+node_modules/
+docs/
+tests/
+scratch/
+tmp/
+work/
+output/
+outputs/
+mcp/
+*.md
+graphify-out/
+temp_audio_cache/
+.migration/
+*.db
+*.pyc
+__pycache__/
+*.log
+*.bak
+preview-selector-pagos.png
+sossa_backup_sincronizado.json
+mrmicua_backup_sincronizado.json
+reporte_consolidado_productores.csv
+transacciones_consolidadas_globales.csv
+firebase-adminsdk.json
+
+# SRI queda preparado localmente, pero aún no se ha configurado el certificado
+# ni el ambiente fiscal. Mantener fuera del despliegue Hobby los endpoints
+# opcionales de emisión/descarga hasta activar el facturador.
+api/payments/download-ride.js
+api/payments/download-xml.js
+api/payments/retry-sri.js
+api/sri_handlers.py
+api/_sri_download.js
+* 2.*
+* 3.*
+* copy.*
+* copy*.*
+
+# Funcionalidad administrativa opcional; se reactiva al pasar a un plan con
+# capacidad adicional o al consolidar endpoints.
+api/convert-referral.js
+session_memory.json
+subagent_memories.json

@@ -26,18 +26,18 @@ export const TRANSLATIONS = {
         clause11Title: "11. Content ID / Monetización:",
         contentIdProhibited: "PROHIBIDO el registro en sistemas de Content ID (YouTube, Facebook, etc.) sin autorización escrita.",
         contentIdAllowed: "PERMITIDO el registro en sistemas de Content ID.",
-        legalText1: "Las partes acuerdan que el presente contrato puede ser formalizado de manera física, digital o mediante firmas escaneadas. En caso de no mediar una firma manuscrita, el Licenciatario declara haber leído este documento y manifiesta su <strong>aceptación tácita, consentimiento legal y ratificación absoluta</strong> de todos los términos mediante el pago de la Tarifa de Licencia",
+        legalText1: "Las partes acuerdan que el presente contrato puede formalizarse de manera física, digital o mediante firmas escaneadas. Si no existe una firma manuscrita, el Licenciatario declara haber leído este documento y manifiesta su <strong>aceptación y consentimiento</strong> respecto de todos sus términos mediante el pago de la Tarifa de Licencia",
         legalText2: "y la recepción de los archivos musicales.",
         securityText: "Como medida de seguridad, autenticidad e integridad contractual, este documento incorpora el logotipo oficial de",
         securityText2: "como marca de agua de fondo y el código de referencia único",
         securityText3: "Cualquier remoción, ocultamiento o alteración digital de estas marcas de seguridad anula de forma automática e inmediata la validez legal del presente contrato y los derechos de explotación aquí otorgados.",
         producerRole: "EL LICENCIANTE (PRODUCTOR)",
         buyerRole: "EL LICENCIATARIO (COMPRADOR)",
-        buyerSignatureAuto: "Formalizado por aceptación de pago electrónico",
+        buyerSignatureAuto: "Formalizado mediante aceptación del pago",
         buyerSignatureDocusign: "Formalizado por firma electrónica (DocuSign)",
-        sealVerified: "LICENSE VERIFIED",
-        sealRef: "Ref:",
-        sealStatus: "Estatus: Válido por Transacción y Firma Electrónica",
+        sealVerified: "DOCUMENTO VERIFICADO",
+        sealRef: "Código de referencia:",
+        sealStatus: "Estado: licencia vigente",
         footerText: "Fin del Contrato de Licencia Comercial"
     },
     en: {
@@ -78,7 +78,7 @@ export const TRANSLATIONS = {
         buyerSignatureDocusign: "Formalized by electronic signature (DocuSign)",
         sealVerified: "LICENSE VERIFIED",
         sealRef: "Ref:",
-        sealStatus: "Status: Valid by Transaction and Electronic Signature",
+        sealStatus: "Status: valid license",
         footerText: "End of Commercial License Agreement"
     }
 };
@@ -269,6 +269,9 @@ export const UI_TRANSLATIONS = {
         payment_bank: "Transferencia Bancaria",
         payment_credit: "Tarjeta de Crédito",
         payment_wu: "Western Union",
+        payment_deuna: "Deuna!",
+        payment_payphone: "PayPhone",
+        payment_stripe: "Stripe",
         payment_other: "Otro",
         sidebar_effective_date_short: "Fecha Vigor",
         sidebar_celebration_place_short: "Lugar Firma",
@@ -321,8 +324,8 @@ export const UI_TRANSLATIONS = {
         tab_beats: "Catálogo de Beats",
         tab_dashboard: "Dashboard de Ventas",
         tab_sales: "Pedidos de Beats",
-        tab_admin: "Contabilidad General",
-        tab_whitelist: "Whitelisting Content ID",
+        tab_admin: "Contabilidad general",
+        tab_whitelist: "Lista blanca de Content ID",
 
         // Previsualización Panel
         preview_print_view: "Vista de Impresión",
@@ -541,17 +544,17 @@ export const UI_TRANSLATIONS = {
         support_faq_q5: "¿Qué ocurre cuando expira el plazo de años de mi licencia?",
         support_faq_a5: "Las licencias no exclusivas tienen una vigencia temporal de 5 o 10 años. Una vez cumplido este periodo, los derechos comerciales expiran. Para continuar monetizando tu canción en plataformas, deberás renovar la licencia o adquirir una mejora al precio vigente en ese momento.",
         support_copyright_title: "Guía de Derechos de Autor y Registro de Regalías",
-        support_copyright_text: "Cuando grabas tu voz sobre un beat, creas una <strong>Obra Derivada</strong>. Legalmente, la composición musical (melodía y letra) se divide <strong>50% / 50%</strong> entre tú (letrista) y el productor (sossa).<br><br>Las sociedades de gestión colectiva (PROs como ASCAP, BMI, SACM, SAYCO) recaudan las regalías por la comunicación pública de tu música. Al registrar tu canción en el portal de tu PRO, debes indicar los porcentajes de participación acordados en el contrato de BEATSS:<br><ol><li><strong>Tu Participación</strong>: Split del <strong>50%</strong> de los derechos de escritor (Writer's Share).</li><li><strong>Participación del Productor (sossa)</strong>: Split del <strong>50%</strong> de los derechos de autor musicales (Composer Share). (La información de IPI y PRO del productor se autocompleta en el panel de usuario al descargar tu contrato).</li></ol><br><strong>Importante:</strong> Las regalías de distribución digital (Master) a través de tu distribuidora (DistroKid, TuneCore) son independientes de la composición y te corresponden al 100% hasta los límites de tu licencia.",
+        support_copyright_text: "Cuando grabas sobre un beat creas una obra derivada. Los porcentajes de composición, autoría, máster y regalías <strong>no son universales</strong>: se rigen por el contrato de la licencia elegida y por cualquier split sheet firmado entre las partes.<br><br>Al registrar la canción en una sociedad de gestión o distribuidora, copia exactamente los porcentajes e identificadores que consten en tu contrato BEATSS. Si existen acuerdos adicionales, prevalece el documento firmado más específico. Las regalías del máster y las de composición son derechos distintos y deben registrarse por separado.",
         support_license_title: "Acuerdo de Licencia Comercial",
-        support_license_text: "Todas las licencias de uso musical compradas en la plataforma BEATSS son contratos legalmente vinculantes. El pago de la tarifa y la descarga de los archivos constituye la aceptación tácita de todos los términos.<br><br>Como medida de seguridad e integridad contractual, cada documento incorpora marcas de agua digitales y códigos de referencia únicos para verificar su autenticidad. Cualquier remoción o alteración digital de estas marcas anula de forma automática e inmediata la validez legal del contrato y los derechos de explotación otorgados.",
+        support_license_text: "Todas las licencias de uso musical compradas en la plataforma BEATSS contienen los términos aplicables a la operación. La aceptación registrada, el pago de la tarifa y la recepción de los archivos acreditan el proceso de compra.<br><br>Como medida de seguridad e integridad contractual, cada documento incorpora una marca de agua y un código de referencia único. Cualquier alteración del contenido o del código debe verificarse con el productor antes de usar la copia.",
         support_terms_title: "Términos de Servicio y Privacidad",
-        support_terms_text: "BEATSS es una plataforma de automatización de licencias. Respetamos tu privacidad y protegemos tus datos personales. Las transacciones automáticas se procesan de forma segura a través de pasarelas de pago cifradas y certificadas (como PayPal y PayPhone).<br><br>Todos los instrumentales del catálogo pertenecen a sus respectivos productores y están protegidos por leyes internacionales de propiedad intelectual. La compra de una licencia otorga un derecho de uso no exclusivo o exclusivo según la licencia elegida, pero no transmite los derechos de autor de la música original.",
+        support_terms_text: "BEATSS permite a productores administrar catálogos, contratos, pedidos y entregas. Cada productor es responsable de la exactitud de su identidad, precios, archivos, derechos y métodos de cobro. BEATSS no convierte una venta en cesión de derechos distinta a la expresamente indicada en el contrato aceptado.<br><br>Para operar la cuenta tratamos datos de acceso, perfil, catálogo, compradores, licencias, pedidos y evidencias de pago. Los datos privados sólo son accesibles por su titular y por procesos autorizados del servidor; la tienda muestra únicamente la información necesaria para presentar el catálogo y completar el método de pago elegido. No vendemos datos personales. Puedes solicitar acceso, corrección o eliminación mediante soporte, sujeto a las obligaciones legales de conservación.<br><br>Las compras requieren aceptación expresa de los términos y de la licencia. Los pagos automáticos sólo se habilitan cuando el productor tiene una cuenta compatible correctamente vinculada. Versión vigente: 14 de agosto de 2026.",
         support_tab_api: "Documentación de API",
         support_tab_status: "Estado del Sistema",
         support_api_title: "Documentación de API para Desarrolladores",
         support_api_text: "La API de BEATSS permite integrar la validación y generación de licencias en sistemas externos.<br><br><strong>Endpoints Disponibles:</strong><ul><li><code>GET /api/load-local?user={id}</code>: Recupera la base de datos de transacciones local del productor.</li><li><code>POST /api/save-local?user={id}</code>: Sincroniza y almacena de forma segura las nuevas firmas e historial.</li><li><code>POST /api/redeem-vip</code>: Procesa códigos de acceso y promociones para los planes Pro/Elite.</li><li><code>POST /api/payments/webhook</code>: Integra notificaciones de pagos procesados vía PayPal, Deuna y PayPhone.</li></ul><br>Para obtener credenciales de desarrollo, contacta a soporte técnico.",
         support_status_title: "Estado del Sistema y Servicios Activos",
-        support_status_text: "Monitoreo en tiempo real de la infraestructura de BEATSS:<br><br>🟢 <strong>Base de Datos (Firebase Firestore)</strong>: Operativo (100% online)<br>🟢 <strong>Almacenamiento (Google Drive Sync)</strong>: Activo y Sincronizado<br>🟢 <strong>Facturación Electrónica (SRI Contingencia)</strong>: Activo y en espera de cola local (0 pendientes)<br>🟢 <strong>Motor de Firmas (DocuSign API)</strong>: Operativo (Demo/Producción)<br>🟢 <strong>Servicio de Audio Web (Vite CDN)</strong>: Operativo (Latencia: 14ms)<br><br><em>Última revisión: Hace unos instantes. Todos los sistemas funcionan de manera normal.</em>"
+        support_status_text: "Esta pantalla no realiza monitoreo en tiempo real y por eso no muestra estados inventados.<br><br><strong>Servicios que pueden intervenir:</strong><ul><li>Firebase para acceso, datos y archivos.</li><li>Stripe, PayPal, PayPhone, Deuna o transferencia, sólo cuando el productor los haya configurado.</li><li>SRI y firma electrónica, sólo cuando exista una configuración fiscal válida.</li><li>Correo de entrega, sólo cuando el servicio del productor esté configurado.</li></ul>Si una operación no confirma pago, licencia y entrega, revisa su estado en Pedidos antes de asumir que se completó."
     },
     en: {
         nav_marketplace: "Marketplace",
@@ -738,6 +741,9 @@ export const UI_TRANSLATIONS = {
         payment_bank: "Bank Transfer",
         payment_credit: "Credit Card",
         payment_wu: "Western Union",
+        payment_deuna: "Deuna!",
+        payment_payphone: "PayPhone",
+        payment_stripe: "Stripe",
         payment_other: "Other",
         sidebar_effective_date_short: "Effective Date",
         sidebar_celebration_place_short: "Signing Place",
@@ -1010,16 +1016,16 @@ export const UI_TRANSLATIONS = {
         support_faq_q5: "What happens when the term of my license expires?",
         support_faq_a5: "Non-exclusive licenses have a validity period of 5 or 10 years. Upon expiration, commercial rights end. To continue monetizing your song on platforms, you must renew your license or purchase an upgrade at the current price.",
         support_copyright_title: "Copyright & Royalties Registration Guide",
-        support_copyright_text: "When you record your vocals over a beat, you create a <strong>Derivative Work</strong>. Legally, the composition (melody and lyrics) is split <strong>50% / 50%</strong> between you (writer) and the producer (sossa).<br><br>Public performance rights organizations (PROs like ASCAP, BMI, PRS, SACM, SAYCO) collect royalties for the public performance of your music. When registering your song on your PRO portal, you must indicate the splits agreed in the BEATSS contract:<br><ol><li><strong>Your Share</strong>: Split of <strong>50%</strong> of the writer's share.</li><li><strong>Producer Share (sossa)</strong>: Split of <strong>50%</strong> of the musical composition share (Composer). (The producer's IPI and PRO information is automatically filled in your contract download).</li></ol><br><strong>Important:</strong> Digital distribution royalties (Master) from your distributor (DistroKid, TuneCore) are separate from composition publishing and belong 100% to you up to the license limits.",
+        support_copyright_text: "Recording over a beat creates a derivative work. Composition, songwriting, master and royalty percentages are <strong>not universal</strong>: they are governed by the selected license agreement and any split sheet signed by the parties.<br><br>When registering the song with a rights society or distributor, copy the percentages and identifiers shown in your BEATSS contract. A more specific signed agreement controls when additional agreements exist. Master and composition royalties are separate rights and must be registered separately.",
         support_license_title: "Commercial License Agreement Summary",
         support_license_text: "All musical licenses purchased on BEATSS are legally binding agreements. Paying the fee and downloading the files constitutes tacit acceptance of all terms.<br><br>As a security and contractual integrity measure, each document incorporates digital watermarks and unique reference codes to verify authenticity. Any digital removal or alteration of these marks automatically and immediately nullifies the contract's validity and the exploitation rights granted.",
         support_terms_title: "Terms of Service & Privacy Policy",
-        support_terms_text: "BEATSS is a license automation platform. We respect your privacy and protect your personal data. Transactions are processed securely through certified and encrypted payment gateways (such as PayPal and PayPhone).<br><br>All instrumentals in the catalog belong to their respective producers and are protected by international intellectual property laws. Buying a license grants a non-exclusive or exclusive right of use, but does not transfer the copyrights of the original music composition.",
+        support_terms_text: "BEATSS lets producers manage catalogs, contracts, orders and deliveries. Each producer is responsible for the accuracy of their identity, prices, files, rights and payment methods. A sale does not transfer rights beyond those expressly stated in the accepted license agreement.<br><br>To operate an account, BEATSS processes access, profile, catalog, buyer, license, order and payment-evidence data. Private data is available only to its owner and authorized server processes; the storefront shows only what is needed to present a catalog and complete the selected payment method. We do not sell personal data. You may request access, correction or deletion through support, subject to legal retention obligations.<br><br>Purchases require explicit acceptance of the terms and license. Automated payment methods are enabled only when the producer has properly linked a compatible account. Current version: August 14, 2026.",
         support_tab_api: "API Docs",
         support_tab_status: "System Status",
         support_api_title: "Developer API Documentation",
         support_api_text: "The BEATSS API allows you to integrate license validation and generation into external systems.<br><br><strong>Available Endpoints:</strong><ul><li><code>GET /api/load-local?user={id}</code>: Retrieves the local transaction database for the producer.</li><li><code>POST /api/save-local?user={id}</code>: Synchronizes and securely stores new signatures and history.</li><li><code>POST /api/redeem-vip</code>: Processes access codes and promotions for Pro/Elite plans.</li><li><code>POST /api/payments/webhook</code>: Integrates instant notifications of license payments processed via PayPal, Deuna, and PayPhone.</li></ul><br>To obtain developer credentials, contact technical support.",
         support_status_title: "System Status & Active Services",
-        support_status_text: "Real-time monitoring of the BEATSS infrastructure:<br><br>🟢 <strong>Database (Firebase Firestore)</strong>: Operational (100% online)<br>🟢 <strong>Storage (Google Drive Sync)</strong>: Active and Synchronized<br>🟢 <strong>Electronic Billing (SRI Contingency Queue)</strong>: Active and idling (0 pending)<br>🟢 <strong>Signature Engine (DocuSign API)</strong>: Operational (Demo/Production)<br>🟢 <strong>Audio Web Service (Vite CDN)</strong>: Operational (Latency: 14ms)<br><br><em>Last checked: Just now. All systems are operating normally.</em>"
+        support_status_text: "This screen does not perform real-time monitoring, so it does not display unverified service states.<br><br><strong>Services that may be involved:</strong><ul><li>Firebase for access, data and files.</li><li>Stripe, PayPal, PayPhone, Deuna or bank transfer only when configured by the producer.</li><li>SRI and electronic signatures only when valid tax settings are available.</li><li>Delivery email only when the producer's service is configured.</li></ul>If an operation does not confirm payment, license and delivery, check its status in Orders before treating it as complete."
     }
 };

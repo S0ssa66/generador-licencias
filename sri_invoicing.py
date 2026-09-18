@@ -1,7 +1,5 @@
-import os
 import io
 import re
-import uuid
 import math
 import base64
 import hashlib
@@ -33,20 +31,21 @@ WS_AUTORIZACION_PROD = "https://cel.sri.gob.ec/comprobantes-electronicos-ws/Auto
 # --- FUNCIONES DE SOPORTE CRIPTOGRÁFICO Y XML ---
 
 def c14n_xml(xml_str):
-    """Canonicaliza un fragmento o documento XML de forma exacta usando xmllint."""
-    import uuid
-    import subprocess
-    import os
-    archivo_tmp = f'/tmp/c14n_{uuid.uuid4()}.xml'
-    try:
-        with open(archivo_tmp, 'w', encoding='utf-8') as f:
-            f.write(xml_str)
-        cmd = f'xmllint --c14n {archivo_tmp}'
-        salida = subprocess.check_output(cmd, shell=True)
-        return salida.decode('utf-8')
-    finally:
-        if os.path.exists(archivo_tmp):
-            os.remove(archivo_tmp)
+    """Canonicaliza XML en memoria con la implementación de ``lxml``.
+
+    La firma XAdES se ejecuta también en workers administrados y funciones
+    serverless, donde no se puede asumir que exista el binario ``xmllint`` ni
+    escribir archivos temporales en una ruta del sistema. ``lxml`` usa libxml2
+    para producir la misma canonicalización inclusiva C14N 1.0.
+    """
+    parser = etree.XMLParser(remove_blank_text=False)
+    node = etree.fromstring(xml_str.strip().encode('utf-8'), parser)
+    return etree.tostring(
+        node,
+        method='c14n',
+        exclusive=False,
+        with_comments=False,
+    ).decode('utf-8')
 
 def format_xml_string(cad):
     cad = cad.replace('\n', '')
@@ -160,8 +159,14 @@ def firmar_xml_comprobante(xml_content, p12_bytes, password_str):
     password_bytes = password_str.encode('utf-8')
     private_key, certificate, additional_certificates = pkcs12.load_key_and_certificates(p12_bytes, password_bytes)
     
-    # Validar caducidad
-    if certificate.not_valid_after < datetime.datetime.now():
+    # Validar caducidad sin usar la propiedad ingenua que las versiones
+    # recientes de cryptography están retirando.
+    not_valid_after_utc = getattr(certificate, 'not_valid_after_utc', None)
+    if not_valid_after_utc is not None:
+        certificate_expired = not_valid_after_utc < datetime.datetime.now(datetime.timezone.utc)
+    else:
+        certificate_expired = certificate.not_valid_after < datetime.datetime.now()
+    if certificate_expired:
         raise ValueError("El certificado de firma electrónica ha caducado.")
         
     # Obtener el certificado OpenSSL para formatear los campos como issuer
@@ -266,7 +271,49 @@ def calcular_modulo11(clave_48):
     else:
         return verificador
 
-def generar_clave_acceso(fecha_emision, tipo_comprobante, ruc, ambiente, serie, secuencial, codigo_numerico="12345678"):
+SRI_PAYMENT_METHOD_CODES = {
+    # Las pasarelas de BEATSS son medios digitales; el comprobante no debe
+    # inventar que fue una tarjeta concreta si la pasarela no lo confirma.
+    'paypal': '20',
+    'payphone': '20',
+    'deuna': '20',
+    'transferencia': '20',
+    'transferencia_bancaria': '20',
+    'tarjeta_credito': '19',
+    'tarjeta_debito': '16',
+    'credito': '19',
+    'debito': '16',
+    'otros': '20',
+}
+
+
+def normalizar_forma_pago_sri(value):
+    """Convierte el método de pago interno de BEATSS al código SRI.
+
+    PayPal, PayPhone y Deuna se registran como ``20`` (otros con utilización
+    del sistema financiero) salvo que el dato de la operación confirme
+    explícitamente crédito o débito. Así evitamos clasificar una billetera o
+    QR como una tarjeta que no fue utilizada.
+    """
+    raw = str(value or '').strip().lower()
+    if raw.isdigit() and raw in {'01', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'}:
+        return raw
+    normalized = re.sub(r'[^a-z0-9]+', '_', raw).strip('_')
+    return SRI_PAYMENT_METHOD_CODES.get(normalized, '20')
+
+
+def codigo_numerico_desde_referencia(reference_id):
+    """Genera el código numérico estable de 8 dígitos para una operación.
+
+    El SRI exige un código numérico en la clave de acceso. Derivarlo del pago
+    permite reintentar una emisión sin cambiar la clave y sin usar el valor
+    fijo heredado ``12345678``.
+    """
+    digest = hashlib.sha256(str(reference_id or '').encode('utf-8')).digest()
+    return str(int.from_bytes(digest[:6], 'big') % 100_000_000).zfill(8)
+
+
+def generar_clave_acceso(fecha_emision, tipo_comprobante, ruc, ambiente, serie, secuencial, codigo_numerico=None):
     """
     Genera la clave de acceso de 49 dígitos numéricos del SRI.
     Formatos:
@@ -280,12 +327,23 @@ def generar_clave_acceso(fecha_emision, tipo_comprobante, ruc, ambiente, serie, 
     if isinstance(fecha_emision, (datetime.date, datetime.datetime)):
         fecha_str = fecha_emision.strftime("%d%m%Y")
     else:
-        fecha_str = fecha_emision.replace("/", "").replace("-", "")
+        fecha_str = str(fecha_emision).replace("/", "").replace("-", "")
         
     ruc_clean = re.sub(r'\D', '', ruc)
     serie_clean = re.sub(r'\D', '', serie).zfill(6)
     secuencial_clean = re.sub(r'\D', '', secuencial).zfill(9)
-    codigo_clean = re.sub(r'\D', '', str(codigo_numerico)).zfill(8)
+    if codigo_numerico is None:
+        codigo_numerico = codigo_numerico_desde_referencia(f"{fecha_str}-{ruc_clean}-{serie_clean}-{secuencial_clean}")
+    codigo_clean = re.sub(r'\D', '', str(codigo_numerico)).zfill(8)[-8:]
+
+    if not re.fullmatch(r'\d{8}', fecha_str) or not re.fullmatch(r'\d{2}', str(tipo_comprobante)):
+        raise ValueError('Fecha o tipo de comprobante inválido para la clave de acceso.')
+    if not re.fullmatch(r'\d{13}', ruc_clean):
+        raise ValueError('El RUC debe tener 13 dígitos para la clave de acceso.')
+    if str(ambiente) not in {'1', '2'}:
+        raise ValueError('El ambiente SRI debe ser 1 o 2.')
+    if not re.fullmatch(r'\d{6}', serie_clean) or not re.fullmatch(r'\d{9}', secuencial_clean):
+        raise ValueError('Serie o secuencial inválido para la clave de acceso.')
     
     # 48 primeros dígitos
     clave_48 = f"{fecha_str}{tipo_comprobante}{ruc_clean}{ambiente}{serie_clean}{secuencial_clean}{codigo_clean}1"
@@ -463,10 +521,42 @@ def parsear_respuesta_autorizacion(soap_response):
 
 # --- GENERADOR DE XML FACTURA v2.1.0 ---
 
+IVA_TARIFFS = {
+    '0': ('0', 0.0),
+    '5': ('5', 5.0),
+    '12': ('2', 12.0),
+    '13': ('10', 13.0),
+    '14': ('3', 14.0),
+    '15': ('4', 15.0),
+    'NO_OBJETO': ('6', 0.0),
+    'EXENTO': ('7', 0.0),
+}
+
+
+def obtener_configuracion_iva(emisor):
+    """Devuelve codigo, tarifa y si los precios ya incluyen IVA.
+
+    Los códigos corresponden a la ficha técnica vigente del esquema offline
+    del SRI. La tarifa se mantiene configurable porque la obligación fiscal
+    depende del régimen y de la naturaleza concreta de la operación.
+    """
+    raw_tarifa = str(
+        emisor.get('ivaTarifa')
+        or emisor.get('sriIvaTarifa')
+        or ('0' if emisor.get('sriRimpe') == 'rimpe_popular' else '15')
+    ).strip().upper()
+    if raw_tarifa not in IVA_TARIFFS:
+        raise ValueError(f"Tarifa IVA no válida: {raw_tarifa}")
+
+    raw_incluido = emisor.get('ivaIncluido', emisor.get('sriIvaIncluido', True))
+    incluido = str(raw_incluido).strip().lower() not in {'0', 'false', 'no', 'off'}
+    codigo, tarifa = IVA_TARIFFS[raw_tarifa]
+    return codigo, tarifa, incluido
+
 def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
     """
     Genera el XML de la factura de acuerdo a la estructura oficial del SRI (v2.1.0).
-    emisor: dict con llaves ruc, razonSocial, nombreComercial, dirMatriz, dirEstablecimiento, estab, ptoEmi, obligadoContabilidad, ambiente, sriRimpe, contribuyenteEspecial, agenteRetencion
+    emisor: dict con llaves ruc, razonSocial, nombreComercial, dirMatriz, dirEstablecimiento, estab, ptoEmi, obligadoContabilidad, ambiente, sriRimpe, contribuyenteEspecial, agenteRetencion y rucProveedor opcional
     comprador: dict con llaves tipoIdentificacionComprador, razonSocialComprador, identificacionComprador, dirComprador, emailComprador, formaPago
     items: lista de dict con llaves codigoPrincipal, descripcion, cantidad, precioUnitario, descuento
     secuencial: string de 9 dígitos.
@@ -480,22 +570,40 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
     tipo_id_comprador = comprador.get('tipoIdentificacionComprador') or '07'
     email_comprador = comprador.get('emailComprador') or ''
     dir_comprador = comprador.get('dirComprador') or 'Quito'
-    forma_pago = comprador.get('formaPago') or '20' # 20 = Otros con utilizacion del sistema financiero
+    forma_pago = normalizar_forma_pago_sri(comprador.get('formaPago'))
     
     fecha_emision = datetime.datetime.now().strftime("%d/%m/%Y")
     
-    # Calcular totales
-    total_sin_impuestos = 0.0
-    total_descuento = 0.0
-    
+    iva_codigo, iva_tarifa, iva_incluido = obtener_configuracion_iva(emisor)
+
+    # Los precios de BEATSS son importes cobrados al comprador. Por defecto
+    # se consideran IVA incluido para que la factura conserve exactamente el
+    # valor aprobado por PayPal; el emisor puede desactivar esta opción si sus
+    # precios están publicados antes de impuestos.
+    lineas = []
+    subtotal_publicado = 0.0
+    descuento_publicado = 0.0
     for item in items:
         cantidad = float(item.get('cantidad', 1))
         precio_uni = float(item.get('precioUnitario', 0.0))
         desc = float(item.get('descuento', 0.0))
-        total_sin_impuestos += (cantidad * precio_uni)
-        total_descuento += desc
-        
-    importe_total = total_sin_impuestos - total_descuento
+        line_total = (cantidad * precio_uni) - desc
+        subtotal_publicado += cantidad * precio_uni
+        descuento_publicado += desc
+        lineas.append((item, cantidad, precio_uni, desc, line_total))
+
+    importe_publicado = subtotal_publicado - descuento_publicado
+    factor_iva = 1.0 + (iva_tarifa / 100.0) if iva_incluido and iva_tarifa else 1.0
+    total_sin_impuestos = importe_publicado / factor_iva
+    total_descuento = descuento_publicado / factor_iva
+    valor_iva = total_sin_impuestos * (iva_tarifa / 100.0)
+    importe_total = total_sin_impuestos + valor_iva
+
+    # Redondear los valores contables antes de serializarlos en el XML.
+    total_sin_impuestos = round(total_sin_impuestos, 2)
+    total_descuento = round(total_descuento, 2)
+    valor_iva = round(valor_iva, 2)
+    importe_total = round(importe_total, 2)
     
     root = etree.Element("factura", id="comprobante", version="2.1.0")
     
@@ -512,7 +620,7 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
     etree.SubElement(info_trib, "estab").text = str(emisor.get('estab', '001')).zfill(3)
     etree.SubElement(info_trib, "ptoEmi").text = str(emisor.get('ptoEmi', '001')).zfill(3)
     etree.SubElement(info_trib, "secuencial").text = str(secuencial).zfill(9)
-    etree.SubElement(info_trib, "dirMatriz").text = emisor.get('dirMatriz', '')
+    etree.SubElement(info_trib, "dirMatriz").text = emisor.get('dirMatriz') or 'Quito - Ecuador'
     
     if emisor.get('contribuyenteEspecial'):
         etree.SubElement(info_trib, "contribuyenteEspecial").text = emisor.get('contribuyenteEspecial')
@@ -530,7 +638,7 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
     # infoFactura
     info_fact = etree.SubElement(root, "infoFactura")
     etree.SubElement(info_fact, "fechaEmision").text = fecha_emision
-    etree.SubElement(info_fact, "dirEstablecimiento").text = emisor.get('dirEstablecimiento', emisor.get('dirMatriz', ''))
+    etree.SubElement(info_fact, "dirEstablecimiento").text = emisor.get('dirEstablecimiento') or emisor.get('dirMatriz') or 'Quito - Ecuador'
     
     etree.SubElement(info_fact, "obligadoContabilidad").text = emisor.get('obligadoContabilidad', 'NO').upper()
     etree.SubElement(info_fact, "tipoIdentificacionComprador").text = tipo_id_comprador
@@ -544,9 +652,9 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
     total_con_imp = etree.SubElement(info_fact, "totalConImpuestos")
     total_imp = etree.SubElement(total_con_imp, "totalImpuesto")
     etree.SubElement(total_imp, "codigo").text = "2" # IVA
-    etree.SubElement(total_imp, "codigoPorcentaje").text = "0" # IVA 0%
-    etree.SubElement(total_imp, "baseImponible").text = f"{importe_total:.2f}"
-    etree.SubElement(total_imp, "valor").text = "0.00"
+    etree.SubElement(total_imp, "codigoPorcentaje").text = iva_codigo
+    etree.SubElement(total_imp, "baseImponible").text = f"{total_sin_impuestos:.2f}"
+    etree.SubElement(total_imp, "valor").text = f"{valor_iva:.2f}"
     
     etree.SubElement(info_fact, "propina").text = "0.00"
     etree.SubElement(info_fact, "importeTotal").text = f"{importe_total:.2f}"
@@ -560,14 +668,13 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
     
     # detalles
     detalles = etree.SubElement(root, "detalles")
-    for item in items:
+    for item, cant, p_uni_publicado, d_val_publicado, _ in lineas:
         detalle = etree.SubElement(detalles, "detalle")
         etree.SubElement(detalle, "codigoPrincipal").text = item.get('codigoPrincipal', 'BEAT')
         etree.SubElement(detalle, "descripcion").text = item.get('descripcion', 'Licencia Musical')
-        
-        cant = float(item.get('cantidad', 1))
-        p_uni = float(item.get('precioUnitario', 0.0))
-        d_val = float(item.get('descuento', 0.0))
+
+        p_uni = p_uni_publicado / factor_iva
+        d_val = d_val_publicado / factor_iva
         p_total = (cant * p_uni) - d_val
         
         etree.SubElement(detalle, "cantidad").text = f"{cant:.2f}"
@@ -579,10 +686,10 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
         det_impuestos = etree.SubElement(detalle, "impuestos")
         det_imp = etree.SubElement(det_impuestos, "impuesto")
         etree.SubElement(det_imp, "codigo").text = "2"
-        etree.SubElement(det_imp, "codigoPorcentaje").text = "0"
-        etree.SubElement(det_imp, "tarifa").text = "0"
+        etree.SubElement(det_imp, "codigoPorcentaje").text = iva_codigo
+        etree.SubElement(det_imp, "tarifa").text = f"{iva_tarifa:g}"
         etree.SubElement(det_imp, "baseImponible").text = f"{p_total:.2f}"
-        etree.SubElement(det_imp, "valor").text = "0.00"
+        etree.SubElement(det_imp, "valor").text = f"{round(p_total * iva_tarifa / 100.0, 2):.2f}"
         
     # infoAdicional
     info_adicional = etree.SubElement(root, "infoAdicional")
@@ -594,12 +701,59 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
         campo.text = dir_comprador
     if sri_rimpe and sri_rimpe != 'no_rimpe':
         campo = etree.SubElement(info_adicional, "campoAdicional", nombre="Regimen")
-        if sri_rimpe == 'rimpe_emprendedor' or sri_rimpe == 'RIMPE':
-            campo.text = "Contribuyente Régimen RIMPE"
-        elif sri_rimpe == 'rimpe_popular':
-            campo.text = "Contribuyente Negocio Popular - Régimen RIMPE"
+    if sri_rimpe == 'rimpe_emprendedor' or sri_rimpe == 'RIMPE':
+        campo.text = "Contribuyente Régimen RIMPE"
+    elif sri_rimpe == 'rimpe_popular':
+        campo.text = "Contribuyente Negocio Popular - Régimen RIMPE"
+
+    # Anexo 26: cuando el emisor utiliza un sistema de facturación de un
+    # tercero, el RUC del proveedor se informa en infoAdicional. Es opcional
+    # porque BEATSS también puede operar como sistema propio del emisor.
+    ruc_proveedor = str(emisor.get('rucProveedor') or '').strip()
+    if ruc_proveedor:
+        campo = etree.SubElement(info_adicional, "campoAdicional", nombre="RUC Proveedor")
+        campo.text = ruc_proveedor[:300]
             
     # Retornar string XML decodificado con declaración xml
     xml_bytes = etree.tostring(root, xml_declaration=True, encoding="UTF-8", pretty_print=False)
     return xml_bytes.decode('utf-8')
 
+
+def validar_xml_factura_basico(xml_content):
+    """Valida invariantes críticas antes de firmar o enviar al SRI.
+
+    No reemplaza la validación oficial contra el XSD del SRI, pero evita
+    enviar comprobantes truncados o con una clave de acceso inválida.
+    """
+    root = etree.fromstring(xml_content.encode('utf-8'))
+    errors = []
+    if root.tag != 'factura' or root.get('id') != 'comprobante':
+        errors.append('La raíz debe ser factura id=comprobante')
+    if root.get('version') != '2.1.0':
+        errors.append('Versión de factura no soportada')
+    info_trib = root.find('infoTributaria')
+    info_fact = root.find('infoFactura')
+    for node_name, node in [('infoTributaria', info_trib), ('infoFactura', info_fact), ('detalles', root.find('detalles'))]:
+        if node is None:
+            errors.append(f'Falta {node_name}')
+    if info_trib is not None:
+        ruc = (info_trib.findtext('ruc') or '').strip()
+        clave = (info_trib.findtext('claveAcceso') or '').strip()
+        ambiente = (info_trib.findtext('ambiente') or '').strip()
+        if not re.fullmatch(r'\d{13}', ruc):
+            errors.append('El RUC emisor debe tener 13 dígitos')
+        if not re.fullmatch(r'\d{49}', clave):
+            errors.append('La clave de acceso debe tener 49 dígitos')
+        elif calcular_modulo11(clave[:48]) != int(clave[-1]):
+            errors.append('El dígito verificador de la clave de acceso no coincide')
+        if ambiente not in {'1', '2'}:
+            errors.append('El ambiente SRI debe ser 1 o 2')
+        elif clave and clave[23] != ambiente:
+            errors.append('El ambiente del XML no coincide con la clave de acceso')
+    if info_fact is not None:
+        for field in ('fechaEmision', 'tipoIdentificacionComprador', 'identificacionComprador', 'importeTotal', 'pagos'):
+            if info_fact.find(field) is None:
+                errors.append(f'Falta infoFactura/{field}')
+    if errors:
+        raise ValueError('; '.join(errors))
+    return True

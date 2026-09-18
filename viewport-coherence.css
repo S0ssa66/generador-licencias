@@ -1,0 +1,748 @@
+/*
+ * BEATSS — Viewport Coherence
+ *
+ * This is the final layout layer for the functional workspace. It replaces
+ * fixed desktop dimensions with fluid bounds while leaving IDs, routes and
+ * event handlers untouched. The same rules are intentionally readable at
+ * 2K/retina, standard laptop widths and narrow touch viewports.
+ */
+
+:root {
+    --workspace-sidebar-fluid: clamp(380px, 21vw, 500px);
+    --workspace-gutter-fluid: clamp(24px, 2.2vw, 48px);
+    --workspace-control-text: clamp(14px, .82vw, 16px);
+}
+
+/* Public catalog ------------------------------------------------------- */
+
+/* Los controles de compra y búsqueda conservan un área táctil fiable incluso
+ * cuando el tamaño visual se reduce en teléfonos estrechos. */
+#global-catalog-view :is(#catalog-logo-home, #global-search-input, #catalog-btn-language, #catalog-btn-login, .minimal-select),
+#public-store-view :is(#store-search-input, #store-genre-select, #store-key-select) {
+    box-sizing: border-box;
+    min-height: 44px !important;
+    touch-action: manipulation;
+}
+
+/* Four full-width selectors kept the first beat below the fold on common
+ * 360–560 px phones. A two-column grid recovers that space while the narrow
+ * fallback below keeps the native select labels readable on 320 px screens. */
+@media (min-width: 360px) and (max-width: 560px) {
+    #global-catalog-view main > div:nth-child(2) {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+        padding: 12px !important;
+    }
+
+    #global-catalog-view main > div:nth-child(2) > div {
+        min-width: 0 !important;
+        width: auto !important;
+    }
+
+    #global-catalog-view main > div:nth-child(2) select {
+        min-width: 0;
+        padding-inline: 10px !important;
+    }
+}
+
+/* Desktop workspace ---------------------------------------------------- */
+/* index.html keeps the editor sidebar before main in source order for
+   accessibility. A direct private-route boot does not mount the public
+   landing stylesheet, so relying on implicit grid placement would put the
+   hidden sidebar in the wide column and squeeze Studio into the narrow
+   column on the right. Keep this mapping active across the 901–920px bridge
+   between the historical mobile and desktop breakpoints as well. */
+#app-container.saas-workspace .main-panel {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+}
+
+#app-container.saas-workspace .sidebar {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+#app-container.saas-workspace:has(.sidebar.sidebar-hidden) {
+    grid-template-columns: minmax(0, 1fr) 0 !important;
+}
+
+@media (min-width: 921px) {
+    body:has(#app-container.saas-workspace) {
+        min-width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    #app-container.saas-workspace {
+        grid-template-columns: minmax(0, 1fr) var(--workspace-sidebar-fluid) !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 100dvh !important;
+    }
+
+    #app-container.saas-workspace .sidebar {
+        width: var(--workspace-sidebar-fluid) !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+    #app-container.saas-workspace .sidebar-header {
+        min-height: clamp(136px, 9.2dvh, 166px) !important;
+        padding: clamp(22px, 1.45vw, 31px) clamp(20px, 1.25vw, 30px) 17px !important;
+    }
+
+    #app-container.saas-workspace #app-sidebar-title {
+        font-size: clamp(22px, 1.08vw, 28px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar .subtitle {
+        font-size: clamp(12px, .62vw, 14px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar .header-actions {
+        right: clamp(14px, 1vw, 24px) !important;
+        bottom: 14px !important;
+        gap: clamp(3px, .35vw, 8px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar .header-actions .btn-icon-only {
+        width: clamp(34px, 2.45vw, 44px) !important;
+        height: clamp(34px, 2.45vw, 44px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar > .flex.items-center.space-x-1 {
+        margin-inline: clamp(14px, 1.1vw, 24px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar-scroll {
+        padding-inline: clamp(14px, 1.1vw, 24px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar .section-label,
+    #app-container.saas-workspace [id^="nav-step-"] {
+        font-size: clamp(12px, .68vw, 15px) !important;
+    }
+
+    #app-container.saas-workspace [id^="nav-step-"] .step-badge {
+        width: clamp(24px, 1.6vw, 30px) !important;
+        height: clamp(24px, 1.6vw, 30px) !important;
+        font-size: clamp(11px, .62vw, 14px) !important;
+    }
+
+    #app-container.saas-workspace #step-1 {
+        padding-inline: clamp(18px, 1.35vw, 30px) !important;
+    }
+
+    #app-container.saas-workspace #step-1 > .grid {
+        gap: clamp(12px, .75vw, 17px) !important;
+        grid-auto-rows: clamp(96px, 5.7vw, 120px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar .license-btn {
+        height: clamp(96px, 5.7vw, 120px) !important;
+        min-height: clamp(96px, 5.7vw, 120px) !important;
+        padding: clamp(14px, 1vw, 21px) clamp(16px, 1.1vw, 24px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar .license-btn .lic-name {
+        font-size: clamp(16px, .9vw, 19px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar .license-btn .lic-desc {
+        font-size: clamp(12px, .65vw, 14px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar-actions {
+        padding-inline: clamp(14px, 1.1vw, 24px) !important;
+        padding-top: clamp(14px, .9vw, 20px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar-actions button {
+        min-height: clamp(50px, 3vw, 58px) !important;
+        font-size: clamp(13px, .7vw, 15px) !important;
+    }
+
+    #app-container.saas-workspace .main-header {
+        min-height: clamp(112px, 8.5dvh, 140px) !important;
+        height: clamp(112px, 8.5dvh, 140px) !important;
+        padding-inline: var(--workspace-gutter-fluid) !important;
+    }
+
+    #app-container.saas-workspace .main-header .tabs {
+        width: 100% !important;
+        min-width: 0 !important;
+        overflow-x: auto !important;
+        scrollbar-width: none;
+        gap: clamp(4px, .35vw, 9px) !important;
+        padding-block: clamp(15px, 1.1vw, 22px) !important;
+    }
+
+    #app-container.saas-workspace .main-header .tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    #app-container.saas-workspace .main-header .tab-btn {
+        flex: 0 0 auto !important;
+        min-height: clamp(45px, 3vw, 54px) !important;
+        height: clamp(45px, 3vw, 54px) !important;
+        padding-inline: clamp(14px, 1.05vw, 24px) !important;
+        gap: clamp(7px, .5vw, 11px) !important;
+        font-size: var(--workspace-control-text) !important;
+        letter-spacing: -.01em;
+    }
+
+    #app-container.saas-workspace .main-header .tab-btn svg,
+    #app-container.saas-workspace .main-header .tab-btn i {
+        width: clamp(18px, 1.05vw, 23px) !important;
+        height: clamp(18px, 1.05vw, 23px) !important;
+    }
+
+    #app-container.saas-workspace .tab-content.active {
+        padding: clamp(26px, 2vw, 44px) var(--workspace-gutter-fluid) clamp(38px, 2.8vw, 60px) !important;
+    }
+
+    #app-container.saas-workspace #tab-preview.active {
+        gap: clamp(16px, 1.15vw, 24px) !important;
+    }
+
+    /* Compact, readable controls. The old layer made every control occupy
+       half the row, which is the main source of the oversized empty strips. */
+    #app-container.saas-workspace .preview-actions {
+        display: flex !important;
+        flex: 0 0 auto !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+        gap: clamp(12px, .9vw, 18px) !important;
+        padding: clamp(14px, 1.1vw, 22px) !important;
+    }
+
+    #app-container.saas-workspace .preview-actions > div,
+    #app-container.saas-workspace .preview-actions > div:nth-child(2),
+    #app-container.saas-workspace .preview-actions > div:nth-child(3),
+    #app-container.saas-workspace .preview-actions > div:nth-child(4) {
+        width: auto !important;
+        min-width: 0 !important;
+        min-height: clamp(48px, 3vw, 58px) !important;
+        height: auto !important;
+        flex: 0 1 auto !important;
+        padding: clamp(6px, .45vw, 10px) clamp(9px, .65vw, 14px) !important;
+        border: 1px solid var(--ledger-line) !important;
+        border-radius: 12px !important;
+        background: #f6f7fb !important;
+        box-sizing: border-box !important;
+    }
+
+    #app-container.saas-workspace .preview-actions > div:nth-child(2) {
+        flex: 1 1 clamp(300px, 27vw, 560px) !important;
+        justify-content: flex-start !important;
+    }
+
+    #app-container.saas-workspace .preview-actions > div:nth-child(3),
+    #app-container.saas-workspace .preview-actions > div:nth-child(4) {
+        flex: 0 1 auto !important;
+    }
+
+    #app-container.saas-workspace .preview-actions .preview-mode-switch {
+        display: flex !important;
+        flex: 0 1 auto !important;
+    }
+
+    #app-container.saas-workspace .preview-actions .mode-btn,
+    #app-container.saas-workspace .preview-actions select,
+    #app-container.saas-workspace .preview-actions .btn {
+        font-size: clamp(14px, .72vw, 16px) !important;
+    }
+
+    #app-container.saas-workspace .preview-actions .mode-btn {
+        min-height: 38px !important;
+        padding-inline: clamp(12px, .8vw, 18px) !important;
+    }
+
+    #app-container.saas-workspace #contract-template-select {
+        min-width: clamp(240px, 14vw, 330px) !important;
+        height: clamp(38px, 2.5vw, 46px) !important;
+    }
+
+    #app-container.saas-workspace .preview-container {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: flex-start !important;
+        min-height: clamp(700px, calc(100dvh - 320px), 1040px) !important;
+        padding: clamp(32px, 3.5vw, 72px) !important;
+    }
+
+    #app-container.saas-workspace .paper {
+        width: min(1020px, 100%) !important;
+        min-height: 1320px !important;
+        padding: clamp(70px, 4.4vw, 98px) clamp(64px, 4.6vw, 102px) !important;
+        font-size: clamp(15px, .82vw, 17px) !important;
+        line-height: 1.68 !important;
+    }
+
+    #app-container.saas-workspace .paper h1 {
+        font-size: clamp(25px, 1.55vw, 34px) !important;
+    }
+
+    #app-container.saas-workspace .paper h2 {
+        font-size: clamp(16px, .96vw, 20px) !important;
+    }
+
+    #app-container.saas-workspace .paper h3 {
+        font-size: clamp(14px, .82vw, 17px) !important;
+    }
+
+    #app-container.saas-workspace .paper p,
+    #app-container.saas-workspace .paper li {
+        font-size: inherit !important;
+    }
+}
+
+/* Intermediate desktop/tablet: keep the sidebar usable without forcing a
+   horizontal page overflow. */
+@media (min-width: 921px) and (max-width: 1280px) {
+    #app-container.saas-workspace {
+        grid-template-columns: minmax(0, 1fr) clamp(360px, 31vw, 420px) !important;
+    }
+
+    #app-container.saas-workspace .sidebar {
+        width: clamp(360px, 31vw, 420px) !important;
+    }
+
+    #app-container.saas-workspace .main-header .tab-btn {
+        padding-inline: 11px !important;
+        font-size: 12px !important;
+    }
+
+    #app-container.saas-workspace .preview-actions > div:nth-child(2) {
+        flex-basis: 270px !important;
+    }
+}
+
+/* Touch layout --------------------------------------------------------- */
+@media (max-width: 920px) {
+    #app-container.saas-workspace {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    #app-container.saas-workspace .main-header .tabs-mobile,
+    #app-container.saas-workspace .main-header .tabs-mobile select {
+        min-width: 0 !important;
+        max-width: 100% !important;
+    }
+
+    #app-container.saas-workspace .preview-actions {
+        overflow: visible !important;
+    }
+}
+
+@media (max-width: 760px) {
+    #app-container.saas-workspace .preview-actions {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    #app-container.saas-workspace .preview-actions > div,
+    #app-container.saas-workspace .preview-actions > div:nth-child(2),
+    #app-container.saas-workspace .preview-actions > div:nth-child(3),
+    #app-container.saas-workspace .preview-actions > div:nth-child(4) {
+        width: 100% !important;
+        min-width: 0 !important;
+        justify-self: stretch !important;
+    }
+
+    #app-container.saas-workspace .preview-actions .preview-mode-switch {
+        display: flex !important;
+    }
+
+    #app-container.saas-workspace .preview-actions .mode-btn {
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+    }
+
+    #app-container.saas-workspace #contract-template-select {
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+    }
+
+    #app-container.saas-workspace .preview-container {
+        min-height: 500px !important;
+        padding: 12px !important;
+    }
+
+    #app-container.saas-workspace .paper {
+        width: 100% !important;
+        min-height: auto !important;
+        padding: 30px 18px !important;
+        font-size: 13.5px !important;
+        line-height: 1.62 !important;
+    }
+
+    #app-container.saas-workspace .paper.paper-serif {
+        font-size: 13.5px !important;
+    }
+
+    #app-container.saas-workspace .paper h1 {
+        font-size: clamp(20px, 6vw, 28px) !important;
+    }
+
+    #app-container.saas-workspace .paper h2 {
+        font-size: 16px !important;
+    }
+}
+
+/* At wide desktop widths the physical display often makes the default
+   12px utility labels look like browser chrome. Increase only the workspace
+   type scale; the document and controls remain bounded by the rules above. */
+@media (min-width: 1440px) {
+    #app-container.saas-workspace .main-header .tab-btn {
+        font-size: 15px !important;
+    }
+
+    #app-container.saas-workspace .sidebar .section-label {
+        font-size: 13px !important;
+    }
+
+    #app-container.saas-workspace .preview-actions .mode-btn,
+    #app-container.saas-workspace .preview-actions select,
+    #app-container.saas-workspace .preview-actions .btn {
+        font-size: 15px !important;
+    }
+}
+
+/* Never let a floating assistant become a stray element over the header or
+   sidebar. Keep the support control visible but within the viewport safe area. */
+#beatss-chatbot-container {
+    position: relative;
+    z-index: 1000;
+}
+
+#beatss-chatbot-container .chatbot-fab {
+    right: max(16px, env(safe-area-inset-right)) !important;
+    bottom: max(16px, env(safe-area-inset-bottom)) !important;
+}
+
+#beatss-chatbot-container .chatbot-window {
+    right: max(16px, env(safe-area-inset-right)) !important;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 72px) !important;
+    max-width: min(380px, calc(100vw - 32px)) !important;
+    max-height: calc(100dvh - 112px) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #app-container.saas-workspace *,
+    #app-container.saas-workspace *::before,
+    #app-container.saas-workspace *::after {
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+    }
+}
+
+/* Studio wizard ---------------------------------------------------------
+   El editor se monta como una única etapa. No depende de la clase global
+   `.hidden`, porque capas visuales heredadas podrían reescribirla. */
+#app-container.saas-workspace .studio-wizard-nav {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding: 14px 16px !important;
+    border-bottom: 1px solid #dfe6f2 !important;
+    background: #ffffff !important;
+}
+
+#app-container.saas-workspace .wizard-step-tab {
+    display: flex !important;
+    align-items: center !important;
+    min-width: 0 !important;
+    min-height: 58px !important;
+    gap: 10px !important;
+    padding: 9px 10px !important;
+    border: 1px solid transparent !important;
+    border-radius: 14px !important;
+    background: transparent !important;
+    color: #64748b !important;
+    cursor: pointer !important;
+    text-align: left !important;
+    touch-action: manipulation;
+    transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease !important;
+}
+
+#app-container.saas-workspace .wizard-step-tab:hover {
+    background: #f4f7fc !important;
+    color: #17233d !important;
+}
+
+#app-container.saas-workspace .wizard-step-tab.is-active {
+    border-color: #b8c8ff !important;
+    background: #edf2ff !important;
+    color: #1e3a8a !important;
+    box-shadow: inset 0 -3px 0 #5b5df6 !important;
+}
+
+#app-container.saas-workspace .wizard-step-index {
+    display: inline-grid !important;
+    flex: 0 0 auto !important;
+    width: 27px !important;
+    height: 27px !important;
+    place-items: center !important;
+    border: 1px solid #d2dbe9 !important;
+    border-radius: 50% !important;
+    background: #f8fafc !important;
+    color: #64748b !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+}
+
+#app-container.saas-workspace .wizard-step-tab.is-active .wizard-step-index {
+    border-color: #3f5bf1 !important;
+    background: #3558eb !important;
+    color: #ffffff !important;
+}
+
+#app-container.saas-workspace .wizard-step-copy {
+    display: grid !important;
+    min-width: 0 !important;
+    gap: 1px !important;
+    font-size: 13px !important;
+    font-weight: 750 !important;
+    line-height: 1.1 !important;
+}
+
+#app-container.saas-workspace .wizard-step-copy small {
+    overflow: hidden !important;
+    color: #94a3b8 !important;
+    font-size: 10px !important;
+    font-weight: 650 !important;
+    letter-spacing: .04em !important;
+    text-overflow: ellipsis !important;
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+}
+
+#app-container.saas-workspace .sidebar-scroll {
+    display: block !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+}
+
+#app-container.saas-workspace .wizard-stage {
+    display: block !important;
+    min-height: 100% !important;
+    padding: 20px 16px 28px !important;
+    isolation: isolate;
+}
+
+#app-container.saas-workspace .wizard-stage > .wizard-panel {
+    display: none !important;
+    margin: 0 !important;
+}
+
+#app-container.saas-workspace .wizard-stage > .wizard-panel[hidden],
+#app-container.saas-workspace .wizard-stage > .wizard-panel.hidden {
+    display: none !important;
+}
+
+#app-container.saas-workspace .wizard-stage > .wizard-panel[data-wizard-active="true"] {
+    display: flex !important;
+    flex-direction: column !important;
+    animation: wizard-panel-in .2s ease both;
+}
+
+#app-container.saas-workspace .wizard-stage > .wizard-panel > .input-group,
+#app-container.saas-workspace .wizard-stage > .wizard-panel > .grid,
+#app-container.saas-workspace .wizard-stage > .wizard-panel > .space-y-3,
+#app-container.saas-workspace .wizard-stage > .wizard-panel > details {
+    min-width: 0 !important;
+}
+
+#app-container.saas-workspace .wizard-step-intro {
+    display: grid !important;
+    gap: 6px !important;
+    margin: 2px 0 4px !important;
+    padding: 2px 2px 12px !important;
+    border-bottom: 1px solid #e5ebf5 !important;
+}
+
+#app-container.saas-workspace .wizard-step-eyebrow {
+    color: #526fe9 !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: .12em !important;
+    text-transform: uppercase !important;
+}
+
+#app-container.saas-workspace .wizard-step-intro h2 {
+    margin: 0 !important;
+    color: #17233d !important;
+    font-size: 20px !important;
+    font-weight: 780 !important;
+    letter-spacing: -.025em !important;
+    line-height: 1.12 !important;
+}
+
+#app-container.saas-workspace .wizard-step-intro p {
+    margin: 0 !important;
+    color: #71809a !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+}
+
+#app-container.saas-workspace .wizard-panel > .space-y-3.p-3,
+#app-container.saas-workspace .wizard-panel > details {
+    background: #f7f9fd !important;
+    border-color: #dfe6f2 !important;
+    box-shadow: none !important;
+}
+
+#app-container.saas-workspace .wizard-panel input,
+#app-container.saas-workspace .wizard-panel select,
+#app-container.saas-workspace .wizard-panel textarea {
+    border-color: #d7e0ef !important;
+    background: #ffffff !important;
+    color: #17233d !important;
+}
+
+#app-container.saas-workspace .wizard-panel input::placeholder,
+#app-container.saas-workspace .wizard-panel textarea::placeholder {
+    color: #8a98ad !important;
+}
+
+#app-container.saas-workspace .sidebar-footer {
+    flex: 0 0 auto !important;
+    border-top: 1px solid #dfe6f2 !important;
+    background: #ffffff !important;
+}
+
+#app-container.saas-workspace .wizard-progress-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr) !important;
+    gap: 10px !important;
+    padding: 12px 16px !important;
+}
+
+#app-container.saas-workspace .wizard-progress-actions[data-editor-step-state="1"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+}
+
+#app-container.saas-workspace .wizard-progress-actions[data-editor-step-state="3"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+}
+
+#app-container.saas-workspace .wizard-back-button,
+#app-container.saas-workspace .wizard-next-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 48px !important;
+    gap: 8px !important;
+    border-radius: 12px !important;
+    font-size: 13px !important;
+    font-weight: 750 !important;
+    letter-spacing: .01em !important;
+    touch-action: manipulation;
+    transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease !important;
+}
+
+#app-container.saas-workspace .wizard-back-button {
+    border: 1px solid #d7e0ef !important;
+    background: #ffffff !important;
+    color: #465873 !important;
+}
+
+#app-container.saas-workspace .wizard-next-button {
+    border: 1px solid #3157e8 !important;
+    background: #3558eb !important;
+    color: #ffffff !important;
+    box-shadow: 0 8px 18px rgba(53, 88, 235, .2) !important;
+}
+
+#app-container.saas-workspace .wizard-next-button span,
+#app-container.saas-workspace .wizard-next-button svg {
+    color: #ffffff !important;
+    stroke: currentColor !important;
+}
+
+#app-container.saas-workspace .wizard-next-button[hidden],
+#app-container.saas-workspace .wizard-progress-actions[data-editor-step-state="3"] .wizard-next-button {
+    display: none !important;
+}
+
+#app-container.saas-workspace .wizard-back-button:hover {
+    background: #f5f8fd !important;
+    border-color: #b8c8df !important;
+}
+
+#app-container.saas-workspace .wizard-next-button:hover {
+    background: #294be0 !important;
+    box-shadow: 0 10px 22px rgba(53, 88, 235, .28) !important;
+    transform: translateY(-1px) !important;
+}
+
+#app-container.saas-workspace .sidebar-actions[hidden] {
+    display: none !important;
+}
+
+#app-container.saas-workspace .wizard-step-tab:focus-visible,
+#app-container.saas-workspace .license-btn:focus-visible,
+#app-container.saas-workspace .wizard-back-button:focus-visible,
+#app-container.saas-workspace .wizard-next-button:focus-visible {
+    outline: 3px solid rgba(53, 88, 235, .42) !important;
+    outline-offset: 3px !important;
+}
+
+@keyframes wizard-panel-in {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 920px) {
+    #app-container.saas-workspace .wizard-stage {
+        min-height: auto !important;
+        padding: 16px 14px 22px !important;
+    }
+
+    #app-container.saas-workspace .studio-wizard-nav {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 23 !important;
+        padding: 10px 12px !important;
+    }
+
+    #app-container.saas-workspace .wizard-step-tab {
+        min-height: 50px !important;
+        justify-content: center !important;
+        padding: 8px 6px !important;
+    }
+
+    #app-container.saas-workspace .wizard-step-copy small {
+        display: none !important;
+    }
+
+    #app-container.saas-workspace .wizard-step-copy {
+        font-size: 12px !important;
+    }
+
+    #app-container.saas-workspace .sidebar-footer {
+        position: sticky !important;
+        bottom: calc(76px + env(safe-area-inset-bottom, 12px)) !important;
+        z-index: 501 !important;
+        box-shadow: 0 -8px 24px rgba(23, 35, 61, .14) !important;
+    }
+
+    #app-container.saas-workspace .wizard-progress-actions {
+        padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+}
+
+@media (max-width: 420px) {
+    #app-container.saas-workspace .wizard-step-index {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 11px !important;
+    }
+}

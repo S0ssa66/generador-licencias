@@ -99,6 +99,17 @@ def run_import():
     existing_beats_names = {b['name'].lower(): b for b in beats if 'name' in b}
     existing_history_refs = {h['refCode']: h for h in history if 'refCode' in h}
 
+    # Crear conjunto de combinaciones (invoice/refCode, beatName) ya importadas para evitar duplicados en re-importaciones
+    existing_history_combos = set()
+    for h in history:
+        ref = h.get('refCode', '')
+        beat = h.get('beatName', '').lower()
+        if ref and beat:
+            existing_history_combos.add((ref, beat))
+            if '-' in ref:
+                base_inv = ref.split('-')[0]
+                existing_history_combos.add((base_inv, beat))
+
     new_contacts_count = 0
     new_beats_count = 0
     new_licenses_count = 0
@@ -187,7 +198,11 @@ def run_import():
                 new_beats_count += 1
 
             # --- C. Importar Licencia al Historial ---
-            # Para facturas multi-item, diferenciamos el código de referencia agregando el nombre del beat si es necesario
+            # Evitar duplicados basados en la combinación (factura, beat)
+            beat_name_lower = cleaned_beat.lower()
+            if (invoice, beat_name_lower) in existing_history_combos:
+                continue  # Ya importado previamente, omitir
+
             ref_code = invoice
             if ref_code in existing_history_refs:
                 # Si ya existe exactamente con esta factura, podría ser otro item de la misma factura
@@ -247,6 +262,8 @@ def run_import():
                 }
                 history.append(new_license)
                 existing_history_refs[ref_code] = new_license
+                existing_history_combos.add((ref_code, beat_name_lower))
+                existing_history_combos.add((invoice, beat_name_lower))
                 new_licenses_count += 1
 
     # Ordenar historial por fecha de forma descendente

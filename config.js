@@ -151,7 +151,8 @@ export const SEED_LICENSES = [
     },
     {
         refCode: "EXCL-BANDIDAJE-TRIP-20240101-ELVIS",
-        date: "2024-01-01",
+        date: "2026-05-16",
+        contractEffectiveDate: "2026-05-16",
         beatName: "Bandidaje & Trip",
         buyerName: "Elvis Alberto Lopez Troya",
         type: "exclusive",
@@ -189,7 +190,7 @@ export const DEFAULT_TEMPLATES = [
 ---
 
 ### Información General del Documento
-* **Código de Referencia:** Invoice # {{ref_code}}
+* **Código de referencia:** {{ref_code}}
 * **Fecha de Entrada en Vigor:** {{effective_date}}
 * **Lugar de Celebración:** {{celebration_place}}
 * **Método de Pago:** {{payment_method}}
@@ -211,7 +212,7 @@ Ambas partes de mutuo acuerdo y con plena capacidad legal para obligarse, suscri
 ### Cláusula 1. Objeto del Contrato y Tarifa de Licencia
 El presente Contrato regula los términos, limitaciones y derechos otorgados sobre el archivo de audio instrumental de propiedad exclusiva del Productor titulado **"{{beat_name}}"** (en adelante, el "Beat").
 
-El otorgamiento de dichos derechos se ejecuta en consideración al pago único e inmediato por parte del Licenciatario de la cantidad de **\${{license_value}} USD** ({{license_value_letters}} dólares de los Estados Unidos de América), denominada como la "Tarifa de Licencia". Los derechos aquí descritos están estrictamente condicionados al pago oportuno y completo de dicha tarifa; el presente documento carece de validez legal si el pago no ha sido procesado de manera efectiva.
+El otorgamiento de dichos derechos se ejecuta en consideración al pago único e inmediato por parte del Licenciatario de la cantidad de **\${{license_value}} USD** ({{license_value_letters}} dólares de los Estados Unidos de América), denominada la "Tarifa de Licencia". Los derechos aquí descritos están estrictamente condicionados al pago oportuno y completo de dicha tarifa; el presente documento no entra en vigor si el pago no ha sido procesado de manera efectiva.
 
 ### Cláusula 2. Entrega del Material Musical
 * **2.1. Formatos de Entrega:** El Licenciante se compromete a entregar el Beat en archivos de audio de alta calidad comercial bajo los formatos **{{clause_formats}}**, de acuerdo con los estándares técnicos vigentes en la industria fonográfica.
@@ -231,9 +232,11 @@ La explotación de la Nueva Canción queda sujeta a los siguientes topes y restr
 
 Si el Licenciatario excede cualquiera de estos límites de reproducción o ventas, la presente licencia se considerará saturada y el Licenciatario estará obligado a adquirir una licencia comercial de rango superior (*upgrade*) para continuar explotando la obra.
 
+{{clause_prior_license_upgrade_rules}}
+
 ### Cláusula 5. Sincronización Audiovisual
-* **5.1. Margen de Sincronización:** Se concede al Licenciatario el derecho no exclusivo de sincronizar la Nueva Canción con imágenes en movimiento para la creación de un máximo de **{{clause_videos}}** independientes (Videos).
-* **5.2. Duración y Difusión:** Cada Video no podrá exceder los **{{clause_video_duration}}** de duración en pantalla (o la duración total de la Nueva Canción si esta fuera mayor). Dichos videos podrán ser distribuídos en redes sociales y plataformas de video digital públicas (como YouTube y Vevo).
+* **5.1. Margen de Sincronización:** Se concede al Licenciatario el derecho no exclusivo de sincronizar la Nueva Canción con imágenes en movimiento hasta el límite de **{{clause_videos}}**. Cada obra audiovisual autorizada se denominará, en adelante, el "Video".
+* **5.2. Duración y Difusión:** Cada Video no podrá exceder los **{{clause_video_duration}}** de duración en pantalla (o la duración total de la Nueva Canción si esta fuera mayor). Dichos videos podrán ser distribuidos en redes sociales y plataformas públicas de video digital (como YouTube y Vevo).
 * **5.3. Sincronización Comercial:** {{clause_sync_rules}}
 
 ### Cláusula 6. Restricciones de Uso y Prohibición de Content ID / Registro Digital
@@ -243,7 +246,7 @@ El Licenciatario se compromete de forma absoluta a cumplir las siguientes prohib
 
 ### Cláusula 7. Propiedad Intelectual y Derechos de Autor (Publishing)
 * **7.1. Propiedad del Master Original:** El Productor retiene la propiedad absoluta, exclusiva y total sobre los derechos de autor del Beat, sus composiciones musicales subyacentes y su grabación sonora original. El Licenciatario bajo ninguna circunstancia registrará o intentará registrar el Beat o la Nueva Canción ante la Oficina de Derechos de Autor local o internacional como obra propia instrumental.
-* **7.2. Derechos de Composición (Writer's Share):** En lo relativo a la obra musical resultante (la Nueva Canción), se establece un porcentaje de división de autoría del **{{clause_writer_share}}% para el Licenciatario ({{buyer_name}})** por sus letras y aportes originales, y un **{{clause_producer_share}}% para el Licenciante ({{producer_name}} / {{producer_aka}})** por la composición musical del Beat (afiliado a la sociedad de gestión **{{producer_pro}}** con número IPI **{{producer_ipi}}** y co-publicado a través de **{{producer_publisher}}**). Este porcentaje aplicará a todas las regalías de composición, incluyendo de manera enunciativa mas no limitativa, regalías mecánicas, regalías de ejecución pública (desempeño / comunicación pública) y regalías de sincronización digital.
+* **7.2. Derechos de Composición (Writer's Share):** En lo relativo a la obra musical resultante (la Nueva Canción), se establece un porcentaje de división de autoría del **{{clause_writer_share}}% para el Licenciatario ({{buyer_name}})** por sus letras y aportes originales, y un **{{clause_producer_share}}% para el Licenciante ({{producer_name}} / {{producer_aka}})** por la composición musical del Beat (afiliado a la sociedad de gestión **{{producer_pro}}** con número IPI **{{producer_ipi}}** y co-publicado a través de **{{producer_publisher}}**). Este porcentaje se aplicará a todas las regalías de composición, incluidas, de manera enunciativa mas no limitativa, las regalías mecánicas, de ejecución y comunicación pública, y de sincronización.
 * **7.3. Derechos de Edición (Publisher's Share):** El Productor poseerá y administrará de forma exclusiva su parte correspondiente de los derechos de edición (Publisher's Share) de la composición musical (equivalente a su porcentaje de participación del **{{clause_producer_share}}%**). Si el Licenciatario realiza el registro de la obra ante su respectiva Sociedad de Gestión Colectiva o PRO (v.g., SAYCO, BMI, ASCAP, SGAE), está obligado por ley a inscribir de forma simultánea la participación y datos del Productor.
 * **7.4. Regalías Mecánicas (Mechanical Royalties):** El pago de la Tarifa de Licencia constituye una licencia de reproducción mecánica pagada únicamente para el número autorizado de copias físicas y descargas permanentes establecido en este contrato. En caso de exceder dichos límites o de requerirse por ley, el Licenciatario deberá pagar las regalías mecánicas adicionales correspondientes a la tasa legal vigente en favor del Productor.
 
@@ -265,9 +268,9 @@ Este acuerdo se rige de forma exclusiva por las leyes de **{{laws_jurisdiction}}
 
 ### Cláusula 13. Consentimiento, Aceptación por Acto de Pago y Medidas de Seguridad
 Las partes acuerdan que el presente contrato puede ser formalizado de manera física, digital o mediante firmas escaneadas intercambiadas por medios electrónicos.
-No obstante, en caso de no mediar una firma manuscrita, el Licenciatario declara haber leído este documento y manifiesta su **aceptación tácita, consentimiento legal y ratificación absoluta** de todos y cada uno de los términos aquí descritos mediante la ejecución del pago de la Tarifa de Licencia (\${{license_value}} USD) y la recepción conforme de los archivos musicales del Beat.
+No obstante, en caso de no mediar una firma manuscrita, el Licenciatario declara haber leído este documento y manifiesta su **aceptación y consentimiento** respecto de todos los términos aquí descritos mediante la ejecución del pago de la Tarifa de Licencia (\${{license_value}} USD) y la recepción conforme de los archivos musicales del Beat.
 
-Como medida de seguridad e integridad contractual, este documento incorpora el logotipo oficial de **{{producer_aka}}** en marca de agua y un código de referencia único Invoice # **{{ref_code}}**. La remoción, ocultamiento o alteración digital de cualquiera de estos elementos de seguridad anula de forma automática e inmediata la validez de la presente licencia y los derechos de explotación sobre el Beat.`,
+Como medida de seguridad e integridad contractual, este documento incorpora el logotipo oficial de **{{producer_aka}}** como marca de agua y el código de referencia único **{{ref_code}}**. Cualquier alteración del contenido contractual o del código de referencia puede invalidar la autenticidad de esta copia y deberá verificarse con el Productor.`,
         markdown_en: `# {{producer_aka}}: {{license_type}} Music License Agreement
 ## {{license_exclusivity}} License Agreement for the Exploitation of the Work "{{beat_name}}"
 
@@ -316,6 +319,8 @@ The exploitation of the New Song is subject to the following quantitative limits
 
 If the Licensee exceeds any of these reproduction or sales limits, this license will be considered saturated and the Licensee will be required to purchase a higher-tier commercial license (*upgrade*) to continue exploiting the work.
 
+{{clause_prior_license_upgrade_rules}}
+
 ### Clause 5. Audiovisual Synchronization
 * **5.1. Synchronization Scope:** The Licensee is granted the non-exclusive right to synchronize the New Song with moving images for the creation of a maximum of **{{clause_videos}}** independent videos (Videos).
 * **5.2. Duration and Broadcast:** Each Video may not exceed **{{clause_video_duration}}** of screen duration (or the total duration of the New Song if it is longer). Such videos may be distributed on social networks and public digital video platforms (such as YouTube and Vevo).
@@ -363,7 +368,7 @@ As a measure of security and contractual integrity, this document incorporates t
 ---
 
 ### Información General del Documento
-* **Código de Referencia:** Invoice # {{ref_code}}
+* **Código de referencia:** {{ref_code}}
 * **Fecha de Celebración:** {{effective_date}}
 * **Lugar de Celebración:** {{celebration_place}}
 
@@ -451,7 +456,7 @@ In any digital, physical medium or social network, co-production credit must be 
 ---
 
 ### Información General del Documento
-* **Código de Referencia:** Invoice # {{ref_code}}
+* **Código de referencia:** {{ref_code}}
 * **Fecha de Celebración:** {{effective_date}}
 * **Lugar de Celebración:** {{celebration_place}}
 

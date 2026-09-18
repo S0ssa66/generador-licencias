@@ -176,9 +176,13 @@ class HandlerGetMixin:
                 return
                 
             ride_path = None
+            ride_pdf_b64 = None
             xml_autorizado_b64 = None
+            payment_entry = None
+            history = []
+            db_data = {}
+            backup_path = os.path.join(DIRECTORY, f'{user}_backup_sincronizado.json')
             try:
-                backup_path = os.path.join(DIRECTORY, f'{user}_backup_sincronizado.json')
                 if os.path.exists(backup_path):
                     with open(backup_path, 'r', encoding='utf-8') as f:
                         db_data = json.load(f)
@@ -187,6 +191,7 @@ class HandlerGetMixin:
                     payment_entry = next((x for x in history if x.get('id') == payment_id or x.get('reference') == payment_id or x.get('refCode') == payment_id), None)
                     if payment_entry:
                         ride_path = payment_entry.get('sriRidePath')
+                        ride_pdf_b64 = payment_entry.get('sriRidePdfB64')
                         if ride_path and not os.path.exists(ride_path):
                             ride_path = None
                         xml_autorizado_b64 = payment_entry.get('sriXmlAutorizadoB64')
@@ -203,6 +208,7 @@ class HandlerGetMixin:
                             doc = json.loads(res.read().decode('utf-8'))
                             fields = doc.get('fields', {})
                             ride_path = fields.get('sriRidePath', {}).get('stringValue')
+                            ride_pdf_b64 = fields.get('sriRidePdfB64', {}).get('stringValue')
                             if ride_path and not os.path.exists(ride_path):
                                 ride_path = None
                             xml_autorizado_b64 = fields.get('sriXmlAutorizadoB64', {}).get('stringValue')
@@ -251,7 +257,7 @@ class HandlerGetMixin:
                     except Exception as e:
                         print(f"Error al auto-recuperar XML de SRI: {e}")
 
-            if not ride_path and not xml_autorizado_b64:
+            if not ride_path and not ride_pdf_b64 and not xml_autorizado_b64:
                 self.send_response(404)
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
@@ -270,6 +276,19 @@ class HandlerGetMixin:
                     return
                 except Exception as e:
                     print(f"Error al servir archivo RIDE: {e}")
+
+            if ride_pdf_b64:
+                try:
+                    pdf_bytes = base64.b64decode(ride_pdf_b64)
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/pdf')
+                    self.send_header('Content-Disposition', f'attachment; filename="Factura_{payment_id}.pdf"')
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.end_headers()
+                    self.wfile.write(pdf_bytes)
+                    return
+                except Exception as e:
+                    print(f"Error al servir RIDE almacenado: {e}")
                     
             if xml_autorizado_b64:
                 try:
@@ -324,8 +343,11 @@ class HandlerGetMixin:
                 return
                 
             xml_autorizado_b64 = None
+            payment_entry = None
+            history = []
+            db_data = {}
+            backup_path = os.path.join(DIRECTORY, f'{user}_backup_sincronizado.json')
             try:
-                backup_path = os.path.join(DIRECTORY, f'{user}_backup_sincronizado.json')
                 if os.path.exists(backup_path):
                     with open(backup_path, 'r', encoding='utf-8') as f:
                         db_data = json.load(f)

@@ -93,6 +93,11 @@ def process_async_task(task_id, id_token):
             print(f"[-] [Worker] Consulta vacía en tarea {task_id}.")
             update_firestore_task(task_id, id_token, "failed", progreso="La consulta de la tarea está vacía.")
             return
+
+        # La memoria del agente debe aislarse por usuario y tarea. Si una tarea
+        # antigua no trae userId, usamos el task_id como aislamiento mínimo en
+        # lugar de mezclarla con la sesión local global.
+        user_id = task.get("userId") or f"task_{task_id}"
             
         # 2. Poner la tarea en procesamiento
         update_firestore_task(task_id, id_token, "processing", progreso="Iniciando motor de agentes...")
@@ -103,7 +108,13 @@ def process_async_task(task_id, id_token):
             update_firestore_task(task_id, id_token, "processing", progreso=msg)
             
         # 4. Ejecutar el pipeline de agentes
-        resultado = agente_coordinador.run_agent_pipeline(consulta, progress_cb)
+        resultado = agente_coordinador.run_agent_pipeline(
+            consulta,
+            progress_cb,
+            user_id=user_id,
+            task_id=task_id,
+            project_id="beatss",
+        )
         
         # 5. Marcar como completada
         print(f"[+] [Worker] Tarea {task_id} completada exitosamente.")
@@ -574,8 +585,18 @@ class HandlerPostMixin:
             from api.payment_handlers import handle_payphone_subscription_confirm
             handle_payphone_subscription_confirm(self, parsed)
         elif parsed.path == '/api/payments/payphone/confirm':
-            from api.payment_handlers import handle_payphone_confirm
-            handle_payphone_confirm(self, parsed)
+            # El confirmador Python anterior escribía compras con referencias
+            # heredadas y no comparte las validaciones canónicas del endpoint
+            # serverless. Para no tener dos lógicas de cobro, el servidor
+            # local no procesa PayPhone: las pruebas y los cobros reales deben
+            # pasar por el endpoint de producción actualizado.
+            self.send_response(410)
+            self.send_header('Content-Type', 'application/json')
+            self.send_cors_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps({
+                "error": "PayPhone no se procesa desde el servidor local. Usa el flujo seguro desplegado."
+            }).encode('utf-8'))
         elif parsed.path == '/api/payments/retry-sri':
             from api.sri_handlers import handle_retry_sri
             handle_retry_sri(self, parsed)

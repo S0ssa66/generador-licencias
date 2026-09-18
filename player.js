@@ -4,6 +4,12 @@ window.currentPlayingBeatId = window.currentPlayingBeatId || null;
 window.currentStoreAudio = window.currentStoreAudio || null;
 window.currentStorePlayingBeatId = window.currentStorePlayingBeatId || null;
 
+// Los previews son masters estéreo ya mezclados. Se conserva margen antes de
+// enviarlos a los altavoces para que un archivo masterizado cerca de 0 dBFS no
+// clippee al reproducirse desde la tienda.
+export const DEFAULT_STORE_PREVIEW_VOLUME = 0.7;
+const STORE_PREVIEW_MASTER_HEADROOM = 0.78;
+
 // Helper to update Media Session API metadata and action handlers
 export function updateMediaSession(beat, isStore) {
     if (!('mediaSession' in navigator)) return;
@@ -12,14 +18,14 @@ export function updateMediaSession(beat, isStore) {
         const producerAka = window.producerConfig ? (window.producerConfig.aka || window.producerConfig.name || 'Productor') : 'Productor';
         const artworkUrl = typeof window.getBeatArtwork === 'function' 
             ? window.getBeatArtwork(beat) 
-            : '/logo-sossa.png';
+            : '/logo.png';
 
         navigator.mediaSession.metadata = new MediaMetadata({
             title: beat.name || 'Beat Preview',
             artist: producerAka,
             album: isStore ? 'BEATSS Tienda' : 'BEATSS Catálogo',
             artwork: [
-                { src: artworkUrl || '/logo-sossa.png', sizes: '512x512', type: 'image/png' }
+                { src: artworkUrl || '/logo.png', sizes: '512x512', type: 'image/png' }
             ]
         });
 
@@ -180,11 +186,9 @@ export function toggleStorePlay(beatId) {
 
     if (window.currentStorePlayingBeatId === beatId) {
         if (window.currentStoreAudio.paused) {
+            initWebAudioMixer(window.currentStoreAudio);
+            resumeStoreAudioContext();
             window.currentStoreAudio.play().then(() => {
-                if (window.storeAudioCtx && window.storeAudioCtx.state === 'suspended') {
-                    window.storeAudioCtx.resume();
-                }
-                initWebAudioMixer(window.currentStoreAudio);
                 if ('mediaSession' in navigator) {
                     navigator.mediaSession.playbackState = 'playing';
                     updateMediaSession(beat, true);
@@ -216,7 +220,7 @@ export function toggleStorePlay(beatId) {
         }
             
         window.currentStoreAudio = new Audio(directLink);
-        window.currentStoreAudio.volume = parseFloat(volumeSlider.value || 0.8);
+        window.currentStoreAudio.volume = getSafeStorePreviewVolume(volumeSlider?.value);
 
         window.currentStoreAudio.addEventListener('error', (e) => {
             const err = window.currentStoreAudio.error;
@@ -269,11 +273,11 @@ export function toggleStorePlay(beatId) {
             }
         };
 
+        // Conectar el audio antes de iniciar la reproducción evita un primer
+        // instante sin el margen de seguridad del reproductor.
+        initWebAudioMixer(window.currentStoreAudio);
+        resumeStoreAudioContext();
         window.currentStoreAudio.play().then(() => {
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            initWebAudioMixer(window.currentStoreAudio);
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.playbackState = 'playing';
                 updateMediaSession(beat, true);
@@ -312,7 +316,7 @@ export function setupStoreAudioPlayer() {
 
     volumeSlider.addEventListener('input', (e) => {
         if (window.currentStoreAudio) {
-            window.currentStoreAudio.volume = parseFloat(e.target.value);
+            window.currentStoreAudio.volume = getSafeStorePreviewVolume(e.target.value);
         }
     });
 
@@ -323,6 +327,20 @@ export function setupStoreAudioPlayer() {
             const d = window.currentStoreAudio.duration;
             const maxDuration = (!d || d === Infinity || isNaN(d) || d > 30) ? 30 : d;
             window.currentStoreAudio.currentTime = percentage * maxDuration;
+        }
+    });
+
+    progressContainer.addEventListener('keydown', (event) => {
+        if (!window.currentStoreAudio || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const d = window.currentStoreAudio.duration;
+        const maxDuration = (!d || d === Infinity || isNaN(d) || d > 30) ? 30 : d;
+        const currentTime = window.currentStoreAudio.currentTime;
+        if (event.key === 'Home') window.currentStoreAudio.currentTime = 0;
+        else if (event.key === 'End') window.currentStoreAudio.currentTime = maxDuration;
+        else {
+            const delta = event.key === 'ArrowRight' ? 5 : -5;
+            window.currentStoreAudio.currentTime = Math.min(maxDuration, Math.max(0, currentTime + delta));
         }
     });
 }
@@ -394,26 +412,42 @@ export function updatePlayerProgress() {
         if (progressBar) {
             progressBar.style.width = `${percent}%`;
         }
+        const progressContainer = document.getElementById('player-progress-container');
+        if (progressContainer) {
+            progressContainer.setAttribute('aria-valuenow', String(Math.floor(window.currentStoreAudio.currentTime)));
+            progressContainer.setAttribute('aria-valuetext', `${formatAudioTime(window.currentStoreAudio.currentTime)} de ${formatAudioTime(maxDuration)}`);
+        }
         
         // Actualizar el visualizador de barra de progreso en forma de onda (Waveform)
         const visualizer = document.getElementById('player-waveform-visualizer');
         if (visualizer) {
-            const bars = visualizer.getElementsByClassName('waveform-bar');
-            const activeIndex = Math.floor((percent / 100) * bars.length);
             const isPlaying = !window.currentStoreAudio.paused;
-            
-            for (let i = 0; i < bars.length; i++) {
-                if (i <= activeIndex) {
-                    bars[i].classList.add('active');
-                } else {
-                    bars[i].classList.remove('active');
-                }
-                
-                // Si es la barra del playhead actual y el reproductor está activo, hacerla rebotar
-                if (i === activeIndex && isPlaying) {
-                    bars[i].classList.add('playing');
-                } else {
-                    bars[i].classList.remove('playing');
+            // Cachear elementos DOM en el visualizador para evitar búsquedas repetitivas
+            if (!visualizer._cachedBars) {
+                visualizer._cachedBars = Array.from(visualizer.getElementsByClassName('waveform-bar'));
+            }
+            const bars = visualizer._cachedBars;
+            const activeIndex = Math.min(Math.floor((percent / 100) * bars.length), bars.length - 1);
+
+            const lastActiveIndex = visualizer._lastActiveIndex;
+            const lastIsPlaying = visualizer._lastIsPlaying;
+
+            // Solo actualizar clases si cambió el índice activo o el estado de reproducción
+            if (activeIndex !== lastActiveIndex || isPlaying !== lastIsPlaying) {
+                visualizer._lastActiveIndex = activeIndex;
+                visualizer._lastIsPlaying = isPlaying;
+
+                for (let i = 0; i < bars.length; i++) {
+                    const bar = bars[i];
+                    const shouldBeActive = i <= activeIndex;
+                    const shouldBePlaying = i === activeIndex && isPlaying;
+
+                    if (shouldBeActive !== bar.classList.contains('active')) {
+                        bar.classList.toggle('active', shouldBeActive);
+                    }
+                    if (shouldBePlaying !== bar.classList.contains('playing')) {
+                        bar.classList.toggle('playing', shouldBePlaying);
+                    }
                 }
             }
         }
@@ -481,7 +515,21 @@ export function setPlayButtonState(beatId, isPlaying) {
         }
     });
 
-    if (window.lucide) window.lucide.createIcons();
+    // Optimización Lucide: limitar escaneo a elementos modificados
+    if (window.lucide) {
+        window.lucide.createIcons({ root: playBtn });
+        if (cardBtn) window.lucide.createIcons({ root: cardBtn });
+        if (globalCardBtn) window.lucide.createIcons({ root: globalCardBtn });
+
+        beatsList.forEach(b => {
+            if (b.id !== beatId) {
+                const otherBtn = document.getElementById(`btn-play-store-${b.id}`);
+                if (otherBtn) window.lucide.createIcons({ root: otherBtn });
+                const otherGlobalBtn = document.getElementById(`btn-play-global-${b.id}`);
+                if (otherGlobalBtn) window.lucide.createIcons({ root: otherGlobalBtn });
+            }
+        });
+    }
 }
 
 // Bind to window for index.html inline access and compatibility
@@ -498,56 +546,54 @@ window.setPlayButtonState = setPlayButtonState;
 window.updateMediaSession = updateMediaSession;
 
 // ==========================================================================
-// PROCESADOR MULTI-PISTA STEMS CON WEB AUDIO API
+// RUTA DE ESCUCHA DE PREVIEWS
 // ==========================================================================
+// Un preview de tienda es una mezcla estéreo, no un juego de stems. La ruta
+// debe conservar ese master y no sumar copias filtradas de la misma señal.
 let audioCtx = null;
 let sourceNode = null;
-let lowpassFilter = null;
-let bandpassFilter = null;
-let highpassFilter = null;
-let gainNodeLows = null;
-let gainNodeMids = null;
-let gainNodeHighs = null;
-let gainNodeOriginal = null;
 let masterGain = null;
+let peakLimiter = null;
+let connectedAudioElement = null;
 
-// Nodos DSP para efectos
-let convolverNode = null;
-let reverbGain = null;
-let delayNode = null;
-let delayFeedback = null;
-let delayGain = null;
+function getSafeStorePreviewVolume(value) {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) return DEFAULT_STORE_PREVIEW_VOLUME;
+    return Math.min(1, Math.max(0, parsed));
+}
 
-let reverbEnabled = false;
-let delayEnabled = false;
-let currentReverbWet = 0.0;
-let currentDelayFeedback = 0.0;
-
-const muteStates = { 1: false, 2: false, 3: false, 4: false };
-const originalGainValues = { 1: 1.0, 2: 1.0, 3: 1.0, 4: 1.0 };
-
-function createReverbImpulseResponse(context, seconds, decay) {
-    const rate = context.sampleRate;
-    const length = rate * seconds;
-    const impulse = context.createBuffer(2, length, rate);
-    const left = impulse.getChannelData(0);
-    const right = impulse.getChannelData(1);
-
-    for (let i = 0; i < length; i++) {
-        const decayValue = Math.exp(-i * decay / rate);
-        // Generar ruido blanco con atenuación exponencial
-        left[i] = (Math.random() * 2 - 1) * decayValue;
-        right[i] = (Math.random() * 2 - 1) * decayValue;
+function safelyDisconnect(node) {
+    if (!node) return;
+    try {
+        node.disconnect();
+    } catch (_) {
+        // Algunos navegadores rechazan desconectar un nodo ya liberado.
     }
-    return impulse;
+}
+
+function disconnectPreviousStoreAudioGraph() {
+    safelyDisconnect(sourceNode);
+    safelyDisconnect(masterGain);
+    safelyDisconnect(peakLimiter);
+    sourceNode = null;
+    masterGain = null;
+    peakLimiter = null;
+    connectedAudioElement = null;
+    window._currentConnectedAudio = null;
+}
+
+function resumeStoreAudioContext() {
+    if (!audioCtx || audioCtx.state !== 'suspended') return;
+    audioCtx.resume().catch(() => {
+        // El siguiente gesto del usuario puede reanudar el contexto.
+    });
 }
 
 export function initWebAudioMixer(audioElement) {
-    if (!audioElement) return;
-    
-    // Evitar reinicializar si el elemento de audio actual ya está conectado
-    if (window._currentConnectedAudio === audioElement) return;
-    window._currentConnectedAudio = audioElement;
+    if (!audioElement || !(window.AudioContext || window.webkitAudioContext)) return;
+
+    // Al reanudar el mismo preview no se crea un segundo MediaElementSource.
+    if (connectedAudioElement === audioElement && sourceNode && masterGain && peakLimiter) return;
 
     try {
         if (!audioCtx) {
@@ -555,262 +601,32 @@ export function initWebAudioMixer(audioElement) {
             window.storeAudioCtx = audioCtx;
         }
 
-        // Si ya había una fuente conectada, desconectarla para evitar fugas de memoria
-        if (sourceNode) {
-            try { sourceNode.disconnect(); } catch(e){}
-        }
-        if (masterGain) {
-            try { masterGain.disconnect(); } catch(e){}
-        }
-        if (reverbGain) {
-            try { reverbGain.disconnect(); } catch(e){}
-        }
-        if (delayGain) {
-            try { delayGain.disconnect(); } catch(e){}
-        }
-        if (delayFeedback) {
-            try { delayFeedback.disconnect(); } catch(e){}
-        }
+        disconnectPreviousStoreAudioGraph();
 
         sourceNode = audioCtx.createMediaElementSource(audioElement);
-
-        // Crear filtros divisores de frecuencias
-        // 1. Lowpass a 250Hz (Graves)
-        lowpassFilter = audioCtx.createBiquadFilter();
-        lowpassFilter.type = 'lowpass';
-        lowpassFilter.frequency.value = 250;
-
-        // 2. Bandpass (Medios)
-        bandpassFilter = audioCtx.createBiquadFilter();
-        bandpassFilter.type = 'bandpass';
-        bandpassFilter.frequency.value = 1500; // Centro en 1.5kHz
-        bandpassFilter.Q.value = 0.5;
-
-        // 3. Highpass a 3000Hz (Agudos)
-        highpassFilter = audioCtx.createBiquadFilter();
-        highpassFilter.type = 'highpass';
-        highpassFilter.frequency.value = 3000;
-
-        // Crear Nodos de Ganancia para cada canal
-        gainNodeLows = audioCtx.createGain();
-        gainNodeMids = audioCtx.createGain();
-        gainNodeHighs = audioCtx.createGain();
-        gainNodeOriginal = audioCtx.createGain();
         masterGain = audioCtx.createGain();
+        peakLimiter = audioCtx.createDynamicsCompressor();
 
-        // Valores iniciales de ganancia
-        gainNodeLows.gain.value = muteStates[1] ? 0 : parseFloat(document.getElementById('mixer-fader-1')?.value || 1.0);
-        gainNodeMids.gain.value = muteStates[2] ? 0 : parseFloat(document.getElementById('mixer-fader-2')?.value || 1.0);
-        gainNodeHighs.gain.value = muteStates[3] ? 0 : parseFloat(document.getElementById('mixer-fader-3')?.value || 1.0);
-        gainNodeOriginal.gain.value = muteStates[4] ? 0 : parseFloat(document.getElementById('mixer-fader-4')?.value || 1.0);
-        masterGain.gain.value = 1.0;
+        // -2.2 dB de margen antes de la salida. El limitador sólo interviene
+        // si el usuario eleva el volumen y aparecen picos anómalos.
+        masterGain.gain.value = STORE_PREVIEW_MASTER_HEADROOM;
+        peakLimiter.threshold.value = -2;
+        peakLimiter.knee.value = 0;
+        peakLimiter.ratio.value = 20;
+        peakLimiter.attack.value = 0.003;
+        peakLimiter.release.value = 0.1;
 
-        // Conectar el grafo de audio
-        // Conexiones de entrada
-        sourceNode.connect(lowpassFilter);
-        sourceNode.connect(bandpassFilter);
-        sourceNode.connect(highpassFilter);
-        sourceNode.connect(gainNodeOriginal); // Señal original limpia
+        sourceNode.connect(masterGain);
+        masterGain.connect(peakLimiter);
+        peakLimiter.connect(audioCtx.destination);
 
-        // Conectar filtros a sus ganancias
-        lowpassFilter.connect(gainNodeLows);
-        bandpassFilter.connect(gainNodeMids);
-        highpassFilter.connect(gainNodeHighs);
-
-        // Conectar todo al master gain
-        gainNodeLows.connect(masterGain);
-        gainNodeMids.connect(masterGain);
-        gainNodeHighs.connect(masterGain);
-        gainNodeOriginal.connect(masterGain);
-
-        // Conectar al destino del contexto (Altavoces)
-        masterGain.connect(audioCtx.destination);
-
-        // --- Configuración e Inicialización de Nodos DSP ---
-        
-        // 1. Reverb (Convolver)
-        convolverNode = audioCtx.createConvolver();
-        convolverNode.buffer = createReverbImpulseResponse(audioCtx, 2.0, 2.0); // 2s de decaimiento
-        reverbGain = audioCtx.createGain();
-        reverbGain.gain.value = reverbEnabled ? currentReverbWet : 0.0;
-
-        masterGain.connect(convolverNode);
-        convolverNode.connect(reverbGain);
-        reverbGain.connect(audioCtx.destination);
-
-        // 2. Eco / Delay
-        delayNode = audioCtx.createDelay(1.0); // Máximo 1.0s de retraso
-        delayNode.delayTime.value = 0.35; // 350ms
-        delayFeedback = audioCtx.createGain();
-        delayFeedback.gain.value = delayEnabled ? currentDelayFeedback : 0.0;
-        delayGain = audioCtx.createGain();
-        delayGain.gain.value = delayEnabled ? (currentDelayFeedback * 0.5) : 0.0;
-
-        masterGain.connect(delayNode);
-        delayNode.connect(delayFeedback);
-        delayFeedback.connect(delayNode); // Bucle de retroalimentación
-        delayNode.connect(delayGain);
-        delayGain.connect(audioCtx.destination);
-
-        console.log("🎛️ Web Audio API Mixer & Nodos DSP de Efectos Inicializados con Éxito");
-
-    } catch (e) {
-        console.warn("No se pudo iniciar Web Audio API o sus efectos:", e);
+        connectedAudioElement = audioElement;
+        window._currentConnectedAudio = audioElement;
+    } catch (error) {
+        disconnectPreviousStoreAudioGraph();
+        console.warn('No se pudo iniciar la ruta segura de audio del preview:', error);
     }
 }
-
-window.setMixerGain = function(channel, value) {
-    const val = parseFloat(value);
-    originalGainValues[channel] = val;
-    if (muteStates[channel]) return; // Si está muteado, mantener en cero
-
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-
-    if (channel === 1 && gainNodeLows) gainNodeLows.gain.linearRampToValueAtTime(val, audioCtx.currentTime + 0.05);
-    if (channel === 2 && gainNodeMids) gainNodeMids.gain.linearRampToValueAtTime(val, audioCtx.currentTime + 0.05);
-    if (channel === 3 && gainNodeHighs) gainNodeHighs.gain.linearRampToValueAtTime(val, audioCtx.currentTime + 0.05);
-    if (channel === 4 && gainNodeOriginal) gainNodeOriginal.gain.linearRampToValueAtTime(val, audioCtx.currentTime + 0.05);
-};
-
-window.toggleMixerMute = function(channel) {
-    const btn = document.getElementById(`mixer-mute-${channel}`);
-    if (!btn) return;
-
-    muteStates[channel] = !muteStates[channel];
-
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-
-    const targetGainValue = muteStates[channel] ? 0 : originalGainValues[channel];
-
-    if (channel === 1 && gainNodeLows) gainNodeLows.gain.linearRampToValueAtTime(targetGainValue, audioCtx.currentTime + 0.05);
-    if (channel === 2 && gainNodeMids) gainNodeMids.gain.linearRampToValueAtTime(targetGainValue, audioCtx.currentTime + 0.05);
-    if (channel === 3 && gainNodeHighs) gainNodeHighs.gain.linearRampToValueAtTime(targetGainValue, audioCtx.currentTime + 0.05);
-    if (channel === 4 && gainNodeOriginal) gainNodeOriginal.gain.linearRampToValueAtTime(targetGainValue, audioCtx.currentTime + 0.05);
-
-    if (muteStates[channel]) {
-        btn.classList.add('mute-active');
-        btn.innerHTML = '<i data-lucide="volume-x" style="width: 14px; height: 14px;"></i>';
-    } else {
-        btn.classList.remove('mute-active');
-        btn.innerHTML = '<i data-lucide="volume-2" style="width: 14px; height: 14px;"></i>';
-    }
-    if (window.lucide) window.lucide.createIcons({root: btn});
-};
-
-window.toggleMixerPanel = function() {
-    const panel = document.getElementById('store-mixer-panel');
-    const btn = document.getElementById('player-btn-mixer');
-    if (!panel || !btn) return;
-
-    if (panel.style.display === 'none') {
-        panel.style.display = 'block';
-        btn.classList.add('active-mixer');
-        
-        // Reanudar el AudioContext si es necesario
-        if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-    } else {
-        panel.style.display = 'none';
-        btn.classList.remove('active-mixer');
-    }
-};
-
-window.setMixerEffect = function(effect, value) {
-    const val = parseFloat(value);
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-
-    if (effect === 'reverb') {
-        currentReverbWet = val;
-        if (val > 0 && !reverbEnabled) {
-            reverbEnabled = true;
-            const btn = document.getElementById('mixer-reverb-toggle');
-            if (btn) {
-                btn.classList.add('effect-active');
-                btn.style.color = 'var(--accent, #00ccff)';
-            }
-        }
-        if (reverbGain && reverbEnabled) {
-            reverbGain.gain.linearRampToValueAtTime(val, audioCtx.currentTime + 0.05);
-        }
-    } else if (effect === 'delay') {
-        currentDelayFeedback = val;
-        if (val > 0 && !delayEnabled) {
-            delayEnabled = true;
-            const btn = document.getElementById('mixer-delay-toggle');
-            if (btn) {
-                btn.classList.add('effect-active');
-                btn.style.color = 'var(--accent, #00ccff)';
-            }
-        }
-        if (delayFeedback && delayGain && delayEnabled) {
-            delayFeedback.gain.linearRampToValueAtTime(val, audioCtx.currentTime + 0.05);
-            delayGain.gain.linearRampToValueAtTime(val * 0.5, audioCtx.currentTime + 0.05);
-        }
-    }
-};
-
-window.toggleMixerEffect = function(effect) {
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-
-    if (effect === 'reverb') {
-        reverbEnabled = !reverbEnabled;
-        if (reverbEnabled && currentReverbWet === 0.0) {
-            currentReverbWet = 0.5;
-            const slider = document.getElementById('mixer-reverb-wet');
-            if (slider) slider.value = 0.5;
-        }
-        const btn = document.getElementById('mixer-reverb-toggle');
-        const targetWet = reverbEnabled ? currentReverbWet : 0.0;
-        
-        if (reverbGain) {
-            reverbGain.gain.linearRampToValueAtTime(targetWet, audioCtx.currentTime + 0.05);
-        }
-
-        if (btn) {
-            if (reverbEnabled) {
-                btn.classList.add('effect-active');
-                btn.style.color = 'var(--accent, #00ccff)';
-            } else {
-                btn.classList.remove('effect-active');
-                btn.style.color = '#8a91a6';
-            }
-        }
-    } else if (effect === 'delay') {
-        delayEnabled = !delayEnabled;
-        if (delayEnabled && currentDelayFeedback === 0.0) {
-            currentDelayFeedback = 0.4;
-            const slider = document.getElementById('mixer-delay-feedback');
-            if (slider) slider.value = 0.4;
-        }
-        const btn = document.getElementById('mixer-delay-toggle');
-        const targetFeedback = delayEnabled ? currentDelayFeedback : 0.0;
-        const targetGain = delayEnabled ? (currentDelayFeedback * 0.5) : 0.0;
-
-        if (delayFeedback && delayGain) {
-            delayFeedback.gain.linearRampToValueAtTime(targetFeedback, audioCtx.currentTime + 0.05);
-            delayGain.gain.linearRampToValueAtTime(targetGain, audioCtx.currentTime + 0.05);
-        }
-
-        if (btn) {
-            if (delayEnabled) {
-                btn.classList.add('effect-active');
-                btn.style.color = 'var(--accent, #00ccff)';
-            } else {
-                btn.classList.remove('effect-active');
-                btn.style.color = '#8a91a6';
-            }
-        }
-    }
-};
 
 window.initWebAudioMixer = initWebAudioMixer;
 
@@ -829,17 +645,22 @@ export function initializeWaveformVisualizer() {
         if (oldBar) {
             oldBar.style.display = 'none';
         }
-        
+
         container.appendChild(visualizer);
     }
-    
+
     visualizer.innerHTML = '';
-    
-    // Generar 60 barras de onda con alturas variables coherentes
+
+    // Resetear la caché de barras y estados para la nueva reproducción
+    visualizer._cachedBars = null;
+    visualizer._lastActiveIndex = -1;
+    visualizer._lastIsPlaying = null;
+
+    // Generar 65 barras de onda con alturas variables coherentes
     const numBars = 65;
     // Semilla pseudo-aleatoria basada en el ID del beat para que cada beat tenga su propia "huella de audio" visual única
     let seed = window.currentStorePlayingBeatId ? parseInt(String(window.currentStorePlayingBeatId).replace(/[^0-9]/g, '')) || 42 : 42;
-    
+
     for (let i = 0; i < numBars; i++) {
         // Generar altura pseudo-aleatoria suave
         seed = (seed * 9301 + 49297) % 233280;
@@ -855,4 +676,3 @@ export function initializeWaveformVisualizer() {
 }
 
 window.initializeWaveformVisualizer = initializeWaveformVisualizer;
-
