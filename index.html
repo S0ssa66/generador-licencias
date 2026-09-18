@@ -1835,68 +1835,78 @@
 
             <!-- Tab Content: Contabilidad General (Solo Admin Sossa) -->
             <div class="tab-content" id="tab-admin" hidden aria-hidden="true">
-                <!-- Header Card -->
+                <!-- Header Card Ultra-Compacto -->
                 <div class="admin-header-card">
                     <div class="admin-header-main">
-                        <div class="admin-header-eyebrow">
-                            <i data-lucide="crown" style="width: 14px; height: 14px;"></i>
-                            <span>Admin Sossa</span>
+                        <div class="admin-header-title-row">
+                            <h2 class="admin-header-title">
+                                Contabilidad y Operaciones Globales
+                            </h2>
+                            <span class="admin-status-pill">
+                                <span class="admin-status-dot"></span>
+                                Producción Activa
+                            </span>
                         </div>
-                        <h2 class="admin-header-title">
-                            Contabilidad y Operaciones Globales
-                        </h2>
                         <p class="admin-header-subtitle">
-                            Monitorea el GMV consolidado, suscripciones SaaS activas, pagos pendientes y la salud operativa del ecosistema.
+                            Consolidado de GMV, licencias multi-productor, suscripciones SaaS y control de operaciones.
                         </p>
                     </div>
                     <div class="admin-header-actions">
                         <button type="button" class="admin-btn-refresh" id="btn-admin-refresh" title="Recargar todos los datos desde la nube">
                             <i data-lucide="refresh-cw"></i>
-                            <span>Actualizar Datos</span>
+                            <span>Actualizar</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Resumen Consolidado (KPIs) -->
-                <div class="admin-stats-grid" id="admin-stats-container">
-                    <div class="admin-stat-card admin-stat-card--gmv">
-                        <div class="admin-stat-icon">
+                <!-- Resumen Consolidado (Telemetry Ribbon) -->
+                <div class="admin-kpi-strip" id="admin-stats-container">
+                    <div class="admin-kpi-item admin-kpi-item--gmv">
+                        <div class="admin-kpi-icon">
                             <i data-lucide="banknote"></i>
                         </div>
-                        <div class="admin-stat-info">
-                            <span class="admin-stat-label">Volumen Beats (GMV)</span>
-                            <h3 class="admin-stat-value" id="admin-stat-total-collected">$0.00</h3>
-                            <span class="admin-stat-subtext">Total transaccionado en licencias</span>
+                        <div class="admin-kpi-data">
+                            <span class="admin-kpi-label">Volumen Beats (GMV)</span>
+                            <div class="admin-kpi-value-row">
+                                <span class="admin-kpi-value" id="admin-stat-total-collected">$0.00</span>
+                                <span class="admin-kpi-subtext">Total red</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="admin-stat-card admin-stat-card--saas">
-                        <div class="admin-stat-icon">
+                    <div class="admin-kpi-item admin-kpi-item--saas">
+                        <div class="admin-kpi-icon">
                             <i data-lucide="shield-check"></i>
                         </div>
-                        <div class="admin-stat-info">
-                            <span class="admin-stat-label">Ingresos SaaS (Plataforma)</span>
-                            <h3 class="admin-stat-value" id="admin-stat-total-saas">$0.00</h3>
-                            <span class="admin-stat-subtext">Planes Pro y Elite recaudados</span>
+                        <div class="admin-kpi-data">
+                            <span class="admin-kpi-label">Ingresos SaaS</span>
+                            <div class="admin-kpi-value-row">
+                                <span class="admin-kpi-value" id="admin-stat-total-saas">$0.00</span>
+                                <span class="admin-kpi-subtext">Pro & Elite</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="admin-stat-card admin-stat-card--licenses">
-                        <div class="admin-stat-icon">
+                    <div class="admin-kpi-item admin-kpi-item--licenses">
+                        <div class="admin-kpi-icon">
                             <i data-lucide="files"></i>
                         </div>
-                        <div class="admin-stat-info">
-                            <span class="admin-stat-label">Licencias (Global)</span>
-                            <h3 class="admin-stat-value" id="admin-stat-total-licenses">0</h3>
-                            <span class="admin-stat-subtext">Contratos emitidos en red</span>
+                        <div class="admin-kpi-data">
+                            <span class="admin-kpi-label">Licencias Emitidas</span>
+                            <div class="admin-kpi-value-row">
+                                <span class="admin-kpi-value" id="admin-stat-total-licenses">0</span>
+                                <span class="admin-kpi-subtext">Contratos</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="admin-stat-card admin-stat-card--producers">
-                        <div class="admin-stat-icon">
+                    <div class="admin-kpi-item admin-kpi-item--producers">
+                        <div class="admin-kpi-icon">
                             <i data-lucide="users"></i>
                         </div>
-                        <div class="admin-stat-info">
-                            <span class="admin-stat-label">Productores</span>
-                            <h3 class="admin-stat-value" id="admin-stat-total-users">0</h3>
-                            <span class="admin-stat-subtext">Cuentas registradas</span>
+                        <div class="admin-kpi-data">
+                            <span class="admin-kpi-label">Productores</span>
+                            <div class="admin-kpi-value-row">
+                                <span class="admin-kpi-value" id="admin-stat-total-users">0</span>
+                                <span class="admin-kpi-subtext">Registrados</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1909,7 +1919,7 @@
                     </button>
                     <button type="button" class="admin-nav-pill" data-admin-view="analytics">
                         <i data-lucide="bar-chart-3"></i>
-                        <span>Rendimiento & Analíticas</span>
+                        <span>Rendimiento</span>
                     </button>
                     <button type="button" class="admin-nav-pill" data-admin-view="payments">
                         <i data-lucide="clock"></i>
@@ -1937,7 +1947,7 @@
                 <!-- Sección 1: Analíticas Avanzadas & Rendimiento -->
                 <div class="admin-section" id="admin-section-analytics" data-section-name="analytics">
                     <div class="admin-analytics-layout">
-                        <!-- Columna Izquierda: Ventas por Productor -->
+                        <!-- Columna Izquierda: Rendimiento por Productor -->
                         <div class="admin-panel" id="admin-producer-analytics">
                             <div class="admin-panel-header">
                                 <div>
@@ -1955,53 +1965,48 @@
                                         <option value="pro">Pro ⚡</option>
                                         <option value="elite">Elite 👑</option>
                                     </select>
+                                    <div class="admin-view-switcher" role="group" aria-label="Cambiar formato de visualización">
+                                        <button type="button" class="admin-view-btn active" id="btn-admin-view-table" title="Vista en tabla">
+                                            <i data-lucide="table-2"></i>
+                                            <span>Tabla</span>
+                                        </button>
+                                        <button type="button" class="admin-view-btn" id="btn-admin-view-cards" title="Vista en tarjetas">
+                                            <i data-lucide="layout-grid"></i>
+                                            <span>Tarjetas</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="producer-stats-grid" id="admin-producer-stats-grid">
-                                <div class="producer-analytics-card">
-                                    <div class="producer-card-header">
-                                        <div class="producer-card-identity">
-                                            <h4 class="producer-card-aka" title="Sossa (Principal)">Sossa (Principal)</h4>
-                                            <span class="producer-card-email" title="admin@sossamusic.com">admin@sossamusic.com</span>
-                                        </div>
-                                        <span class="admin-plan-badge admin-plan-badge--elite">ELITE 👑</span>
-                                    </div>
-                                    
-                                    <div class="producer-metrics-row">
-                                        <div class="producer-metric-box">
-                                            <span class="producer-metric-label">Facturado</span>
-                                            <span class="producer-metric-val-sales" id="admin-card-sossa-sales">$0.00</span>
-                                        </div>
-                                        <div class="producer-metric-box">
-                                            <span class="producer-metric-label">Licencias</span>
-                                            <span class="producer-metric-val-count" id="admin-card-sossa-lic">0</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="producer-secondary-row">
-                                        <span>Ticket: <strong>$0.0</strong></span>
-                                        <span>SRI: <strong style="color: var(--adm-green);">Activo</strong></span>
-                                    </div>
 
-                                    <div class="breakdown-row" style="margin-top: 2px;">
-                                        <div class="breakdown-info">
-                                            <span class="breakdown-label" style="font-size: 11px; color: var(--adm-muted);">Cuota GMV</span>
-                                            <span class="breakdown-value" style="font-size: 11px; color: var(--adm-ink);">100%</span>
-                                        </div>
-                                        <div class="admin-progress-container">
-                                            <div class="admin-progress-bar" style="width: 100%; background: linear-gradient(90deg, #3157e8, #10b981);"></div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="producer-active-date">
-                                        Activo: Productor Principal Verificado
-                                    </div>
-                                </div>
+                            <!-- Vista Tabla Compacta (Principal) -->
+                            <div class="admin-table-container" id="admin-producers-table-wrap">
+                                <table class="admin-producers-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Productor</th>
+                                            <th>Plan</th>
+                                            <th style="text-align: right;">Facturado</th>
+                                            <th style="text-align: center;">Licencias</th>
+                                            <th style="text-align: right;">Ticket</th>
+                                            <th>Favorita</th>
+                                            <th>Cuota GMV</th>
+                                            <th>Última Actividad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-producers-table-body">
+                                        <!-- Generado dinámicamente -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Vista Tarjetas Compactas (Alternativo) -->
+                            <div class="producer-stats-grid" id="admin-producer-stats-grid" style="display: none;">
+                                <!-- Generado dinámicamente -->
                             </div>
                         </div>
 
                         <!-- Columna Derecha: Métodos de Pago y Distribución de Planes -->
-                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <div style="display: flex; flex-direction: column; gap: 14px;">
                             <!-- Métodos de Pago -->
                             <div class="admin-panel" style="flex: 1;">
                                 <div class="admin-panel-header">

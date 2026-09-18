@@ -237,14 +237,78 @@ export default async function handler(req, res) {
         });
 
         // 5. Obtener licencias consolidadas (collectionGroup 'licencias')
+        const sossaProducer = producerConfigs.find(p => {
+            const em = (p.email || '').toLowerCase();
+            return SOSSA_ADMIN_EMAILS.includes(em) || p.userId === decodedToken.uid;
+        }) || producerConfigs[0];
+        const sossaUid = sossaProducer?.userId || decodedToken.uid;
+
         const licSnap = await db.collectionGroup('licencias').get();
         const allLicenses = [];
         licSnap.forEach(doc => {
-            const data = doc.data();
+            const data = doc.data() || {};
             const pathSegments = doc.ref.path.split('/');
-            const userId = (pathSegments.length >= 2 && pathSegments[0] === 'users')
+            let userId = (pathSegments.length >= 2 && pathSegments[0] === 'users')
                 ? pathSegments[1]
                 : (doc.ref.parent.parent ? doc.ref.parent.parent.id : '');
+            
+            const rawEmail = String(data.producerConfig?.email || data.producerEmail || data.userEmail || '').toLowerCase();
+            const rawAka = String(data.producerConfig?.aka || data.producerConfig?.name || data.producerName || data.producer || '').toLowerCase();
+            
+            // Normalizar referencias históricas de Sossa
+            const isSossaLic = userId === 'sossa' || userId === sossaUid || SOSSA_ADMIN_EMAILS.includes(rawEmail) || rawAka.includes('sossa');
+            if (isSossaLic) {
+                userId = sossaUid;
+                if (!data.producerConfig) {
+                    data.producerConfig = {
+                        aka: sossaProducer?.aka || 'Sossa',
+                        name: sossaProducer?.name || 'Joao David Domínguez (Sossa)',
+                        email: sossaProducer?.email || 'admin@sossamusic.com',
+                        plan: sossaProducer?.plan || 'elite'
+                    };
+                }
+            } else if (userId === 'cgmonarco' || rawEmail === 'beatscgmonarco@gmail.com') {
+                const cgProd = producerConfigs.find(p => (p.email || '').toLowerCase() === 'beatscgmonarco@gmail.com');
+                userId = cgProd?.userId || 'cgmonarco';
+                if (!data.producerConfig) {
+                    data.producerConfig = {
+                        aka: 'CG Monarco',
+                        name: 'CG Monarco',
+                        email: 'beatscgmonarco@gmail.com',
+                        plan: cgProd?.plan || 'inicial'
+                    };
+                }
+            } else if (userId === 'mrmicua' || rawEmail === 'mistermicua@gmail.com') {
+                const micuaProd = producerConfigs.find(p => (p.email || '').toLowerCase() === 'mistermicua@gmail.com');
+                userId = micuaProd?.userId || 'mrmicua';
+                if (!data.producerConfig) {
+                    data.producerConfig = {
+                        aka: 'Mister Micua',
+                        name: 'Mister Micua',
+                        email: 'mistermicua@gmail.com',
+                        plan: micuaProd?.plan || 'inicial'
+                    };
+                }
+            } else if (!data.producerConfig) {
+                const matchProd = producerConfigs.find(p => p.userId === userId || (rawEmail && (p.email || '').toLowerCase() === rawEmail));
+                if (matchProd) {
+                    data.producerConfig = {
+                        aka: matchProd.aka,
+                        name: matchProd.name,
+                        email: matchProd.email,
+                        plan: matchProd.plan
+                    };
+                } else {
+                    const fallbackAka = data.producerName || data.producer || (userId ? `Productor #${userId.slice(0, 6)}` : 'Productor');
+                    data.producerConfig = {
+                        aka: fallbackAka,
+                        name: data.producerName || fallbackAka,
+                        email: rawEmail || '',
+                        plan: 'inicial'
+                    };
+                }
+            }
+
             allLicenses.push({
                 ...data,
                 userId

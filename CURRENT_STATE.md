@@ -4,6 +4,19 @@
 > datos de clientes ni historial extenso. El historial se conserva en
 > `COLLABORATION_STATE.md`, que desde 2026-09-01 es un archivo de consulta.
 
+## Rediseño Compacto de Contabilidad, Telemetry Ribbon y Directorio Multi-Productor — DONE (2026-09-17)
+
+- Estado: `DONE`; agente: `Antigravity`; fecha: 2026-09-17.
+- Objetivo: transformar el panel de Contabilidad y Operaciones Globales (`#tab-admin`) en una interfaz SaaS compacta y de alta densidad de información (estilo Linear/Stripe/Vercel), erradicar las tarjetas de KPI gigantes y el recorte lateral, unificar las 74 licencias históricas de Sossa eliminando el error de "Desconocido N/A", e implementar directorio en tabla con conmutador a tarjetas compactas.
+- Resumen:
+  1. Ribbon de Telemetría (`.admin-kpi-strip`): sustitución de las 4 tarjetas gigantes por una cinta horizontal compacta en una sola fila (`display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; height: 48px`), sin recorte lateral ni desbordamiento vertical.
+  2. Directorio Multi-Productor en Tabla Compacta (`#admin-producers-table-wrap` / `.admin-producers-table`): vista principal de 40px por fila con avatars de 28px con iniciales, badges de plan, métricas financieras alineadas y barras de progreso micro para la cuota GMV.
+  3. Conmutador de Vistas (`.admin-view-switcher`): alternancia fluida entre tabla y tarjetas compactas (~90px de alto), persistente en `localStorage`.
+  4. Normalización de Identidad en Backend y Frontend (`server-handlers/admin-producers.js` y `dashboard_modules/accounting.js`): mapeo y unificación de referencias históricas (`userId: 'sossa'`, emails `admin@sossamusic.com`, `masterjuego25@gmail.com`, `sossabeatz1@gmail.com`, alias AKA) a la identidad principal de Sossa, asociando sus 74 licencias sin fragmentación. Reconocimiento y enlace para productores adicionales (`cgmonarco`, `mrmicua`). Erradicado por completo el fallback a "Desconocido N/A".
+  5. Saneamiento de CSS: eliminadas reglas agresivas de `#app-container.saas-workspace #tab-admin > *` en `beatss-coherence.css` que forzaban fondos blancos y sombras pesadas sobre contenedores de grid.
+- Verificación: 265/265 pruebas en Node superadas (`node --test tests/*.test.mjs`); verificación de seguridad estática `node scripts/security-check.mjs` aprobada; `npm run build` y presupuesto de rendimiento aprobados (gzip 61.75 kB < 65 kB).
+- Siguiente acción exacta: realizar commit y desplegar a producción en Vercel.
+
 ## Configuración de Correo Corporativo Sossa (admin@sossamusic.com) — DONE (2026-09-17)
 
 - Estado: `DONE`; agente: `Antigravity`; fecha: 2026-09-17.

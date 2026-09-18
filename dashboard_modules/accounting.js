@@ -333,13 +333,20 @@ async function loadConsolidatedAccounting() {
         // 5. Agrupación y Cálculo de Estadísticas por Productor (GMV, Licencias, AOV, etc.)
         const producerStats = {};
         
+        // Identificar el perfil principal de Sossa
+        const sossaProducer = producerConfigs.find(p => {
+            const em = (p.email || '').toLowerCase();
+            return SOSSA_ADMIN_EMAILS.includes(em) || (auth.currentUser && p.userId === auth.currentUser.uid);
+        }) || producerConfigs[0];
+        const sossaUid = sossaProducer?.userId || auth.currentUser?.uid || 'sossa';
+
         // Inicializar con todos los registrados
         producerConfigs.forEach(prod => {
             producerStats[prod.userId] = {
                 userId: prod.userId,
                 aka: prod.aka || 'Sin AKA',
                 name: prod.name || 'Sin Nombre',
-                email: prod.email || 'N/A',
+                email: prod.email || '',
                 plan: prod.plan || 'inicial',
                 totalSales: 0,
                 licensesCount: 0,
@@ -348,19 +355,33 @@ async function loadConsolidatedAccounting() {
             };
         });
 
-        // Sumar datos de licencias
+        // Sumar datos de licencias con normalización de identidades históricas
         allLicenses.forEach(lic => {
-            const uId = lic.userId || 'unknown';
-            
-            // Si el productor no está registrado en config, lo creamos dinámicamente
+            let uId = lic.userId || 'unknown';
+            const rawEmail = String(lic.producerConfig?.email || lic.producerEmail || lic.userEmail || '').toLowerCase();
+            const rawAka = String(lic.producerConfig?.aka || lic.producerConfig?.name || lic.producerName || lic.producer || '').toLowerCase();
+
+            // Normalizar referencias históricas de Sossa a su perfil principal
+            if (uId === 'sossa' || uId === sossaUid || SOSSA_ADMIN_EMAILS.includes(rawEmail) || rawAka.includes('sossa')) {
+                uId = sossaUid;
+            } else if (uId === 'cgmonarco' || rawEmail === 'beatscgmonarco@gmail.com') {
+                const cg = producerConfigs.find(p => (p.email || '').toLowerCase() === 'beatscgmonarco@gmail.com');
+                if (cg) uId = cg.userId;
+            } else if (uId === 'mrmicua' || rawEmail === 'mistermicua@gmail.com') {
+                const micua = producerConfigs.find(p => (p.email || '').toLowerCase() === 'mistermicua@gmail.com');
+                if (micua) uId = micua.userId;
+            }
+
+            // Si el productor no está registrado en config, creamos una entrada limpia
             if (uId !== 'unknown' && !producerStats[uId]) {
-                const producerName = lic.producerConfig?.aka || lic.producerConfig?.name || "Desconocido";
+                const fallbackAka = lic.producerConfig?.aka || lic.producerConfig?.name || lic.producerName || lic.producer || (uId.length > 8 ? `Productor #${uId.slice(0, 6)}` : uId);
+                const producerName = fallbackAka;
                 producerStats[uId] = {
                     userId: uId,
-                    aka: producerName,
-                    name: lic.producerConfig?.name || 'Desconocido',
-                    email: lic.producerConfig?.email || 'N/A',
-                    plan: 'inicial',
+                    aka: fallbackAka,
+                    name: lic.producerConfig?.name || lic.producerName || producerName,
+                    email: lic.producerConfig?.email || rawEmail || '',
+                    plan: lic.producerConfig?.plan || 'inicial',
                     totalSales: 0,
                     licensesCount: 0,
                     lastActiveDate: '',
@@ -411,7 +432,7 @@ async function loadConsolidatedAccounting() {
             }
         });
 
-        // 7. Actualizar Tarjetas de Resumen Consolidado (Fila Superior)
+        // 7. Actualizar Tira de Resumen Consolidado (Telemetry Ribbon)
         const totalCollectedEl = document.getElementById('admin-stat-total-collected');
         const totalSaasEl = document.getElementById('admin-stat-total-saas');
         const totalLicensesEl = document.getElementById('admin-stat-total-licenses');
@@ -422,114 +443,190 @@ async function loadConsolidatedAccounting() {
         if (totalLicensesEl) totalLicensesEl.textContent = allLicenses.length;
         if (totalUsersEl) totalUsersEl.textContent = producerConfigs.length;
 
-        // 8. Renderizar Tarjetas de Rendimiento por Productor (Filtros Reactivos en Memoria)
+        // 8. Renderizar Rendimiento por Productor (Vista Tabla Compacta y Vista Tarjetas)
         const producerGrid = document.getElementById('admin-producer-stats-grid');
-        
-        window.renderAdminProducerStats = function() {
-            if (!producerGrid) return;
-            producerGrid.innerHTML = '';
-            
+        const producerTableBody = document.getElementById('admin-producers-table-body');
+        const producerTableWrap = document.getElementById('admin-producers-table-wrap');
+
+        const licenseLabels = {
+            basic: 'Básica',
+            premium: 'Premium',
+            premium_plus: 'Prem. Plus',
+            unlimited_flp: 'Ilim. + FLP',
+            unlimited: 'Ilimitada',
+            exclusive: 'Exclusiva'
+        };
+
+        function getFilteredProducerStats() {
             const searchTerm = (document.getElementById('admin-producer-search')?.value || '').toLowerCase().trim();
             const planFilter = document.getElementById('admin-producer-filter-plan')?.value || 'all';
             
             const statsList = Object.values(producerStats);
-            
-            const filteredStats = statsList.filter(s => {
+            const filtered = statsList.filter(s => {
                 const matchesSearch = s.aka.toLowerCase().includes(searchTerm) || s.email.toLowerCase().includes(searchTerm) || s.name.toLowerCase().includes(searchTerm);
                 const matchesPlan = planFilter === 'all' || s.plan.toLowerCase() === planFilter;
                 return matchesSearch && matchesPlan;
             });
             
-            // Ordenar por facturación desc
-            filteredStats.sort((a, b) => b.totalSales - a.totalSales);
-            
-            if (filteredStats.length === 0) {
-                producerGrid.innerHTML = `
-                    <div style="grid-column: 1 / -1; padding: 40px 20px; text-align: center; color: #8a91a6; font-size: 13px;">
-                        <i data-lucide="search-code" style="width: 24px; height: 24px; margin-bottom: 8px; opacity: 0.4; display: inline-block;"></i>
-                        <p style="margin:0;">No se encontraron productores con los filtros aplicados.</p>
-                    </div>
-                `;
-                safeCreateIcons();
-                return;
-            }
-            
-            filteredStats.forEach(s => {
-                const share = totalRevenue > 0 ? (s.totalSales / totalRevenue) * 100 : 0;
-                
-                let planBadge = '';
-                const plan = s.plan.toLowerCase();
-                if (plan === 'pro') {
-                    planBadge = `<span class="admin-plan-badge admin-plan-badge--pro">PRO ⚡</span>`;
-                } else if (plan === 'elite') {
-                    planBadge = `<span class="admin-plan-badge admin-plan-badge--elite">ELITE 👑</span>`;
-                } else {
-                    planBadge = `<span class="admin-plan-badge admin-plan-badge--inicial">INICIAL</span>`;
-                }
-                
-                let favoriteLicense = 'Ninguna';
-                let maxCount = 0;
-                Object.entries(s.licenseTypes).forEach(([type, count]) => {
-                    if (count > maxCount) {
-                        maxCount = count;
-                        favoriteLicense = type;
-                    }
-                });
-                
-                const licenseLabels = {
-                    basic: 'Básica',
-                    premium: 'Premium',
-                    premium_plus: 'Prem. Plus',
-                    unlimited_flp: 'Ilim. + FLP',
-                    unlimited: 'Ilimitada',
-                    exclusive: 'Exclusiva'
-                };
-                const favLabel = licenseLabels[favoriteLicense.toLowerCase()] || favoriteLicense;
-                const aov = s.licensesCount > 0 ? s.totalSales / s.licensesCount : 0;
-                
-                const card = document.createElement('div');
-                card.className = 'producer-analytics-card';
-                card.innerHTML = `
-                    <div class="producer-card-header">
-                        <div class="producer-card-identity">
-                            <h4 class="producer-card-aka" title="${sanitizeHtml(s.aka)}">${sanitizeHtml(s.aka)}</h4>
-                            <span class="producer-card-email" title="${sanitizeHtml(s.email)}">${sanitizeHtml(s.email)}</span>
-                        </div>
-                        ${planBadge}
-                    </div>
-                    
-                    <div class="producer-metrics-row">
-                        <div class="producer-metric-box">
-                            <span class="producer-metric-label">Facturado</span>
-                            <span class="producer-metric-val-sales">$${s.totalSales.toFixed(2)}</span>
-                        </div>
-                        <div class="producer-metric-box">
-                            <span class="producer-metric-label">Licencias</span>
-                            <span class="producer-metric-val-count">${s.licensesCount}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="producer-secondary-row">
-                        <span>Ticket: <strong>$${aov.toFixed(1)}</strong></span>
-                        <span>Favorita: <strong>${sanitizeHtml(favLabel)}</strong></span>
-                    </div>
-
-                    <div class="breakdown-row" style="margin-top: 2px;">
-                        <div class="breakdown-info">
-                            <span class="breakdown-label" style="font-size: 11px; color: var(--adm-muted);">Cuota GMV</span>
-                            <span class="breakdown-value" style="font-size: 11px; color: var(--adm-ink);">${share.toFixed(1)}%</span>
-                        </div>
-                        <div class="admin-progress-container">
-                            <div class="admin-progress-bar" style="width: ${share}%; background: linear-gradient(90deg, #3157e8, #10b981);"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="producer-active-date">
-                        Activo: ${sanitizeHtml(s.lastActiveDate || 'Sin actividad')}
-                    </div>
-                `;
-                producerGrid.appendChild(card);
+            // Priorizar Sossa al inicio, luego ordenar por facturación descendente
+            filtered.sort((a, b) => {
+                const isSossaA = SOSSA_ADMIN_EMAILS.includes(a.email.toLowerCase()) || a.userId === sossaUid;
+                const isSossaB = SOSSA_ADMIN_EMAILS.includes(b.email.toLowerCase()) || b.userId === sossaUid;
+                if (isSossaA && !isSossaB) return -1;
+                if (!isSossaA && isSossaB) return 1;
+                return b.totalSales - a.totalSales;
             });
+            return filtered;
+        }
+
+        window.renderAdminProducerStats = function() {
+            const filteredStats = getFilteredProducerStats();
+            
+            // --- Render Vista Tabla Compacta (Principal) ---
+            if (producerTableBody) {
+                producerTableBody.innerHTML = '';
+                if (filteredStats.length === 0) {
+                    producerTableBody.innerHTML = `
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 28px; color: #8a91a6; font-size: 12px;">
+                                No se encontraron productores con los filtros aplicados.
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    filteredStats.forEach(s => {
+                        const share = totalRevenue > 0 ? (s.totalSales / totalRevenue) * 100 : 0;
+                        const plan = s.plan.toLowerCase();
+                        let planBadge = `<span class="admin-plan-badge admin-plan-badge--inicial">INICIAL</span>`;
+                        let avatarClass = '';
+                        if (plan === 'pro') {
+                            planBadge = `<span class="admin-plan-badge admin-plan-badge--pro">PRO ⚡</span>`;
+                            avatarClass = 'producer-avatar--pro';
+                        } else if (plan === 'elite') {
+                            planBadge = `<span class="admin-plan-badge admin-plan-badge--elite">ELITE 👑</span>`;
+                            avatarClass = 'producer-avatar--elite';
+                        }
+
+                        let favoriteLicense = 'Ninguna';
+                        let maxCount = 0;
+                        Object.entries(s.licenseTypes).forEach(([type, count]) => {
+                            if (count > maxCount) {
+                                maxCount = count;
+                                favoriteLicense = type;
+                            }
+                        });
+                        const favLabel = licenseLabels[favoriteLicense.toLowerCase()] || favoriteLicense;
+                        const aov = s.licensesCount > 0 ? s.totalSales / s.licensesCount : 0;
+                        const initials = (s.aka || 'P').slice(0, 2).toUpperCase();
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>
+                                <div class="producer-table-identity">
+                                    <div class="producer-avatar ${avatarClass}">${sanitizeHtml(initials)}</div>
+                                    <div class="producer-meta">
+                                        <span class="producer-meta-aka">${sanitizeHtml(s.aka)}</span>
+                                        <span class="producer-meta-email">${sanitizeHtml(s.email || 'Sin correo')}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${planBadge}</td>
+                            <td style="text-align: right; font-weight: 700; color: var(--adm-green); font-family: ui-monospace, monospace;">$${s.totalSales.toFixed(2)}</td>
+                            <td style="text-align: center; font-weight: 700;">${s.licensesCount}</td>
+                            <td style="text-align: right; font-family: ui-monospace, monospace; color: var(--adm-muted);">$${aov.toFixed(1)}</td>
+                            <td><span style="font-size: 11px; background: #eef2f6; padding: 2px 7px; border-radius: 6px; font-weight: 600;">${sanitizeHtml(favLabel)}</span></td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 11px; font-family: ui-monospace, monospace; min-width: 34px;">${share.toFixed(1)}%</span>
+                                    <div class="admin-progress-container" style="width: 55px; height: 5px;">
+                                        <div class="admin-progress-bar" style="width: ${share}%; background: linear-gradient(90deg, #3157e8, #10b981);"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="font-size: 11px; color: var(--adm-muted); font-family: ui-monospace, monospace;">${sanitizeHtml(s.lastActiveDate || 'Sin registro')}</td>
+                        `;
+                        producerTableBody.appendChild(tr);
+                    });
+                }
+            }
+
+            // --- Render Vista Tarjetas Compactas (Alternativo) ---
+            if (producerGrid) {
+                producerGrid.innerHTML = '';
+                if (filteredStats.length === 0) {
+                    producerGrid.innerHTML = `
+                        <div style="grid-column: 1 / -1; padding: 30px 20px; text-align: center; color: #8a91a6; font-size: 12px;">
+                            <i data-lucide="search-code" style="width: 20px; height: 20px; margin-bottom: 6px; opacity: 0.4; display: inline-block;"></i>
+                            <p style="margin:0;">No se encontraron productores con los filtros aplicados.</p>
+                        </div>
+                    `;
+                } else {
+                    filteredStats.forEach(s => {
+                        const share = totalRevenue > 0 ? (s.totalSales / totalRevenue) * 100 : 0;
+                        const plan = s.plan.toLowerCase();
+                        let planBadge = `<span class="admin-plan-badge admin-plan-badge--inicial">INICIAL</span>`;
+                        if (plan === 'pro') {
+                            planBadge = `<span class="admin-plan-badge admin-plan-badge--pro">PRO ⚡</span>`;
+                        } else if (plan === 'elite') {
+                            planBadge = `<span class="admin-plan-badge admin-plan-badge--elite">ELITE 👑</span>`;
+                        }
+
+                        let favoriteLicense = 'Ninguna';
+                        let maxCount = 0;
+                        Object.entries(s.licenseTypes).forEach(([type, count]) => {
+                            if (count > maxCount) {
+                                maxCount = count;
+                                favoriteLicense = type;
+                            }
+                        });
+                        const favLabel = licenseLabels[favoriteLicense.toLowerCase()] || favoriteLicense;
+                        const aov = s.licensesCount > 0 ? s.totalSales / s.licensesCount : 0;
+
+                        const card = document.createElement('div');
+                        card.className = 'producer-analytics-card';
+                        card.innerHTML = `
+                            <div class="producer-card-header">
+                                <div class="producer-card-identity">
+                                    <h4 class="producer-card-aka" title="${sanitizeHtml(s.aka)}">${sanitizeHtml(s.aka)}</h4>
+                                    <span class="producer-card-email" title="${sanitizeHtml(s.email)}">${sanitizeHtml(s.email)}</span>
+                                </div>
+                                ${planBadge}
+                            </div>
+                            
+                            <div class="producer-metrics-row">
+                                <div class="producer-metric-box">
+                                    <span class="producer-metric-label">Facturado</span>
+                                    <span class="producer-metric-val-sales">$${s.totalSales.toFixed(2)}</span>
+                                </div>
+                                <div class="producer-metric-box">
+                                    <span class="producer-metric-label">Licencias</span>
+                                    <span class="producer-metric-val-count">${s.licensesCount}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="producer-secondary-row">
+                                <span>Ticket: <strong>$${aov.toFixed(1)}</strong></span>
+                                <span>Favorita: <strong>${sanitizeHtml(favLabel)}</strong></span>
+                            </div>
+
+                            <div class="breakdown-row" style="margin-top: 1px;">
+                                <div class="breakdown-info">
+                                    <span class="breakdown-label" style="font-size: 10px; color: var(--adm-muted);">Cuota GMV</span>
+                                    <span class="breakdown-value" style="font-size: 10px; color: var(--adm-ink);">${share.toFixed(1)}%</span>
+                                </div>
+                                <div class="admin-progress-container" style="height: 4px;">
+                                    <div class="admin-progress-bar" style="width: ${share}%; background: linear-gradient(90deg, #3157e8, #10b981);"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="producer-active-date">
+                                Activo: ${sanitizeHtml(s.lastActiveDate || 'Sin actividad')}
+                            </div>
+                        `;
+                        producerGrid.appendChild(card);
+                    });
+                }
+            }
             safeCreateIcons();
         };
 
@@ -544,6 +641,38 @@ async function loadConsolidatedAccounting() {
             planSelectFilter.removeEventListener('change', window.renderAdminProducerStats);
             planSelectFilter.addEventListener('change', window.renderAdminProducerStats);
         }
+
+        // Configuración del Alternador de Vista (Tabla vs Tarjetas)
+        const btnViewTable = document.getElementById('btn-admin-view-table');
+        const btnViewCards = document.getElementById('btn-admin-view-cards');
+
+        function setProducerViewMode(mode) {
+            if (mode === 'cards') {
+                if (producerTableWrap) producerTableWrap.style.display = 'none';
+                if (producerGrid) producerGrid.style.display = 'grid';
+                btnViewCards?.classList.add('active');
+                btnViewTable?.classList.remove('active');
+            } else {
+                if (producerTableWrap) producerTableWrap.style.display = 'block';
+                if (producerGrid) producerGrid.style.display = 'none';
+                btnViewTable?.classList.add('active');
+                btnViewCards?.classList.remove('active');
+            }
+            try {
+                localStorage.setItem('admin_producers_view_mode', mode);
+            } catch (_) {}
+            safeCreateIcons();
+        }
+
+        if (btnViewTable) {
+            btnViewTable.onclick = () => setProducerViewMode('table');
+        }
+        if (btnViewCards) {
+            btnViewCards.onclick = () => setProducerViewMode('cards');
+        }
+
+        const savedViewMode = (typeof localStorage !== 'undefined' && localStorage.getItem('admin_producers_view_mode')) || 'table';
+        setProducerViewMode(savedViewMode);
         
         window.renderAdminProducerStats();
 
