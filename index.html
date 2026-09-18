@@ -423,12 +423,15 @@
     
 
     <!-- ===== MODAL PREVIEW DE COMPROBANTE ADMIN ===== -->
-    <div id="admin-receipt-preview-modal" style="display:none; position:fixed; inset:0; z-index:11000; align-items:center; justify-content:center; background:rgba(5,7,15,0.9); backdrop-filter:blur(8px); padding:16px;">
-        <div style="background:#0f1320; border:1px solid rgba(0,102,255,0.3); border-radius:16px; width:100%; max-width:640px; padding:24px; position:relative; text-align:center;">
-            <button onclick="document.getElementById('admin-receipt-preview-modal').style.display='none'" style="position:absolute; top:16px; right:16px; background:rgba(255,255,255,0.06); border:none; color:#8a91a6; width:32px; height:32px; border-radius:50%; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;">&times;</button>
-            <h3 style="color:#ffffff; font-size:16px; font-weight:700; margin:0 0 16px 0; font-family:'Montserrat',sans-serif;">Comprobante de Transferencia</h3>
-            <div style="max-height:70vh; overflow-y:auto; border:1px solid #2b2b35; border-radius:8px; background:#05070a; padding:8px;">
-                <img id="admin-receipt-preview-large-img" style="max-width:100%; height:auto; border-radius:6px; object-fit:contain;">
+    <div id="admin-receipt-preview-modal" style="display:none; position:fixed; inset:0; z-index:11000; align-items:center; justify-content:center; padding:16px;">
+        <div class="receipt-modal-box">
+            <button type="button" id="btn-close-admin-receipt-modal" onclick="document.getElementById('admin-receipt-preview-modal').style.display='none'" style="position:absolute; top:16px; right:16px; background:#f1f5f9; border:none; color:#64748b; width:34px; height:34px; border-radius:50%; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: background 0.2s;">&times;</button>
+            <h3 style="color:#0f172a; font-size:16px; font-weight:700; margin:0 0 16px 0; font-family:'Montserrat',sans-serif; text-align: left; display: flex; align-items: center; gap: 8px;">
+                <i data-lucide="receipt" style="color: var(--adm-amber, #f59e0b); width: 20px; height: 20px;"></i>
+                <span>Comprobante de Transferencia</span>
+            </h3>
+            <div class="receipt-preview-img-container">
+                <img id="admin-receipt-preview-large-img" style="max-width:100%; height:auto; border-radius:8px; object-fit:contain;" alt="Comprobante">
             </div>
         </div>
     </div>
@@ -1277,7 +1280,8 @@
                         <aside class="sri-facturador-card sri-facturador-help">
                             <h3>Flujo de BEATSS</h3>
                             <ul>
-                                <li>La factura se encola después de confirmar el pago.</li>
+                                <li>La cola automática exige pago Live, solicitud de factura y tu activación previa.</li>
+                                <li>Las compras de prueba y las ventas sin solicitud fiscal permanecen sin emitir.</li>
                                 <li>BEATSS genera y firma el XML con tu certificado.</li>
                                 <li>El SRI devuelve autorización o el comprobante queda en contingencia.</li>
                                 <li>Al autorizarse, puedes descargar RIDE y XML.</li>
@@ -1831,255 +1835,355 @@
 
             <!-- Tab Content: Contabilidad General (Solo Admin Sossa) -->
             <div class="tab-content" id="tab-admin" hidden aria-hidden="true">
-                <div class="history-controls">
-                    <h2 style="font-family: var(--font-title); font-size: 20px; font-weight: 700; color: var(--text-primary);">📊 Panel de Contabilidad Consolidada (Sossa Admin)</h2>
-                    <div class="history-actions" style="margin-left: auto;">
-                        <button class="btn btn-secondary" id="btn-admin-refresh" title="Recargar todos los datos desde la nube">
-                            <i data-lucide="refresh-cw"></i> Actualizar Datos
+                <!-- Header Card -->
+                <div class="admin-header-card">
+                    <div class="admin-header-main">
+                        <div class="admin-header-eyebrow">
+                            <i data-lucide="crown" style="width: 14px; height: 14px;"></i>
+                            <span>Admin Sossa</span>
+                        </div>
+                        <h2 class="admin-header-title">
+                            Contabilidad y Operaciones Globales
+                        </h2>
+                        <p class="admin-header-subtitle">
+                            Monitorea el GMV consolidado, suscripciones SaaS activas, pagos pendientes y la salud operativa del ecosistema.
+                        </p>
+                    </div>
+                    <div class="admin-header-actions">
+                        <button type="button" class="admin-btn-refresh" id="btn-admin-refresh" title="Recargar todos los datos desde la nube">
+                            <i data-lucide="refresh-cw"></i>
+                            <span>Actualizar Datos</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Resumen Consolidado -->
-                <div class="history-stats-cards" id="admin-stats-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                <!-- Resumen Consolidado (KPIs) -->
+                <div class="admin-stats-grid" id="admin-stats-container">
+                    <div class="admin-stat-card admin-stat-card--gmv">
+                        <div class="admin-stat-icon">
                             <i data-lucide="banknote"></i>
                         </div>
-                        <div class="stat-details">
-                            <span class="stat-label">Volumen Beats (GMV)</span>
-                            <h3 class="stat-value" id="admin-stat-total-collected">$0.00</h3>
+                        <div class="admin-stat-info">
+                            <span class="admin-stat-label">Volumen Beats (GMV)</span>
+                            <h3 class="admin-stat-value" id="admin-stat-total-collected">$0.00</h3>
+                            <span class="admin-stat-subtext">Total transaccionado en licencias</span>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">
+                    <div class="admin-stat-card admin-stat-card--saas">
+                        <div class="admin-stat-icon">
                             <i data-lucide="shield-check"></i>
                         </div>
-                        <div class="stat-details">
-                            <span class="stat-label">Ingresos SaaS (Plataforma)</span>
-                            <h3 class="stat-value" id="admin-stat-total-saas">$0.00</h3>
+                        <div class="admin-stat-info">
+                            <span class="admin-stat-label">Ingresos SaaS (Plataforma)</span>
+                            <h3 class="admin-stat-value" id="admin-stat-total-saas">$0.00</h3>
+                            <span class="admin-stat-subtext">Planes Pro y Elite recaudados</span>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: rgba(0, 204, 255, 0.1); color: #00ccff;">
+                    <div class="admin-stat-card admin-stat-card--licenses">
+                        <div class="admin-stat-icon">
                             <i data-lucide="files"></i>
                         </div>
-                        <div class="stat-details">
-                            <span class="stat-label">Licencias (Global)</span>
-                            <h3 class="stat-value" id="admin-stat-total-licenses">0</h3>
+                        <div class="admin-stat-info">
+                            <span class="admin-stat-label">Licencias (Global)</span>
+                            <h3 class="admin-stat-value" id="admin-stat-total-licenses">0</h3>
+                            <span class="admin-stat-subtext">Contratos emitidos en red</span>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: rgba(236, 72, 153, 0.1); color: #ec4899;">
+                    <div class="admin-stat-card admin-stat-card--producers">
+                        <div class="admin-stat-icon">
                             <i data-lucide="users"></i>
                         </div>
-                        <div class="stat-details">
-                            <span class="stat-label">Productores</span>
-                            <h3 class="stat-value" id="admin-stat-total-users">0</h3>
+                        <div class="admin-stat-info">
+                            <span class="admin-stat-label">Productores</span>
+                            <h3 class="admin-stat-value" id="admin-stat-total-users">0</h3>
+                            <span class="admin-stat-subtext">Cuentas registradas</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Sección de Analíticas Avanzadas (Sossa Admin) -->
-                <div class="admin-analytics-grid" style="margin-top: 24px;">
-                    <!-- Columna Izquierda: Ventas por Productor -->
-                    <div id="admin-producer-analytics" style="background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(0, 102, 255, 0.15); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-                            <h3 style="color: #ffffff; font-size: 16px; font-weight: 700; margin: 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
-                                <i data-lucide="bar-chart-3" style="color: #10b981; width: 20px; height: 20px;"></i> Rendimiento por Productor
-                            </h3>
-                            <!-- Filtros Rápidos -->
-                            <div style="display: flex; gap: 8px;">
-                                <input type="text" id="admin-producer-search" placeholder="🔍 Buscar productor..." style="background: #1a1e27; border: 1px solid rgba(255,255,255,0.08); color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 12px; outline: none; width: 150px;">
-                                <select id="admin-producer-filter-plan" style="background: #1a1e27; border: 1px solid rgba(255,255,255,0.08); color: #fff; border-radius: 6px; padding: 4px 6px; font-size: 12px; outline: none;">
-                                    <option value="all">Todos los planes</option>
-                                    <option value="inicial">Inicial</option>
+                <!-- Sub-Navigation Segmented Controller -->
+                <nav class="admin-nav-bar" id="admin-subnav-bar" aria-label="Navegación de secciones admin">
+                    <button type="button" class="admin-nav-pill active" data-admin-view="all">
+                        <i data-lucide="layout-grid"></i>
+                        <span>Vista Completa</span>
+                    </button>
+                    <button type="button" class="admin-nav-pill" data-admin-view="analytics">
+                        <i data-lucide="bar-chart-3"></i>
+                        <span>Rendimiento & Analíticas</span>
+                    </button>
+                    <button type="button" class="admin-nav-pill" data-admin-view="payments">
+                        <i data-lucide="clock"></i>
+                        <span>Pagos Pendientes</span>
+                        <span class="admin-badge-count" id="admin-nav-pending-count" style="display: none;">0</span>
+                    </button>
+                    <button type="button" class="admin-nav-pill" data-admin-view="producers">
+                        <i data-lucide="users"></i>
+                        <span>Productores</span>
+                    </button>
+                    <button type="button" class="admin-nav-pill" data-admin-view="vip">
+                        <i data-lucide="key"></i>
+                        <span>Códigos VIP</span>
+                    </button>
+                    <button type="button" class="admin-nav-pill" data-admin-view="history">
+                        <i data-lucide="list"></i>
+                        <span>Historial Global</span>
+                    </button>
+                    <button type="button" class="admin-nav-pill" data-admin-view="obsidian">
+                        <i data-lucide="book-open"></i>
+                        <span>Bóveda Obsidian</span>
+                    </button>
+                </nav>
+
+                <!-- Sección 1: Analíticas Avanzadas & Rendimiento -->
+                <div class="admin-section" id="admin-section-analytics" data-section-name="analytics">
+                    <div class="admin-analytics-layout">
+                        <!-- Columna Izquierda: Ventas por Productor -->
+                        <div class="admin-panel" id="admin-producer-analytics">
+                            <div class="admin-panel-header">
+                                <div>
+                                    <h3 class="admin-panel-title">
+                                        <i data-lucide="bar-chart-3" style="color: var(--adm-green);"></i>
+                                        <span>Rendimiento por Productor</span>
+                                    </h3>
+                                    <p class="admin-panel-subtitle">Volumen de ventas, licencias emitidas y ticket promedio.</p>
+                                </div>
+                                <div class="admin-filters-bar">
+                                    <input type="text" id="admin-producer-search" class="admin-input-search" placeholder="🔍 Buscar productor...">
+                                    <select id="admin-producer-filter-plan" class="admin-select-filter">
+                                        <option value="all">Todos los planes</option>
+                                        <option value="inicial">Inicial</option>
+                                        <option value="pro">Pro ⚡</option>
+                                        <option value="elite">Elite 👑</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="producer-stats-grid" id="admin-producer-stats-grid">
+                                <!-- Tarjetas de productores inyectadas dinámicamente -->
+                            </div>
+                        </div>
+
+                        <!-- Columna Derecha: Métodos de Pago y Distribución de Planes -->
+                        <div style="display: flex; flex-direction: column; gap: 24px;">
+                            <!-- Métodos de Pago -->
+                            <div class="admin-panel" style="flex: 1;">
+                                <div class="admin-panel-header">
+                                    <h3 class="admin-panel-title">
+                                        <i data-lucide="wallet" style="color: var(--adm-purple);"></i>
+                                        <span>Métodos de Pago (Beats)</span>
+                                    </h3>
+                                </div>
+                                <div id="admin-payment-methods-breakdown" style="display: flex; flex-direction: column; gap: 14px;">
+                                    <!-- Barras de métodos de pago inyectadas dinámicamente -->
+                                </div>
+                            </div>
+
+                            <!-- Distribución de Planes SaaS -->
+                            <div class="admin-panel" style="flex: 1;">
+                                <div class="admin-panel-header">
+                                    <h3 class="admin-panel-title">
+                                        <i data-lucide="layers" style="color: var(--adm-pink);"></i>
+                                        <span>Distribución de Planes SaaS</span>
+                                    </h3>
+                                </div>
+                                <div id="admin-saas-plans-breakdown" style="display: flex; flex-direction: column; gap: 14px;">
+                                    <!-- Barras de planes SaaS inyectadas dinámicamente -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 2: Solicitudes de Pago Pendientes -->
+                <div class="admin-section" id="admin-section-payments" data-section-name="payments">
+                    <div class="admin-panel" id="admin-payments-container" style="display: block;">
+                        <div class="admin-panel-header">
+                            <div>
+                                <h3 class="admin-panel-title">
+                                    <i data-lucide="clock" style="color: var(--adm-amber);"></i>
+                                    <span>Solicitudes de Pago Pendientes</span>
+                                </h3>
+                                <p class="admin-panel-subtitle">Transferencias locales (Pichincha, Guayaquil, Deuna!) pendientes de confirmación.</p>
+                            </div>
+                        </div>
+                        <div class="admin-table-wrapper">
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Productor (Email)</th>
+                                        <th>AKA</th>
+                                        <th>Plan</th>
+                                        <th>Banco/Método</th>
+                                        <th>Referencia</th>
+                                        <th>Fecha</th>
+                                        <th style="text-align: center;">Comprobante</th>
+                                        <th style="text-align: right;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-payments-table-body">
+                                    <!-- Filas de pagos pendientes inyectadas dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="admin-payments-empty" class="admin-empty-state" style="display: block;">
+                            <i data-lucide="check-circle-2" style="color: var(--adm-green);"></i>
+                            <h4>No hay solicitudes pendientes</h4>
+                            <p>Todas las solicitudes de pago de suscripción están al día.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 3: Productores Registrados -->
+                <div class="admin-section" id="admin-section-producers" data-section-name="producers">
+                    <div class="admin-panel" id="admin-users-container">
+                        <div class="admin-panel-header">
+                            <div>
+                                <h3 class="admin-panel-title">
+                                    <i data-lucide="users" style="color: var(--adm-cyan);"></i>
+                                    <span>Productores Registrados</span>
+                                </h3>
+                                <p class="admin-panel-subtitle">Directorio completo de cuentas registradas y control de planes manuales.</p>
+                            </div>
+                        </div>
+                        <div class="admin-table-wrapper">
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>AKA / Productor</th>
+                                        <th>Nombre Real</th>
+                                        <th>Email</th>
+                                        <th>WhatsApp / Teléfono</th>
+                                        <th>Plan Activo</th>
+                                        <th>Vencimiento</th>
+                                        <th style="text-align: right;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-users-table-body">
+                                    <!-- Filas de productores inyectadas dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 4: Gestión de Códigos VIP -->
+                <div class="admin-section" id="admin-section-vip" data-section-name="vip">
+                    <div class="admin-panel" id="admin-vip-container">
+                        <div class="admin-panel-header">
+                            <div>
+                                <h3 class="admin-panel-title">
+                                    <i data-lucide="key" style="color: var(--adm-purple);"></i>
+                                    <span>Gestión de Códigos VIP</span>
+                                </h3>
+                                <p class="admin-panel-subtitle">Genera cupones de activación gratuita para productores o embajadores.</p>
+                            </div>
+                        </div>
+                        <div class="admin-vip-toolbar">
+                            <div class="admin-vip-field">
+                                <label for="admin-vip-plan">Tipo de Plan</label>
+                                <select id="admin-vip-plan">
                                     <option value="pro">Pro ⚡</option>
                                     <option value="elite">Elite 👑</option>
                                 </select>
                             </div>
+                            <div class="admin-vip-field">
+                                <label for="admin-vip-months">Duración (Meses)</label>
+                                <select id="admin-vip-months">
+                                    <option value="1">1 Mes</option>
+                                    <option value="3">3 Meses</option>
+                                    <option value="6">6 Meses</option>
+                                    <option value="12">12 Meses</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn-generate-vip" id="btn-admin-generate-vip">
+                                <i data-lucide="plus"></i>
+                                <span>Generar Código</span>
+                            </button>
                         </div>
-                        <div class="producer-stats-grid" id="admin-producer-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; max-height: 480px; overflow-y: auto; padding-right: 4px;">
-                            <!-- Tarjetas de productores inyectadas dinámicamente -->
+                        <div class="admin-table-wrapper">
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Plan</th>
+                                        <th>Duración</th>
+                                        <th>Estado</th>
+                                        <th style="text-align: right;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-vip-table-body">
+                                    <!-- Filas de códigos VIP inyectadas dinámicamente -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Columna Derecha: Métodos de Pago y Distribución de Planes -->
-                    <div style="display: flex; flex-direction: column; gap: 24px;">
-                        <!-- Métodos de Pago -->
-                        <div style="background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(0, 102, 255, 0.15); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); flex: 1;">
-                            <h3 style="color: #ffffff; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
-                                <i data-lucide="wallet" style="color: #a855f7; width: 18px; height: 18px;"></i> Métodos de Pago (Beats)
-                            </h3>
-                            <div id="admin-payment-methods-breakdown" style="display: flex; flex-direction: column; gap: 14px;">
-                                <!-- Barras de métodos de pago inyectadas dinámicamente -->
+                <!-- Sección 5: Historial de Licencias Consolidado -->
+                <div class="admin-section" id="admin-section-history" data-section-name="history">
+                    <div class="admin-panel">
+                        <div class="admin-panel-header">
+                            <div>
+                                <h3 class="admin-panel-title">
+                                    <i data-lucide="list" style="color: var(--adm-cyan);"></i>
+                                    <span>Historial Global de Licencias</span>
+                                </h3>
+                                <p class="admin-panel-subtitle">Registro centralizado de todas las licencias emitidas por cualquier productor.</p>
+                            </div>
+                            <div class="admin-filters-bar">
+                                <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--adm-muted); letter-spacing: 0.5px;">Filtrar Productor:</span>
+                                <select id="admin-filter-producer" class="admin-select-filter" style="min-width: 180px;">
+                                    <option value="all">Todos los Productores</option>
+                                </select>
+                                <span id="admin-licenses-count" style="font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 8px; background: var(--adm-cyan-tint); color: var(--adm-cyan); border: 1px solid var(--adm-cyan-border);">0 licencias</span>
                             </div>
                         </div>
+                        <div class="admin-table-wrapper">
+                            <table class="history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Productor</th>
+                                        <th>Referencia</th>
+                                        <th>Fecha</th>
+                                        <th>Beat</th>
+                                        <th>Comprador</th>
+                                        <th>Tipo</th>
+                                        <th style="text-align: right;">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-table-body">
+                                    <!-- Datos consolidados inyectados dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="admin-empty-state" id="admin-empty" style="display: none;">
+                            <i data-lucide="bar-chart-3"></i>
+                            <h4>No hay datos consolidados</h4>
+                            <p>No se encontraron licencias emitidas por ningún productor en la base de datos.</p>
+                        </div>
+                    </div>
+                </div>
 
-                        <!-- Distribución de Planes SaaS -->
-                        <div style="background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(0, 102, 255, 0.15); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); flex: 1;">
-                            <h3 style="color: #ffffff; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
-                                <i data-lucide="layers" style="color: #ec4899; width: 18px; height: 18px;"></i> Distribución de Planes SaaS
-                            </h3>
-                            <div id="admin-saas-plans-breakdown" style="display: flex; flex-direction: column; gap: 14px;">
-                                <!-- Barras de planes SaaS inyectadas dinámicamente -->
+                <!-- Sección 6: Gestión de Bóveda Obsidian -->
+                <div class="admin-section" id="admin-section-obsidian" data-section-name="obsidian">
+                    <div class="admin-panel admin-obsidian-card" id="admin-obsidian-container">
+                        <div class="admin-panel-header">
+                            <div>
+                                <h3 class="admin-panel-title" style="color: var(--adm-purple);">
+                                    <i data-lucide="book-open" style="color: var(--adm-purple);"></i>
+                                    <span>Gestión de Bóveda de Obsidian</span>
+                                </h3>
+                                <p class="admin-panel-subtitle">Sincronización, ordenamiento documental y regeneración de mapas de conocimiento.</p>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <!-- Solicitudes de Activación de Pago Local (Banco Pichincha, Guayaquil, Deuna!) -->
-                <div id="admin-payments-container" style="margin-top: 24px; display: none; background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); margin-bottom: 24px;">
-                    <h3 style="color: #ffffff; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="clock" style="color: #f59e0b; width: 20px; height: 20px;"></i> Solicitudes de Pago Pendientes
-                    </h3>
-                    <div style="overflow-x: auto;">
-                        <table class="history-table" style="width: 100%; min-width: 500px;">
-                            <thead>
-                                <tr>
-                                    <th>Productor (Email)</th>
-                                    <th>AKA</th>
-                                    <th>Plan</th>
-                                    <th>Banco/Método</th>
-                                    <th>Referencia</th>
-                                    <th>Fecha</th>
-                                    <th style="text-align: center;">Comprobante</th>
-                                    <th style="text-align: right;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="admin-payments-table-body">
-                                <!-- Filas de pagos pendientes inyectadas dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="admin-payments-empty" style="display: block; text-align: center; padding: 20px; color: #8a91a6;">
-                        <i data-lucide="check-circle-2" style="width: 32px; height: 32px; color: #10b981; margin-bottom: 8px; display: inline-block;"></i>
-                        <p style="margin: 0; font-size: 13px;">No hay solicitudes de pago pendientes.</p>
-                    </div>
-                </div>
-
-                <!-- Productores Registrados (Solo Admin Sossa) -->
-                <div id="admin-users-container" style="margin-top: 24px; background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); margin-bottom: 24px;">
-                    <h3 style="color: #ffffff; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="users" style="color: #0066ff; width: 20px; height: 20px;"></i> Productores Registrados
-                    </h3>
-                    <div style="overflow-x: auto;">
-                        <table class="history-table" style="width: 100%; min-width: 500px;">
-                            <thead>
-                                <tr>
-                                    <th>AKA / Productor</th>
-                                    <th>Nombre Real</th>
-                                    <th>Email</th>
-                                    <th>WhatsApp/Teléfono</th>
-                                    <th>Plan Activo</th>
-                                    <th>Vencimiento</th>
-                                    <th style="text-align: right;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="admin-users-table-body">
-                                <!-- Filas de productores inyectadas dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Gestión de Códigos VIP (Solo Admin Sossa) -->
-                <div id="admin-vip-container" style="margin-top: 24px; background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); margin-bottom: 24px;">
-                    <h3 style="color: #ffffff; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="key" style="color: #00ccff; width: 20px; height: 20px;"></i> Gestión de Códigos VIP
-                    </h3>
-                    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 20px; padding: 16px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="flex: 1; min-width: 150px;">
-                            <label style="display: block; color: #8a91a6; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">Tipo de Plan</label>
-                            <select id="admin-vip-plan" class="form-input" style="width: 100%; height: 38px; background: #1a1e27; border: 1px solid rgba(255,255,255,0.08); color: #fff; border-radius: 8px; padding: 0 12px; box-sizing: border-box; outline: none;">
-                                <option value="pro">Pro ⚡</option>
-                                <option value="elite">Elite 👑</option>
-                            </select>
-                        </div>
-                        <div style="flex: 1; min-width: 150px;">
-                            <label style="display: block; color: #8a91a6; font-size: 11px; font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">Duración (Meses)</label>
-                            <select id="admin-vip-months" class="form-input" style="width: 100%; height: 38px; background: #1a1e27; border: 1px solid rgba(255,255,255,0.08); color: #fff; border-radius: 8px; padding: 0 12px; box-sizing: border-box; outline: none;">
-                                <option value="1">1 Mes</option>
-                                <option value="3">3 Meses</option>
-                                <option value="6">6 Meses</option>
-                                <option value="12">12 Meses</option>
-                            </select>
-                        </div>
-                        <button class="btn btn-primary" id="btn-admin-generate-vip" style="height: 38px; padding: 0 20px; font-weight: 700; border-radius: 8px;">
-                            <i data-lucide="plus" style="width: 16px; height: 16px; margin-right: 4px; display: inline-block; vertical-align: middle;"></i> Generar Código
-                        </button>
-                    </div>
-                    <div style="overflow-x: auto;">
-                        <table class="history-table" style="width: 100%; min-width: 500px;">
-                            <thead>
-                                <tr>
-                                    <th>Código</th>
-                                    <th>Plan</th>
-                                    <th>Duración</th>
-                                    <th>Estado</th>
-                                    <th style="text-align: right;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="admin-vip-table-body">
-                                <!-- Filas de códigos VIP inyectadas dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Barra de filtros del historial consolidado -->
-                <div class="history-controls" style="margin-top: 32px; background: rgba(15, 19, 32, 0.3); border: 1px solid rgba(255,255,255,0.05); padding: 12px 20px; border-radius: 12px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;">
-                    <h3 style="color: #ffffff; font-size: 14px; font-weight: 700; margin: 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 6px;">
-                        <i data-lucide="list" style="color: #00ccff; width: 16px; height: 16px;"></i> Historial de Licencias Consolidado
-                    </h3>
-                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                        <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 12px; color: #8a91a6; font-weight: 600; text-transform: uppercase;">Filtrar Productor:</span>
-                            <select id="admin-filter-producer" style="background: #1a1e27; border: 1px solid rgba(255,255,255,0.08); color: #fff; border-radius: 6px; padding: 4px 10px; font-size: 13px; outline: none; min-width: 160px;">
-                                <option value="all">Todos los Productores</option>
-                            </select>
-                        </div>
-                        <span id="admin-licenses-count" style="font-size: 12px; background: rgba(0, 204, 255, 0.15); color: #00ccff; padding: 3px 8px; border-radius: 6px; font-weight: 600;">0 licencias</span>
-                    </div>
-                </div>
-
-                <div class="history-list-wrapper" style="margin-top: 20px;">
-                    <table class="history-table">
-                        <thead>
-                            <tr>
-                                <th>Productor</th>
-                                <th>Referencia</th>
-                                <th>Fecha</th>
-                                <th>Beat</th>
-                                <th>Comprador</th>
-                                <th>Tipo</th>
-                                <th>Valor</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-table-body">
-                            <!-- Datos consolidados de todos los productores -->
-                        </tbody>
-                    </table>
-                    <div class="empty-state" id="admin-empty" style="display: none;">
-                        <i data-lucide="bar-chart-3"></i>
-                        <h3>No hay datos consolidados</h3>
-                        <p>No se encontraron licencias emitidas por ningún productor en la base de datos.</p>
-                    </div>
-                </div>
-
-                <!-- Gestión de Obsidian (Solo Admin Sossa) -->
-                <div id="admin-obsidian-container" style="margin-top: 24px; background: rgba(15, 19, 32, 0.5); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); margin-bottom: 24px;">
-                    <h3 style="color: #ffffff; font-size: 16px; font-weight: 700; margin: 0 0 16px 0; font-family: 'Montserrat', sans-serif; display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="book-open" style="color: #8b5cf6; width: 20px; height: 20px;"></i> Gestión de Bóveda de Obsidian
-                    </h3>
-                    <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="font-size: 13px; color: #8a91a6; line-height: 1.6;">
+                        <div style="font-size: 13px; color: var(--adm-muted); line-height: 1.6; max-width: 820px;">
                             La bóveda de Obsidian se encuentra activa y se organiza automáticamente en segundo plano cada 5 minutos. También puedes forzar una reorganización manual inmediata. Esto escaneará el directorio raíz de la bóveda, moverá los archivos correspondientes a sus respectivas carpetas y regenerará el panel central <strong>Dashboard BEATSS.md</strong>.
                         </div>
-                        <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px; flex-wrap: wrap;">
-                            <button class="btn btn-primary" id="btn-admin-organize-obsidian" style="height: 38px; padding: 0 20px; font-weight: 700; border-radius: 8px; background: var(--electric-purple); border-color: var(--electric-purple); cursor: pointer; color: white; border: none; display: flex; align-items: center; gap: 6px;">
-                                <i data-lucide="folder-sync" style="width: 16px; height: 16px;"></i> Organizar Bóveda Ahora
+                        <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 6px;">
+                            <button type="button" class="admin-btn-obsidian" id="btn-admin-organize-obsidian">
+                                <i data-lucide="folder-sync"></i>
+                                <span>Organizar Bóveda Ahora</span>
                             </button>
-                            <span id="obsidian-organize-status" style="font-size: 12px; font-weight: 600; color: #8a91a6;">Auto-organización en segundo plano activa</span>
+                            <span id="obsidian-organize-status" style="font-size: 13px; font-weight: 600; color: var(--adm-muted);">Auto-organización en segundo plano activa</span>
                         </div>
                     </div>
                 </div>
@@ -2088,24 +2192,24 @@
     </div>
 
     <!-- Modal de Cambio de Plan Manual (Solo Sossa Admin) -->
-    <div class="modal-backdrop" id="admin-plan-modal" style="display: none; background-color: rgba(11, 14, 20, 0.85); backdrop-filter: blur(12px); z-index: 10010;">
-        <div class="modal" style="width: 460px; max-width: 90vw; background-color: var(--bg-modal); border: 1px solid var(--border-color); border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); position: relative; display: flex; flex-direction: column;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 18px; background: none;">
-                <h2 style="font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 700; color: #ffffff; margin: 0; display: flex; align-items: center; gap: 8px;">
-                    <i data-lucide="shield-alert" style="color: #ffd700; width: 18px; height: 18px;"></i> Modificar Plan Manual
+    <div class="modal-backdrop" id="admin-plan-modal" style="display: none; background-color: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 10010;">
+        <div class="modal" style="width: 480px; max-width: 92vw; background: #ffffff; border: 1px solid #dfe4ec; border-radius: 20px; padding: 24px; box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15); position: relative; display: flex; flex-direction: column;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 14px; margin-bottom: 18px; background: none;">
+                <h2 style="font-family: inherit; font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="shield-alert" style="color: #f59e0b; width: 18px; height: 18px;"></i> Modificar Plan de Suscripción
                 </h2>
-                <button class="btn-icon-only" id="btn-close-admin-plan" style="background: none; border: none; font-size: 24px; color: var(--text-secondary); cursor: pointer; line-height: 1;">&times;</button>
+                <button class="btn-icon-only" id="btn-close-admin-plan" style="background: #f1f5f9; border: none; font-size: 20px; color: #64748b; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
             </div>
             <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; text-align: left; padding: 0;">
-                <div style="padding: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px;">
-                    <div style="font-size: 11px; text-transform: uppercase; color: #8a91a6; font-weight: 600; letter-spacing: 0.5px;">Productor Seleccionado</div>
-                    <div id="admin-plan-user-name" style="font-size: 14px; font-weight: 700; color: #ffffff; margin-top: 4px;">Cargando...</div>
-                    <div id="admin-plan-user-email" style="font-size: 11px; color: #a0aec0; font-family: monospace; margin-top: 2px;">Cargando...</div>
+                <div style="padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+                    <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.5px;">Productor Seleccionado</div>
+                    <div id="admin-plan-user-name" style="font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 4px;">Cargando...</div>
+                    <div id="admin-plan-user-email" style="font-size: 12px; color: #64748b; font-family: ui-monospace, monospace; margin-top: 2px;">Cargando...</div>
                 </div>
 
                 <div class="input-group">
-                    <label style="color: var(--text-secondary); font-size: 12px; font-weight: 600;">Plan a Asignar</label>
-                    <select id="admin-plan-select" style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; color: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer; outline: none; height: 38px; width: 100%;">
+                    <label style="color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Plan a Asignar</label>
+                    <select id="admin-plan-select" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 12px; color: #0f172a; font-size: 13px; font-weight: 600; cursor: pointer; outline: none; height: 40px; width: 100%;">
                         <option value="inicial">Inicial (Gratuito)</option>
                         <option value="pro">Pro ⚡</option>
                         <option value="elite">Elite 👑</option>
@@ -2113,27 +2217,27 @@
                 </div>
 
                 <div class="input-group" id="admin-plan-duration-container">
-                    <label style="color: var(--text-secondary); font-size: 12px; font-weight: 600;">Duración del Plan</label>
-                    <select id="admin-plan-duration" style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; color: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer; outline: none; height: 38px; width: 100%;">
-                        <option value="no-expire">Sin Expiración (No aplica)</option>
+                    <label style="color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Duración del Plan</label>
+                    <select id="admin-plan-duration" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 12px; color: #0f172a; font-size: 13px; font-weight: 600; cursor: pointer; outline: none; height: 40px; width: 100%;">
+                        <option value="no-expire">Sin Expiración (Permanente)</option>
                         <option value="1">1 Mes</option>
                         <option value="3">3 Meses</option>
                         <option value="6">6 Meses</option>
                         <option value="12">12 Meses</option>
-                        <option value="custom">Fecha Especial...</option>
+                        <option value="custom">Fecha Específica...</option>
                     </select>
                 </div>
 
                 <div class="input-group" id="admin-plan-date-container" style="display: none;">
-                    <label style="color: var(--text-secondary); font-size: 12px; font-weight: 600;">Fecha de Vencimiento Específica</label>
-                    <input type="date" id="admin-plan-date" style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 12px; color: #ffffff; font-size: 13px; font-weight: 600; height: 38px; width: 100%; box-sizing: border-box; outline: none;">
+                    <label style="color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Fecha de Vencimiento Específica</label>
+                    <input type="date" id="admin-plan-date" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 12px; color: #0f172a; font-size: 13px; font-weight: 600; height: 40px; width: 100%; box-sizing: border-box; outline: none;">
                 </div>
                 
-                <div id="admin-plan-status" style="font-size: 11px; font-weight: 600; display: none; margin-top: 4px;"></div>
+                <div id="admin-plan-status" style="font-size: 12px; font-weight: 600; display: none; margin-top: 4px; padding: 8px 12px; border-radius: 8px;"></div>
             </div>
-            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 18px; background: none;">
-                <button type="button" class="btn btn-secondary" id="btn-cancel-admin-plan" style="height: 38px; padding: 0 16px; border-radius: 8px;">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="btn-save-admin-plan" style="height: 38px; padding: 0 16px; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 18px; background: none;">
+                <button type="button" class="btn btn-secondary" id="btn-cancel-admin-plan" style="height: 38px; padding: 0 16px; border-radius: 10px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; font-weight: 600; cursor: pointer;">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-save-admin-plan" style="height: 38px; padding: 0 18px; border-radius: 10px; background: #3157e8; color: #ffffff; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(49, 87, 232, 0.25);">
                     <i data-lucide="check" style="width: 16px; height: 16px;"></i> Aplicar Plan
                 </button>
             </div>

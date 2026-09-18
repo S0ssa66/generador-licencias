@@ -1,0 +1,960 @@
+/* ==========================================================================
+   BEATSS — Admin Accounting & Operations Dashboard (#tab-admin)
+   Color Palette:
+     - Emerald Green: #10b981 (GMV Beats, Approved, Success)
+     - Electric Purple: #8b5cf6 (SaaS Platform, Obsidian, Royal Accents)
+     - Sky Cyan: #0284c7 / #00ccff (Global Licenses, Pro Plan, Links)
+     - Rose Pink: #ec4899 (Producers Count, Elite Plan)
+     - Amber Gold: #f59e0b (Pending Payments, Alerts)
+     - Slate & White Canvas: #f8fafc / #ffffff / #0f172a
+   ========================================================================== */
+
+#app-container.saas-workspace #tab-admin {
+    --adm-canvas: #f4f5f8;
+    --adm-paper: #ffffff;
+    --adm-card-subtle: #f8fafc;
+    --adm-line: #dfe4ec;
+    --adm-line-subtle: #f1f5f9;
+    --adm-ink: #0f172a;
+    --adm-muted: #64748b;
+    --adm-muted-light: #94a3b8;
+    
+    /* Exact Brand Accents */
+    --adm-green: #10b981;
+    --adm-green-tint: rgba(16, 185, 129, 0.08);
+    --adm-green-border: rgba(16, 185, 129, 0.25);
+    
+    --adm-purple: #8b5cf6;
+    --adm-purple-tint: rgba(139, 92, 246, 0.08);
+    --adm-purple-border: rgba(139, 92, 246, 0.25);
+    
+    --adm-cyan: #0284c7;
+    --adm-cyan-tint: rgba(2, 132, 199, 0.08);
+    --adm-cyan-border: rgba(2, 132, 199, 0.25);
+    
+    --adm-pink: #ec4899;
+    --adm-pink-tint: rgba(236, 72, 153, 0.08);
+    --adm-pink-border: rgba(236, 72, 153, 0.25);
+    
+    --adm-amber: #f59e0b;
+    --adm-amber-tint: rgba(245, 158, 11, 0.08);
+    --adm-amber-border: rgba(245, 158, 11, 0.25);
+    
+    --adm-red: #ef4444;
+    --adm-red-tint: rgba(239, 68, 68, 0.08);
+    --adm-red-border: rgba(239, 68, 68, 0.25);
+
+    display: none;
+    flex-direction: column;
+    gap: 24px;
+    padding: clamp(16px, 2.5vw, 36px) !important;
+    background: var(--adm-canvas) !important;
+    color: var(--adm-ink) !important;
+    min-height: 0;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+#app-container.saas-workspace #tab-admin.active {
+    display: flex !important;
+}
+
+#app-container.saas-workspace #tab-admin * {
+    box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   1. Header Section
+   -------------------------------------------------------------------------- */
+.admin-header-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 22px 28px;
+    background: var(--adm-paper);
+    border: 1px solid var(--adm-line);
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
+}
+
+.admin-header-main {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-header-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--adm-purple);
+    background: var(--adm-purple-tint);
+    border: 1px solid var(--adm-purple-border);
+    padding: 3px 10px;
+    border-radius: 999px;
+    width: fit-content;
+}
+
+.admin-header-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--adm-ink);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-header-subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: var(--adm-muted);
+    line-height: 1.4;
+}
+
+.admin-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-btn-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--adm-ink);
+    background: #ffffff;
+    border: 1px solid var(--adm-line);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+}
+
+.admin-btn-refresh:hover {
+    background: var(--adm-card-subtle);
+    border-color: #cbd5e1;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
+
+.admin-btn-refresh:active {
+    transform: translateY(0);
+}
+
+/* --------------------------------------------------------------------------
+   2. KPI Metric Cards (Consolidated Summary)
+   -------------------------------------------------------------------------- */
+#app-container.saas-workspace #tab-admin .admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    width: 100%;
+}
+
+.admin-stat-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 22px 24px;
+    background: var(--adm-paper);
+    border: 1px solid var(--adm-line);
+    border-radius: 20px;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.admin-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+
+.admin-stat-card--gmv::before { background: var(--adm-green); }
+.admin-stat-card--saas::before { background: var(--adm-purple); }
+.admin-stat-card--licenses::before { background: var(--adm-cyan); }
+.admin-stat-card--producers::before { background: var(--adm-pink); }
+
+.admin-stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    flex-shrink: 0;
+}
+
+.admin-stat-icon i,
+.admin-stat-icon svg {
+    width: 24px;
+    height: 24px;
+}
+
+.admin-stat-card--gmv .admin-stat-icon {
+    background: var(--adm-green-tint);
+    color: var(--adm-green);
+    border: 1px solid var(--adm-green-border);
+}
+
+.admin-stat-card--saas .admin-stat-icon {
+    background: var(--adm-purple-tint);
+    color: var(--adm-purple);
+    border: 1px solid var(--adm-purple-border);
+}
+
+.admin-stat-card--licenses .admin-stat-icon {
+    background: var(--adm-cyan-tint);
+    color: var(--adm-cyan);
+    border: 1px solid var(--adm-cyan-border);
+}
+
+.admin-stat-card--producers .admin-stat-icon {
+    background: var(--adm-pink-tint);
+    color: var(--adm-pink);
+    border: 1px solid var(--adm-pink-border);
+}
+
+.admin-stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+}
+
+.admin-stat-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--adm-muted);
+}
+
+.admin-stat-value {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--adm-ink);
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-stat-subtext {
+    font-size: 12px;
+    color: var(--adm-muted-light);
+    margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   3. Sub-Navigation Segmented Controller (Tabs)
+   -------------------------------------------------------------------------- */
+.admin-nav-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    background: var(--adm-paper);
+    border: 1px solid var(--adm-line);
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.03);
+    overflow-x: auto;
+    width: 100%;
+    scrollbar-width: none;
+}
+
+.admin-nav-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.admin-nav-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: 11px;
+    border: none;
+    background: transparent;
+    color: var(--adm-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.admin-nav-pill:hover {
+    background: var(--adm-card-subtle);
+    color: var(--adm-ink);
+}
+
+.admin-nav-pill.active {
+    background: #3157e8;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(49, 87, 232, 0.25);
+}
+
+.admin-nav-pill i,
+.admin-nav-pill svg {
+    width: 16px;
+    height: 16px;
+}
+
+.admin-badge-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    background: var(--adm-amber);
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);
+}
+
+.admin-nav-pill.active .admin-badge-count {
+    background: #ffffff;
+    color: #3157e8;
+    box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   4. Section Containers & Panels
+   -------------------------------------------------------------------------- */
+.admin-panel {
+    background: var(--adm-paper);
+    border: 1px solid var(--adm-line);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.03);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.admin-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.admin-panel-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--adm-ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: -0.01em;
+}
+
+.admin-panel-title i,
+.admin-panel-title svg {
+    width: 20px;
+    height: 20px;
+}
+
+.admin-panel-subtitle {
+    margin: 4px 0 0 0;
+    font-size: 13px;
+    color: var(--adm-muted);
+}
+
+/* --------------------------------------------------------------------------
+   5. Analytics Grid Layout (Rendimiento por Productor + Desgloses)
+   -------------------------------------------------------------------------- */
+.admin-analytics-layout {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 24px;
+    width: 100%;
+}
+
+@media (max-width: 1080px) {
+    .admin-analytics-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-filters-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.admin-input-search {
+    height: 36px;
+    padding: 0 12px 0 34px;
+    font-size: 12px;
+    background: #ffffff;
+    border: 1px solid var(--adm-line);
+    border-radius: 10px;
+    color: var(--adm-ink);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 180px;
+}
+
+.admin-input-search:focus {
+    border-color: #3157e8;
+    box-shadow: 0 0 0 3px rgba(49, 87, 232, 0.12);
+}
+
+.admin-select-filter {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #ffffff;
+    border: 1px solid var(--adm-line);
+    border-radius: 10px;
+    color: var(--adm-ink);
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.admin-select-filter:focus {
+    border-color: #3157e8;
+}
+
+/* Producer Cards Grid */
+#app-container.saas-workspace #tab-admin .producer-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    max-height: 540px;
+    overflow-y: auto;
+    padding-right: 4px;
+    padding-bottom: 4px;
+}
+
+#app-container.saas-workspace #tab-admin .producer-stats-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+#app-container.saas-workspace #tab-admin .producer-stats-grid::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 99px;
+}
+
+/* Overriding any legacy styles for .producer-analytics-card */
+#app-container.saas-workspace #tab-admin .producer-analytics-card {
+    background: #ffffff !important;
+    border: 1px solid var(--adm-line) !important;
+    border-radius: 16px !important;
+    padding: 18px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02) !important;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+#app-container.saas-workspace #tab-admin .producer-analytics-card:hover {
+    transform: translateY(-2px) !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
+}
+
+#app-container.saas-workspace #tab-admin .producer-analytics-card::before {
+    display: none !important;
+}
+
+.producer-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.producer-card-identity {
+    min-width: 0;
+    flex: 1;
+}
+
+.producer-card-aka {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--adm-ink);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.producer-card-email {
+    font-size: 12px;
+    color: var(--adm-muted);
+    font-family: ui-monospace, monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    margin-top: 2px;
+}
+
+.producer-metrics-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--adm-card-subtle);
+    border-radius: 12px;
+    border: 1px solid var(--adm-line-subtle);
+}
+
+.producer-metric-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.producer-metric-label {
+    font-size: 10px;
+    color: var(--adm-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.producer-metric-val-sales {
+    color: var(--adm-green);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.producer-metric-val-count {
+    color: var(--adm-ink);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.producer-secondary-row {
+    font-size: 11px;
+    color: var(--adm-muted);
+    padding: 6px 0;
+    border-top: 1px solid var(--adm-line-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.producer-secondary-row strong {
+    color: var(--adm-ink);
+}
+
+.producer-active-date {
+    font-size: 10px;
+    color: var(--adm-muted-light);
+    text-align: right;
+    margin-top: auto;
+    border-top: 1px solid var(--adm-line-subtle);
+    padding-top: 6px;
+    font-family: ui-monospace, monospace;
+}
+
+/* --------------------------------------------------------------------------
+   6. Progress Bars & Breakdowns
+   -------------------------------------------------------------------------- */
+#app-container.saas-workspace #tab-admin .breakdown-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#app-container.saas-workspace #tab-admin .breakdown-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+
+#app-container.saas-workspace #tab-admin .breakdown-label {
+    color: var(--adm-ink);
+    font-weight: 600;
+}
+
+#app-container.saas-workspace #tab-admin .breakdown-value {
+    font-family: ui-monospace, monospace;
+    font-weight: 600;
+    color: var(--adm-muted);
+}
+
+#app-container.saas-workspace #tab-admin .admin-progress-container {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+#app-container.saas-workspace #tab-admin .admin-progress-bar {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+/* --------------------------------------------------------------------------
+   7. Tables & Data Lists
+   -------------------------------------------------------------------------- */
+.admin-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--adm-line);
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+#app-container.saas-workspace #tab-admin table.history-table {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+
+#app-container.saas-workspace #tab-admin table.history-table thead {
+    background: var(--adm-card-subtle);
+    border-bottom: 1px solid var(--adm-line);
+}
+
+#app-container.saas-workspace #tab-admin table.history-table th {
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--adm-muted);
+    border: none;
+    white-space: nowrap;
+}
+
+#app-container.saas-workspace #tab-admin table.history-table tbody tr {
+    border-bottom: 1px solid var(--adm-line-subtle) !important;
+    background: transparent;
+    transition: background 0.15s ease;
+}
+
+#app-container.saas-workspace #tab-admin table.history-table tbody tr:hover {
+    background: #f8fafc !important;
+}
+
+#app-container.saas-workspace #tab-admin table.history-table tbody tr:last-child {
+    border-bottom: none !important;
+}
+
+#app-container.saas-workspace #tab-admin table.history-table td {
+    padding: 14px 16px !important;
+    color: var(--adm-ink);
+    border: none;
+    vertical-align: middle;
+}
+
+/* Badges */
+.admin-plan-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.admin-plan-badge--elite {
+    background: var(--adm-pink-tint);
+    color: var(--adm-pink);
+    border: 1px solid var(--adm-pink-border);
+}
+
+.admin-plan-badge--pro {
+    background: var(--adm-cyan-tint);
+    color: var(--adm-cyan);
+    border: 1px solid var(--adm-cyan-border);
+}
+
+.admin-plan-badge--inicial {
+    background: rgba(148, 163, 184, 0.12);
+    color: #64748b;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+/* VIP Toolbar */
+.admin-vip-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    padding: 18px 20px;
+    background: var(--adm-card-subtle);
+    border-radius: 14px;
+    border: 1px solid var(--adm-line);
+}
+
+.admin-vip-field {
+    flex: 1;
+    min-width: 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-vip-field label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--adm-muted);
+    letter-spacing: 0.5px;
+}
+
+.admin-vip-field select {
+    width: 100%;
+    height: 40px;
+    background: #ffffff;
+    border: 1px solid var(--adm-line);
+    border-radius: 10px;
+    padding: 0 12px;
+    color: var(--adm-ink);
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.admin-vip-field select:focus {
+    border-color: #3157e8;
+}
+
+.btn-generate-vip {
+    height: 40px;
+    padding: 0 20px;
+    font-size: 13px;
+    font-weight: 700;
+    background: #3157e8;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(49, 87, 232, 0.3);
+}
+
+.btn-generate-vip:hover {
+    background: #2546c7;
+    transform: translateY(-1px);
+}
+
+/* Obsidian Vault Card */
+.admin-obsidian-card {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.04) 0%, rgba(139, 92, 246, 0.01) 100%);
+    border: 1px solid var(--adm-purple-border);
+    border-radius: 20px;
+    padding: 24px;
+}
+
+.admin-btn-obsidian {
+    height: 40px;
+    padding: 0 20px;
+    font-weight: 700;
+    font-size: 13px;
+    border-radius: 10px;
+    background: var(--adm-purple);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+}
+
+.admin-btn-obsidian:hover {
+    background: #7c3aed;
+    transform: translateY(-1px);
+}
+
+/* Empty State */
+.admin-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--adm-muted);
+}
+
+.admin-empty-state i,
+.admin-empty-state svg {
+    width: 40px;
+    height: 40px;
+    color: var(--adm-muted-light);
+    margin-bottom: 12px;
+}
+
+.admin-empty-state h4 {
+    margin: 0 0 6px 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--adm-ink);
+}
+
+.admin-empty-state p {
+    margin: 0;
+    font-size: 13px;
+    max-width: 420px;
+}
+
+/* --------------------------------------------------------------------------
+   8. Modals (Plan Modal & Receipt Preview)
+   -------------------------------------------------------------------------- */
+#admin-plan-modal .modal {
+    background: #ffffff !important;
+    border: 1px solid var(--adm-line) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.15) !important;
+    color: var(--adm-ink) !important;
+}
+
+#admin-plan-modal .modal-header {
+    border-bottom: 1px solid var(--adm-line-subtle) !important;
+}
+
+#admin-plan-modal .modal-header h2 {
+    color: var(--adm-ink) !important;
+}
+
+#admin-plan-modal .modal-footer {
+    border-top: 1px solid var(--adm-line-subtle) !important;
+}
+
+#admin-receipt-preview-modal {
+    background: rgba(15, 23, 42, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+}
+
+#admin-receipt-preview-modal .receipt-modal-box {
+    background: #ffffff;
+    border: 1px solid var(--adm-line);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 680px;
+    padding: 24px;
+    position: relative;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+}
+
+#admin-receipt-preview-modal .receipt-preview-img-container {
+    max-height: 72vh;
+    overflow-y: auto;
+    border: 1px solid var(--adm-line);
+    border-radius: 12px;
+    background: #f8fafc;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#admin-receipt-preview-modal img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+
+/* --------------------------------------------------------------------------
+   9. Mobile Responsive (< 768px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+    #app-container.saas-workspace #tab-admin {
+        padding: 16px 16px calc(100px + env(safe-area-inset-bottom, 16px)) 16px !important;
+        gap: 16px;
+    }
+    
+    .admin-header-card {
+        padding: 16px;
+    }
+    
+    .admin-header-title {
+        font-size: 18px;
+    }
+    
+    .admin-stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+    }
+    
+    .admin-stat-card {
+        padding: 16px;
+        gap: 12px;
+    }
+    
+    .admin-stat-icon {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .admin-stat-value {
+        font-size: 20px;
+    }
+    
+    .admin-panel {
+        padding: 16px;
+        border-radius: 16px;
+    }
+    
+    .admin-input-search {
+        width: 100%;
+    }
+    
+    .admin-filters-bar {
+        width: 100%;
+    }
+    
+    .admin-vip-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

@@ -4,6 +4,159 @@
 > datos de clientes ni historial extenso. El historial se conserva en
 > `COLLABORATION_STATE.md`, que desde 2026-09-01 es un archivo de consulta.
 
+## Rediseño Integral de Contabilidad y Operaciones Globales — DONE (2026-09-17)
+
+- Estado: `DONE`; agente: `Antigravity`; fecha: 2026-09-17.
+- Objetivo: rediseñar desde cero el panel administrativo de Contabilidad y
+  Operaciones Globales (`#tab-admin` / `/contabilidad`) sobre el canvas SaaS
+  claro, preservando colores de marca, funcionalidades, IDs y seguridad.
+- Resumen: nuevo sistema de diseño `accounting.css` sin fondos oscuros legacy;
+  subnavegador segmentado con badges dinámicos para pagos pendientes; modales
+  de comprobante y plan modernizados; renderizado dinámico con sanitización
+  estricta (AST preserved) y event delegation seguro sin inline onclicks.
+- Archivos modificados: `accounting.css` (nuevo), `index.html`, `main.js`,
+  `dashboard_modules/accounting.js`, `CURRENT_STATE.md`.
+- Verificación: Node **264/264** tests aprobados; `security:check` aprobado;
+  `npm run build` y presupuesto de rendimiento aprobados (HTML gzip 60.89 kB,
+  bajo el límite de 65 kB); validación visual en escritorio y móvil completada.
+- Siguiente acción exacta: publicar a producción en Vercel con autorización de Sossa.
+
+## Publicar árbol BEATSS autorizado en Vercel — DONE (2026-09-17)
+
+- Estado: `DONE`; agente: `Codex`; fecha: 2026-09-17.
+- Objetivo: publicar el árbol actual de BEATSS en el proyecto Vercel vinculado,
+  tras autorización explícita de Sossa para incluir cambios heredados.
+- Resumen: Vercel publicó `dpl_xbpWp4zrwdkzenhvBbDHuuUfi7tP`, estado
+  `READY`, alias `https://beatss.app`; no se limpiaron cambios locales.
+- Archivos modificados: `CURRENT_STATE.md`; además se publicó el árbol local
+  completo según la autorización de Sossa.
+- Verificación: Node **264/264**, Python SRI **8/8**, seguridad y build con
+  presupuesto aprobados; HTTP 200 en `/`, `/tienda/sossa` y `/facturacion`.
+  Un GET a `/api/payments/retry-sri` devolvió 404.
+- Bloqueo/límite: `.vercelignore` excluye el reintento y las descargas SRI;
+  tampoco hay worker Python persistente confirmado en Vercel. No se emitió
+  factura ni se comprobó un flujo fiscal real.
+- Siguiente acción exacta: consolidar endpoints SRI en una función existente,
+  probar y republicar sin superar el límite de funciones.
+
+## Publicar correcciones SRI verificadas — BLOCKED (2026-09-17)
+
+- Estado: `BLOCKED`; agente: `Codex`; fecha: 2026-09-17.
+- Objetivo: publicar en Vercel las correcciones SRI aprobadas por Sossa sin
+  emitir facturas, cobrar ni cambiar registros de producción.
+- Resumen: se revisó el proyecto Vercel ya vinculado y la configuración de
+  exclusión; la versión a publicar incluye mucho trabajo local heredado y
+  archivos sin seguimiento, no sólo los cambios SRI. El intento de publicar
+  fue rechazado por el control de seguridad antes de iniciar un despliegue.
+- Archivos modificados en esta tarea: sólo `CURRENT_STATE.md`. No se cambió
+  código ni datos externos; no se emitió factura ni se envió correo.
+- Verificación: Node **264/264**, Python SRI **8/8**, `security:check` y build
+  con presupuesto aprobados. La CLI de Vercel confirmó acceso de lectura al
+  proyecto y el último despliegue previo estaba `READY`; no se creó uno nuevo
+  en esta tarea. El alias no se ha verificado para cambios nuevos porque no
+  hubo publicación.
+- Bloqueo: autorización genérica «publícalo» insuficiente para exponer todo el
+  árbol actual, según el revisor de seguridad. Además, `.vercelignore` excluye
+  descargas/reintento SRI y Vercel no aloja el worker Python persistente; una
+  publicación web sola no pondría en marcha el flujo fiscal completo.
+- Siguiente acción exacta: pedir a Sossa autorización específica para publicar
+  el árbol de trabajo completo con sus cambios ajenos, o instrucciones para
+  delimitar una entrega revisada; no rodear el rechazo del despliegue.
+
+## Corregir fallos críticos de emisión y entrega SRI — DONE (2026-09-17)
+
+- Estado: `DONE`; agente: `Codex`; fecha: 2026-09-17.
+- Objetivo: limitar la emisión a pagos aprobados, conservar una identidad fiscal
+  única por pago y hacer seguros los reintentos y descargas.
+- Resumen: la cola y el worker comprueban un pago aprobado del productor y
+  rechazan pruebas; el emisor usa los datos del pago como fuente fiscal. La
+  reserva conserva secuencial, clave y XML firmado antes de una sola llamada a
+  Recepción; un resultado incierto consulta la misma clave sin reenviar. La
+  conciliación conserva el estado de autorización pendiente de artefactos. El
+  worker pagina trabajos, acota reintentos y protege la cola SQLite de cambios
+  de XML/clave. El panel exige confirmación manual y descarga XML/RIDE con
+  sesión; sólo entrega artefactos autorizados e íntegros. Una identificación
+  numérica inválida ya no se convierte en pasaporte/consumidor final.
+- Archivos modificados: `sri_service.py`, `sri_contingency.py`,
+  `api/_sri_queue.js`, `api/_sri_download.js`, `api/payments/retry-sri.js`,
+  `dashboard_modules/history.js`, `dashboard_modules/invoicing.js`,
+  `tests/sri-issuance-hardening.test.mjs`, `tests/test_sri_reliability.py`,
+  `CURRENT_STATE.md`.
+- Pruebas: Node **264/264**; Python SRI **8/8**; `npm run security:check`
+  aprobado; `npm run build` y presupuesto aprobados (HTML gzip 60 785 B);
+  `npm run security:deps` sin altas/críticas, con nueve avisos moderados.
+  `git diff --check` de los archivos rastreados de esta tarea sin errores.
+- Bloqueos/límites: no hubo prueba de extremo a extremo con SRI, certificado,
+  Firestore real, worker remoto ni descarga autenticada real; no se emitió
+  factura, no se envió correo y no se desplegó. La cola necesita un worker
+  persistente; los estados de Pruebas no acreditan una emisión en Producción.
+- Siguiente acción exacta: con autorización explícita de Sossa, desplegar;
+  comprobar que el worker remoto está saludable y verificar una única emisión
+  controlada en el ambiente fiscal correcto, su autorización, XML/RIDE y correo.
+
+## Endurecer emisión SRI y observabilidad del facturador — DONE (2026-09-17)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: reforzar reserva de secuencial, salud del worker, confirmación
+  manual, reintentos controlados y protección de XML/RIDE.
+- Resumen: la emisión reserva el secuencial antes de firmar mediante
+  compare-and-set y conserva una reserva idempotente por pago; un fallo puede
+  dejar un hueco, pero nunca reutiliza el número fiscal. La emisión manual
+  requiere confirmación explícita y rechaza referencias Stripe de prueba. El
+  worker aplica espera exponencial acotada, marca revisión al agotar intentos
+  y publica un heartbeat privado que el facturador muestra sin revelar datos
+  sensibles. Una autorización sin XML/RIDE almacenados queda como
+  `AUTORIZADO_ENTREGA_PENDIENTE`: no ofrece descarga ni puede reemitirse.
+- Archivos modificados: `sri_service.py`, `sri_contingency.py`,
+  `api/payments/retry-sri.js`, `api/payments/config.js`,
+  `dashboard_modules/invoicing.js`, `tests/sri-issuance-hardening.test.mjs`,
+  `CURRENT_STATE.md`.
+- Pruebas: AST Python aprobado; `node --test tests/*.test.mjs` **262/262**;
+  `npm run security:check` aprobado (la advertencia local de
+  `DOWNLOAD_SIGNING_KEY` es esperada); `npm run build` y presupuesto aprobados
+  (HTML gzip 60,783 B, bajo 65 kB).
+- Límites: no se emitió comprobante, no se escribió Firestore, no se tocó un
+  certificado, ni se desplegó producción. El worker requiere un proceso
+  persistente para registrar su heartbeat; Vercel por sí solo sólo encola.
+- Siguiente acción exacta: con autorización explícita de Sossa, publicar los
+  cambios; antes de facturar en Producción, confirmar que el estado muestre
+  worker saludable y realizar una única emisión controlada solicitada por el
+  comprador.
+
+## Compactar facturador SRI y auditar flujo fiscal — DONE (2026-09-17)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: reducir scroll inicial del Facturador SRI y verificar que sus
+  estados, reintentos, configuración protegida y descargas coincidan con el
+  flujo fiscal real.
+- Resumen: se redujeron padding, márgenes, jerarquía del encabezado, estado,
+  métricas, filtros y tabla para que el registro aparezca antes. El aviso de
+  configuración distingue explícitamente **Pruebas** de **Producción**. La
+  ayuda describe el requisito real de la cola automática (pago Live + petición
+  de factura + opt-in), y las operaciones ya en proceso muestran seguimiento
+  en vez de ofrecer una segunda emisión.
+- Auditoría: la configuración expone sólo el indicador de firma, no el P12 ni
+  contraseña; el webhook distingue Stripe Live/test; la cola requiere opt-in
+  y solicitud fiscal, tiene idempotencia/lease/heartbeat; los XML/RIDE nuevos
+  usan Storage privado y las descargas validan sesión y propiedad. La captura
+  muestra ambiente `Pruebas`: las emisiones allí no son comprobantes fiscales
+  de producción.
+- Archivos modificados: `facturador.css`, `dashboard_modules/invoicing.js`,
+  `index.html`, `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`.
+- Pruebas: `node --test tests/*.test.mjs` **260/260** aprobado;
+  `npm run security:check` aprobado; `npm run build` y presupuesto aprobados
+  (HTML gzip 60,784 bytes, bajo 65 kB); sintaxis de worker Python aprobada;
+  `git diff --check` de los archivos intervenidos sin errores.
+- Límite: no se ejecutó una emisión real al SRI ni se cambiaron ventas,
+  credenciales, Firestore o producción. La vista local requiere autenticación,
+  por lo que la evidencia visual corresponde al layout compilado y pruebas de
+  regresión, no a una sesión fiscal real.
+- Siguiente acción exacta: con autorización de Sossa, publicar este rediseño;
+  luego, si se desea facturación real, cambiar el ambiente a Producción y hacer
+  una única emisión controlada solicitada por el comprador.
+
 ## Rediseño compacto de Ventas y retiro del asistente financiero — 2026-09-16
 
 - Estado: `DONE` (publicado).

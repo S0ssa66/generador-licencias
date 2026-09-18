@@ -1,6 +1,30 @@
 import { LICENSE_CONFIGS, SEED_LICENSES, DEFAULT_TEMPLATES } from './config.js';
 import { TRANSLATIONS, UI_TRANSLATIONS } from './i18n.js';
 import { getProducerDefault } from './producerDefaults.js';
+import {
+    normalizeWorkspacePathname,
+    workspacePathForTab,
+    workspaceTabForPath,
+    workspaceTitleForTab
+} from './workspace-routes.js';
+import './tailwind-entry.css';
+import './styles.css';
+import './mobile.css';
+import './settings-modern.css';
+import './viewport-coherence.css';
+import './workspace-theme.css?v=workspace-theme-1';
+import './email-progress.css?v=email-progress-light-1';
+import './email-history.css';
+import './beatss-ui.js?v=boot-fix-6';
+import './mobile-studio.js?v=boot-fix-6';
+import './facturador.css?v=boot-fix-6';
+import './dashboard-home.css?v=dashboard-home-1';
+import './sales-analytics.css?v=sales-analytics-1';
+import './contract-studio.css?v=contract-studio-1';
+import './operations-ledger.css?v=operations-ledger-1';
+import './license-library.css?v=license-library-1';
+import './beat-catalog.css?v=beat-catalog-1';
+import './accounting.css';
 import { 
     auth, 
     db, 
@@ -29,12 +53,175 @@ import {
     getDownloadURL
 } from "./firebase.js";
 import './auth.js';
-import './player.js';
-import './catalog.js';
-import './checkout.js';
-import './editor.js';
-import './dashboard.js';
-import './chatbot.js';
+
+// Crea y mantiene el registro privado básico de cada productor autenticado.
+// Está en el bundle del Studio porque usa Firestore; Auth lo invoca sólo una
+// vez que el panel completo ya fue solicitado.
+async function ensureUserIdentityRecord(user) {
+    if (!user?.uid) return;
+    const userRef = doc(db, 'users', user.uid);
+    const now = new Date().toISOString();
+    const providerIds = (user.providerData || [])
+        .map(provider => provider.providerId)
+        .filter(Boolean);
+    const primaryProvider = providerIds.includes('google.com')
+        ? 'google'
+        : providerIds.includes('password')
+            ? 'email_password'
+            : (providerIds[0] || 'unknown');
+
+    try {
+        const existing = await getDoc(userRef);
+        const auditData = {
+            email: user.email || '',
+            displayName: user.displayName || '',
+            authProvider: primaryProvider,
+            authProviders: providerIds,
+            emailVerified: user.emailVerified === true,
+            lastLoginAt: now
+        };
+        if (user.emailVerified === true) {
+            auditData.requiresEmailVerification = false;
+            auditData.onboardingStatus = existing.exists() && existing.data()?.onboardingStatus === 'completed'
+                ? 'completed'
+                : 'profile_pending';
+        }
+        if (!existing.exists()) {
+            auditData.plan = 'inicial';
+            auditData.registeredAt = user.metadata?.creationTime || now;
+        }
+        window.accountDeletionStatus = existing.exists()
+            ? String(existing.data()?.accountDeletionStatus || '')
+            : '';
+        await setDoc(userRef, auditData, { merge: true });
+        renderAccountDeletionStatus();
+    } catch (error) {
+        console.warn('No se pudo actualizar el registro de acceso del productor:', error.message);
+    }
+}
+window.ensureUserIdentityRecord = ensureUserIdentityRecord;
+
+// --- CONFIGURACIÓN DE LAZY LOADING Y PROXIES EN WINDOW ---
+const lazyModules = {
+    player: ['playBeat', 'togglePlay', 'initializeWaveformVisualizer', 'toggleStorePlay', 'setupStoreAudioPlayer'],
+    catalog: [
+        'renderBeatsGrid', 'updateGenreAndKeyFilters', 'renderGlobalBeats',
+        'initBeatsDB', 'openBeatsModal', 'closeBeatsModal',
+        'selectBeat', 'selectBeatForContract', 'initGlobalCatalog'
+    ],
+    checkout: [
+        'openPaymentModal', 'closePaymentModal', 'switchPaymentPlan',
+        'selectPaymentMethod', 'goToPaymentStep', 'simulatePaypalSubscription',
+        'simulatePayphoneSubscription',
+        'checkPayphoneRedirectResult', 'checkStripeReturn', 'closePayphoneOverlay', 'loadBuyerDownloadPage', 'initiateDeunaDynamicPayment',
+        'initPublicStore', 'renderStoreBeats', 'shareBeat', 'openBeatCheckoutModal', 'setupStoreCheckout', 'switchStoreTab'
+    ],
+    editor: [
+        'generatePreview', 'addCustomFieldRow', 'saveTemplateCustom', 'resetTemplateCustom',
+        'loadTemplates', 'loadFormDraft', 'loadWhitelistData', 'selectLicenseType', 'checkDocuSignOAuth', 'updateGoogleLoginLinkStatus', 'loadPlatformGDriveStatus', 'linkGoogleAccountForLogin',
+        'getCentralGdriveToken', 'getGdriveToken', 'getOrCreateDriveFolder',
+        'uploadFileToStorage', 'dataURLtoBlob', 'loadTemplateToEditor', 'generateReferenceCode', 'initPlatformGDriveOAuth', 'createBeatStarsMigrationTicket', 'copyBeatStarsMigrationTicket', 'clearBeatStarsMigrationTicket',
+        'handleFolderImport', 'handleZipSelect', 'analyzeSelectedZip', 'openTemplatesEditor', 'closeTemplatesEditor',
+        'downloadPDF', 'copyMarkdown', 'sendEmailDelivery', 'sendToDocuSign', 'checkAndSendSignedDelivery', 'clearFormFields'
+    ],
+    history: [
+        'updateHistoryTable', 'saveCurrentLicenseToHistory',
+        'setupHistoryRowEvents', 'loadLicenseIntoEditor', 'clearAllHistory',
+        'filterHistory', 'exportHistoryToCSV', 'exportHistoryToJSON'
+    ],
+    emailHistory: [
+        'recordEmailEvent', 'loadEmailHistory', 'exportEmailHistoryToCSV', 'exportEmailHistoryToJSON'
+    ],
+    contacts: [
+        'loadContacts', 'autoSaveContact', 'saveAllContacts',
+        'openContactsModal', 'closeContactsModal', 'renderContactsTable'
+    ],
+    csvImporter: [
+        'handleBeatStarsCsvImport'
+    ],
+    charts: [
+        'updateDashboardView', 'exportDashboardToPDF'
+    ],
+    accounting: [
+        'loadReferralData', 'loadConsolidatedAccounting', 'generateVipCodeAdmin', 'triggerReferralConversion'
+    ],
+    sales: [
+        'loadSalesData', 'requestNotificationPermission'
+    ],
+    invoicing: [
+        'initSriInvoicingView', 'renderSriInvoicingView'
+    ],
+    storageBackup: [
+        'loadHistory', 'saveHistory', 'loadFromLocalServer', 'autoSyncGoogleDrive',
+        'saveToLocalServer', 'backupToGoogleDrive', 'restoreFromGoogleDrive', 'safeSetItem', 'getLocalHeaders'
+    ]
+};
+
+const moduleLoaders = {
+    player: () => import('./player.js'),
+    catalog: () => import('./catalog.js'),
+    checkout: () => import('./checkout.js'),
+    editor: () => import('./editor.js'),
+    history: () => import('./dashboard_modules/history.js'),
+    emailHistory: () => import('./dashboard_modules/email_history.js'),
+    contacts: () => import('./dashboard_modules/contacts.js'),
+    csvImporter: () => import('./dashboard_modules/csv_importer.js'),
+    charts: () => import('./dashboard_modules/charts.js'),
+    accounting: () => import('./dashboard_modules/accounting.js'),
+    sales: () => import('./dashboard_modules/sales.js'),
+    invoicing: () => import('./dashboard_modules/invoicing.js'),
+    paymentPasarelas: () => import('./paymentPasarelas.js'),
+    storageBackup: () => import('./storageBackup.js')
+};
+
+const loadedModules = new Set();
+const modulePromises = new Map();
+
+async function loadModule(name) {
+    if (loadedModules.has(name)) return;
+    if (!moduleLoaders[name]) throw new Error(`Módulo no registrado: ${name}`);
+    if (modulePromises.has(name)) return modulePromises.get(name);
+
+    const loadPromise = (async () => {
+        await moduleLoaders[name]();
+        loadedModules.add(name);
+    })().finally(() => modulePromises.delete(name));
+
+    modulePromises.set(name, loadPromise);
+    return loadPromise;
+}
+
+// Inicializar proxies en window para todas las funciones lazy de forma segura
+Object.entries(lazyModules).forEach(([moduleName, funcs]) => {
+    funcs.forEach(funcName => {
+        const proxy = async function(...args) {
+            await loadModule(moduleName);
+            if (typeof window[funcName] === 'function' && window[funcName] !== proxy) {
+                return window[funcName](...args);
+            } else {
+                console.warn(`[LazyLoader] La función ${funcName} no fue redefinida tras cargar ${moduleName}`);
+            }
+        };
+        window[funcName] = proxy;
+    });
+});
+
+// El asistente se descarga únicamente cuando alguien lo abre. El proxy deja
+// funcional el botón de soporte sin añadir JS, DOM ni timers al arranque.
+let chatbotPromise = null;
+const lazyChatbotProxy = {
+    async toggleChat(...args) {
+        if (!chatbotPromise) {
+            chatbotPromise = import('./chatbot.js').then(() => {
+                window.initChatbot?.();
+                return window.beatssChatbot;
+            });
+        }
+        const chatbot = await chatbotPromise;
+        if (chatbot && chatbot !== lazyChatbotProxy) return chatbot.toggleChat(...args);
+    }
+};
+window.beatssChatbot = window.beatssChatbot || lazyChatbotProxy;
 
 const sanitizeHtml = window.sanitizeHtml || function(str) {
     return str == null ? '' : String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
@@ -42,6 +229,7 @@ const sanitizeHtml = window.sanitizeHtml || function(str) {
 
 // Alias locales para funciones en otros módulos asignadas al objeto global window
 const checkDocuSignOAuth = (...args) => window.checkDocuSignOAuth(...args);
+const generatePreview = (...args) => window.generatePreview(...args);
 const loadTemplates = (...args) => window.loadTemplates(...args);
 const loadContacts = (...args) => window.loadContacts(...args);
 const initBeatsDB = (...args) => window.initBeatsDB(...args);
@@ -52,6 +240,7 @@ const loadSalesData = (...args) => window.loadSalesData(...args);
 const requestNotificationPermission = (...args) => window.requestNotificationPermission(...args);
 const loadPlatformGDriveStatus = (...args) => window.loadPlatformGDriveStatus(...args);
 const updateGoogleLoginLinkStatus = (...args) => window.updateGoogleLoginLinkStatus(...args);
+const linkGoogleAccountForLogin = (...args) => window.linkGoogleAccountForLogin(...args);
 const getGdriveToken = (...args) => window.getGdriveToken(...args);
 const getOrCreateDriveFolder = (...args) => window.getOrCreateDriveFolder(...args);
 const triggerReferralConversion = (...args) => window.triggerReferralConversion(...args);
@@ -60,18 +249,211 @@ const renderBeatsGrid = (...args) => window.renderBeatsGrid(...args);
 const updateGenreAndKeyFilters = (...args) => window.updateGenreAndKeyFilters(...args);
 const loadConsolidatedAccounting = (...args) => window.loadConsolidatedAccounting(...args);
 const updateDashboardView = (...args) => window.updateDashboardView(...args);
+const saveCurrentLicenseToHistory = (...args) => window.saveCurrentLicenseToHistory(...args);
+const clearAllHistory = (...args) => window.clearAllHistory(...args);
+const openContactsModal = (...args) => window.openContactsModal(...args);
+const closeContactsModal = (...args) => window.closeContactsModal(...args);
+const renderContactsTable = (...args) => window.renderContactsTable(...args);
+const exportHistoryToCSV = (...args) => window.exportHistoryToCSV(...args);
+const exportHistoryToJSON = (...args) => window.exportHistoryToJSON(...args);
 const handleFolderImport = (...args) => window.handleFolderImport(...args);
-const dataURLtoBlob = (...args) => window.dataURLtoBlob(...args);
-const uploadFileToStorage = (...args) => window.uploadFileToStorage(...args);
+const safeSetItem = (...args) => window.safeSetItem(...args);
+const loadHistory = async (...args) => {
+    await loadModule('storageBackup');
+    if (typeof window.loadHistory !== 'function' || window.loadHistory === loadHistory) {
+        throw new Error('El cargador del historial de licencias no está disponible.');
+    }
+    return window.loadHistory(...args);
+};
+const saveHistory = async (...args) => {
+    await loadModule('storageBackup');
+    if (typeof window.saveHistory !== 'function' || window.saveHistory === saveHistory) {
+        throw new Error('El guardado del historial de licencias no está disponible.');
+    }
+    return window.saveHistory(...args);
+};
+const loadFromLocalServer = (...args) => window.loadFromLocalServer(...args);
+const autoSyncGoogleDrive = (...args) => window.autoSyncGoogleDrive(...args);
+const saveToLocalServer = (...args) => window.saveToLocalServer(...args);
+const backupToGoogleDrive = (...args) => window.backupToGoogleDrive(...args);
+const restoreFromGoogleDrive = (...args) => window.restoreFromGoogleDrive(...args);
+
+let activeEditorStep = 1;
+
+const EDITOR_STEP_COPY = {
+    1: { next: 'Continuar a datos' },
+    2: { back: 'Volver a licencia', next: 'Revisar entrega' },
+    3: { back: 'Editar datos' }
+};
+
+function updateEditorStepFooter(step) {
+    const footer = document.getElementById('wizard-progress-actions');
+    const backButton = document.getElementById('wizard-back');
+    const nextButton = document.getElementById('wizard-next');
+    const nextLabel = document.getElementById('wizard-next-label');
+    const deliveryActions = document.getElementById('delivery-actions');
+
+    if (footer) footer.dataset.editorStepState = String(step);
+    if (backButton) {
+        backButton.hidden = step === 1;
+        const backLabel = backButton.querySelector('span');
+        if (backLabel) backLabel.textContent = EDITOR_STEP_COPY[step]?.back || 'Volver';
+    }
+    if (nextButton) {
+        nextButton.hidden = step === 3;
+        if (nextLabel) nextLabel.textContent = EDITOR_STEP_COPY[step]?.next || 'Continuar';
+    }
+    if (deliveryActions) deliveryActions.hidden = step !== 3;
+}
+
+// Navegación estable del editor de licencias. Cada cambio de paso actualiza
+// el panel, el selector y las acciones para impedir que dos etapas se mezclen.
+function showEditorStep(step) {
+    const normalizedStep = Number(step);
+    if (![1, 2, 3].includes(normalizedStep)) return;
+    activeEditorStep = normalizedStep;
+
+    const wizardStage = document.getElementById('wizard-stage');
+    if (wizardStage) wizardStage.dataset.activeStep = String(normalizedStep);
+
+    for (let index = 1; index <= 3; index++) {
+        const section = document.getElementById(`step-${index}`);
+        const isActive = index === normalizedStep;
+        if (section) {
+            section.hidden = !isActive;
+            section.classList.toggle('hidden', !isActive);
+            section.dataset.wizardActive = String(isActive);
+            section.toggleAttribute('inert', !isActive);
+            section.setAttribute('aria-hidden', String(!isActive));
+
+            // Los estilos heredados de versiones anteriores no pueden volver a
+            // montar un paso inactivo debajo del actual. El atributo hidden y
+            // este valor en línea se refuerzan entre sí para conservar un único
+            // panel de trabajo visible en todas las vistas.
+            if (isActive) {
+                section.style.removeProperty('display');
+            } else {
+                section.style.setProperty('display', 'none', 'important');
+            }
+        }
+
+        const nav = document.getElementById(`nav-step-${index}`);
+        if (!nav) continue;
+        nav.classList.toggle('is-active', isActive);
+        nav.setAttribute('aria-selected', String(isActive));
+        nav.tabIndex = isActive ? 0 : -1;
+    }
+
+    updateEditorStepFooter(normalizedStep);
+    const sidebarScroll = document.querySelector('.sidebar-scroll');
+    const sidebar = document.querySelector('#app-container .sidebar');
+    const resetWizardScroll = () => {
+        if (sidebarScroll) sidebarScroll.scrollTop = 0;
+        if (sidebar) sidebar.scrollTop = 0;
+    };
+    resetWizardScroll();
+    requestAnimationFrame(resetWizardScroll);
+}
+window.nextStep = showEditorStep;
+
+// Función helper para debounce (limitar frecuencia de ejecución)
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+const debouncedGeneratePreview = debounce((...args) => {
+    if (typeof window.generatePreview === 'function') window.generatePreview(...args);
+}, 300);
+window.debouncedGeneratePreview = debouncedGeneratePreview;
+
+export function dataURLtoBlob(dataurl) {
+    const arr = dataurl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+}
+window.dataURLtoBlob = dataURLtoBlob;
+
+export async function uploadFileToStorage(blob, path) {
+    const storageRef = ref(storage, path);
+    const uploadTask = uploadBytesResumable(storageRef, blob);
+
+    return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+            try {
+                uploadTask.cancel();
+                console.warn('Firebase Storage upload cancelado por timeout.');
+            } catch (err) {
+                console.error('Error al cancelar uploadTask:', err);
+            }
+            reject(new Error('Timeout al subir a Firebase Storage (30s)'));
+        }, 30000);
+
+        uploadTask.on('state_changed',
+            null,
+            (error) => {
+                clearTimeout(timeoutId);
+                reject(error);
+            },
+            async () => {
+                clearTimeout(timeoutId);
+                try {
+                    const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                    resolve(downloadUrl);
+                } catch (e) {
+                    reject(e);
+                }
+            }
+        );
+    });
+}
+window.uploadFileToStorage = uploadFileToStorage;
+
 const loadTemplateToEditor = (...args) => window.loadTemplateToEditor(...args);
 const saveTemplateCustom = (...args) => window.saveTemplateCustom(...args);
 const resetTemplateCustom = (...args) => window.resetTemplateCustom(...args);
 const generateReferenceCode = (...args) => window.generateReferenceCode(...args);
 const checkPayphoneRedirectResult = (...args) => window.checkPayphoneRedirectResult(...args);
+const checkStripeReturn = (...args) => typeof window.checkStripeReturn === 'function' ? window.checkStripeReturn(...args) : undefined;
 const renderGlobalBeats = (...args) => window.renderGlobalBeats(...args);
 const renderStoreBeats = (...args) => window.renderStoreBeats(...args);
 const updateHistoryTable = (...args) => window.updateHistoryTable(...args);
 const initPlatformGDriveOAuth = (...args) => window.initPlatformGDriveOAuth(...args);
+// Configuración puede abrirse desde Inicio, donde el editor aún no está
+// descargado. Cargarlo aquí evita que los controles de migración fallen por
+// intentar invocar un global que todavía no existe.
+const createBeatStarsMigrationTicket = async (...args) => {
+    await loadModule('editor');
+    if (typeof window.createBeatStarsMigrationTicket !== 'function') {
+        throw new Error('No se pudo cargar el control de migración de BeatStars.');
+    }
+    return window.createBeatStarsMigrationTicket(...args);
+};
+const copyBeatStarsMigrationTicket = async (...args) => {
+    await loadModule('editor');
+    if (typeof window.copyBeatStarsMigrationTicket !== 'function') {
+        throw new Error('No se pudo cargar el control de migración de BeatStars.');
+    }
+    return window.copyBeatStarsMigrationTicket(...args);
+};
+const handleZipSelect = (...args) => window.handleZipSelect(...args);
+const analyzeSelectedZip = (...args) => window.analyzeSelectedZip(...args);
+const openTemplatesEditor = (...args) => window.openTemplatesEditor(...args);
+const closeTemplatesEditor = (...args) => window.closeTemplatesEditor(...args);
+const downloadPDF = (...args) => window.downloadPDF(...args);
+const copyMarkdown = (...args) => window.copyMarkdown(...args);
+const sendEmailDelivery = (...args) => window.sendEmailDelivery(...args);
+const sendToDocuSign = (...args) => window.sendToDocuSign(...args);
+const checkAndSendSignedDelivery = (...args) => window.checkAndSendSignedDelivery(...args);
+const clearFormFields = (...args) => window.clearFormFields(...args);
 
 // Estado global de la aplicación
 let currentLang = 'es';
@@ -102,6 +484,9 @@ function loadScript(src) {
         document.head.appendChild(script);
     });
 }
+// Compartir el cargador con los módulos lazy que se ejecutan fuera de main.js.
+// Sin esta referencia, funciones como Reenviar EmailJS no podían cargar su SDK.
+window.loadScript = loadScript;
 
 const REAL_FEED_ITEMS = [
     {
@@ -385,31 +770,58 @@ function updateUILanguage() {
 
     // 4. Actualizar textos de conmutación de idioma
     const langLabel = currentLang.toUpperCase();
-    ['landing-btn-language', 'catalog-btn-language', 'lang-icon'].forEach(id => {
+    ['catalog-btn-language', 'lang-icon'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.textContent = langLabel;
         }
     });
 
-    // 5. Refrescar vistas y datos que dependen del idioma
-    if (typeof renderGlobalBeats === 'function' && window.filteredGlobalBeats) {
-        renderGlobalBeats(window.filteredGlobalBeats);
-    }
-    if (typeof renderStoreBeats === 'function' && window.storeBeats) {
-        renderStoreBeats(window.storeBeats);
-    }
-    if (typeof updateHistoryTable === 'function') {
-        updateHistoryTable();
-    }
-    if (typeof generatePreview === 'function') {
-        generatePreview();
-    }
-    if (typeof renderLiveLicensesFeed === 'function') {
-        renderLiveLicensesFeed();
+    // 5. Refrescar vistas y datos que dependen del idioma. Estas funciones
+    // son proxies lazy: no deben activarse durante la landing pública porque
+    // traducir el HTML no requiere descargar el editor, historial ni backups.
+    const appContainer = document.getElementById('app-container');
+    const workspaceIsVisible = Boolean(
+        window.currentUser &&
+        appContainer &&
+        getComputedStyle(appContainer).display !== 'none'
+    );
+    if (workspaceIsVisible) {
+        if (typeof renderGlobalBeats === 'function' && window.filteredGlobalBeats) {
+            renderGlobalBeats(window.filteredGlobalBeats);
+        }
+        if (typeof renderStoreBeats === 'function' && window.storeBeats) {
+            renderStoreBeats(window.storeBeats);
+        }
+        if (typeof updateHistoryTable === 'function') {
+            updateHistoryTable();
+        }
+        if (typeof generatePreview === 'function') {
+            generatePreview();
+        }
+        if (typeof renderLiveLicensesFeed === 'function') {
+            renderLiveLicensesFeed();
+        }
     }
 }
 window.updateUILanguage = updateUILanguage;
+
+function bindLanguageToggle(id) {
+    const button = document.getElementById(id);
+    if (!button || button.dataset.languageBound === 'true') return;
+    button.addEventListener('click', () => {
+        currentLang = currentLang === 'es' ? 'en' : 'es';
+        window.currentLang = currentLang;
+        localStorage.setItem('beatss_language', currentLang);
+        updateUILanguage();
+        window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: currentLang } }));
+    });
+    button.dataset.languageBound = 'true';
+}
+
+// El catálogo es público, por lo que su selector debe funcionar sin esperar a
+// que exista una sesión o se inicialice el workspace privado.
+bindLanguageToggle('catalog-btn-language');
 
 // Convertir enlaces de Google Drive a enlaces a través de nuestro proxy de audio (para evitar restricciones de CORS y CORP de Google)
 function getGDriveDirectLink(url) {
@@ -445,10 +857,46 @@ function getGDriveDirectLink(url) {
 window.getGDriveDirectLink = getGDriveDirectLink;
 
 // Configuración de Productor por defecto
+const PRIVATE_CONFIG_KEYS = [
+    'signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId',
+    'emailjsServiceId', 'emailjsTemplateId', 'emailjsTemplatePendingId',
+    'emailjsPublicKey', 'paypalClientSecret', 'sriP12Password',
+    'sriP12Base64', 'sriSecuencial', 'audioTagBase64',
+    'bankPichinchaAcc', 'bankPichinchaDni', 'bankPichinchaName', 'bankPichinchaType',
+    'bankGuayaquilAcc', 'bankGuayaquilDni', 'bankGuayaquilName', 'bankGuayaquilType',
+    'deunaName', 'deunaPhone', 'deunaQrBase64',
+    'paypalClientId', 'paypalEmail', 'paypalPlanIdPro', 'paypalPlanIdElite',
+    'paypalPlanIdCreator', 'paypalPlanIdProArtist',
+    'payphoneAppId', 'payphoneClientId', 'payphonePhone',
+    'stripePublishableKey', 'stripeConnectAccountId',
+    'id', 'address', 'birthdate', 'sriRuc', 'sriRazonSocial', 'sriNombreComercial',
+    'sriDirMatriz', 'sriEstab', 'sriPtoEmi', 'sriAmbiente', 'sriRimpe',
+    'sriContabilidad', 'sriIvaTarifa', 'sriIvaIncluido', 'sriRucProveedor',
+    'sriAutoQueueEnabled'
+];
+
+function getPublicProducerConfig(config) {
+    const publicConfig = { ...(config || {}) };
+    PRIVATE_CONFIG_KEYS.forEach(key => delete publicConfig[key]);
+    return publicConfig;
+}
+
+function createProducerStoreSlug(value, uid = '') {
+    const base = String(value || 'productor')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 48) || 'productor';
+    const suffix = String(uid || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 8).toLowerCase();
+    return suffix ? `${base}-${suffix}` : base;
+}
+
 let producerConfig = {
-    name: "Sossa",
-    aka: "Sossa",
-    email: "sossabeatz1@gmail.com",
+    name: "Productor",
+    aka: "Productor",
+    email: "",
     phone: "",
     place: "Quito, Ecuador",
     id: "",
@@ -462,9 +910,11 @@ let producerConfig = {
     dsEnv: "demo",
     emailjsServiceId: "",
     emailjsTemplateId: "",
+    emailjsTemplatePendingId: "",
     emailjsPublicKey: "",
-    gdriveClientId: "216966055009-03rjdnq87uh3h15e3qfglp2pnmos9t5k.apps.googleusercontent.com",
-    storageProvider: "gdrive-central"
+    gdriveClientId: "",
+    storageProvider: "firebase",
+    pdfStorageProvider: "firebase"
 };
 window.producerConfig = producerConfig;
 
@@ -536,7 +986,7 @@ window.openPaymentModal = function(warningMessage = null, mode = 'producers') {
     // Prefill RUC Invoice fields in subscription form if config is available
     const subInvoiceRuc = document.getElementById('sub-invoice-ruc');
     if (subInvoiceRuc && window.producerConfig) {
-        subInvoiceRuc.value = window.producerConfig.sriRuc || '0803743111001';
+        subInvoiceRuc.value = window.producerConfig.sriRuc || '';
         const subInvoiceCompany = document.getElementById('sub-invoice-company');
         if (subInvoiceCompany) subInvoiceCompany.value = window.producerConfig.sriRazonSocial || window.producerConfig.name || '';
         const subInvoiceAddress = document.getElementById('sub-invoice-address');
@@ -557,6 +1007,11 @@ window.openPaymentModal = function(warningMessage = null, mode = 'producers') {
         modal.style.display = 'flex';
         modal.scrollTop = 0;
     }
+    // El módulo y la configuración de pagos se piden sólo cuando el modal se
+    // abre, nunca durante el primer paint de la página.
+    loadModule('paymentPasarelas')
+        .then(() => window.initPaymentModalPasarelas?.())
+        .catch((error) => console.warn('[BEATSS] No se pudo cargar el módulo de pagos:', error?.message || error));
     safeCreateIcons();
 };
 
@@ -605,6 +1060,8 @@ window.switchSupportTab = function(tabName) {
 };
 
 // Contar licencias generadas este mes para Plan Inicial
+const INITIAL_PLAN_MONTHLY_LICENSE_LIMIT = 5;
+
 function getLicensesThisMonthCount() {
     const today = new Date();
     const year = today.getFullYear();
@@ -618,8 +1075,8 @@ function checkPlanLimitExceeded(actionName = 'generar una nueva licencia') {
     if (window.currentUserIsPro) return false;
     
     const count = getLicensesThisMonthCount();
-    if (count >= 3) {
-        openPaymentModal(`Límite alcanzado: Has generado el límite de 3 licencias del Plan Inicial este mes (${count}/3 usadas). Mejora al Plan Pro hoy para generar licencias ilimitadas.`);
+    if (count >= INITIAL_PLAN_MONTHLY_LICENSE_LIMIT) {
+        openPaymentModal(`Límite alcanzado: Has generado el límite de ${INITIAL_PLAN_MONTHLY_LICENSE_LIMIT} licencias del Plan Inicial este mes (${count}/${INITIAL_PLAN_MONTHLY_LICENSE_LIMIT} usadas). Mejora al Plan Pro para generar licencias ilimitadas.`);
         return true;
     }
     return false;
@@ -682,11 +1139,11 @@ function updatePlanUI() {
 
         // ── Nombre del plan ──────────────────────────────────────────────
         if (plan === 'elite') {
-            settingsPlanName.innerHTML = `<span style="color:#ec4899;"><i data-lucide="crown" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;"></i>Elite</span>`;
+            settingsPlanName.innerHTML = `<span style="color:var(--settings-primary, #3157e8);"><i data-lucide="crown" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;"></i>Elite</span>`;
         } else if (plan === 'pro') {
-            settingsPlanName.innerHTML = `<span style="color:#a855f7;"><i data-lucide="sparkles" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;"></i>Pro</span>`;
+            settingsPlanName.innerHTML = `<span style="color:var(--settings-primary, #3157e8);"><i data-lucide="sparkles" style="width:20px;height:20px;vertical-align:middle;margin-right:6px;"></i>Pro</span>`;
         } else {
-            settingsPlanName.innerHTML = `<span style="color:#8a91a6;">Gratuito</span>`;
+            settingsPlanName.innerHTML = `<span style="color:var(--settings-muted, #697993);">Gratuito</span>`;
         }
 
         // ── Badge de estado ───────────────────────────────────────────────
@@ -775,10 +1232,14 @@ function updatePlanUI() {
 }
 
 // Wrappers seguros para evitar fallos por red o bloqueos de navegador
-function safeCreateIcons() {
+function safeCreateIcons(rootElement = null) {
     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
         try {
-            lucide.createIcons();
+            if (rootElement) {
+                lucide.createIcons({ root: rootElement });
+            } else {
+                lucide.createIcons();
+            }
         } catch (e) {
             console.warn('Error al crear iconos de Lucide:', e);
         }
@@ -797,198 +1258,7 @@ function safeGetItem(key) {
     }
 }
 
-// Obtener cabeceras con token de autenticación para peticiones al servidor local
-async function getLocalHeaders() {
-    let token = window.localAuthToken;
-    if (!token) {
-        token = localStorage.getItem('local_auth_token');
-    }
-    if (!token) {
-        try {
-            const localServerUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-                ? '/api/local-token'
-                : 'http://localhost:8000/api/local-token';
-            const res = await fetch(localServerUrl);
-            if (res.ok) {
-                const data = await res.json();
-                token = data.token;
-                if (token) {
-                    window.localAuthToken = token;
-                    localStorage.setItem('local_auth_token', token);
-                }
-            }
-        } catch (e) {
-            console.warn("No se pudo obtener el token local automáticamente:", e);
-        }
-    }
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
-}
-window.getLocalHeaders = getLocalHeaders;
 
-// Guardar copia de seguridad en el archivo físico del servidor local (Mac)
-async function saveToLocalServer() {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const isProducer = ['masterjuego25@gmail.com', 'sossabeatz1@gmail.com', 'beatscgmonarco@gmail.com', 'mistermicua@gmail.com'].some(email => 
-        auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() === email
-    );
-    if (!isLocal && !isProducer) return;
-    try {
-        let legacyUser = 'sossa';
-        if (auth.currentUser && auth.currentUser.email) {
-            const email = auth.currentUser.email.toLowerCase();
-            if (email === 'beatscgmonarco@gmail.com') {
-                legacyUser = 'cgmonarco';
-            } else if (email === 'mistermicua@gmail.com') {
-                legacyUser = 'mrmicua';
-            }
-        }
-
-        const backupData = {};
-        const configVal = localStorage.getItem(`${window.currentUser}_producer_config`);
-        const historyVal = localStorage.getItem(`${window.currentUser}_license_history`);
-        const contactsVal = localStorage.getItem(`${window.currentUser}_contacts`);
-        const beatsVal = localStorage.getItem(`${window.currentUser}_beats`);
-
-        backupData[`${window.currentUser}_producer_config`] = configVal;
-        backupData[`${window.currentUser}_license_history`] = historyVal;
-        backupData[`${window.currentUser}_contacts`] = contactsVal;
-        backupData[`${window.currentUser}_beats`] = beatsVal;
-
-        // Also write legacy keys for backward-compatibility with other scripts
-        backupData[`${legacyUser}_producer_config`] = configVal;
-        backupData[`${legacyUser}_license_history`] = historyVal;
-        backupData[`${legacyUser}_contacts`] = contactsVal;
-        backupData[`${legacyUser}_beats`] = beatsVal;
-
-        const localApiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? `/api/save-local?user=${legacyUser}`
-            : `http://localhost:8000/api/save-local?user=${legacyUser}`;
-            
-        const headers = await getLocalHeaders();
-        const res = await fetch(localApiUrl, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(backupData)
-        });
-        if (res.ok) {
-            console.log(`💾 Archivo local ${legacyUser}_backup_sincronizado.json actualizado automáticamente.`);
-        } else {
-            console.warn('Error al guardar archivo local:', await res.text());
-        }
-    } catch (e) {
-        console.warn('No se pudo guardar el archivo local en el servidor:', e);
-    }
-}
-
-// Cargar copia de seguridad desde el archivo físico del servidor local (Mac)
-// EL ARCHIVO LOCAL SIEMPRE TIENE PRIORIDAD SOBRE GOOGLE DRIVE
-window._localServerLoaded = false;
-async function loadFromLocalServer() {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const isProducer = ['masterjuego25@gmail.com', 'sossabeatz1@gmail.com', 'beatscgmonarco@gmail.com', 'mistermicua@gmail.com'].some(email => 
-        auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() === email
-    );
-    if (!isLocal && !isProducer) return;
-    try {
-        let legacyUser = 'sossa';
-        if (auth.currentUser && auth.currentUser.email) {
-            const email = auth.currentUser.email.toLowerCase();
-            if (email === 'beatscgmonarco@gmail.com') {
-                legacyUser = 'cgmonarco';
-            } else if (email === 'mistermicua@gmail.com') {
-                legacyUser = 'mrmicua';
-            }
-        }
-
-        const localApiUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-            ? `/api/load-local?user=${legacyUser}`
-            : `http://localhost:8000/api/load-local?user=${legacyUser}`;
-            
-        const headers = await getLocalHeaders();
-        const res = await fetch(localApiUrl, { headers: headers });
-        if (res.ok) {
-            const backupData = await res.json();
-
-            // Contar licencias y contactos
-            let localCount = 0, diskCount = 0;
-            let localContacts = 0, diskContacts = 0;
-            try { localCount = JSON.parse(localStorage.getItem(`${window.currentUser}_license_history`) || '[]').length; } catch(e) {}
-            
-            const diskHistoryStr = backupData[`${window.currentUser}_license_history`] || backupData[`${legacyUser}_license_history`] || '[]';
-            try { diskCount = JSON.parse(diskHistoryStr).length; } catch(e) {}
-            
-            try { localContacts = JSON.parse(localStorage.getItem(`${window.currentUser}_contacts`) || '[]').length; } catch(e) {}
-            
-            const diskContactsStr = backupData[`${window.currentUser}_contacts`] || backupData[`${legacyUser}_contacts`] || '[]';
-            try { diskContacts = JSON.parse(diskContactsStr).length; } catch(e) {}
-
-            const localWeight = (localCount * 1000) + localContacts;
-            const diskWeight = (diskCount * 1000) + diskContacts;
-
-            // Siempre cargar del disco si tiene IGUAL O MÁS datos combinados que localStorage
-            const shouldLoad = diskWeight >= localWeight;
-
-            if (shouldLoad) {
-                const setOrRemove = (key, val) => {
-                    if (val === null || val === undefined || val === 'null') {
-                        localStorage.removeItem(key);
-                    } else {
-                        localStorage.setItem(key, val);
-                    }
-                };
-                setOrRemove(`${window.currentUser}_producer_config`, backupData[`${window.currentUser}_producer_config`] || backupData[`${legacyUser}_producer_config`]);
-                setOrRemove(`${window.currentUser}_license_history`, backupData[`${window.currentUser}_license_history`] || backupData[`${legacyUser}_license_history`]);
-                setOrRemove(`${window.currentUser}_contacts`, backupData[`${window.currentUser}_contacts`] || backupData[`${legacyUser}_contacts`]);
-                setOrRemove(`${window.currentUser}_beats`, backupData[`${window.currentUser}_beats`] || backupData[`${legacyUser}_beats`]);
-
-                window._localServerLoaded = true;
-                console.log(`🔄 Archivo local cargado: peso ${diskWeight} (localStorage tenía ${localWeight})`);
-
-                if (diskWeight !== localWeight) {
-                    showToast(`🔄 Datos sincronizados desde archivo local (${diskCount} licencias, ${diskContacts} contactos)`, false);
-                    await new Promise(resolve => setTimeout(resolve, 800));
-                    window.location.reload();
-                }
-            } else {
-                // localStorage tiene más datos → guardar al disco para mantener sincronía
-                console.log(`💾 localStorage tiene más datos (${localWeight}) que disco (${diskWeight}). Actualizando disco...`);
-                await saveToLocalServer();
-                window._localServerLoaded = true;
-            }
-        }
-    } catch (e) {
-        console.warn('No se pudo cargar el archivo local desde el servidor:', e);
-    }
-}
-
-function safeSetItem(key, value) {
-    try {
-        localStorage.setItem(key, value);
-        // Si es una clave de base de datos, gatillar auto-respaldos
-        if ([`${window.currentUser}_producer_config`, `${window.currentUser}_license_history`, `${window.currentUser}_contacts`, `${window.currentUser}_beats`].includes(key)) {
-            // Respaldar en Google Drive en segundo plano si hay sesión
-            autoBackupGoogleDrive();
-            // Guardar en el archivo físico de la Mac en segundo plano si estamos en localhost o somos productor admin
-            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const isProducer = ['masterjuego25@gmail.com', 'sossabeatz1@gmail.com', 'beatscgmonarco@gmail.com', 'mistermicua@gmail.com'].some(email => 
-                auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() === email
-            );
-            if (isLocal || isProducer) {
-                saveToLocalServer();
-            }
-        }
-        return true;
-    } catch (e) {
-        console.warn('No se pudo acceder a localStorage.setItem:', e);
-        return false;
-    }
-}
-
-window.safeSetItem = safeSetItem;
 window.initApp = initApp;;
 
 if (document.readyState === 'loading') {
@@ -999,8 +1269,43 @@ if (document.readyState === 'loading') {
 
 async function initApp(user) {
     window.currentUser = user;
+    // El Studio vigente es un producto de superficie clara. El selector de
+    // tema heredado dejaba el modo oscuro como valor por defecto y hacía que
+    // una ruta privada directa dependiera de haber cargado antes la portada.
+    // Mantener esta clase al iniciar vuelve determinista el tema del área
+    // autenticada, incluso si existe una preferencia antigua en localStorage.
+    document.body.classList.add('light-theme');
     document.getElementById('app-container').style.display = 'grid';
+    document.getElementById('app-container').setAttribute('aria-hidden', 'false');
     document.body.classList.add('admin-active');
+
+    // Arranque por ruta: el Studio no necesita descargar el dashboard,
+    // catálogo e historial antes del primer render.
+    const bootPath = normalizedPathname();
+    const bootTab = workspaceTabForPath(bootPath) || 'tab-home';
+    const bootRouteByTab = {
+        'tab-home': 'home',
+        'tab-preview': 'studio',
+        'tab-history': 'history',
+        'tab-email-history': 'email-history',
+        'tab-invoicing': 'invoicing',
+        'tab-beats': 'catalog',
+        'tab-dashboard': 'dashboard',
+        'tab-sales': 'sales',
+        'tab-whitelist': 'whitelist',
+        'tab-admin': 'accounting'
+    };
+    const bootRoute = bootRouteByTab[bootTab] || 'home';
+    const runWhenIdle = (task, timeout = 1800) => {
+        const run = () => Promise.resolve().then(task).catch((error) => {
+            console.warn('[BEATSS] Tarea secundaria diferida falló:', error?.message || error);
+        });
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(run, { timeout });
+        } else {
+            window.setTimeout(run, 0);
+        }
+    };
 
     // Resetear modos globales y actualizar UI del carrito
     window.stateManager.setState('isGlobalCatalogMode', false);
@@ -1029,22 +1334,34 @@ async function initApp(user) {
         if (window.lucide) window.lucide.createIcons();
     }
 
-    checkDocuSignOAuth();
+    // Solo se necesita cargar el editor para procesar el retorno OAuth de
+    // DocuSign; en el resto de rutas no debe arrastrar ese módulo pesado.
+    if (window.location.hash.includes('access_token=')) {
+        checkDocuSignOAuth();
+    }
     initDefaultDate();
     
-    // Cargar del servidor local si estamos en localhost, o si el usuario es administrador y estamos en producción
+    // Los endpoints del servidor Python solo existen en desarrollo local.
+    // Consultarlos en producción retrasaba a administradores con una petición
+    // que nunca podía aportar datos al primer render.
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const isProducer = ['masterjuego25@gmail.com', 'sossabeatz1@gmail.com', 'beatscgmonarco@gmail.com', 'mistermicua@gmail.com'].some(email => 
-        auth.currentUser && auth.currentUser.email && auth.currentUser.email.toLowerCase() === email
-    );
-    if (isLocal || isProducer) {
+    if (isLocal) {
         await loadFromLocalServer();
+    }
+
+    // El Studio necesita el editor antes de cargar la configuración porque
+    // esta última prepara algunos controles que pertenecen al editor. Hacer
+    // explícita esa dependencia evita que el primer render quede a medias
+    // mientras un proxy lazy intenta resolver una función global.
+    if (bootRoute === 'studio') {
+        await loadModule('editor');
     }
     
     await loadProducerConfig();
     updatePlanUI();
-    await loadTemplates();
-
+    if (bootRoute === 'studio') {
+        await loadTemplates();
+    }
     // Configurar logo y tema por defecto según el AKA cargado en el config
     const logoImg = document.getElementById('app-logo');
     const sidebarTitle = document.getElementById('app-sidebar-title');
@@ -1079,11 +1396,11 @@ async function initApp(user) {
         }
     }
 
-    // Actualizar advertencia de Google Drive en configuración
     const driveWarning = document.getElementById('drive-folder-warning');
     if (driveWarning) {
-        const folderName = `${producerConfig.aka || producerConfig.name || 'BEATSS'} Licencias`;
-        driveWarning.innerHTML = `🔒 Los contratos PDF se guardarán automáticamente en tu Drive en la carpeta <strong>${sanitizeHtml(folderName)}/Contratos</strong>.`;
+        driveWarning.textContent = producerConfig.storageProvider === 'gdrive-central'
+            ? 'Los archivos pesados de cada beat se guardarán en el Drive central de BEATSS. Los pedidos, licencias y contratos transaccionales permanecen protegidos en Firebase.'
+            : 'Los archivos se guardarán en Firebase hasta que el Drive central de BEATSS esté vinculado.';
     }
 
     // Mostrar pestaña de administración si es Sossa Admin
@@ -1092,79 +1409,121 @@ async function initApp(user) {
         adminTabBtn.style.display = window.currentUserIsAdmin ? 'inline-flex' : 'none';
     }
 
-    await loadHistory();
-    await loadContacts(); // Cargar los contactos desde Firestore
-    await initBeatsDB();
-    setupEventListeners();
-    window.isInitializing = true;
-    selectLicenseType('basic'); // Cargar tipo básico al inicio
-    loadFormDraft(); // Restaurar borrador si existe
-    window.isInitializing = false;
-    await loadReferralData(); // Cargar datos del programa de referidos
-    await loadSalesData(); // Iniciar listener en tiempo real de pedidos de beats
-    requestNotificationPermission(); // Solicitar permiso de notificaciones nativas
+    if (bootRoute === 'studio') {
+        window.isInitializing = true;
+        try {
+            await Promise.resolve(selectLicenseType('basic')); // Cargar tipo básico al inicio
+            await Promise.resolve(loadFormDraft()); // Restaurar borrador si existe
+
+            // Un borrador antiguo o una carga parcial nunca deben dejar el
+            // papel vacío. Si no se produjo HTML, regenerar una vez con los
+            // valores actuales del formulario.
+            const preview = document.getElementById('rendered-contract-content');
+            if (preview && !preview.innerHTML.trim()) {
+                await Promise.resolve(generatePreview());
+            }
+        } catch (error) {
+            console.error('[BEATSS] No se pudo inicializar la previsualización del Studio:', error);
+        } finally {
+            window.isInitializing = false;
+        }
+    }
+
+    // Los listeners son importantes para la interacción, pero un control
+    // opcional no debe impedir que el contrato ya renderizado sea visible.
+    try {
+        setupEventListeners();
+        // La ruta es la única fuente de verdad al arrancar. Esto garantiza
+        // que nunca queden dos paneles activos por clases heredadas del HTML
+        // o por una navegación privada pendiente durante la autenticación.
+        selectWorkspaceTab(window.beatssPendingWorkspaceTab || bootTab);
+        if (bootRoute === 'studio') showEditorStep(1);
+    } catch (error) {
+        console.error('[BEATSS] Error al registrar controles de la interfaz:', error);
+    }
+
+    // selectWorkspaceTab ya dispara la carga específica de la vista activa.
+    // No repetimos aquí las mismas consultas a historial, ventas, catálogo o
+    // facturación; las funciones lazy continúan disponibles para cada acción.
+    if (bootRoute === 'studio') runWhenIdle(() => loadHistory(), 1200);
+    if (bootRoute === 'studio') runWhenIdle(() => loadReferralData(), 4000);
     safeCreateIcons();
     initTooltips();
     
-    // Auto-sincronizar silenciosamente en segundo plano si hay sesión activa de Google
-    setTimeout(autoSyncGoogleDrive, 600);
+    // Google Drive ya no forma parte del flujo principal. Solo intentamos
+    // sincronizar si existe una sesión de Drive válida y, además, después de
+    // que la interfaz quedó libre; así no se descarga storageBackup ni se
+    // consulta Drive en cada inicio normal.
+    runWhenIdle(() => {
+        if (!sessionStorage.getItem('gdrive_access_token')) return;
+        return autoSyncGoogleDrive();
+    }, 5000);
+
+    if (producerConfig.onboardingCompleted === false) {
+        window.setTimeout(() => {
+            openSettingsModal();
+            showToast('Completa tu perfil y guarda los cambios para activar tu espacio de productor.');
+        }, 250);
+    }
 }
 
 // Establecer fecha de hoy por defecto
 function initDefaultDate() {
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('effective-date').value = today;
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const field = document.getElementById('effective-date');
+    if (field) field.value = today;
+}
+
+async function loadSriProfileFromServer() {
+    if (!auth.currentUser) return {};
+    try {
+        const response = await fetch('/api/payments/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${await auth.currentUser.getIdToken()}`
+            },
+            body: JSON.stringify({ action: 'sri-profile', producerId: window.currentUser })
+        });
+        if (!response.ok) return {};
+        const payload = await response.json();
+        return payload?.sri && typeof payload.sri === 'object' ? payload.sri : {};
+    } catch (error) {
+        console.warn('No se pudo consultar el estado protegido del SRI:', error.message);
+        return {};
+    }
+}
+
+async function saveSriConfigToServer(sri) {
+    if (!auth.currentUser) throw new Error('Sesión requerida para guardar la configuración SRI.');
+    const response = await fetch('/api/payments/config', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${await auth.currentUser.getIdToken()}`
+        },
+        body: JSON.stringify({ action: 'save-sri-config', producerId: window.currentUser, sri })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'No se pudo guardar la configuración SRI.');
+    return payload?.sri || {};
 }
 
 async function loadProducerConfig() {
     const docRef = doc(db, "users", window.currentUser, "config", "producer");
-    const privateDocRef = doc(db, "users", window.currentUser, "private_config", "producer");
     let firestoreLoaded = false;
     let publicData = null;
-    let privateData = null;
     try {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             publicData = docSnap.data();
         }
         
-        try {
-            const privateSnap = await getDoc(privateDocRef);
-            if (privateSnap.exists()) {
-                privateData = privateSnap.data();
-            }
-        } catch (e) {
-            console.warn("No se pudo leer la configuración privada (puede que no esté inicializada o falten permisos):", e.message);
-        }
-        
         if (publicData) {
-            // Migración automática de campos privados si están en el documento público
-            const privateKeys = ['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey', 'paypalClientSecret', 'audioTagBase64'];
-            let migrationNeeded = false;
-            const migratedPrivate = { ...(privateData || {}) };
-            const cleanPublic = { ...publicData };
-            
-            privateKeys.forEach(key => {
-                if (key in cleanPublic && cleanPublic[key] !== undefined && cleanPublic[key] !== '') {
-                    migratedPrivate[key] = cleanPublic[key];
-                    delete cleanPublic[key];
-                    migrationNeeded = true;
-                }
-            });
-            
-            if (migrationNeeded) {
-                console.log("🛡️ Migrando credenciales y firma a configuración privada...");
-                try {
-                    await setDoc(privateDocRef, migratedPrivate);
-                    await setDoc(docRef, cleanPublic);
-                    publicData = cleanPublic;
-                    privateData = migratedPrivate;
-                } catch (migrationErr) {
-                    console.error("Fallo en la migración de configuración:", migrationErr);
-                }
-            }
-            
-            producerConfig = { ...producerConfig, ...publicData, ...(privateData || {}) };
+            // La proyección pública se limpia también en el navegador para no
+            // volver a conservar valores heredados de firma/certificado.
+            producerConfig = { ...producerConfig, ...getPublicProducerConfig(publicData), ...(await loadSriProfileFromServer()) };
             firestoreLoaded = true;
         }
     } catch (err) {
@@ -1178,7 +1537,9 @@ async function loadProducerConfig() {
             try {
                 const localConfig = JSON.parse(saved);
                 producerConfig = { ...producerConfig, ...localConfig };
-                console.log("Cargada configuración de productor desde localStorage:", producerConfig);
+                // El almacenamiento local nunca debe conservar credenciales ni
+                // certificados, aunque provengan de una versión antigua.
+                safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(getPublicProducerConfig(producerConfig)));
             } catch (e) {
                 console.error("Error al parsear config de localStorage:", e);
             }
@@ -1187,6 +1548,8 @@ async function loadProducerConfig() {
             const displayName = auth.currentUser ? auth.currentUser.displayName : "";
             producerConfig = getProducerDefault(currentEmail, displayName);
         }
+
+        if (producerConfig.storageProvider === 'gdrive') producerConfig.storageProvider = 'gdrive-central';
             
             // Si fue referido por alguien, registrar el referido en la base de datos
             const referredBy = localStorage.getItem('beatss_referred_by');
@@ -1200,7 +1563,6 @@ async function loadProducerConfig() {
                         createdAt: new Date().toISOString()
                     });
                     localStorage.removeItem('beatss_referred_by');
-                    console.log("👥 Registro de referido guardado con éxito.");
                 } catch (e) {
                     console.error("Error al registrar referido en Firestore:", e);
                 }
@@ -1208,17 +1570,32 @@ async function loadProducerConfig() {
 
         // Subir a Firestore y actualizar localStorage
         try {
-            await setDoc(docRef, producerConfig);
-            safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(producerConfig));
+            const publicConfig = getPublicProducerConfig(producerConfig);
+            await setDoc(docRef, publicConfig);
+            safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(publicConfig));
             // También guardar en el documento raíz del usuario para fácil consulta en consultas unificadas
             const userRef = doc(db, "users", window.currentUser);
             await setDoc(userRef, {
-                plan: producerConfig.plan || 'inicial',
-                planActivatedAt: new Date().toISOString(),
+                plan: producerConfig.plan || 'inicial'
             }, { merge: true });
         } catch (err) {
             console.error("Error al guardar config de productor en Firestore:", err);
         }
+    }
+
+    if (!producerConfig.storeSlug) {
+        producerConfig.storeSlug = createProducerStoreSlug(producerConfig.aka || producerConfig.name, window.currentUser);
+        const publicConfig = getPublicProducerConfig(producerConfig);
+        safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(publicConfig));
+        setDoc(docRef, { storeSlug: producerConfig.storeSlug }, { merge: true })
+            .catch((error) => console.warn('No se pudo guardar el identificador de tienda:', error.message));
+    }
+
+    if (producerConfig.storageProvider === 'gdrive') {
+        producerConfig.storageProvider = 'gdrive-central';
+        safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(getPublicProducerConfig(producerConfig)));
+        setDoc(docRef, { storageProvider: 'gdrive-central' }, { merge: true })
+            .catch((error) => console.warn('No se pudo guardar la migración de almacenamiento:', error.message));
     }
 
     // Comprobar expiración del Plan Pro o Elite
@@ -1227,12 +1604,11 @@ async function loadProducerConfig() {
         const expirationDate = new Date(expDateStr);
         if (expirationDate < new Date()) {
             const expiredPlan = producerConfig.plan;
-            console.log(`El Plan ${expiredPlan} ha expirado. Degradando a Plan Inicial.`);
             producerConfig.plan = 'inicial'; // 'inicial' represents the free tier
             // Guardar cambio de plan en segundo plano para no demorar la carga inicial
             const userConfigRef = doc(db, "users", window.currentUser, "config", "producer");
-            setDoc(userConfigRef, producerConfig).then(() => {
-                safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(producerConfig));
+            setDoc(userConfigRef, getPublicProducerConfig(producerConfig), { merge: true }).then(() => {
+                safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(getPublicProducerConfig(producerConfig)));
                 showToast(`Tu suscripción ${expiredPlan === 'elite' ? 'Elite' : 'Pro'} ha expirado. Volviendo al Plan Inicial.`, true);
                 updatePlanUI();
                 generatePreview();
@@ -1257,8 +1633,8 @@ async function loadProducerConfig() {
     document.getElementById('cfg-ds-env').value = producerConfig.dsEnv || "demo";
     document.getElementById('cfg-emailjs-service-id').value = producerConfig.emailjsServiceId || "";
     document.getElementById('cfg-emailjs-template-id').value = producerConfig.emailjsTemplateId || "";
+    document.getElementById('cfg-emailjs-template-pending-id').value = producerConfig.emailjsTemplatePendingId || "";
     document.getElementById('cfg-emailjs-public-key').value = producerConfig.emailjsPublicKey || "";
-    document.getElementById('cfg-gdrive-client-id').value = producerConfig.gdriveClientId || "";
     
     // Rellenar datos de cobro de tienda pública
     document.getElementById('cfg-bank-pichincha-acc').value = producerConfig.bankPichinchaAcc || "";
@@ -1298,27 +1674,46 @@ async function loadProducerConfig() {
     if (document.getElementById('cfg-paypal-plan-id-elite')) {
         document.getElementById('cfg-paypal-plan-id-elite').value = producerConfig.paypalPlanIdElite || "";
     }
+    if (document.getElementById('cfg-stripe-publishable-key')) {
+        document.getElementById('cfg-stripe-publishable-key').value = producerConfig.stripePublishableKey || "";
+    }
+    if (document.getElementById('cfg-stripe-connect-account-id')) {
+        document.getElementById('cfg-stripe-connect-account-id').value = producerConfig.stripeConnectAccountId || "";
+    }
     document.getElementById('cfg-payphone-phone').value = producerConfig.payphonePhone || "";
     document.getElementById('cfg-payphone-client-id').value = producerConfig.payphoneClientId || "";
     document.getElementById('cfg-payphone-appid').value = producerConfig.payphoneAppId || "";
 
     // Cargar datos de Facturación Electrónica SRI (Ecuador)
-    document.getElementById('cfg-sri-ruc').value = producerConfig.sriRuc || "0803743111001";
+    document.getElementById('cfg-sri-ruc').value = producerConfig.sriRuc || "";
     document.getElementById('cfg-sri-razon-social').value = producerConfig.sriRazonSocial || "";
     document.getElementById('cfg-sri-nombre-comercial').value = producerConfig.sriNombreComercial || "";
-    document.getElementById('cfg-sri-dir-matriz').value = producerConfig.sriDirMatriz || "";
+    document.getElementById('cfg-sri-dir-matriz').value = producerConfig.sriDirMatriz || "Quito - Ecuador";
     document.getElementById('cfg-sri-estab').value = producerConfig.sriEstab || "001";
     document.getElementById('cfg-sri-pto-emi').value = producerConfig.sriPtoEmi || "001";
     document.getElementById('cfg-sri-ambiente').value = producerConfig.sriAmbiente || "1";
     document.getElementById('cfg-sri-rimpe').value = producerConfig.sriRimpe || "no_rimpe";
     document.getElementById('cfg-sri-contabilidad').value = producerConfig.sriContabilidad || "NO";
-    document.getElementById('cfg-sri-p12-password').value = producerConfig.sriP12Password || "";
+    const sriIvaTarifaEl = document.getElementById('cfg-sri-iva-tarifa');
+    if (sriIvaTarifaEl) {
+        sriIvaTarifaEl.value = producerConfig.sriIvaTarifa || (producerConfig.sriRimpe === 'rimpe_popular' ? '0' : '15');
+    }
+    const sriIvaIncluidoEl = document.getElementById('cfg-sri-iva-incluido');
+    if (sriIvaIncluidoEl) {
+        sriIvaIncluidoEl.checked = producerConfig.sriIvaIncluido !== false && producerConfig.sriIvaIncluido !== 'false';
+    }
+    if (document.getElementById('cfg-sri-ruc-proveedor')) {
+        document.getElementById('cfg-sri-ruc-proveedor').value = producerConfig.sriRucProveedor || "";
+    }
+    document.getElementById('cfg-sri-p12-password').value = '';
+    const sriAutoQueueEl = document.getElementById('cfg-sri-auto-queue');
+    if (sriAutoQueueEl) sriAutoQueueEl.checked = producerConfig.sriAutoQueueEnabled === true;
     
     // Mostrar estado del archivo .p12 subido
     const p12Status = document.getElementById('cfg-sri-p12-status');
     if (p12Status) {
-        if (producerConfig.sriP12Base64) {
-            p12Status.innerHTML = '✅ <strong style="color: #4ade80;">Firma electrónica (.p12) cargada.</strong> Puedes subir otra si deseas reemplazarla.';
+        if (producerConfig.sriSignatureConfigured === true) {
+            p12Status.innerHTML = '✅ <strong style="color: #4ade80;">Firma electrónica protegida y configurada.</strong> Puedes subir otra para reemplazarla; la actual no se descarga al navegador.';
         } else {
             p12Status.innerHTML = 'Firma electrónica (.p12 / .pfx) no cargada. Sube tu archivo para emitir facturas digitales oficiales.';
         }
@@ -1343,6 +1738,12 @@ async function loadProducerConfig() {
             paypalClientIdInput.placeholder = 'Client ID (Opcional)';
             paypalClientSecretInput.placeholder = 'Client Secret (Opcional)';
         }
+    }
+
+    const stripePublishableKeyInput = document.getElementById('cfg-stripe-publishable-key');
+    if (stripePublishableKeyInput) {
+        stripePublishableKeyInput.disabled = !isProOrElite;
+        stripePublishableKeyInput.placeholder = isProOrElite ? 'pk_test_... o pk_live_...' : '⚠️ Requiere Plan Pro/Elite';
     }
 
     // Configurar campos de PayPhone
@@ -1382,7 +1783,7 @@ async function loadProducerConfig() {
     }
 
     if (document.getElementById('cfg-storage-provider')) {
-        document.getElementById('cfg-storage-provider').value = producerConfig.storageProvider || "gdrive-central";
+        document.getElementById('cfg-storage-provider').value = producerConfig.storageProvider || "firebase";
     }
     if (document.getElementById('cfg-contract-color')) {
         document.getElementById('cfg-contract-color').value = producerConfig.contractColor || "default";
@@ -1444,7 +1845,7 @@ async function loadProducerConfig() {
         el.style.display = window.currentUserIsAdmin ? (isGrid ? 'grid' : (isFlex ? 'flex' : 'block')) : 'none';
     });
 
-    if (window.currentUserIsAdmin) {
+    if (window.currentUserIsAdmin && loadedModules.has('editor')) {
         loadPlatformGDriveStatus();
     }
     
@@ -1535,14 +1936,102 @@ async function loadProducerConfig() {
         }
     }
 
-    // Cargar estado de la vinculación de Google para iniciar sesión
-    updateGoogleLoginLinkStatus();
+    // Cargar estado de la vinculación de Google para iniciar sesión solo
+    // cuando el módulo del editor ya está disponible. En rutas como Dashboard
+    // no se debe descargar el editor solo por abrir el panel.
+    if (loadedModules.has('editor')) {
+        updateGoogleLoginLinkStatus();
+    }
     window.producerConfig = producerConfig;
+}
+
+function validarRucSri(value) {
+    const ruc = String(value || '').trim();
+    if (!/^\d{13}$/.test(ruc) || /^0+$/.test(ruc) || ruc.slice(-3) === '000') return false;
+    const province = Number(ruc.slice(0, 2));
+    const third = Number(ruc[2]);
+    if (!((province >= 1 && province <= 24) || province === 30)) return false;
+
+    if (third < 6) {
+        const weights = [2, 1, 2, 1, 2, 1, 2, 1, 2];
+        const sum = weights.reduce((total, weight, index) => {
+            const product = Number(ruc[index]) * weight;
+            return total + (product >= 10 ? product - 9 : product);
+        }, 0);
+        return ((10 - (sum % 10)) % 10) === Number(ruc[9]);
+    }
+    if (third === 9) {
+        const weights = [4, 3, 2, 7, 6, 5, 4, 3, 2];
+        const sum = weights.reduce((total, weight, index) => total + Number(ruc[index]) * weight, 0);
+        return ((11 - (sum % 11)) % 11) % 10 === Number(ruc[9]);
+    }
+    if (third === 6) {
+        const weights = [3, 2, 7, 6, 5, 4, 3, 2];
+        const sum = weights.reduce((total, weight, index) => total + Number(ruc[index]) * weight, 0);
+        return ((11 - (sum % 11)) % 11) % 10 === Number(ruc[8]);
+    }
+    return false;
+}
+
+function validateSriProducerConfig(config) {
+    const value = (key) => String(config?.[key] ?? '').trim();
+    const secretFields = ['sriP12Base64', 'sriP12Password', 'sriSecuencial'];
+    const hasSriData = [
+        'sriRuc', 'sriRazonSocial', 'sriNombreComercial',
+        'sriRucProveedor', ...secretFields
+    ].some((key) => value(key)) ||
+        (value('sriDirMatriz') !== '' && value('sriDirMatriz') !== 'Quito - Ecuador') ||
+        value('sriEstab') !== '' && value('sriEstab') !== '001' ||
+        value('sriPtoEmi') !== '' && value('sriPtoEmi') !== '001' ||
+        value('sriAmbiente') !== '' && value('sriAmbiente') !== '1' ||
+        value('sriRimpe') !== '' && value('sriRimpe') !== 'no_rimpe' ||
+        value('sriContabilidad') !== '' && value('sriContabilidad') !== 'NO' ||
+        value('sriIvaTarifa') !== '' && value('sriIvaTarifa') !== '15';
+
+    // Dejar todos los campos vacíos sigue siendo válido: significa que el
+    // productor aún no activó la facturación electrónica. El backend lo
+    // marcará como NO_CONFIGURADO en una compra aprobada.
+    if (!hasSriData) return { ok: true };
+
+    const errors = [];
+    const ruc = value('sriRuc');
+    const providerRuc = value('sriRucProveedor');
+    const estab = value('sriEstab');
+    const ptoEmi = value('sriPtoEmi');
+    const ambiente = value('sriAmbiente');
+    const iva = value('sriIvaTarifa');
+
+    if (!validarRucSri(ruc)) {
+        errors.push({ fieldId: 'cfg-sri-ruc', message: 'El RUC del emisor no supera la validación ecuatoriana del SRI.' });
+    }
+    if (!value('sriRazonSocial')) {
+        errors.push({ fieldId: 'cfg-sri-razon-social', message: 'Ingresa la razón social oficial del emisor.' });
+    }
+    if (!value('sriDirMatriz')) {
+        errors.push({ fieldId: 'cfg-sri-dir-matriz', message: 'Ingresa la dirección de la matriz.' });
+    }
+    if (!/^\d{3}$/.test(estab)) {
+        errors.push({ fieldId: 'cfg-sri-estab', message: 'El establecimiento debe tener 3 dígitos, por ejemplo 001.' });
+    }
+    if (!/^\d{3}$/.test(ptoEmi)) {
+        errors.push({ fieldId: 'cfg-sri-pto-emi', message: 'El punto de emisión debe tener 3 dígitos, por ejemplo 001.' });
+    }
+    if (!['1', '2'].includes(ambiente)) {
+        errors.push({ fieldId: 'cfg-sri-ambiente', message: 'Selecciona un ambiente SRI válido: pruebas o producción.' });
+    }
+    if (!['0', '5', '12', '13', '14', '15', 'NO_OBJETO', 'EXENTO'].includes(iva)) {
+        errors.push({ fieldId: 'cfg-sri-iva-tarifa', message: 'Selecciona una tarifa IVA válida.' });
+    }
+    if (providerRuc && !validarRucSri(providerRuc)) {
+        errors.push({ fieldId: 'cfg-sri-ruc-proveedor', message: 'El RUC del proveedor no supera la validación ecuatoriana del SRI.' });
+    }
+
+    return errors.length ? { ok: false, ...errors[0] } : { ok: true };
 }
 
 // Guardar configuración de productor
 async function saveProducerConfig() {
-    producerConfig.name = document.getElementById('cfg-producer-name').value.trim() || producerConfig.name || "Joao David Dominguez";
+    producerConfig.name = document.getElementById('cfg-producer-name').value.trim() || producerConfig.name || "Productor";
     producerConfig.id = document.getElementById('cfg-producer-id').value.trim() || producerConfig.id || "";
     producerConfig.aka = document.getElementById('cfg-producer-aka').value.trim() || producerConfig.aka || "Productor";
     producerConfig.place = document.getElementById('cfg-default-place').value.trim() || producerConfig.place || "Quito, Ecuador";
@@ -1578,10 +2067,9 @@ async function saveProducerConfig() {
     // Guardar campos de EmailJS
     producerConfig.emailjsServiceId = document.getElementById('cfg-emailjs-service-id').value.trim();
     producerConfig.emailjsTemplateId = document.getElementById('cfg-emailjs-template-id').value.trim();
+    producerConfig.emailjsTemplatePendingId = document.getElementById('cfg-emailjs-template-pending-id').value.trim();
     producerConfig.emailjsPublicKey = document.getElementById('cfg-emailjs-public-key').value.trim();
 
-    // Guardar Google Drive Client ID
-    producerConfig.gdriveClientId = document.getElementById('cfg-gdrive-client-id').value.trim();
     if (document.getElementById('cfg-storage-provider')) {
         producerConfig.storageProvider = document.getElementById('cfg-storage-provider').value;
     }
@@ -1632,6 +2120,18 @@ async function saveProducerConfig() {
     if (document.getElementById('cfg-paypal-plan-id-elite')) {
         producerConfig.paypalPlanIdElite = document.getElementById('cfg-paypal-plan-id-elite').value.trim();
     }
+    if (document.getElementById('cfg-stripe-publishable-key')) {
+        producerConfig.stripePublishableKey = document.getElementById('cfg-stripe-publishable-key').value.trim();
+    }
+    if (document.getElementById('cfg-stripe-connect-account-id')) {
+        const connectAccountId = document.getElementById('cfg-stripe-connect-account-id').value.trim();
+        if (connectAccountId && !/^acct_[A-Za-z0-9]{8,}$/.test(connectAccountId)) {
+            showToast('El identificador de Stripe Connect no es válido.', true);
+            document.getElementById('cfg-stripe-connect-account-id').focus();
+            return;
+        }
+        producerConfig.stripeConnectAccountId = connectAccountId;
+    }
     producerConfig.payphonePhone = document.getElementById('cfg-payphone-phone').value.trim();
     producerConfig.payphoneClientId = document.getElementById('cfg-payphone-client-id').value.trim();
     producerConfig.payphoneAppId = document.getElementById('cfg-payphone-appid').value.trim();
@@ -1646,23 +2146,41 @@ async function saveProducerConfig() {
     producerConfig.sriAmbiente = document.getElementById('cfg-sri-ambiente').value;
     producerConfig.sriRimpe = document.getElementById('cfg-sri-rimpe').value;
     producerConfig.sriContabilidad = document.getElementById('cfg-sri-contabilidad').value;
-    producerConfig.sriP12Password = document.getElementById('cfg-sri-p12-password').value;
-    if (window.tempSriP12Base64) {
-        producerConfig.sriP12Base64 = window.tempSriP12Base64;
+    if (document.getElementById('cfg-sri-iva-tarifa')) {
+        producerConfig.sriIvaTarifa = document.getElementById('cfg-sri-iva-tarifa').value || '15';
+    }
+    if (document.getElementById('cfg-sri-iva-incluido')) {
+        producerConfig.sriIvaIncluido = document.getElementById('cfg-sri-iva-incluido').checked;
+    }
+    if (document.getElementById('cfg-sri-ruc-proveedor')) {
+        producerConfig.sriRucProveedor = document.getElementById('cfg-sri-ruc-proveedor').value.trim();
+    }
+    const sriSecrets = {
+        sriP12Password: document.getElementById('cfg-sri-p12-password').value,
+        sriP12Base64: window.tempSriP12Base64 || ''
+    };
+    const sriAutoQueueEl = document.getElementById('cfg-sri-auto-queue');
+    producerConfig.sriAutoQueueEnabled = sriAutoQueueEl?.checked === true;
+
+    const sriValidation = validateSriProducerConfig(producerConfig);
+    if (!sriValidation.ok) {
+        showToast(sriValidation.message, true);
+        const invalidField = document.getElementById(sriValidation.fieldId);
+        const panel = invalidField?.closest('[data-settings-panel]');
+        if (panel && typeof window.activateSettingsSection === 'function') {
+            window.activateSettingsSection(panel.dataset.settingsPanel);
+        }
+        invalidField?.focus();
+        return;
     }
 
-    // Si cambió el Client ID, limpiar token cacheado de Drive
-    if (producerConfig.gdriveClientId !== (JSON.parse(localStorage.getItem(`${window.currentUser}_producer_config`) || '{}').gdriveClientId || '')) {
-        sessionStorage.removeItem('gdrive_access_token');
-        sessionStorage.removeItem('gdrive_token_expiry');
-    }
-    
+    producerConfig.onboardingCompleted = true;
+
     // Guardar en Firestore
     const docRef = doc(db, "users", window.currentUser, "config", "producer");
-    const privateDocRef = doc(db, "users", window.currentUser, "private_config", "producer");
     
     // Separar datos públicos y privados
-    const privateKeys = ['signature', 'dsClientId', 'dsAccountId', 'dsEnv', 'gdriveClientId', 'emailjsServiceId', 'emailjsTemplateId', 'emailjsPublicKey', 'paypalClientSecret', 'sriP12Password', 'sriP12Base64', 'audioTagBase64'];
+    const privateKeys = PRIVATE_CONFIG_KEYS;
     const publicConfig = { ...producerConfig };
     const privateConfig = {};
     
@@ -1673,10 +2191,29 @@ async function saveProducerConfig() {
         }
     });
 
+    const sriPrivateConfig = {};
+    Object.keys(privateConfig).forEach(key => {
+        if (key.startsWith('sri')) {
+            sriPrivateConfig[key] = privateConfig[key];
+            delete privateConfig[key];
+        }
+    });
+    sriPrivateConfig.sriAutoQueueEnabled = producerConfig.sriAutoQueueEnabled;
+    if (sriSecrets.sriP12Password) sriPrivateConfig.sriP12Password = sriSecrets.sriP12Password;
+    if (sriSecrets.sriP12Base64) sriPrivateConfig.sriP12Base64 = sriSecrets.sriP12Base64;
+
     try {
         await setDoc(docRef, publicConfig);
-        await setDoc(privateDocRef, privateConfig);
-        safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(producerConfig));
+        await setDoc(doc(db, "users", window.currentUser, "private_config", "producer"), privateConfig, { merge: true });
+        const savedSri = await saveSriConfigToServer(sriPrivateConfig);
+        Object.keys(sriSecrets).forEach(key => delete producerConfig[key]);
+        producerConfig = { ...producerConfig, ...savedSri };
+        window.tempSriP12Base64 = '';
+        await setDoc(doc(db, 'users', window.currentUser), {
+            onboardingStatus: 'completed',
+            onboardingCompletedAt: new Date().toISOString()
+        }, { merge: true });
+        safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(publicConfig));
         window.producerConfig = producerConfig;
         document.getElementById('celebration-place').value = producerConfig.place;
         
@@ -1829,7 +2366,7 @@ async function redeemVIPCode() {
         }
         producerConfig.redeemedCodes.push(codeId);
         
-        safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(producerConfig));
+        safeSetItem(`${window.currentUser}_producer_config`, JSON.stringify(getPublicProducerConfig(producerConfig)));
         
         msgEl.style.color = '#10b981';
         const formattedDate = new Date(resData.expirationPro).toLocaleDateString('es-ES', {
@@ -1917,16 +2454,16 @@ function addCustomFieldRow(key = '', value = '') {
 
     container.appendChild(row);
 
-    // Event listeners
-    keyInput.addEventListener('input', generatePreview);
-    valueInput.addEventListener('input', generatePreview);
+    // Event listeners utilizando la versión debounced para evitar congelamientos al escribir
+    keyInput.addEventListener('input', debouncedGeneratePreview);
+    valueInput.addEventListener('input', debouncedGeneratePreview);
     deleteBtn.addEventListener('click', () => {
         row.remove();
-        generatePreview();
+        debouncedGeneratePreview();
     });
 
-    safeCreateIcons();
-    generatePreview();
+    safeCreateIcons(row); // Optimización Lucide: compilar solo los iconos de esta fila
+    debouncedGeneratePreview();
 }
 window.addCustomFieldRow = addCustomFieldRow;
 
@@ -2001,456 +2538,37 @@ function importBackup(event) {
     reader.readAsText(file);
 }
 
-// Subir copia de seguridad completa a Google Drive (Nube)
-async function backupToGoogleDrive() {
-    const btn = document.getElementById('btn-gdrive-backup');
-    if (!btn) return;
-    const originalText = btn.innerHTML;
-    try {
-        btn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width:14px;height:14px;margin-right:4px;"></i> Subiendo...';
-        btn.disabled = true;
-        safeCreateIcons();
 
-        const token = await getGdriveToken();
-        const folderName = `${producerConfig.aka || 'Productor'} Licencias`;
-        const backupFilename = `${window.currentUser}_backup_sincronizado.json`;
-        const rootId = await getOrCreateDriveFolder(token, folderName);
-        
-        // Agrupar datos de localStorage
-        const backupData = {};
-        backupData[`${window.currentUser}_producer_config`] = localStorage.getItem(`${window.currentUser}_producer_config`);
-        backupData[`${window.currentUser}_license_history`] = localStorage.getItem(`${window.currentUser}_license_history`);
-        backupData[`${window.currentUser}_contacts`] = localStorage.getItem(`${window.currentUser}_contacts`);
-        backupData[`${window.currentUser}_beats`] = localStorage.getItem(`${window.currentUser}_beats`);
-        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-
-        // Buscar si ya existe el archivo sincronizado
-        const q = `name='${backupFilename}' and '${rootId}' in parents and trashed=false`;
-        const searchRes = await fetch(
-            `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        const searchData = await searchRes.json();
-        const existingFile = searchData.files && searchData.files.length > 0 ? searchData.files[0] : null;
-
-        if (existingFile) {
-            // Actualizar contenido (PATCH)
-            const uploadRes = await fetch(
-                `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`,
-                {
-                    method: 'PATCH',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: blob
-                }
-            );
-            if (!uploadRes.ok) throw new Error('Error al actualizar en Drive');
-        } else {
-            // Crear archivo (POST multipart)
-            const metadata = { name: backupFilename, parents: [rootId] };
-            const form = new FormData();
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', blob, backupFilename);
-
-            const uploadRes = await fetch(
-                'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-                { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: form }
-            );
-            if (!uploadRes.ok) throw new Error('Error al crear copia en Drive');
-        }
-
-        showToast('☁️ Copia de seguridad guardada en Drive con éxito');
-    } catch (err) {
-        console.error('Error de sincronización:', err);
-        showToast('Error al respaldar en Drive: ' + err.message, true);
-    } finally {
-        if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-        safeCreateIcons();
-    }
-}
-
-// Descargar copia de seguridad completa desde Google Drive (Nube)
-async function restoreFromGoogleDrive() {
-    const btn = document.getElementById('btn-gdrive-restore');
-    if (!btn) return;
-    const originalText = btn.innerHTML;
-    try {
-        btn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width:14px;height:14px;margin-right:4px;"></i> Descargando...';
-        btn.disabled = true;
-        safeCreateIcons();
-
-        const token = await getGdriveToken();
-        const folderName = `${producerConfig.aka || 'Productor'} Licencias`;
-        const backupFilename = `${window.currentUser}_backup_sincronizado.json`;
-        const rootId = await getOrCreateDriveFolder(token, folderName);
-        
-        // Buscar el archivo
-        const q = `name='${backupFilename}' and '${rootId}' in parents and trashed=false`;
-        const searchRes = await fetch(
-            `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        const searchData = await searchRes.json();
-        const existingFile = searchData.files && searchData.files.length > 0 ? searchData.files[0] : null;
-
-        if (!existingFile) {
-            throw new Error('No se encontró copia sincronizada en Drive. Créala primero en tu Mac.');
-        }
-
-        // Descargar (media layout)
-        const downloadRes = await fetch(
-            `https://www.googleapis.com/drive/v3/files/${existingFile.id}?alt=media`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        if (!downloadRes.ok) throw new Error('Error al descargar archivo');
-
-        const backupData = await downloadRes.json();
-        let legacyUser = 'sossa';
-        if (auth.currentUser && auth.currentUser.email) {
-            const email = auth.currentUser.email.toLowerCase();
-            if (email === 'beatscgmonarco@gmail.com') {
-                legacyUser = 'cgmonarco';
-            } else if (email === 'mistermicua@gmail.com') {
-                legacyUser = 'mrmicua';
-            }
-        }
-
-        const configKey2 = `${window.currentUser}_producer_config`;
-        const historyKey2 = `${window.currentUser}_license_history`;
-        const contactsKey2 = `${window.currentUser}_contacts`;
-        const beatsKey2 = `${window.currentUser}_beats`;
-        if (backupData[configKey2] !== undefined || backupData[`${legacyUser}_producer_config`] !== undefined) {
-            const pc2 = backupData[configKey2] || backupData[`${legacyUser}_producer_config`];
-            const lh2 = backupData[historyKey2] || backupData[`${legacyUser}_license_history`];
-            const ct2 = backupData[contactsKey2] || backupData[`${legacyUser}_contacts`];
-            const bt2 = backupData[beatsKey2] || backupData[`${legacyUser}_beats`];
-            if (pc2) safeSetItem(configKey2, pc2);
-            if (lh2) safeSetItem(historyKey2, lh2);
-            if (ct2) safeSetItem(contactsKey2, ct2);
-            if (bt2) safeSetItem(beatsKey2, bt2);
-            
-            showToast('✅ ¡Datos descargados e importados! Recargando...', false);
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        } else {
-            throw new Error('El archivo descargado no es una copia de seguridad válida.');
-        }
-    } catch (err) {
-        console.error('Error de descarga:', err);
-        showToast('Error al restaurar desde Drive: ' + err.message, true);
-    } finally {
-        if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-        safeCreateIcons();
-    }
-}
-
-// Auto-sincronizar de forma silenciosa en segundo plano si hay una sesión activa de Google
-async function autoSyncGoogleDrive() {
-    const cachedToken = sessionStorage.getItem('gdrive_access_token');
-    const expiry = parseInt(sessionStorage.getItem('gdrive_token_expiry') || '0', 10);
-    
-    // Si hay un token válido de Google Drive que dure al menos 2 minutos más
-    if (cachedToken && Date.now() < expiry - 120000) {
-        console.log('☁️ Auto-sincronizando silenciosamente con Google Drive...');
-        try {
-            const folderNameSync = `${producerConfig.aka || 'Productor'} Licencias`;
-            const backupFilenameSync = `${window.currentUser}_backup_sincronizado.json`;
-            const rootId = await getOrCreateDriveFolder(cachedToken, folderNameSync);
-            const q = `name='${backupFilenameSync}' and '${rootId}' in parents and trashed=false`;
-            const searchRes = await fetch(
-                `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`,
-                { headers: { 'Authorization': `Bearer ${cachedToken}` } }
-            );
-            
-            if (!searchRes.ok) return;
-            const searchData = await searchRes.json();
-            const existingFile = searchData.files && searchData.files.length > 0 ? searchData.files[0] : null;
-
-            if (existingFile) {
-                const downloadRes = await fetch(
-                    `https://www.googleapis.com/drive/v3/files/${existingFile.id}?alt=media`,
-                    { headers: { 'Authorization': `Bearer ${cachedToken}` } }
-                );
-                if (downloadRes.ok) {
-                    const backupData = await downloadRes.json();
-                    let legacyUser = 'sossa';
-                    if (auth.currentUser && auth.currentUser.email) {
-                        const email = auth.currentUser.email.toLowerCase();
-                        if (email === 'beatscgmonarco@gmail.com') {
-                            legacyUser = 'cgmonarco';
-                        } else if (email === 'mistermicua@gmail.com') {
-                            legacyUser = 'mrmicua';
-                        }
-                    }
-
-                    // ── PRIORIDAD: archivo local > Google Drive ─────────────────
-                    // Contar licencias y contactos en cada fuente
-                    let localCount = 0, driveCount = 0;
-                    let localContacts = 0, driveContacts = 0;
-                    try { localCount = JSON.parse(localStorage.getItem(`${window.currentUser}_license_history`) || '[]').length; } catch(e) {}
-                    try { driveCount = JSON.parse(backupData[`${window.currentUser}_license_history`] || backupData[`${legacyUser}_license_history`] || '[]').length; } catch(e) {}
-                    try { localContacts = JSON.parse(localStorage.getItem(`${window.currentUser}_contacts`) || '[]').length; } catch(e) {}
-                    try { driveContacts = JSON.parse(backupData[`${window.currentUser}_contacts`] || backupData[`${legacyUser}_contacts`] || '[]').length; } catch(e) {}
-
-                    const localWeight = (localCount * 1000) + localContacts;
-                    const driveWeight = (driveCount * 1000) + driveContacts;
-
-                    // Si el archivo local tiene MÁS datos combinados que Drive → actualizar Drive con los datos locales
-                    if (localWeight > driveWeight) {
-                        console.log(`☁️ Local (${localWeight}) > Drive (${driveWeight}): actualizando Google Drive con datos locales...`);
-                        autoBackupGoogleDrive();
-                        return;
-                    } else if (localWeight === driveWeight) {
-                        const norm = (v) => (v === null || v === undefined || v === 'null') ? '' : v;
-                        if (norm(backupData[`${window.currentUser}_license_history`] || backupData[`${legacyUser}_license_history`]) !== norm(localStorage.getItem(`${window.currentUser}_license_history`)) ||
-                            norm(backupData[`${window.currentUser}_contacts`] || backupData[`${legacyUser}_contacts`]) !== norm(localStorage.getItem(`${window.currentUser}_contacts`))) {
-                             // Si hay igual peso pero diferentes datos, subimos los locales para asegurar que lo último editado quede guardado
-                             console.log(`☁️ Pesos iguales pero datos diferentes. Forzando backup a Drive...`);
-                             autoBackupGoogleDrive();
-                        }
-                        return;
-                    }
-
-                    // Solo si Drive tiene MAYOR PESO que local → restaurar desde Drive
-                    console.log(`☁️ Drive (${driveWeight}) > Local (${localWeight}): restaurando desde Google Drive...`);
-                    const norm = (v) => (v === null || v === undefined || v === 'null') ? '' : v;
-
-                    let changed = false;
-                    if (norm(backupData[`${window.currentUser}_producer_config`] || backupData[`${legacyUser}_producer_config`]) !== norm(localStorage.getItem(`${window.currentUser}_producer_config`))) changed = true;
-                    if (norm(backupData[`${window.currentUser}_license_history`] || backupData[`${legacyUser}_license_history`]) !== norm(localStorage.getItem(`${window.currentUser}_license_history`))) changed = true;
-                    if (norm(backupData[`${window.currentUser}_contacts`] || backupData[`${legacyUser}_contacts`]) !== norm(localStorage.getItem(`${window.currentUser}_contacts`))) changed = true;
-                    if (norm(backupData[`${window.currentUser}_beats`] || backupData[`${legacyUser}_beats`]) !== norm(localStorage.getItem(`${window.currentUser}_beats`))) changed = true;
-                    
-                    if (changed) {
-                        const setOrRemove = (key, val) => {
-                            if (val === null || val === undefined || val === 'null') {
-                                localStorage.removeItem(key);
-                            } else {
-                                safeSetItem(key, val);
-                            }
-                        };
-                        
-                        setOrRemove(`${window.currentUser}_producer_config`, backupData[`${window.currentUser}_producer_config`] || backupData[`${legacyUser}_producer_config`]);
-                        setOrRemove(`${window.currentUser}_license_history`, backupData[`${window.currentUser}_license_history`] || backupData[`${legacyUser}_license_history`]);
-                        setOrRemove(`${window.currentUser}_contacts`, backupData[`${window.currentUser}_contacts`] || backupData[`${legacyUser}_contacts`]);
-                        setOrRemove(`${window.currentUser}_beats`, backupData[`${window.currentUser}_beats`] || backupData[`${legacyUser}_beats`]);
-                        
-                        showToast(`🔄 Datos actualizados desde Google Drive (${driveCount} licencias)`, false);
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1200);
-                    }
-                }
-            } else {
-                // No existe el archivo en Drive → subirlo ahora con los datos locales
-                console.log('☁️ No existe backup en Drive. Creando backup inicial...');
-                autoBackupGoogleDrive();
-            }
-        } catch (e) {
-            console.warn('Auto-sync silencioso falló:', e);
-        }
-    }
-}
-
-// Auto-respaldar de forma silenciosa en segundo plano en Google Drive si hay sesión activa (Debounced)
-async function autoBackupGoogleDrive() {
-    if (autoBackupTimeout) clearTimeout(autoBackupTimeout);
-    
-    autoBackupTimeout = setTimeout(async () => {
-        const cachedToken = sessionStorage.getItem('gdrive_access_token');
-        const expiry = parseInt(sessionStorage.getItem('gdrive_token_expiry') || '0', 10);
-        
-        // Si hay un token válido de Google Drive que dure al menos 2 minutos más
-        if (cachedToken && Date.now() < expiry - 120000) {
-            console.log('☁️ Auto-guardando copia de seguridad en Google Drive (debounced)...');
-            try {
-                const folderNameAuto = `${producerConfig.aka || 'Productor'} Licencias`;
-                const backupFilenameAuto = `${window.currentUser}_backup_sincronizado.json`;
-                const rootId = await getOrCreateDriveFolder(cachedToken, folderNameAuto);
-                
-                // Agrupar datos de localStorage
-                const backupData = {};
-                backupData[`${window.currentUser}_producer_config`] = localStorage.getItem(`${window.currentUser}_producer_config`);
-                backupData[`${window.currentUser}_license_history`] = localStorage.getItem(`${window.currentUser}_license_history`);
-                backupData[`${window.currentUser}_contacts`] = localStorage.getItem(`${window.currentUser}_contacts`);
-                backupData[`${window.currentUser}_beats`] = localStorage.getItem(`${window.currentUser}_beats`);
-                const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-
-                // Buscar si ya existe el archivo sincronizado
-                const q = `name='${backupFilenameAuto}' and '${rootId}' in parents and trashed=false`;
-                const searchRes = await fetch(
-                    `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`,
-                    { headers: { 'Authorization': `Bearer ${cachedToken}` } }
-                );
-                
-                if (!searchRes.ok) return;
-                const searchData = await searchRes.json();
-                const existingFile = searchData.files && searchData.files.length > 0 ? searchData.files[0] : null;
-
-                if (existingFile) {
-                    // Actualizar contenido (PATCH)
-                    await fetch(
-                        `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`,
-                        {
-                            method: 'PATCH',
-                            headers: { 'Authorization': `Bearer ${cachedToken}`, 'Content-Type': 'application/json' },
-                            body: blob
-                        }
-                    );
-                } else {
-                    // Crear archivo (POST multipart)
-                    const metadata = { name: backupFilenameAuto, parents: [rootId] };
-                    const form = new FormData();
-                    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                    form.append('file', blob, backupFilenameAuto);
-
-                    await fetch(
-                        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-                        { method: 'POST', headers: { 'Authorization': `Bearer ${cachedToken}` }, body: form }
-                    );
-                }
-                console.log('☁️ Auto-respaldo en Google Drive completado con éxito (debounced).');
-            } catch (err) {
-                console.warn('Auto-respaldo silencioso en Drive falló:', err);
-            }
-        }
-    }, 2000);
-}
-
-
-
-
-// Cargar historial de Firestore (con fallback a localStorage) e inyectar siempre las licencias semilla para Sossa Admin
-async function loadHistory() {
-    let savedList = [];
-    let firestoreLoaded = false;
-    if (window.currentUserIsPro) {
-        try {
-            const colRef = collection(db, "users", window.currentUser, "licencias");
-            const q = query(colRef, orderBy("date", "desc"), limit(150));
-            const querySnapshot = await getDocs(q);
-            querySnapshot.forEach((docSnap) => {
-                savedList.push(docSnap.data());
-            });
-            firestoreLoaded = true;
-        } catch (err) {
-            console.error("Error al cargar historial de Firestore:", err);
-        }
-    }
-
-    // Cargar de localStorage para fusionar
-    let localList = [];
-    const saved = localStorage.getItem(`${window.currentUser}_license_history`);
-    if (saved) {
-        try {
-            localList = JSON.parse(saved);
-            if (!Array.isArray(localList)) localList = [];
-        } catch (e) {
-            localList = [];
-        }
-    }
-
-    // Fusionar listas usando refCode como clave única
-    let mergedList = [...savedList];
-    let needsSaveToFirestore = false;
-    
-    localList.forEach(localLic => {
-        if (localLic && localLic.refCode) {
-            const exists = mergedList.some(l => l.refCode === localLic.refCode);
-            if (!exists) {
-                mergedList.push(localLic);
-                needsSaveToFirestore = true;
-            }
-        }
-    });
-
-    // Ordenar por fecha descendente
-    mergedList.sort((a, b) => {
-        const dateA = a.date || "";
-        const dateB = b.date || "";
-        return dateB.localeCompare(dateA);
-    });
-
-    licenseHistory = mergedList;
-
-    // Manejo de licencias semilla (solo para sossa admin)
-    let changed = false;
-    if (window.currentUserIsAdmin) {
-        SEED_LICENSES.forEach(seed => {
-            if (!licenseHistory.some(l => l.refCode === seed.refCode)) {
-                licenseHistory.push(seed);
-                changed = true;
-            }
-        });
-    } else {
-        // Limpiar si se inyectaron por error en otra cuenta previamente
-        const originalLength = licenseHistory.length;
-        const seedCodes = SEED_LICENSES.map(s => s.refCode);
-        licenseHistory = licenseHistory.filter(l => !seedCodes.includes(l.refCode));
-        if (licenseHistory.length !== originalLength) changed = true;
-    }
-    
-    if (changed || needsSaveToFirestore) {
-        safeSetItem(`${window.currentUser}_license_history`, JSON.stringify(licenseHistory));
-        if (firestoreLoaded) {
-            console.log("Subiendo licencias locales combinadas a Firestore...");
-            for (const lic of licenseHistory) {
-                if (!lic.refCode) continue;
-                try {
-                    const licDocRef = doc(db, "users", window.currentUser, "licencias", lic.refCode);
-                    await setDoc(licDocRef, lic);
-                } catch (err) {
-                    console.error("Error al guardar licencia en Firestore:", err);
-                }
-            }
-        }
-    }
-
-    updateHistoryTable();
-}
-
-// Guardar historial en Firestore y localStorage
-async function saveHistory() {
-    safeSetItem(`${window.currentUser}_license_history`, JSON.stringify(licenseHistory));
-    
-    // Si el historial no está vacío, intentar convertir el referido de este usuario
-    if (licenseHistory.length > 0) {
-        triggerReferralConversion();
-    }
-    
-    if (!window.currentUserIsPro) {
-        updateHistoryTable();
-        return;
-    }
-    
-    // Guardar cada documento en Firestore de forma asíncrona
-    for (const lic of licenseHistory) {
-        if (!lic.refCode) continue;
-        try {
-            const licDocRef = doc(db, "users", window.currentUser, "licencias", lic.refCode);
-            await setDoc(licDocRef, lic);
-        } catch (err) {
-            console.error("Error al guardar licencia en Firestore:", err);
-        }
-    }
-    updateHistoryTable();
-}
 
 // Configurar los manejadores de eventos
 function setupEventListeners() {
+    // Navegación del flujo del editor sin depender de handlers inline. Esto
+    // mantiene Tipo → Datos → Entrega funcional incluso bajo CSP estricta.
+    document.querySelectorAll('[data-editor-step]').forEach(control => {
+        control.addEventListener('click', (event) => {
+            event.preventDefault();
+            showEditorStep(control.dataset.editorStep);
+        });
+    });
+
+    document.getElementById('wizard-next')?.addEventListener('click', () => {
+        showEditorStep(Math.min(3, activeEditorStep + 1));
+    });
+    document.getElementById('wizard-back')?.addEventListener('click', () => {
+        showEditorStep(Math.max(1, activeEditorStep - 1));
+    });
+
     // Botones de tipo de licencia
     const licenseBtns = document.querySelectorAll('.license-btn');
     licenseBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            licenseBtns.forEach(b => b.classList.remove('active'));
+            licenseBtns.forEach(b => {
+                b.classList.remove('active');
+                b.setAttribute('aria-pressed', 'false');
+            });
             const targetBtn = e.currentTarget;
             targetBtn.classList.add('active');
+            targetBtn.setAttribute('aria-pressed', 'true');
             selectLicenseType(targetBtn.dataset.type);
         });
     });
@@ -2465,16 +2583,6 @@ function setupEventListeners() {
         'clause-credits'
     ];
     
-    // Función helper para debounce (limitar frecuencia de ejecución)
-    function debounce(func, wait) {
-        let timeout;
-        return function(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
-    }
-    const debouncedGeneratePreview = debounce(generatePreview, 300);
-
     inputIds.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', debouncedGeneratePreview);
@@ -2483,51 +2591,41 @@ function setupEventListeners() {
     document.getElementById('payment-method').addEventListener('change', generatePreview);
     document.getElementById('clause-content-id').addEventListener('change', generatePreview);
 
-    // Botones Header (Idioma y Tema)
-    const registerLanguageToggle = (id) => {
-        const btn = document.getElementById(id);
-        if (btn) {
-            btn.addEventListener('click', () => {
-                currentLang = currentLang === 'es' ? 'en' : 'es';
-                localStorage.setItem('beatss_language', currentLang);
-                updateUILanguage();
-            });
-        }
-    };
-    registerLanguageToggle('btn-language');
-    registerLanguageToggle('landing-btn-language');
-    registerLanguageToggle('catalog-btn-language');
+    // Botón de idioma. El Studio ya no expone el interruptor de tema legado:
+    // todas sus vistas comparten una única base clara y accesible.
+    bindLanguageToggle('btn-language');
+    bindLanguageToggle('catalog-btn-language');
 
-    const btnTheme = document.getElementById('btn-theme-toggle');
-    if (btnTheme) {
-        btnTheme.addEventListener('click', () => {
-            document.body.classList.toggle('light-theme');
-            const isLight = document.body.classList.contains('light-theme');
-            document.getElementById('theme-icon').setAttribute('data-lucide', isLight ? 'sun' : 'moon');
-            safeCreateIcons();
-            localStorage.setItem(`${window.currentUser}_theme`, isLight ? 'light' : 'dark');
-        });
-        
-        // Cargar tema guardado por usuario
-        if (localStorage.getItem(`${window.currentUser}_theme`) === 'light') {
-            document.body.classList.add('light-theme');
-            document.getElementById('theme-icon').setAttribute('data-lucide', 'sun');
-            safeCreateIcons();
-        }
-    }
+    // Mientras la plataforma opera con un único productor, el acceso del
+    // Studio abre directamente la tienda pública de Sossa.
+    document.getElementById('btn-global-catalog')?.addEventListener('click', () => {
+        window.location.assign('/tienda/sossa');
+    });
 
     // Botón de configuración (modal)
     document.getElementById('btn-settings').addEventListener('click', openSettingsModal);
+    document.getElementById('workspace-settings-btn')?.addEventListener('click', (event) => {
+        event.currentTarget.closest('details')?.removeAttribute('open');
+        openSettingsModal();
+    });
+    document.getElementById('btn-toggle-private-settings')?.addEventListener('click', (event) => {
+        const isVisible = event.currentTarget.getAttribute('aria-pressed') === 'true';
+        setSettingsPrivateValuesVisible(!isVisible);
+    });
     document.getElementById('btn-close-settings').addEventListener('click', closeSettingsModal);
     document.getElementById('btn-cancel-settings').addEventListener('click', closeSettingsModal);
     document.getElementById('btn-save-settings').addEventListener('click', saveProducerConfig);
     document.getElementById('btn-export-backup').addEventListener('click', exportBackup);
+    document.getElementById('btn-account-deletion-request')?.addEventListener('click', requestAccountDeletionChange);
     
     // Vinculación de Google Drive Central (Admin)
     const btnLinkCentralGDrive = document.getElementById('btn-link-central-gdrive');
     if (btnLinkCentralGDrive) {
         btnLinkCentralGDrive.addEventListener('click', initPlatformGDriveOAuth);
     }
+
+    document.getElementById('btn-create-beatstars-migration-ticket')?.addEventListener('click', createBeatStarsMigrationTicket);
+    document.getElementById('btn-copy-beatstars-migration-ticket')?.addEventListener('click', copyBeatStarsMigrationTicket);
 
     // Vinculación de Google Account para Login
     const btnLinkGoogleLogin = document.getElementById('btn-link-google-login');
@@ -2811,7 +2909,7 @@ function setupEventListeners() {
                 // El resultado es un DataURL tipo data:application/x-pkcs12;base64,.....
                 window.tempSriP12Base64 = evt.target.result;
                 if (sriP12StatusEl) {
-                    sriP12StatusEl.innerHTML = `✅ <strong style="color: #4ade80;">Firma seleccionada localmente: ${file.name}</strong>. Recuerda guardar la configuración.`;
+                    sriP12StatusEl.innerHTML = `✅ <strong style="color: #4ade80;">Firma seleccionada localmente: ${sanitizeHtml(file.name)}</strong>. Recuerda guardar la configuración.`;
                 }
                 showToast("🔑 Archivo de firma .p12 cargado en memoria (se guardará al actualizar configuración).");
             };
@@ -2900,7 +2998,26 @@ function setupEventListeners() {
     window.switchTab = function(tabId) {
         const tabBtns = document.querySelectorAll('.tab-btn');
         const sidebarEl = document.querySelector('aside.sidebar');
+        const appContainer = document.getElementById('app-container');
         const mobileSelect = document.getElementById('mobile-tab-select');
+        const targetContent = document.getElementById(tabId);
+
+        if (!targetContent || !targetContent.classList.contains('tab-content')) {
+            console.warn('Pestaña inválida:', tabId);
+            return;
+        }
+
+        // La dirección identifica la sección seleccionada, incluso si una
+        // carga de datos posterior falla o tarda. Atrás/Adelante aplica la
+        // pestaña con __beatssApplyingRoute y evita entradas duplicadas.
+        if (!window.__beatssApplyingRoute && typeof window.syncBeatssPathForTab === 'function') {
+            window.syncBeatssPathForTab(tabId);
+        }
+
+        if (appContainer) appContainer.dataset.activeTab = tabId;
+
+        const secondaryNav = document.querySelector('.workspace-secondary-nav');
+        if (secondaryNav) secondaryNav.open = false;
 
         // Sincronizar select de móvil si existe
         if (mobileSelect && mobileSelect.value !== tabId) {
@@ -2916,30 +3033,72 @@ function setupEventListeners() {
             }
         });
 
-        // Ocultar todos los contenidos y mostrar el activo
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        const targetContent = document.getElementById(tabId);
-        if (targetContent) {
-            targetContent.classList.add('active');
-        }
+        // Aislar la vista activa tanto visual como semánticamente. La clase
+        // por sí sola era insuficiente porque reglas heredadas podían volver a
+        // dar display:flex a una pestaña anterior.
+        document.querySelectorAll('.tab-content').forEach((content) => {
+            const isActive = content === targetContent;
+            content.classList.toggle('active', isActive);
+            content.hidden = !isActive;
+            content.setAttribute('aria-hidden', String(!isActive));
+            if (!isActive) content.scrollTop = 0;
+        });
+        targetContent.hidden = false;
+        targetContent.scrollTop = 0;
+        document.querySelector('.main-panel')?.scrollTo({ top: 0, behavior: 'auto' });
 
         // Mostrar/ocultar sidebar según el tab activo
-        if (tabId === 'tab-history' || tabId === 'tab-dashboard' || tabId === 'tab-admin' || tabId === 'tab-beats' || tabId === 'tab-sales' || tabId === 'tab-whitelist') {
+        if (tabId === 'tab-home' || tabId === 'tab-history' || tabId === 'tab-email-history' || tabId === 'tab-invoicing' || tabId === 'tab-dashboard' || tabId === 'tab-admin' || tabId === 'tab-beats' || tabId === 'tab-sales' || tabId === 'tab-whitelist') {
             sidebarEl && sidebarEl.classList.add('sidebar-hidden');
         } else {
             sidebarEl && sidebarEl.classList.remove('sidebar-hidden');
         }
 
         // Acciones específicas por pestaña
+        if (tabId === 'tab-preview') {
+            // El Studio puede abrirse desde Inicio después de que la app ya
+            // arrancó. En ese caso el editor no formó parte del arranque por
+            // ruta y la hoja de papel quedaba visible, pero vacía.
+            Promise.resolve(loadModule('editor'))
+                .then(() => window.generatePreview?.())
+                .catch((error) => console.warn('[BEATSS] No se pudo cargar la vista previa del contrato:', error?.message || error));
+        }
         if (tabId === 'tab-beats') {
-            renderBeatsGrid();
-            updateGenreAndKeyFilters();
+            // La base de beats se inicializa al entrar a la pestaña, no al
+            // arrancar cualquier otra vista privada. Reutilizamos la carga
+            // completada o en curso al volver a esta pestaña.
+            const activeUser = window.currentUser || null;
+            const beatDataReady = window._beatsDBLoaded && window._beatsDBLoadedFor === activeUser
+                ? Promise.resolve()
+                : (window._beatsDBLoadingPromise || (window._beatsDBLoadingPromise = initBeatsDB().finally(() => {
+                    window._beatsDBLoadingPromise = null;
+                })));
+            beatDataReady.then(() => {
+                renderBeatsGrid();
+                updateGenreAndKeyFilters();
+            }).catch((error) => console.warn('[BEATSS] No se pudo iniciar el catálogo:', error?.message || error));
+        }
+        if (tabId === 'tab-history') {
+            loadHistory().catch((error) => console.warn('[BEATSS] No se pudo cargar el historial:', error?.message || error));
+            Promise.resolve(loadModule('editor')).catch(() => {});
+        }
+        if (tabId === 'tab-email-history') {
+            Promise.resolve(loadModule('emailHistory'))
+                .then(() => window.loadEmailHistory?.())
+                .catch((error) => console.warn('[BEATSS] No se pudo cargar el historial de emails:', error?.message || error));
+        }
+        if (tabId === 'tab-invoicing') {
+            Promise.resolve(loadModule('invoicing'))
+                .then(() => window.initSriInvoicingView?.())
+                .catch((error) => console.warn('[BEATSS] No se pudo cargar el facturador SRI:', error?.message || error));
         }
         if (tabId === 'tab-admin' && window.currentUserIsAdmin) {
             loadConsolidatedAccounting();
         }
         if (tabId === 'tab-dashboard') {
-            updateDashboardView();
+            Promise.resolve(loadHistory())
+                .then(() => updateDashboardView())
+                .catch((error) => console.warn('[BEATSS] No se pudo cargar el dashboard:', error?.message || error));
         }
         if (tabId === 'tab-sales') {
             loadSalesData();
@@ -2949,6 +3108,10 @@ function setupEventListeners() {
                 window.loadWhitelistData();
             }
         }
+
+        // Permite que la navegación móvil refleje rutas directas como
+        // /ventas, /pedidos y /content-id sin duplicar la lógica de tabs.
+        window.dispatchEvent(new CustomEvent('beatss:tabchange', { detail: { tabId } }));
     };
 
     // Cambio de pestañas (escritorio)
@@ -2967,6 +3130,19 @@ function setupEventListeners() {
             window.switchTab(e.target.value);
         });
     }
+
+    document.querySelectorAll('[data-home-tab]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const targetTab = button.dataset.homeTab;
+            if (window.matchMedia('(max-width: 760px)').matches && (targetTab === 'tab-preview' || targetTab === 'editor')) {
+                if (typeof window.setMobileStudioView === 'function') {
+                    window.setMobileStudioView('editor');
+                    return;
+                }
+            }
+            window.switchTab(targetTab);
+        });
+    });
 
     // Cambio de modo de previsualización (Rendered vs Markdown)
     const modeBtns = document.querySelectorAll('.mode-btn');
@@ -2996,6 +3172,14 @@ function setupEventListeners() {
     document.getElementById('btn-send-signed-delivery').addEventListener('click', checkAndSendSignedDelivery);
     document.getElementById('btn-copy-md').addEventListener('click', copyMarkdown);
     document.getElementById('btn-save').addEventListener('click', saveCurrentLicenseToHistory);
+
+    const closeProgressBtn = document.getElementById('btn-close-progress');
+    if (closeProgressBtn) {
+        closeProgressBtn.addEventListener('click', () => {
+            const progressModal = document.getElementById('email-progress-modal');
+            if (progressModal) window.closeEmailProgressModal?.();
+        });
+    }
 
     // Refresh de admin consolidado
     const adminRefreshBtn = document.getElementById('btn-admin-refresh');
@@ -3039,6 +3223,11 @@ function setupEventListeners() {
 
     document.getElementById('btn-clear-fields').addEventListener('click', clearFormFields);
     document.getElementById('btn-clear-history').addEventListener('click', clearAllHistory);
+    document.getElementById('btn-refresh-history').addEventListener('click', () => {
+        loadHistory().catch((error) => {
+            console.warn('[BEATSS] No se pudo recargar el historial:', error?.message || error);
+        });
+    });
 
     // Directorio de Contactos
     document.getElementById('btn-contacts-modal').addEventListener('click', openContactsModal);
@@ -3051,7 +3240,21 @@ function setupEventListeners() {
     // Logout
     const switchBtn = document.getElementById('btn-switch-user');
     if (switchBtn) {
-        switchBtn.addEventListener('click', () => {
+        let logoutInProgress = false;
+
+        switchBtn.addEventListener('click', async () => {
+            if (logoutInProgress) return;
+            logoutInProgress = true;
+
+            const previousLabel = switchBtn.getAttribute('aria-label');
+            switchBtn.disabled = true;
+            switchBtn.setAttribute('aria-busy', 'true');
+            switchBtn.setAttribute('aria-label', 'Cerrando sesión');
+            switchBtn.title = 'Cerrando sesión…';
+            switchBtn.innerHTML = '<i data-lucide="loader-circle" class="animate-spin"></i>';
+            if (typeof window.safeCreateIcons === 'function') window.safeCreateIcons();
+            if (typeof window.showToast === 'function') window.showToast('Cerrando sesión…');
+
             // Cancelar listener de pagos en tiempo real antes de cerrar sesión
             if (typeof window._salesUnsubscribe === 'function') {
                 window._salesUnsubscribe();
@@ -3060,16 +3263,30 @@ function setupEventListeners() {
             
             // Indicar que estamos cerrando sesión para omitir actualizaciones del DOM
             window.isLoggingOut = true;
-            
-            signOut(auth).then(() => {
+
+            const returnToLanding = () => {
+                window.clearBeatssSessionSecurityState?.({ broadcast: true, reason: 'manual' });
                 localStorage.removeItem('active_user');
-                console.log("Sesión de Firebase cerrada con éxito.");
-                window.location.reload();
-            }).catch(err => {
-                console.error("Error al cerrar sesión de Firebase:", err);
-                localStorage.removeItem('active_user');
-                window.location.reload();
-            });
+                localStorage.removeItem('beatss_has_session');
+                sessionStorage.removeItem('beatss_manual_login');
+                window.currentUser = null;
+                window.currentUserEmail = null;
+                window.currentUserIsAdmin = false;
+                window.location.replace(`${window.location.origin}/`);
+            };
+
+            try {
+                // Firebase normalmente elimina la sesión local enseguida. El
+                // límite evita que una red lenta deje el botón bloqueado.
+                await Promise.race([
+                    signOut(auth),
+                    new Promise(resolve => setTimeout(resolve, 1800))
+                ]);
+            } catch (err) {
+                console.error('Error al cerrar sesión de Firebase:', err);
+            } finally {
+                returnToLanding();
+            }
         });
     }
 
@@ -3089,7 +3306,8 @@ function setupEventListeners() {
     document.getElementById('btn-add-manual').addEventListener('click', openManualAddModal);
     document.getElementById('btn-close-manual-modal').addEventListener('click', closeManualAddModal);
     document.getElementById('btn-cancel-manual-modal').addEventListener('click', closeManualAddModal);
-    document.getElementById('btn-confirm-manual-add').addEventListener('click', confirmManualAdd);
+    document.getElementById('btn-confirm-manual-add').addEventListener('click', () => confirmManualAdd());
+    document.getElementById('btn-prepare-manual-delivery').addEventListener('click', () => confirmManualAdd({ prepareDelivery: true }));
     document.getElementById('manual-add-modal').addEventListener('click', (e) => {
         if (e.target === e.currentTarget) closeManualAddModal();
     });
@@ -3114,7 +3332,19 @@ function setupEventListeners() {
                 currentUploadedReceiptBase64 = null;
                 return;
             }
-            
+
+            const allowedReceiptTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+            if (!allowedReceiptTypes.has(file.type) || file.size > 8 * 1024 * 1024) {
+                inputReceiptFile.value = '';
+                if (spanReceiptName) spanReceiptName.textContent = 'No se ha seleccionado archivo';
+                if (previewContainer) previewContainer.style.display = 'none';
+                currentUploadedReceiptBase64 = null;
+                alert(file.size > 8 * 1024 * 1024
+                    ? 'La imagen supera el límite de 8 MB.'
+                    : 'Usa una imagen JPEG, PNG o WebP.');
+                return;
+            }
+
             if (spanReceiptName) spanReceiptName.textContent = file.name;
             
             const reader = new FileReader();
@@ -3146,7 +3376,21 @@ function setupEventListeners() {
                     if (previewContainer) previewContainer.style.display = 'block';
                     currentUploadedReceiptBase64 = compressedBase64;
                 };
+                img.onerror = function() {
+                    inputReceiptFile.value = '';
+                    if (spanReceiptName) spanReceiptName.textContent = 'No se ha seleccionado archivo';
+                    if (previewContainer) previewContainer.style.display = 'none';
+                    currentUploadedReceiptBase64 = null;
+                    alert('No se pudo leer la imagen del comprobante.');
+                };
                 img.src = evt.target.result;
+            };
+            reader.onerror = function() {
+                inputReceiptFile.value = '';
+                if (spanReceiptName) spanReceiptName.textContent = 'No se ha seleccionado archivo';
+                if (previewContainer) previewContainer.style.display = 'none';
+                currentUploadedReceiptBase64 = null;
+                alert('No se pudo leer el comprobante.');
             };
             reader.readAsDataURL(file);
         });
@@ -3179,8 +3423,8 @@ function setupEventListeners() {
                 // Convertir base64 de la captura a un Blob
                 const blob = await dataURLtoBlob(currentUploadedReceiptBase64);
                 
-                // Subir a Firebase Storage en la ruta receipts/saas/UID_timestamp.jpg
-                const storagePath = `receipts/saas/${auth.currentUser.uid}_${Date.now()}.jpg`;
+                // Subir a Firebase Storage en un espacio aislado por usuario.
+                const storagePath = `receipts/saas/${auth.currentUser.uid}/${Date.now()}.jpg`;
                 const downloadUrl = await uploadFileToStorage(blob, storagePath);
                 
                 submitBtn.innerHTML = '⏳ Registrando comprobante...';
@@ -3188,7 +3432,15 @@ function setupEventListeners() {
                 // Importamos addDoc en la cabecera de firebase.js
                 const paymentsCol = collection(db, "payments");
                 const needInvoice = document.getElementById('sub-chk-need-invoice')?.checked;
+                const invoiceRuc = document.getElementById('sub-invoice-ruc')?.value.trim() || '';
+                const invoiceCompany = document.getElementById('sub-invoice-company')?.value.trim() || '';
+                const invoiceAddress = document.getElementById('sub-invoice-address')?.value.trim() || '';
+                const invoiceEmail = document.getElementById('sub-invoice-email')?.value.trim() || '';
+                if (needInvoice && (!/^\d{13}$/.test(invoiceRuc) || !invoiceCompany || !invoiceAddress || !/^\S+@\S+\.\S+$/.test(invoiceEmail))) {
+                    throw new Error('Completa correctamente los datos de facturación.');
+                }
                 const docData = {
+                    type: 'subscription_payment',
                     userId: auth.currentUser.uid,
                     userEmail: auth.currentUser.email,
                     aka: producerConfig.aka || '',
@@ -3202,10 +3454,10 @@ function setupEventListeners() {
                 
                 if (needInvoice) {
                     docData.needInvoice = true;
-                    docData.invoiceRuc = document.getElementById('sub-invoice-ruc').value.trim();
-                    docData.invoiceCompany = document.getElementById('sub-invoice-company').value.trim();
-                    docData.invoiceAddress = document.getElementById('sub-invoice-address').value.trim();
-                    docData.invoiceEmail = document.getElementById('sub-invoice-email').value.trim();
+                    docData.invoiceRuc = invoiceRuc;
+                    docData.invoiceCompany = invoiceCompany;
+                    docData.invoiceAddress = invoiceAddress;
+                    docData.invoiceEmail = invoiceEmail;
                 }
                 
                 // addDoc
@@ -3353,7 +3605,7 @@ function closeManualAddModal() {
 }
 
 // Confirmar y guardar licencia manual en el historial
-function confirmManualAdd() {
+function confirmManualAdd({ prepareDelivery = false } = {}) {
     const beatName  = document.getElementById('m-beat-name').value.trim();
     const buyerName = document.getElementById('m-buyer-name').value.trim();
     const valueRaw  = document.getElementById('m-value').value.trim();
@@ -3381,6 +3633,33 @@ function confirmManualAdd() {
     const date        = document.getElementById('m-date').value || new Date().toISOString().split('T')[0];
     const paymentMethod = document.getElementById('m-payment').value;
     const config      = LICENSE_CONFIGS[type] || LICENSE_CONFIGS.basic;
+    const mp3Link     = document.getElementById('m-audio-mp3').value.trim();
+    const wavLink     = document.getElementById('m-audio-wav').value.trim();
+    const stemsLink   = document.getElementById('m-audio-stems').value.trim();
+
+    if (prepareDelivery) {
+        const emailInput = document.getElementById('m-buyer-email');
+        if (!buyerEmail || !emailInput.checkValidity()) {
+            showToast('Ingresa un correo válido para preparar la entrega', true);
+            emailInput.focus();
+            return null;
+        }
+        if (!mp3Link) {
+            showToast('La entrega requiere al menos el archivo o enlace MP3', true);
+            document.getElementById('m-audio-mp3').focus();
+            return null;
+        }
+        if (type !== 'basic' && !wavLink) {
+            showToast('Esta licencia requiere el archivo o enlace WAV', true);
+            document.getElementById('m-audio-wav').focus();
+            return null;
+        }
+        if (!['basic', 'premium'].includes(type) && !stemsLink) {
+            showToast('Esta licencia requiere el archivo o enlace de stems', true);
+            document.getElementById('m-audio-stems').focus();
+            return null;
+        }
+    }
 
     // Usar refCode personalizado o generar uno automático
     let refCode = document.getElementById('m-ref-code').value.trim();
@@ -3397,9 +3676,9 @@ function confirmManualAdd() {
         value,
         paymentMethod,
         audioLinks: {
-            mp3: document.getElementById('m-audio-mp3').value.trim(),
-            wav: document.getElementById('m-audio-wav').value.trim(),
-            stems: document.getElementById('m-audio-stems').value.trim()
+            mp3: mp3Link,
+            wav: wavLink,
+            stems: stemsLink
         },
         formData: {
             buyerId,
@@ -3437,13 +3716,199 @@ function confirmManualAdd() {
     saveHistory();
     updateHistoryTable();
     closeManualAddModal();
+
+    if (prepareDelivery) {
+        if (typeof window.loadLicenseIntoEditor === 'function') {
+            window.loadLicenseIntoEditor(licenseData);
+        }
+        if (typeof window.nextStep === 'function') {
+            window.nextStep(2);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showToast('Licencia preparada. Completa cualquier dato faltante, revisa el PDF y pulsa “Enviar por correo”.');
+    }
+
+    return licenseData;
 }
 
 // Selección de tipo de licencia y auto-completado de campos
 
 // Funciones del Modal de Configuración
+const SETTINGS_PRIVATE_FIELD_IDS = Object.freeze([
+    'cfg-producer-id',
+    'cfg-producer-phone',
+    'cfg-producer-ipi',
+    'cfg-ds-client-id',
+    'cfg-ds-account-id',
+    'cfg-bank-pichincha-acc',
+    'cfg-bank-pichincha-dni',
+    'cfg-bank-guayaquil-acc',
+    'cfg-bank-guayaquil-dni',
+    'cfg-deuna-phone',
+    'cfg-paypal-client-id',
+    'cfg-paypal-client-secret',
+    'cfg-paypal-plan-id-pro',
+    'cfg-paypal-plan-id-elite',
+    'cfg-payphone-phone',
+    'cfg-payphone-client-id',
+    'cfg-payphone-appid',
+    'cfg-sri-ruc',
+    'cfg-sri-dir-matriz',
+    'cfg-sri-p12-password',
+    'cfg-sri-ruc-proveedor',
+    'cfg-stripe-publishable-key',
+    'cfg-stripe-connect-account-id',
+    'cfg-emailjs-service-id',
+    'cfg-emailjs-public-key',
+    'cfg-emailjs-template-id',
+    'cfg-emailjs-template-pending-id'
+]);
+
+function setSettingsPrivateValuesVisible(visible = false) {
+    const shouldReveal = visible === true;
+    SETTINGS_PRIVATE_FIELD_IDS.forEach((fieldId) => {
+        const input = document.getElementById(fieldId);
+        if (!input) return;
+        input.type = shouldReveal ? 'text' : 'password';
+        input.autocomplete = 'off';
+        input.spellcheck = false;
+    });
+
+    const toggle = document.getElementById('btn-toggle-private-settings');
+    if (!toggle) return;
+    toggle.setAttribute('aria-pressed', String(shouldReveal));
+    toggle.setAttribute('aria-label', shouldReveal ? 'Ocultar datos privados' : 'Mostrar datos privados');
+    toggle.title = shouldReveal ? 'Ocultar datos privados' : 'Mostrar datos privados';
+    const label = toggle.querySelector('span');
+    if (label) label.textContent = shouldReveal ? 'Ocultar datos privados' : 'Mostrar datos privados';
+    const icon = toggle.querySelector('[data-lucide]');
+    if (icon) icon.setAttribute('data-lucide', shouldReveal ? 'eye-off' : 'eye');
+    safeCreateIcons();
+}
+
+function initSettingsSections() {
+    const modal = document.getElementById('settings-modal');
+    if (!modal) return;
+
+    const buttons = Array.from(modal.querySelectorAll('[data-settings-section]'));
+    const panels = Array.from(modal.querySelectorAll('[data-settings-panel]'));
+    if (!buttons.length || !panels.length) return;
+
+    const activate = (section, shouldFocus = false) => {
+        const nextSection = panels.some(panel => panel.dataset.settingsPanel === section)
+            ? section
+            : panels[0].dataset.settingsPanel;
+
+        buttons.forEach(button => {
+            const isActive = button.dataset.settingsSection === nextSection;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-selected', String(isActive));
+        });
+        panels.forEach(panel => {
+            const isActive = panel.dataset.settingsPanel === nextSection;
+            panel.classList.toggle('is-active', isActive);
+            panel.hidden = !isActive;
+        });
+        modal.dataset.settingsSection = nextSection;
+
+        if (shouldFocus) {
+            const activeButton = buttons.find(button => button.dataset.settingsSection === nextSection);
+            activeButton?.focus({ preventScroll: true });
+        }
+    };
+
+    buttons.forEach(button => {
+        if (button.dataset.settingsBound === 'true') return;
+        button.addEventListener('click', () => activate(button.dataset.settingsSection));
+        button.addEventListener('keydown', event => {
+            if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(event.key)) return;
+            event.preventDefault();
+            const index = buttons.indexOf(button);
+            const direction = ['ArrowDown', 'ArrowRight'].includes(event.key) ? 1 : -1;
+            const nextButton = buttons[(index + direction + buttons.length) % buttons.length];
+            activate(nextButton.dataset.settingsSection, true);
+        });
+        button.dataset.settingsBound = 'true';
+    });
+
+    modal.activateSettingsSection = activate;
+    window.activateSettingsSection = activate;
+    activate(modal.dataset.settingsSection || 'account');
+}
+
+function setSettingsIntegrationLoading() {
+    const googleStatus = document.getElementById('cfg-google-login-status');
+    const googleButton = document.getElementById('btn-link-google-login');
+    const driveStatus = document.getElementById('cfg-gdrive-central-status');
+    const driveButton = document.getElementById('btn-link-central-gdrive');
+
+    if (googleStatus) {
+        googleStatus.textContent = 'Verificando acceso con Google...';
+        googleStatus.style.color = '#8a91a6';
+    }
+    if (googleButton) googleButton.disabled = true;
+
+    if (driveStatus) {
+        driveStatus.textContent = 'Verificando estado de Google Drive...';
+        driveStatus.style.color = '#8a91a6';
+    }
+    if (driveButton) driveButton.disabled = true;
+}
+
+function setSettingsIntegrationUnavailable() {
+    const googleStatus = document.getElementById('cfg-google-login-status');
+    const googleButton = document.getElementById('btn-link-google-login');
+    const driveStatus = document.getElementById('cfg-gdrive-central-status');
+    const driveButton = document.getElementById('btn-link-central-gdrive');
+
+    if (googleStatus) {
+        googleStatus.textContent = 'No se pudo comprobar el acceso con Google. Cierra y vuelve a abrir Configuración.';
+        googleStatus.style.color = '#e53e3e';
+    }
+    if (googleButton) googleButton.disabled = true;
+
+    if (driveStatus) {
+        driveStatus.textContent = 'No se pudo comprobar Google Drive en este momento.';
+        driveStatus.style.color = '#e53e3e';
+    }
+    if (driveButton) driveButton.disabled = true;
+}
+
+async function refreshSettingsIntegrationStatuses() {
+    setSettingsIntegrationLoading();
+
+    try {
+        // Configuración es un flujo privado bajo demanda: cargar el módulo aquí
+        // evita dejar los estados iniciales visibles en rutas que no usan Editor.
+        await loadModule('editor');
+        updateGoogleLoginLinkStatus();
+
+        if (window.currentUserIsAdmin) {
+            await loadPlatformGDriveStatus();
+            return;
+        }
+
+        const driveStatus = document.getElementById('cfg-gdrive-central-status');
+        const driveButton = document.getElementById('btn-link-central-gdrive');
+        if (driveStatus) {
+            driveStatus.textContent = 'Disponible sólo para el administrador de BEATSS.';
+            driveStatus.style.color = '#8a91a6';
+        }
+        if (driveButton) driveButton.disabled = true;
+    } catch (error) {
+        console.warn('[BEATSS] No se pudieron cargar los estados de Integraciones:', error);
+        setSettingsIntegrationUnavailable();
+    }
+}
+
 function openSettingsModal() {
-    document.getElementById('settings-modal').style.display = 'flex';
+    const modal = document.getElementById('settings-modal');
+    if (!modal) return;
+    initSettingsSections();
+    renderAccountDeletionStatus();
+    setSettingsPrivateValuesVisible(false);
+    modal.style.display = 'flex';
+    void refreshSettingsIntegrationStatuses();
     if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
         try {
             lucide.createIcons();
@@ -3453,7 +3918,57 @@ function openSettingsModal() {
     }
 }
 
+function renderAccountDeletionStatus() {
+    const status = document.getElementById('account-deletion-status');
+    const button = document.getElementById('btn-account-deletion-request');
+    if (!status || !button) return;
+    const requested = window.accountDeletionStatus === 'requested';
+    status.textContent = requested
+        ? 'Tu solicitud está registrada. Puedes cancelarla mientras la revisión de seguridad y retención legal siga pendiente.'
+        : 'Puedes solicitar la eliminación de tu cuenta y sus datos. La solicitud pasa por una revisión de seguridad y retención legal antes del borrado definitivo.';
+    button.textContent = requested ? 'Cancelar solicitud' : 'Solicitar eliminación';
+    button.classList.toggle('is-cancel', requested);
+}
+
+async function requestAccountDeletionChange() {
+    const user = auth.currentUser;
+    if (!user) {
+        showToast('Debes iniciar sesión de nuevo para administrar tu cuenta.', true);
+        return;
+    }
+    const requested = window.accountDeletionStatus === 'requested';
+    const action = requested ? 'cancel' : 'request';
+    if (!requested && !window.confirm('Esta acción registrará una solicitud de eliminación. No borrará tu cuenta inmediatamente. ¿Deseas continuar?')) return;
+
+    const button = document.getElementById('btn-account-deletion-request');
+    if (button) button.disabled = true;
+    try {
+        const token = await user.getIdToken(true);
+        const response = await fetch('/api/account/deletion-request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ action })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'No se pudo registrar la solicitud.');
+        window.accountDeletionStatus = result.status;
+        renderAccountDeletionStatus();
+        showToast(result.message);
+    } catch (error) {
+        showToast(error.message || 'No se pudo administrar la solicitud.', true);
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
 function closeSettingsModal() {
+    setSettingsPrivateValuesVisible(false);
+    // Una clave temporal sólo vive en memoria. Si el administrador cierra el
+    // panel, se elimina de la interfaz para reducir una exposición accidental.
+    if (loadedModules.has('editor')) window.clearBeatStarsMigrationTicket?.();
     document.getElementById('settings-modal').style.display = 'none';
 }
 
@@ -3463,35 +3978,54 @@ function showToast(message, isError = false) {
     const oldToasts = document.querySelectorAll('.toast');
     oldToasts.forEach(t => t.remove());
 
+    // Algunos módulos históricos llaman a showToast(..., 'error') en lugar de
+    // pasar un booleano. Normalizamos ambos formatos para que el estado visual
+    // nunca dependa de un valor de CSS inexistente.
+    const errorState = isError === true || isError === 'error' || isError === 'danger';
     const toast = document.createElement('div');
-    toast.className = `toast ${isError ? 'error' : ''}`;
+    toast.className = `toast ${errorState ? 'error' : 'success'}`;
     toast.innerHTML = `
-        <i data-lucide="${isError ? 'alert-triangle' : 'check-circle-2'}"></i>
-        <span>${message}</span>
+        <i data-lucide="${errorState ? 'alert-triangle' : 'check-circle-2'}" aria-hidden="true"></i>
+        <span class="toast-message"></span>
     `;
+    toast.querySelector('.toast-message').textContent = String(message ?? '');
     document.body.appendChild(toast);
     safeCreateIcons();
 
-    // Estilo en JS para la animación
+    // Estilo en JS para la animación. El sistema activo es claro; usar
+    // `color: #fff` sobre `var(--bg-card)` hacía que los mensajes de éxito
+    // desaparecieran y `var(--danger)` sin declarar dejaba los errores sin
+    // fondo. Ambos estados usan ahora una superficie oscura de alto contraste
+    // y un acento semántico distinto.
     Object.assign(toast.style, {
         position: 'fixed',
         bottom: '24px',
         right: '24px',
-        backgroundColor: isError ? 'var(--danger)' : 'var(--bg-card)',
-        color: '#fff',
-        border: isError ? 'none' : '1px solid var(--border-color)',
-        padding: '12px 20px',
-        borderRadius: '8px',
+        maxWidth: 'min(420px, calc(100vw - 32px))',
+        backgroundColor: 'var(--ledger-ink, #172238)',
+        color: '#ffffff',
+        border: `1px solid ${errorState ? 'var(--ledger-orange, #ff6b42)' : 'var(--ledger-blue, #3157e8)'}`,
+        padding: '14px 18px',
+        borderRadius: '14px',
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
-        boxShadow: 'var(--shadow-lg)',
+        boxShadow: '0 16px 38px rgba(23, 34, 56, .22)',
         zIndex: '2000',
         animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         fontFamily: 'var(--font-sans)',
         fontSize: '13px',
-        fontWeight: '500'
+        fontWeight: '600',
+        lineHeight: '1.45'
     });
+    const icon = toast.querySelector('svg');
+    if (icon) {
+        icon.style.flex = '0 0 auto';
+        icon.style.color = errorState ? 'var(--ledger-orange, #ff6b42)' : 'var(--ledger-mint, #b7f0d4)';
+        icon.style.width = '19px';
+        icon.style.height = '19px';
+        icon.setAttribute('aria-hidden', 'true');
+    }
 
     // Agregar estilos de animación si no existen
     if (!document.getElementById('toast-animation-styles')) {
@@ -3505,6 +4039,18 @@ function showToast(message, isError = false) {
             @keyframes fadeOut {
                 from { opacity: 1; }
                 to { opacity: 0; }
+            }
+            .toast-message {
+                min-width: 0;
+                overflow-wrap: anywhere;
+            }
+            @media (max-width: 760px) {
+                .toast {
+                    right: 16px !important;
+                    bottom: calc(82px + env(safe-area-inset-bottom)) !important;
+                    left: 16px !important;
+                    max-width: none !important;
+                }
             }
             .animate-spin {
                 animation: spin 1s linear infinite;
@@ -3524,11 +4070,16 @@ function showToast(message, isError = false) {
     }, 3500);
 }
 
-// Inicializar tooltips premium reemplazando el atributo 'title' nativo
+// Los controles del Studio usan ayudas nativas: son accesibles y no invaden
+// la maqueta con los tooltips oscuros heredados.
 function initTooltips() {
     document.querySelectorAll('button[title], a[title], .btn-icon-only[title], .btn[title]').forEach(el => {
         const titleText = el.getAttribute('title');
         if (titleText) {
+            if (el.closest('#app-container.saas-workspace')) {
+                if (!el.getAttribute('aria-label')) el.setAttribute('aria-label', titleText);
+                return;
+            }
             el.setAttribute('data-tooltip', titleText);
             el.removeAttribute('title');
         }
@@ -3539,8 +4090,6 @@ function initTooltips() {
 window.showToast = showToast;
 window.initTooltips = initTooltips;
 window.checkPlanLimitExceeded = checkPlanLimitExceeded;
-window.saveHistory = saveHistory;
-window.loadHistory = loadHistory;
 window.openSettingsModal = openSettingsModal;
 window.addCustomFieldRow = addCustomFieldRow;
 window.initDefaultDate = initDefaultDate;
@@ -3651,9 +4200,16 @@ window.changeZoom = function(action) {
     if (action === 'fit') {
         const container = paper.parentElement;
         if (container) {
-            // El ancho del contenedor menos un padding de seguridad
-            const availableWidth = container.clientWidth - 64;
-            const fitScale = availableWidth / 800;
+            // El papel ahora es fluido y puede medir 920px en escritorio.
+            // Calculamos el ajuste con su ancho real para evitar que el zoom
+            // conserve la referencia antigua de 800px.
+            const containerStyles = window.getComputedStyle(container);
+            const horizontalPadding =
+                (parseFloat(containerStyles.paddingLeft) || 0) +
+                (parseFloat(containerStyles.paddingRight) || 0);
+            const availableWidth = Math.max(1, container.clientWidth - horizontalPadding - 16);
+            const paperWidth = parseFloat(window.getComputedStyle(paper).width) || paper.offsetWidth || 800;
+            const fitScale = Math.min(1, availableWidth / Math.max(1, paperWidth));
             newZoom = Math.floor(fitScale * 100);
         }
     } else if (typeof action === 'number') {
@@ -3680,8 +4236,74 @@ window.changeZoom = function(action) {
     if (val) val.innerText = `${newZoom}%`;
 };
 
+function normalizedPathname() {
+    return normalizeWorkspacePathname(window.location.pathname);
+}
+
+function publicStorePath(producerAka) {
+    return `/tienda/${encodeURIComponent(String(producerAka || '').trim())}`;
+}
+
+function buyerDownloadPath(paymentId, downloadToken = '') {
+    const query = downloadToken ? `?token=${encodeURIComponent(downloadToken)}` : '';
+    return `/descargas/${encodeURIComponent(String(paymentId || '').trim())}${query}`;
+}
+
+window.syncBeatssPathForTab = function(tabId) {
+    const path = workspacePathForTab(tabId);
+    if (!path) return;
+
+    document.title = workspaceTitleForTab(tabId);
+    if (normalizedPathname() === path) {
+        history.replaceState({ view: 'home', tabId }, '', `${path}${window.location.search}${window.location.hash}`);
+        return;
+    }
+
+    history.pushState({ view: 'home', tabId }, '', path);
+};
+
+function selectWorkspaceTab(tabId) {
+    if (!tabId) return;
+    window.__beatssApplyingRoute = true;
+    window.switchTab?.(tabId);
+    window.__beatssApplyingRoute = false;
+    document.title = workspaceTitleForTab(tabId);
+}
+
+function openPrivateWorkspaceRoute(tabId) {
+    window.beatssPendingWorkspaceTab = tabId;
+    window.showAppView('home', null, false);
+
+    if (window.currentUser) {
+        // showAppView consume la pestaña pendiente y la aplica una sola vez.
+        return;
+    }
+
+    // Mantiene la URL solicitada y abre el acceso. Evitamos delegar al botón
+    // heredado de la landing: el callback inicial de Firebase puede terminar
+    // después del click y ocultar ese modal antes de que el usuario lo vea.
+    // Al completar Google/email, showAppView('home') aplicará la pestaña
+    // pendiente.
+    const openPendingLogin = () => {
+        if (typeof window.openAuthModal === 'function') {
+            window.openAuthModal('login');
+            return;
+        }
+        window.openAuthModal?.('login');
+    };
+    setTimeout(openPendingLogin, 0);
+}
+
 window.showAppView = function(viewName, params = null, pushState = true) {
-    console.log("🚦 Cambiando a vista:", viewName, "con parámetros:", params);
+    // El marketplace general está retirado temporalmente. Incluso si algún
+    // módulo heredado solicita "catalog", nunca debe volver a mostrarlo.
+    if (viewName === 'catalog') {
+        window.location.assign('/tienda/sossa');
+        return;
+    }
+    document.body.dataset.beatssView = viewName;
+    document.body.classList.remove('beatss-view-home', 'beatss-view-catalog', 'beatss-view-store', 'beatss-view-download');
+    document.body.classList.add(`beatss-view-${viewName}`);
     
     // Toggle class active de administración en el body para el chatbot
     if (viewName === 'home' && window.currentUser) {
@@ -3713,15 +4335,37 @@ window.showAppView = function(viewName, params = null, pushState = true) {
     const loginModal = document.getElementById('login-modal');
     if (loginModal) loginModal.style.display = 'none';
 
+    [landing, appContainer, globalCatalog, publicStore, buyerDownload, loginModal].forEach((element) => {
+        if (!element) return;
+        element.setAttribute('aria-hidden', 'true');
+        element.inert = true;
+    });
+
     // 2. Mostrar y configurar el contenedor de la vista solicitada
     if (viewName === 'home') {
         if (window.currentUser) {
-            if (appContainer) appContainer.style.display = 'grid';
+            if (appContainer) {
+                appContainer.style.display = 'grid';
+                appContainer.setAttribute('aria-hidden', 'false');
+                appContainer.inert = false;
+            }
         } else {
-            if (landing) landing.style.display = 'block';
+            if (landing) {
+                landing.style.display = 'block';
+                landing.setAttribute('aria-hidden', 'false');
+                landing.inert = false;
+            }
         }
         if (pushState) {
-            history.pushState({ view: 'home' }, '', window.location.pathname);
+            const pendingTab = window.beatssPendingWorkspaceTab;
+            const pendingPath = pendingTab ? workspacePathForTab(pendingTab) : '';
+            history.pushState({ view: 'home', tabId: pendingTab || null }, '', pendingPath || '/');
+        }
+
+        if (window.currentUser && window.beatssPendingWorkspaceTab) {
+            const pendingTab = window.beatssPendingWorkspaceTab;
+            window.beatssPendingWorkspaceTab = null;
+            requestAnimationFrame(() => selectWorkspaceTab(pendingTab));
         }
         // Ocultar reproductor si se vuelve a home
         const player = document.getElementById('store-audio-player');
@@ -3731,26 +4375,38 @@ window.showAppView = function(viewName, params = null, pushState = true) {
         window.stateManager.setState('isGlobalCatalogMode', true);
         window.stateManager.setState('isPublicStoreMode', false);
         
-        if (globalCatalog) globalCatalog.style.display = 'block';
+        if (globalCatalog) {
+            globalCatalog.style.display = 'block';
+            globalCatalog.setAttribute('aria-hidden', 'false');
+            globalCatalog.inert = false;
+        }
         
         if (pushState) {
-            history.pushState({ view: 'catalog' }, '', '?catalogo=1');
+            history.pushState({ view: 'catalog' }, '', '/catalogo');
         }
         
-        if (typeof window.initGlobalCatalog === 'function') {
-            window.initGlobalCatalog();
-        }
+        void loadModule('catalog')
+            .then(() => window.initGlobalCatalog?.())
+            .catch((error) => {
+                console.error('[BEATSS] No se pudo iniciar el catálogo público:', error?.message || error);
+                const grid = document.getElementById('global-beats-grid');
+                if (grid) grid.innerHTML = '<p class="global-catalog-error" role="status">No se pudo cargar el catálogo. Inténtalo de nuevo.</p>';
+            });
     } 
     else if (viewName === 'store') {
         window.stateManager.setState('isGlobalCatalogMode', false);
         window.stateManager.setState('isPublicStoreMode', true);
         
-        if (publicStore) publicStore.style.display = 'block';
+        if (publicStore) {
+            publicStore.style.display = 'block';
+            publicStore.setAttribute('aria-hidden', 'false');
+            publicStore.inert = false;
+        }
         
         const producerAka = params?.producer;
         if (producerAka) {
             if (pushState) {
-                history.pushState({ view: 'store', producer: producerAka }, '', '?p=' + encodeURIComponent(producerAka));
+                history.pushState({ view: 'store', producer: producerAka }, '', publicStorePath(producerAka));
             }
             if (window.initPublicStore) {
                 window.initPublicStore(producerAka);
@@ -3761,16 +4417,17 @@ window.showAppView = function(viewName, params = null, pushState = true) {
         window.stateManager.setState('isGlobalCatalogMode', false);
         window.stateManager.setState('isPublicStoreMode', false);
         
-        if (buyerDownload) buyerDownload.style.display = 'block';
+        if (buyerDownload) {
+            buyerDownload.style.display = 'block';
+            buyerDownload.setAttribute('aria-hidden', 'false');
+            buyerDownload.inert = false;
+        }
         
         const paymentId = params?.paymentId;
         const downloadToken = params?.downloadToken || '';
         if (paymentId) {
             if (pushState) {
-                const qs = downloadToken
-                    ? `?download=${encodeURIComponent(paymentId)}&token=${encodeURIComponent(downloadToken)}`
-                    : `?download=${encodeURIComponent(paymentId)}`;
-                history.pushState({ view: 'download', paymentId }, '', qs);
+                history.pushState({ view: 'download', paymentId }, '', buyerDownloadPath(paymentId, downloadToken));
             }
             if (typeof window.loadBuyerDownloadPage === 'function') {
                 window.loadBuyerDownloadPage(paymentId, downloadToken);
@@ -3788,40 +4445,63 @@ window.showAppView = function(viewName, params = null, pushState = true) {
 document.getElementById('btn-sales-refresh')?.addEventListener('click', loadSalesData);
 
 function handleInitialRouting() {
-    if (typeof window.checkPayphoneSubscriptionRedirectResult === 'function') {
-        window.checkPayphoneSubscriptionRedirectResult();
-    }
-    checkPayphoneRedirectResult();
+    const pathname = normalizedPathname();
     const urlParams = new URLSearchParams(window.location.search);
+    const hasPayphoneReturn = Boolean(urlParams.get('id') && urlParams.get('clientTransactionId'));
+    // PayPhone solo necesita el módulo de checkout cuando realmente volvemos
+    // de su redirección. Evita descargar más de 1 MB de código en cada visita
+    // normal al Studio o a la landing.
+    if (hasPayphoneReturn) {
+        if (typeof window.checkPayphoneSubscriptionRedirectResult === 'function') {
+            window.checkPayphoneSubscriptionRedirectResult();
+        }
+        checkPayphoneRedirectResult();
+    }
+    if (urlParams.get('stripe_session_id')) {
+        checkStripeReturn();
+    } else if (urlParams.get('stripe_cancelled')) {
+        urlParams.delete('stripe_cancelled');
+        const cleanUrl = `${window.location.pathname}${urlParams.toString() ? `?${urlParams.toString()}` : ''}${window.location.hash}`;
+        window.history.replaceState({}, document.title, cleanUrl);
+        if (typeof window.showToast === 'function') window.showToast('El pago con Stripe fue cancelado.');
+    }
     const downloadId = urlParams.get('download') || urlParams.get('order');
     const downloadToken = urlParams.get('token') || '';
     const producerAka = urlParams.get('p') || urlParams.get('producer');
-    if (downloadId) {
-        window.showAppView('download', { paymentId: downloadId, downloadToken }, false);
-    } else if (producerAka) {
-        window.showAppView('store', { producer: producerAka }, false);
-    } else if (urlParams.has('catalogo') || window.location.hash === '#catalogo') {
-        window.showAppView('catalog', null, false);
+    const routeDownloadId = pathname.startsWith('/descargas/')
+        ? decodeURIComponent(window.location.pathname.split('/').filter(Boolean)[1] || '')
+        : '';
+    const routeProducerAka = pathname.startsWith('/tienda/')
+        ? decodeURIComponent(window.location.pathname.split('/').filter(Boolean)[1] || '')
+        : '';
+    const workspaceTab = workspaceTabForPath(pathname);
+
+    if (routeDownloadId || downloadId) {
+        window.showAppView('download', { paymentId: routeDownloadId || downloadId, downloadToken }, false);
+    } else if (routeProducerAka || producerAka) {
+        window.showAppView('store', { producer: routeProducerAka || producerAka }, false);
+    } else if (workspaceTab) {
+        const canonicalPath = workspacePathForTab(workspaceTab);
+        if (canonicalPath && pathname !== canonicalPath) {
+            window.history.replaceState(
+                { view: 'home', tabId: workspaceTab },
+                '',
+                `${canonicalPath}${window.location.search}${window.location.hash}`
+            );
+        }
+        openPrivateWorkspaceRoute(workspaceTab);
+    } else if (pathname === '/catalogo' || urlParams.has('catalogo') || window.location.hash === '#catalogo') {
+        window.location.replace('/tienda/sossa');
     } else {
         window.showAppView('home', null, false);
     }
 }
 
+window.applyBeatssRoute = handleInitialRouting;
+
 // Escuchar popstate para navegación del navegador (Atrás/Adelante)
-window.addEventListener('popstate', (event) => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const downloadId = urlParams.get('download') || urlParams.get('order');
-    const downloadToken = urlParams.get('token') || '';
-    const producerAka = urlParams.get('p') || urlParams.get('producer');
-    if (downloadId) {
-        window.showAppView('download', { paymentId: downloadId, downloadToken }, false);
-    } else if (producerAka) {
-        window.showAppView('store', { producer: producerAka }, false);
-    } else if (urlParams.has('catalogo')) {
-        window.showAppView('catalog', null, false);
-    } else {
-        window.showAppView('home', null, false);
-    }
+window.addEventListener('popstate', () => {
+    handleInitialRouting();
 });
 
 setTimeout(handleInitialRouting, 500);
@@ -3865,42 +4545,9 @@ window.apply3DTiltEffect = function() {
     });
 };
 
-// 2. Controlador de la barra táctil fija inferior en dispositivos móviles
+// Inicialización de componentes auxiliares que no pertenecen a la navegación móvil.
+// La navegación móvil vive exclusivamente en mobile-studio.js.
 document.addEventListener('DOMContentLoaded', () => {
-    const mobileBtns = document.querySelectorAll('.mobile-nav-btn');
-    const sidebar = document.querySelector('.sidebar');
-    const mainPanel = document.querySelector('.main-panel');
-    
-    if (mobileBtns.length > 0) {
-        mobileBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                mobileBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                const target = btn.dataset.target;
-                if (target === 'form') {
-                    // El historial colapsa el sidebar. Al volver al formulario
-                    // hay que restaurarlo antes de hacerlo visible en móvil.
-                    if (sidebar) sidebar.classList.remove('sidebar-hidden');
-                    if (sidebar) sidebar.style.setProperty('display', 'block', 'important');
-                    if (mainPanel) mainPanel.style.setProperty('display', 'none', 'important');
-                } else if (target === 'preview') {
-                    if (sidebar) sidebar.style.setProperty('display', 'none', 'important');
-                    if (mainPanel) mainPanel.style.setProperty('display', 'block', 'important');
-                    if (typeof window.switchTab === 'function') {
-                        window.switchTab('tab-preview');
-                    }
-                } else if (target === 'history') {
-                    if (sidebar) sidebar.style.setProperty('display', 'none', 'important');
-                    if (mainPanel) mainPanel.style.setProperty('display', 'block', 'important');
-                    if (typeof window.switchTab === 'function') {
-                        window.switchTab('tab-history');
-                    }
-                }
-            });
-        });
-    }
-
     // Inicializar chatbot virtual
     if (typeof window.initChatbot === 'function') {
         window.initChatbot();
@@ -4021,5 +4668,3 @@ function initFeaturedProducerRotation() {
     });
 }
 // Rotation configuration completed
-
-
