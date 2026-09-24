@@ -1,5 +1,28 @@
 # Estado operativo actual de BEATSS
 
+## Auditoría fiscal integral del SRI y ajustes normativos en RIDE y validación — DONE (2026-09-24)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Antigravity` y subagente `sri_tax_advisor`.
+- Fecha: `2026-09-24`.
+- Objetivo: Auditar integralmente la conformidad técnica y normativa del sistema de facturación electrónica SRI de BEATSS, corregir discrepancias en el RIDE PDF y sincronizar validaciones cliente-servidor.
+- Dictamen de Auditoría:
+  - Criptografía XAdES-BES & PKCS#12: 100% CUMPLE (Aislamiento de secretos, C14N inclusiva en memoria nativa sin binarios externos, compatibilidad certificada con BCE, Security Data, ANF, Uanataca).
+  - Algoritmo Clave de Acceso Módulo 11 Ponderado: 100% CUMPLE (Exactitud matemática de 49 dígitos).
+  - Esquema XML Factura v2.1.0: 100% CUMPLE (Estructura oficial vigente del SRI, Anexo 26 RUC proveedor tecnológico).
+  - Emisión Manual e Idempotencia: 100% CUMPLE (Prohibición estricta de emisión automática/en lote; control individual del dueño; bloqueo CAS contra secuenciales duplicados; reintentos consultan estado sin reenviar XML).
+  - Web Services SOAP: 100% CUMPLE (Endpoints celcer/cel, manejo asíncrono y tolerante de respuestas).
+- Correcciones aplicadas:
+  1. `sri_ride.py`: Extracción dinámica de impuestos desde `//infoFactura/totalConImpuestos/totalImpuesto`. Anteriormente el PDF fijaba `SUBTOTAL 15%: $ 0.00` e `IVA 15%: $ 0.00` con todo en `SUBTOTAL IVA 0%`. Ahora calcula y refleja fielmente tanto tarifas grabadas (15%, 12%, 14%, 13%, 5%) como 0%, No Objeto y Exento.
+  2. `api/_sri_buyer.js`: Corrección en el algoritmo Módulo 11 para RUCs jurídicos (dígito 9) y públicos (dígito 6) en frontend, evitando que un residuo 1 (verificador 10) sea truncado a 0 mediante `% 10`.
+  3. `tests/test_sri_invoicing.py`: Test unitario automatizado `test_ride_pdf_dynamic_vat_breakdown` que genera y verifica un PDF RIDE con desglose dinámico.
+- Verificación ejecutada:
+  - Node test suite: 295/295 tests pasados (`node --test tests/*.test.mjs`).
+  - Python test suite: 77/77 tests pasados (`.venv/bin/python -m unittest discover -s tests -p 'test_*.py'`).
+  - Build & Performance: `npm run build` aprobado (HTML gzip 62.48 kB).
+  - Seguridad: `npm run security:check` PASSED.
+- Siguiente acción: El productor puede acceder a `https://beatss.app/facturacion` y ejecutar con total confianza la emisión manual de su primera factura electrónica.
+
 ## Diagnosticar y corregir el facturador SRI para selección y emisión individual por venta — DONE (2026-09-24)
 
 - Estado: `DONE`; lock liberado.
