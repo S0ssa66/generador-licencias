@@ -1,8 +1,415 @@
 # Estado operativo actual de BEATSS
 
+## Publicado por OpenCode — desbloqueo del deploy — DONE (2026-09-23)
+
+- Estado: `DONE`
+- Agente: `OpenCode`
+- Contexto: Codex quedó `BLOCKED` para publicar por su lectura de que el equipo
+  Vercel está en Hobby (restricción de uso comercial). El deploy técnico sí
+  funciona en este proyecto; Sossa autorizó publicar.
+- Publicado: `dpl_6yLi2ucXTwpzNn166wpHkP7EU8Ts`, `READY`, `production`, alias
+  `https://beatss.app`.
+- Pre-vuelo: `npm run build` + presupuesto, **275/275** pruebas Node y
+  `npm run security:check`.
+- Verificación Live: `/`, `/inicio`, `/tienda/sossa`, `/ventas`, `/pedidos`,
+  `/contabilidad` y `/facturacion` → HTTP 200; webhook GET → 405.
+- Nota: `.vercelignore` mantiene excluidos los endpoints SRI opcionales
+  (`api/sri_handlers.py`, `api/payments/retry-sri.js`, `api/_sri_download.js`,
+  `download-ride.js`, `download-xml.js`), así que el facturador SRI **no queda
+  activo en producción**; sigue local. No se modificó `.vercelignore`.
+- Siguiente acción: ninguna de deploy. Si Sossa quiere habilitar SRI en
+  producción, autorizar y revisar fiscalmente antes.
+
+## Publicar la implementación SRI pendiente — BLOCKED (2026-09-23)
+
+- Estado: `BLOCKED`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: publicar los cambios locales del facturador SRI para poder continuar la validación.
+- Resumen: no se desplegó. El build Vite terminó correctamente y el presupuesto aprobó (HTML gzip 62.36 kB / 65 kB). La suite Node terminó con código 0; las pruebas Python SRI/API dieron 27/27 y `npm run security:check` aprobó con el aviso local esperado de `DOWNLOAD_SIGNING_KEY` ausente. El intento de usar el CLI Vercel offline no pudo obtener metadatos (`ENOTCACHED`); el CLI 59.20.0 encontrado en caché no pudo completar `whoami` porque su comprobación de actualización intentó escribir en `~/Library/Caches` fuera del sandbox (`EPERM`). No se imprimieron ni cambiaron secretos.
+- Archivos modificados por esta tarea: `CURRENT_STATE.md`. Se preservó el resto de los cambios locales; no hubo commit ni deploy.
+- Pruebas y resultado: `npm run build` aprobado; Node `node --test --test-reporter=dot tests/*.test.mjs` finalizó con código 0; `.venv/bin/python -m unittest tests.test_sri_reliability tests.test_sri_issue_api` 27/27; `npm run security:check` aprobado; `git diff --check` aprobado.
+- Bloqueos: el handoff anterior documenta que el único equipo Vercel visible está en Hobby. La documentación oficial de Vercel restringe Hobby al uso personal/no comercial y define como comercial una implementación usada para ganancia financiera; BeatSS vende licencias. No se debe publicar ahí ni cambiar a un plan pagado sin que Sossa elija y autorice un destino comercial. La verificación CLI fresca de equipo/plan no pudo completarse en esta sesión.
+- Siguiente acción exacta: Sossa debe habilitar/autorizar un destino apto para actividad comercial (por ejemplo, completar en su cuenta un plan comercial Vercel o elegir otro host con acceso configurado). Después, Codex puede desplegar estos cambios ya validados, verificar las rutas en producción y continuar con una prueba controlada SRI sin emitir una factura Live.
+
+## Contrastar en modo lectura las rutas de producción del facturador SRI — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: comprobar desde fuera si las rutas/página SRI de producción están publicadas, sin autenticarse ni emitir.
+- Resumen: el crawler web devuelve HTML de la página raíz, con contenido del Facturador cuya fecha de rastreo es de hace 3 semanas; no sirve para afirmar estado actual. Las aperturas directas de `/facturacion` y endpoints SRI fallaron internamente en el conector web. `curl` falló DNS para `beatss.app` en las cuatro rutas. Por tanto, no hay respuesta HTTP actual verificada de las rutas SRI.
+- Archivos modificados: `CURRENT_STATE.md`.
+- Pruebas/verificación: sólo GET/crawler; sin sesión, POST, emisión o mutación. DNS local devolvió `Could not resolve host`.
+- Bloqueos: no se pudo comprobar publicación ni runtime; el acceso de red/DNS de este entorno no resuelve el dominio. Firebase Hosting no está configurado, y el hosting backend conocido sigue siendo Vercel Hobby.
+- Siguiente acción exacta: obtener acceso de despliegue y un destino comercial autorizado; una vez publicado, verificar la ruta `/api/sri-issue` autenticada en ambiente de pruebas sin enviar una factura Live.
+
+## Verificar si el proyecto Firebase existente permite una ruta de hosting de solo lectura — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: comprobar si el proyecto Firebase ya compartido puede ser candidato de hosting, consultando únicamente existencia/acceso y APIs habilitadas.
+- Resumen: `.firebaserc` apunta a `licencias-musicales`, pero `firebase.json` sólo configura Firestore, Storage y emuladores; no hay Firebase Hosting ni rewrites para `/api/sri-issue`. La consulta read-only de proyecto con gcloud no fue accesible; no existe contexto de proyecto configurado, Firebase CLI está ausente y no se consultaron ni activaron recursos.
+- Archivos modificados: `CURRENT_STATE.md`.
+- Verificación: lectura de `firebase.json`, `.firebaserc`, `vercel.json`; `gcloud projects describe` reportó contexto no disponible. No se hicieron cambios externos.
+- Bloqueos: Firebase Hosting no es actualmente una ruta de despliegue lista; además, el backend depende de rewrites/runtime Vercel. Vercel CLI y Docker no están instalados, y el equipo conocido es Hobby, no apto para la actividad comercial del sitio.
+- Siguiente acción exacta: comprobar las rutas públicas actuales de producción por HTTP read-only y contrastarlas con el código; después Sossa debe autorizar un plan Vercel Pro o un nuevo destino comercial con proyecto/acceso configurado. Luego adaptar rutas si migra y validar una emisión seleccionada en ambiente SRI de pruebas.
+
+## Comprobar opciones locales de hosting comercial para completar el flujo SRI — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: comprobar, en modo de solo lectura, si hay un runtime de despliegue comercial ya disponible sin habilitar servicios ni incurrir en costos.
+- Resumen: `gcloud` existe pero no tiene proyecto configurado; Vercel CLI y Docker no están instalados. No hay desde este checkout una ruta disponible para desplegar sin preparar acceso/hosting.
+- Archivos modificados: `CURRENT_STATE.md`.
+- Pruebas/verificación: comandos de presencia de CLI y configuración ejecutados en modo de sólo lectura; no se activaron APIs ni recursos.
+- Bloqueos: el último estado verificado indica que el equipo visible en Vercel está en Hobby, cuyo uso se limita a fines personales/no comerciales; BEATSS vende licencias. No se modificó billing, Firestore, SRI ni producción.
+- Siguiente acción exacta: elegir/autorizar un host apto para uso comercial (por ejemplo, actualizar Vercel a Pro o preparar un proyecto Google Cloud con billing/límites de gasto); después instalar/autenticar la herramienta aprobada, desplegar con autorización y validar en pruebas SRI la factura de una venta seleccionada y sus descargas.
+
+## Alinear guía SRI al flujo manual puntual vigente en BeatSS — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: corregir afirmaciones documentales que presentan el worker persistente como requisito para emitir desde la fila seleccionada, aunque el endpoint autenticado ejecuta esa venta puntualmente.
+- Resumen: la guía ahora distingue la emisión manual puntual desde `/facturacion` (confirmación por venta, sin heartbeat/worker) del worker persistente opcional para seguimiento asíncrono, y corrige el almacenamiento de XML/RIDE a Storage privado. Se conservó el Facturador SRI oficial como alternativa externa con importación autenticada. Añadí aserciones para que el README no vuelva a decir que el heartbeat es requisito ni que los artefactos residen en Firestore Base64.
+- Archivos modificados en esta tarea: `docs/30_SRI/README.md`, `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`, `task.md`.
+- Pruebas y resultado: `node --test --test-reporter=dot tests/*.test.mjs` aprobado; Python SRI/API 32/32; `git diff --check` aprobado. La prueba inspecciona el handler puntual, la documentación sobre worker y el almacenamiento privado.
+- Bloqueos/límites: corrección documental y de regresión, no despliega ni valida runtime. No se contactó SRI/Firestore, no se emitió factura y no se verificaron artefactos reales.
+- Siguiente acción exacta: resolver un hosting comercial compatible para BeatSS; desplegar con autorización expresa y ejecutar primero una prueba controlada de emisión seleccionada en ambiente SRI de pruebas, verificando XML, RIDE, Storage privado y descarga autenticada.
+
+## Asegurar zona de Ecuador si el runtime no trae la base IANA — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: mantener disponible la facturación serverless si la imagen Python no incluye la base de zonas IANA necesaria por `ZoneInfo`.
+- Resumen: `_load_ecuador_timezone()` usa la base IANA `America/Guayaquil` cuando existe; si falta, cae a offset fijo UTC−05:00 para Ecuador continental sin instalar paquetes ni usar red.
+- Archivos modificados en esta tarea: `sri_invoicing.py`, `tests/test_sri_invoicing.py`, `CURRENT_STATE.md`, `task.md`.
+- Pruebas y resultado: Python SRI/API 32/32, suite Node 275/275, `npm run security:check` aprobado con aviso local esperado, `npm run build` y presupuesto aprobados (HTML gzip 62.36 kB/65 kB), `git diff --check` aprobado. La regresión simula `ZoneInfoNotFoundError` y confirma offset UTC−05:00.
+- Bloqueos/límites: simulación local; no hubo llamada al SRI/Firestore ni despliegue. `vercel` no está instalado localmente y el paquete CLI 59.23.2 no está en caché offline; no intenté descargarlo ni desplegar.
+- Siguiente acción exacta: resolver hosting comercial compatible, desplegar con autorización y validar una operación SRI de pruebas seleccionada con sus descargas XML/RIDE.
+
+## Alinear fecha fiscal, clave de acceso y firma con la hora de Ecuador — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: emitir el XML, la clave de acceso y el sello temporal con una misma hora de Ecuador, también en runtimes serverless configurados en UTC.
+- Resumen: `sri_invoicing.ecuador_now()` y `_as_ecuador_datetime()` centralizan la zona. La emisión usa el mismo instante Ecuador para fecha de clave y XML; XAdES serializa `-05:00` desde una hora ya convertida, no añade el offset a la hora UTC del host.
+- Archivos modificados en esta tarea: `sri_invoicing.py`, `sri_service.py`, `tests/test_sri_invoicing.py`, `CURRENT_STATE.md`, `task.md`.
+- Pruebas y resultado: Python SRI/API 31/31; suite Node 275/275; `npm run security:check` aprobado con el aviso local esperado por `DOWNLOAD_SIGNING_KEY`; `npm run build` y presupuesto aprobados (HTML gzip 62.36 kB/65 kB); `git diff --check` aprobado. La regresión con instante UTC `2026-09-24 02:30` confirmó fecha de Ecuador `23/09/2026` en clave/XML y timestamp `2026-09-23T21:30:00-05:00`.
+- Bloqueos/límites: pruebas simuladas; no se contactó al SRI ni se emitió factura real. No se desplegó ni verificó en runtime de producción.
+- Siguiente acción exacta: habilitar hosting compatible con uso comercial, publicar con autorización y comprobar la ruta autenticada en preview; validar XML/RIDE y descargas con una factura de pruebas antes de producción.
+
+## Hacer escribible la generación RIDE de facturas en ejecución serverless — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: evitar que el flujo manual elegido desde BeatSS dependa de una ruta local de macOS para generar el RIDE después de la autorización SRI.
+- Resumen: `_generate_authorized_ride_pdf()` conserva la copia `Documents/Licencias` en ejecución local y usa un archivo temporal en serverless; valida cabecera PDF, lee los bytes, elimina el temporal y devuelve `None` como ruta local. `_persist_authorized_sri()` sube los bytes a Storage privado y no guarda una referencia local que ya no existe.
+- Archivos modificados en esta tarea: `sri_service.py`, `tests/test_sri_reliability.py`, `CURRENT_STATE.md`, `task.md`.
+- Pruebas y resultado: pruebas Python SRI/API 27/27; suite Node 275/275; `npm run security:check` aprobado con aviso local esperado por `DOWNLOAD_SIGNING_KEY` ausente; `npm run build` y presupuesto aprobados (HTML gzip 62.36 kB de 65 kB); `git diff --check` aprobado. Pruebas aisladas simularon generación y almacenamiento, sin Firestore ni SRI.
+- Bloqueos/límites: no se desplegó, no se contactó al SRI Live, no se emitió factura y no se modificó Firestore. Hace falta runtime/preview publicado y una emisión controlada en pruebas antes de afirmar E2E.
+- Siguiente acción exacta: habilitar un plan/hosting compatible con uso comercial; luego desplegar con autorización, validar rutas autenticadas en preview y realizar una emisión de pruebas seleccionada para confirmar XML, RIDE y descargas antes de producción.
+
+## Corregir instrucción obsoleta del worker en el Facturador SRI — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: alinear la ayuda visible del Facturador con la emisión manual puntual que se procesa por solicitud y no exige worker persistente.
+- Resumen: la ayuda ya aclara que la emisión manual puntual de la venta confirmada desde BeatSS no depende de un worker permanente; éste sólo sería necesario para una futura cola automática asíncrona. Se conserva la opción alternativa de asociar XML/RIDE emitidos externamente.
+- Archivos modificados en esta tarea: `index.html`, `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`, `task.md`.
+- Pruebas y resultado: prueba SRI dirigida 15/15; suite Node completa 275/275; `npm run security:check`, `npm run build` (presupuesto gzip aprobado) y `git diff --check` aprobados.
+- Bloqueos/límites: no se desplegó, no se contactó al SRI Live ni se emitió factura o modificó Firestore. El sitio de producción aún no contiene esta corrección local.
+- Siguiente acción exacta: publicar sólo después de resolver el plan/hosting comercial compatible; luego revisar la ayuda en producción. No requiere activar un worker para la emisión puntual manual.
+
+## Reducir bundle Python y validar build oficial Vercel local — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: reducir el bundle Python y validar el camino local de compilación de la emisión SRI manual, sin reemplazar `.vercel/output`, descargar variables ni desplegar.
+- Resumen: `functions.excludeFiles` evita empaquetar el árbol `.migration` de 8,5 GB y carpetas de desarrollo; `includeFiles` conserva `public/logo.png`, que usa la plantilla RIDE. Se corrigió el estado para que `state-guard.mjs` lo interprete sin divergencia.
+- Archivos cambiados para esta comprobación: `vercel.json`, `CURRENT_STATE.md`, `task.md`. Vercel también generó localmente `.python-version`, `pyproject.toml` y `uv.lock`; se conservaron para reproducir Python 3.12 y sus dependencias.
+- Build oficial: Vercel CLI 59.23.2, target preview, salida temporal `/private/tmp/beatss-vercel-build-final-20260923e`; terminó `status: ok`, runtime `python3.12`, duración 60 s, 12 funciones. El mapa de archivos conserva los módulos de emisión y `public/logo.png`; no incluye `.migration` ni archivos `.env`. El paquete de la función SRI quedó en 215,846 bytes de configuración/metadatos; Vercel completó el bundle sin superar el límite Python de 500 MB. El build de Vite dentro de Vercel pasó; HTML gzip 61.89 kB (límite 65 kB).
+- Pruebas: `node --test tests/*.test.mjs` 275/275; `.venv/bin/python -m unittest tests.test_sri_reliability tests.test_sri_issue_api` 24/24; `npm run security:check` aprobado con aviso esperado de `DOWNLOAD_SIGNING_KEY` ausente local; `npm run security:deps` exit 0 sin vulnerabilidades altas/críticas, reportó 9 moderadas; `git diff --check` aprobado.
+- Evidencia de Vercel: `vercel teams list` confirmó que el único equipo visible `masterjuego25-5300's projects` está en plan `hobby`.
+- Bloqueos: no se desplegó ni se verificó el sitio actualizado en producción; Vercel reserva Hobby al uso personal/no comercial y BEATSS vende licencias. No se contactó SRI Live, Firestore, no se emitió factura ni se ejecutó un flujo real. La prueba simulada no sustituye una factura controlada en el ambiente autorizado.
+- Siguiente acción exacta: usar un plan Vercel que permita uso comercial (o migrar a hosting compatible) antes de publicar; luego validar en preview las rutas de emisión/importación y, sólo cuando Sossa seleccione una venta y confirme, ejecutar la prueba fiscal controlada.
+
+## Prueba integrada simulada de emisión manual SRI por venta — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`; agente: `Codex`; fecha: `2026-09-23`.
+- Objetivo: probar el motor de emisión seleccionada hasta el estado final con Firestore/SRI simulados, sin facturar ni tocar datos externos.
+- Resumen: se añadió una prueba integrada del procesamiento puntual: sólo usa el ID seleccionado, consulta la referencia esperada, transiciona `PENDING → PROCESSING → DONE`, y no lista la cola global ni publica heartbeat. La llamada al emisor SRI y la lectura de pago están simuladas.
+- Archivos modificados: `tests/test_sri_reliability.py`, `task.md`, `CURRENT_STATE.md`.
+- Pruebas: `.venv/bin/python -m unittest tests.test_sri_reliability tests.test_sri_issue_api` 24/24; no contactó Firestore/SRI ni emitió. `git diff --check` aprobado.
+- Bloqueos: la ejecución simulada no sustituye `vercel build`, preview desplegada ni flujo de pruebas SRI. Continúa pendiente CLI/DNS y confirmación del plan comercial Vercel.
+- Siguiente acción exacta: confirmar plan Pro/Enterprise y habilitar Vercel CLI autenticado para compilar preview; probar rutas sin emitir, luego publicar con autorización expresa y sólo emitir cuando Sossa seleccione/confirme una venta.
+
+## Verificar emisión manual SRI elegida y cerrar brechas de validación local — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`; agente: `Codex`; fecha: `2026-09-23`.
+- Objetivo: revalidar el flujo donde Sossa elige una venta para que BeatSS solicite explícitamente generar, firmar y enviar esa factura al SRI, sin emisión automática al cobrar.
+- Resumen: se comprobó de nuevo el flujo completo en código: la acción fila pide confirmación; el servidor valida sesión, pago aprobado Live, dueño, ambiente y firma; persiste la selección manual; el handler Python procesa sólo ese pago y usa la misma reserva/clave para consultar autorización. El flujo alternativo importa XML/RIDE ya emitidos. El SRI oficial confirma que el contribuyente puede usar sistemas propios para generar, firmar y enviar, además del Facturador SRI web.
+- Archivos revisados/modificados: revisión de `api/sri-issue.py`, `dashboard_modules/invoicing.js`, `sri_contingency.py`, `server-handlers/sri-retry.js`; sólo se actualizó este handoff.
+- Pruebas: `node --test tests/*.test.mjs` 275/275; `.venv/bin/python -m unittest tests.test_sri_reliability tests.test_sri_issue_api` 23/23; `npm run security:check` aprobado (aviso esperado: falta `DOWNLOAD_SIGNING_KEY` en entorno local); `npm run build` y presupuesto gzip aprobados (`index.html` gzip 61.89 kB, límite 65 kB). `npm exec --yes --package=vercel@59.23.2 -- vercel --version` no pudo descargar el CLI por `ENOTFOUND registry.npmjs.org`.
+- Bloqueos/límites: no existe verificación oficial `vercel build` ni runtime/deployment preview; falta confirmar el plan de Vercel. No se desplegó, no se llamó al SRI Live, no se emitió factura ni se modificó Firestore.
+- Siguiente acción exacta: confirmar que Vercel está en Pro/Enterprise y habilitar acceso autenticado al CLI/build oficial; entonces compilar preview y probar rutas sin emitir. Publicar sólo con autorización expresa para este despliegue y probar la emisión real únicamente cuando Sossa elija y confirme una venta.
+
+## Alinear checklist SRI con emisión puntual sin worker — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`; agente: `Codex`; fecha: `2026-09-23`.
+- Objetivo: retirar como requisito la infraestructura de un worker persistente para el flujo manual puntual por venta, sin cambiar el código de emisión.
+- Resumen: `api/sri-issue.py` llama al motor con `payment_id_filter` y `expected_owner_uid`; el worker persistente no es prerequisito para esa ruta. El checklist ahora lo deja opcional para una cola asíncrona futura y ya no pide heartbeat antes de la emisión puntual.
+- Archivos modificados: `task.md` y `CURRENT_STATE.md`.
+- Pruebas: inspección estática de la llamada acotada a un pago/UID y `git diff --check` aprobados.
+- Bloqueos: ninguno adicional a la build/deployment preview Vercel y a confirmar el plan comercial, anotados en el handoff anterior.
+- Siguiente acción exacta: confirmar plan Vercel y conseguir CLI autenticado para ejecutar build preview; no emitir factura hasta que Sossa seleccione una venta concreta y confirme.
+
+## Validar el endpoint SRI manual web sin desplegar — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`; fecha: `2026-09-23`.
+- Objetivo: probar el handler HTTP de emisión puntual con Firestore/SRI simulados y comprobar la compatibilidad estructural con el runtime Vercel sin tocar producción.
+- Resumen: se añadieron pruebas HTTP deterministas para éxito de venta escogida, autorización pendiente, falta de confirmación, ambiente incorrecto, sesión inválida y venta no seleccionada; todas evitan llamadas reales. La documentación oficial de Vercel confirma la ruta `api/*.py`, el nombre `handler` como subclase de `BaseHTTPRequestHandler`, `requirements.txt` y `maxDuration` en `vercel.json`; Vercel usa Python 3.12 por defecto y `cryptography 49.0.0` declara Python >=3.9. El conteo estático de endpoints Vercel es 12.
+- Archivos modificados: `tests/test_sri_issue_api.py`, `CURRENT_STATE.md` y `task.md`.
+- Pruebas: `tests.test_sri_issue_api` + `tests.test_sri_reliability` 23/23; compilación Python, `node --check` de rutas/UI y `git diff --check` aprobados. Se intentó `npm exec --offline --package=vercel@59.23.2 -- vercel --version`; no pudo ejecutarse porque el paquete no está disponible en la caché offline (`ENOTCACHED`).
+- Bloqueos/límites: la forma del handler coincide con la documentación, pero no hay build oficial/deployment preview Vercel ni verificación del plan asociado a la cuenta. No se desplegó, no se contactó SRI Live ni se modificó Firestore. La guía de Vercel limita Hobby a uso personal/no comercial; BEATSS vende licencias, así que hay que confirmar Pro/Enterprise antes de publicar.
+- Siguiente acción exacta: confirmar el plan activo de Vercel y disponer del CLI autenticado para compilar preview; luego probar las rutas sin invocar emisión fiscal. Sólo tras esa validación y autorización explícita, publicar y hacer una revisión de interfaz/autenticación.
+
+## Emisión SRI manual por venta desde BeatSS — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`; fecha: `2026-09-23`.
+- Objetivo: desde el Facturador, elegir una venta individual y solicitar explícitamente su factura SRI, sin emitir automáticamente cada vez que se cobra.
+- Resumen: se conectó el botón de la fila a una función autenticada que verifica sesión Firebase, propietario, pago aprobado Live, selección manual persistida, ambiente de producción y configuración SRI; procesa sólo el ID escogido. El motor conserva su reserva secuencial e idempotencia y la interfaz distingue una respuesta pendiente de autorización para consultar la misma operación sin crear otra factura. Se conservó la ruta alternativa XML/RIDE para facturas emitidas fuera de BEATSS. La consolidación de endpoints mantiene la superficie de API prevista; el conteo local encontró 12 rutas de función candidatas, pero falta validar con el build oficial de Vercel.
+- Archivos principales modificados en esta tarea: `api/sri-issue.py`, `api/payments/config.js`, `api/payments/retry-sri.js`, `api/gdrive.js`, `api/beatstars-migration.js`, `server-handlers/beatstars-migration.js`, `server-handlers/sri-retry.js`, `server-handlers/sri-download.js`, `api/_sri_download.js`, `sri_contingency.py`, `dashboard_modules/invoicing.js`, `vercel.json`, `.vercelignore`, `scripts/security-check.mjs`, pruebas SRI/migración, `task.md` y `CURRENT_STATE.md`.
+- Pruebas: `node --test tests/*.test.mjs` 275/275; `.venv/bin/python -m unittest tests.test_sri_reliability tests.test_sri_issue_api` 17/17; `npm run security:check` aprobado con aviso esperado de `DOWNLOAD_SIGNING_KEY` ausente localmente; `npm run build` y presupuesto de rendimiento aprobados (HTML gzip 61.89 kB, límite 65 kB); `py_compile`, `node --check` y `git diff --check` aprobados.
+- Bloqueos/límites: no se instaló Vercel CLI, por lo que no se comprobó el runtime Python ni el límite mediante `vercel build`; tampoco se desplegó, se llamó al SRI Live ni se modificó Firestore. Por tanto, el flujo está verificado localmente, no confirmado aún en `beatss.app`.
+- Siguiente acción exacta: con autorización expresa de publicación, ejecutar el build oficial de Vercel, resolver cualquier incompatibilidad Python/funciones, desplegar y comprobar rutas; antes de emitir una factura real, revisar los datos de una venta concreta con Sossa y hacer la prueba fiscal controlada que corresponda.
+
+## Confirmar prerequisitos de hosting del worker SRI Live — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente activo: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: comprobar en modo lectura si Cloud Run ya aloja el worker SRI, sin activar APIs, desplegar ni cambiar configuración.
+- Resumen: la CLI pudo autenticarse en Google Cloud, pero la consulta de servicios no se completó: `run.googleapis.com` está deshabilitada en el proyecto. No se activó la API, no se desplegó y no se configuró facturación.
+- Archivo modificado: `CURRENT_STATE.md`.
+- Prueba: `gcloud run services list --project=licencias-musicales --platform=managed` devolvió `SERVICE_DISABLED`.
+- Bloqueo: para seguir con emisión directa de BeatSS hay que escoger/autorizar el hosting persistente y cualquier implicación de costos.
+- Siguiente acción exacta: esperar a que Sossa autorice activar Cloud Run (o indique otro hosting) antes de cualquier cambio externo.
+
+## Verificar y completar emisión manual SRI elegida desde BeatSS — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente activo: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: asegurar que Sossa pueda seleccionar una venta específica en BeatSS y solicitar manualmente su factura en el SRI, sin activar facturación automática por cobro.
+- Resumen: cada solicitud nueva registra en `sriJobs` el ID, fecha y UID de quien eligió la venta. Los trabajos heredados sólo se arman cuando el productor vuelve a elegirlos; el worker remoto y la cola SQLite cotejan esa confirmación, el pago aprobado, productor y condición Live antes de procesar. La interfaz comunica que Sossa elige cada factura y mantiene disponible la asociación externa XML/RIDE.
+- Archivos modificados en esta tarea: `api/_sri_queue.js`, `server-handlers/sri-retry.js`, `sri_contingency.py`, `dashboard_modules/invoicing.js`, `tests/sri-issuance-hardening.test.mjs`, `tests/test_sri_reliability.py`, `docs/30_SRI/README.md`, `task.md`, `CURRENT_STATE.md`.
+- Pruebas: `node --test tests/*.test.mjs` 274/274; `.venv/bin/python -m unittest tests.test_sri_reliability` 12/12; `npm run security:check` aprobado (aviso local: no está `DOWNLOAD_SIGNING_KEY`); `npm run build` y `performance:check` aprobados (HTML inicial gzip 62.35 kB, límite 65 kB); sintaxis Python/JavaScript y `git diff --check` aprobados. `npm run security:deps` no pudo consultar npm por `ENOTFOUND registry.npmjs.org`; no se considera aprobado.
+- Bloqueos: los cambios siguen locales, sin publicar. No se verificó la configuración Live de firma/ambiente en BeatSS ni un heartbeat real; falta desplegar el worker persistente con permiso `2`. No se emitió factura ni se modificó Firestore. Las solicitudes antiguas sin selección manual quedan retenidas.
+- Siguiente acción exacta: publicar el código web con autorización expresa; definir/proveer el alojamiento del worker persistente; verificar en Datos fiscales ambiente `2`, certificado y datos tributarios; desplegar el worker con `SRI_WORKER_ALLOWED_AMBIENTES=2`, confirmar heartbeat y, cuando Sossa elija una venta real y confirme la emisión, completar la verificación de extremo a extremo.
+
+## Cerrar revisión manual del XML/RIDE en BEATSS — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente activo: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: completar el flujo manual con una confirmación autenticada de que el productor cotejó el comprobante en el portal SRI, manteniendo ese estado separado de `AUTORIZADO` y de la validación criptográfica.
+- Resumen: tras subir XML+RIDE, el dueño puede confirmar que comparó clave, RUC, comprador, total y RIDE en el portal oficial. El endpoint confirma sesión/propietario, revalida existencia y SHA-256 de ambos archivos, sincroniza sólo registros existentes y marca `ARCHIVOS_MANUALES_VERIFICADOS` / `OWNER_VERIFIED` con UID y hora. La interfaz distingue revisión humana de autorización SRI; los archivos siguen descargables y el sistema bloquea reemplazo o reemisión. El facturador explica el flujo manual preferido y la alternativa de emisión directa por operación.
+- Archivos modificados: `api/payments/config.js`, `server-handlers/sri-manual-verify.js` (nuevo), `server-handlers/sri-manual-import.js`, `server-handlers/sri-retry.js`, `server-handlers/sri-download.js`, `dashboard_modules/invoicing.js`, `dashboard_modules/history.js`, `facturador.css`, `tests/sri-issuance-hardening.test.mjs`, `docs/30_SRI/README.md`, `task.md`, `CURRENT_STATE.md`.
+- Pruebas: `node --test tests/*.test.mjs` 272/272; pruebas SRI focalizadas 13/13; `npm run security:check` aprobado (aviso esperado: falta `DOWNLOAD_SIGNING_KEY` en entorno local); `npm run build` y `performance:check` aprobados (HTML inicial gzip 62.35 kB, presupuesto <=65 kB); sintaxis JS de handlers/UI y `git diff --check` aprobados.
+- Bloqueos: no se conectó al SRI ni Firestore, no se importaron documentos reales ni se publicó. El estado humano no valida criptográficamente el comprobante. Worker Live y behavior en producción siguen sin verificarse.
+- Siguiente acción exacta: con autorización expresa, publicar los cambios BEATSS; luego cargar una venta elegida y verificar importación, confirmación y descarga de XML/RIDE en la plataforma sin emitir una factura adicional.
+
+## Endurecer importación manual de comprobantes SRI contra ventas — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`; agente: `Codex`; fecha: 2026-09-23.
+- Objetivo: al adjuntar XML/RIDE a una operación elegida, validar que el XML autorizado sea una factura del emisor configurado y coincida con el comprador y total de esa operación, sin confundir asociación de archivos con validación criptográfica.
+- Resumen: la importación ahora requiere RUC emisor configurado de 13 dígitos, autorización `AUTORIZADO`, clave de 49 dígitos idéntica entre autorización y XML interno, comprobante tipo factura, mismo RUC emisor, mismo total y, cuando consta en la venta, la misma identificación del comprador. Los archivos siguen marcados como pendientes de verificación manual; el RIDE sólo se valida como PDF y no se valida criptográficamente la firma ni se consulta el SRI.
+- Archivos modificados en esta continuación: `server-handlers/sri-manual-import.js`, `tests/sri-issuance-hardening.test.mjs`, `docs/30_SRI/README.md`, `task.md`, `CURRENT_STATE.md`.
+- Pruebas: `node --test tests/*.test.mjs` 271/271; `npm run security:check` aprobado (aviso esperado: `DOWNLOAD_SIGNING_KEY` no está en el entorno local); `npm run build` y `performance:check` aprobados (HTML inicial gzip 62.35 kB, presupuesto <= 65 kB); prueba SRI focalizada 12/12; `node --check server-handlers/sri-manual-import.js` y `git diff --check` aprobados.
+- Bloqueos y límites: no se contactó Firestore/SRI, no se importaron archivos reales y no se publicó. La cuenta de producción habilitada por Sossa no prueba que el despliegue BEATSS contenga esta validación.
+- Siguiente acción exacta: cuando Sossa autorice publicación, desplegar los cambios revisados; después importar XML/RIDE oficiales de una operación elegida y comprobar asociación, descarga y revisión visual, sin crear una factura de prueba en producción.
+
 > Fuente breve de continuidad para Codex y OpenCode. No contiene secretos,
 > datos de clientes ni historial extenso. El historial se conserva en
 > `COLLABORATION_STATE.md`, que desde 2026-09-01 es un archivo de consulta.
+
+## Completar flujo manual de factura SRI desde BEATSS — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`; agente: `Codex`; fecha: 2026-09-23.
+- Objetivo: garantizar que Sossa facture manualmente en SRI, elija en BeatSS la venta y adjunte/importa allí XML/RIDE con asociación inequívoca, almacenamiento privado, revisión y descarga funcional.
+- Resumen: Facturación SRI presenta `Emitir esta venta en SRI` sólo para una operación individual aprobada, no sandbox, con ambiente de producción, firma configurada y heartbeat reciente de worker que declara permitido el ambiente `2`; requiere confirmación del productor antes de invocar la cola autenticada. La interfaz muestra por fila qué requisito impide emitir. No se factura automáticamente al cobrar. El servidor rechaza solicitudes Live antes de encolar si el worker no anuncia ese ambiente. El heartbeat publica los ambientes permitidos según `SRI_WORKER_ALLOWED_AMBIENTES` (por defecto sólo `1`). `Asociar XML + RIDE` sigue disponible como alternativa para una factura ya emitida fuera de BEATSS: ata los archivos al ID interno de una compra aprobada o licencia activa, excluye sandbox y estados activos/ambiguos, guarda en Storage privado con SHA-256 y permite descarga autenticada. El estado importado es `ARCHIVOS_MANUALES_REGISTRADOS` / `PENDING_OWNER_VERIFICATION`, nunca `AUTORIZADO`; no se verifica criptográficamente la firma.
+- Archivos modificados por esta continuación: `dashboard_modules/invoicing.js`, `dashboard_modules/history.js`, `api/payments/config.js`, `server-handlers/sri-download.js`, `server-handlers/sri-manual-import.js` (nuevo), `server-handlers/sri-retry.js`, `sri_contingency.py`, `index.html`, `main.js`, `tests/sri-issuance-hardening.test.mjs`, `tests/test_sri_reliability.py`, `docs/30_SRI/README.md`, `task.md`, `CURRENT_STATE.md`.
+- Pruebas: `node --test tests/*.test.mjs` 271/271; `.venv/bin/python -m unittest tests.test_sri_reliability` 11/11; `npm run security:check` aprobado (aviso esperado: `DOWNLOAD_SIGNING_KEY` no está en el entorno local); `npm run build` y `performance:check` aprobados (HTML inicial gzip 62.35 kB, presupuesto <= 65 kB); `node --check` módulos editados y `git diff --check` aprobados.
+- Bloqueos y límites: no se emitió factura, no se modificó Firestore ni se desplegó. Aún no se ha verificado un heartbeat Live vigente ni una prueba SRI E2E. La cuenta SRI activa no demuestra que el worker esté desplegado/autorizado; tampoco se confirmó que BEATSS publique estos cambios.
+- Siguiente acción exacta: con autorización expresa, publicar el cambio BEATSS y operativizar/verificar el worker con ambiente `2`; comprobar el estado de la fila seleccionada y realizar una prueba controlada antes de cualquier factura Live auténtica. La ruta externa de importación XML/RIDE queda como alternativa, no como flujo principal.
+
+## Ejecución puntual y segura del motor SRI existente — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`; fecha: 2026-09-23.
+- Objetivo: habilitar la ejecución bajo demanda de un único trabajo fiscal con el motor existente, sin proceso persistente ni emisión automática.
+- Resumen: la solicitud explícita de una venta aprobada puede quedar en cola aunque el worker esté desconectado y la respuesta lo indica claramente. `scripts/sri-once.py` inspecciona un único pago en modo lectura y, con confirmación y ambiente explícitos, procesa únicamente ese trabajo. Rechaza sandbox, pagos no aprobados, otro productor, estados ya autorizados/de revisión y trabajos no pendientes. La ejecución puntual no publica heartbeat de worker permanente; los errores fiscales no ofrecen reemisión ciega en la interfaz. Se conservó el firmador existente sin añadir otro proyecto de GitHub.
+- Archivos modificados en esta tarea: `sri_contingency.py`, `scripts/sri-once.py`, `server-handlers/sri-retry.js`, `dashboard_modules/history.js`, `tests/test_sri_reliability.py`, `tests/sri-issuance-hardening.test.mjs`, `docs/30_SRI/README.md`, `CURRENT_STATE.md`, `task.md`.
+- Pruebas y resultado: Python SRI 10/10, Node 269/269, `security:check`, build y presupuesto gzip, compilación Python y `git diff --check` aprobados. La invocación de emisión sin confirmación terminó con código 2 antes de autenticarse. `security:deps` no pudo consultar npm (`ENOTFOUND`), por lo que no se considera aprobada en esta sesión.
+- Bloqueos/límites: no hubo emisión real, modificación de Firestore ni despliegue. Una primera prueba local intentó reportar heartbeat por el camino heredado y falló DNS; se corrigió y la suite se repitió sin ese intento. No hay verificación E2E contra SRI ni prueba de descarga de XML/RIDE autorizados. El código no sustituye la revisión fiscal del emisor.
+- Siguiente acción exacta: revisar XML y firma con datos sintéticos sin enviarlos; después, con una operación auténtica que Sossa elija y autorice expresamente, probar el ambiente SRI 1 y comprobar autorización/XML/RIDE/descargas antes de decidir si se publica. No activar ambiente 2 ni emitir una factura real antes de esa validación.
+
+## Adaptar facturación SRI a flujo manual bajo demanda — DONE (2026-09-21)
+
+- Estado: `DONE`; agente: `Codex`; fecha: 2026-09-21.
+- Objetivo: dejar BEATSS como registro y preparación de datos fiscales, sin
+  emisión automática, para que Sossa facture únicamente cuando corresponda en
+  la herramienta oficial y gratuita del SRI.
+- Resumen: una preferencia automática heredada ya no puede encolar facturas sin
+  el modo automático explícito, que fue retirado del panel. El facturador ahora
+  se presenta como control fiscal manual, abre la página oficial mantenida por
+  el SRI y prepara una ficha local con emisor, cliente, operación y campos
+  faltantes identificados. Preparar la ficha no llama APIs, no emite y no
+  escribe en Firestore. Las facturas ya autorizadas conservan RIDE/XML y los
+  trabajos históricos en curso mantienen su estado para evitar duplicados.
+- Archivos modificados en esta tarea: `api/_sri_queue.js`,
+  `dashboard_modules/invoicing.js`, `index.html`,
+  `tests/sri-issuance-hardening.test.mjs`, `docs/30_SRI/README.md`, `task.md` y
+  `CURRENT_STATE.md`.
+- Pruebas y resultado: pruebas SRI 9/9, Node 268/268, Python SRI 7/7,
+  `security:check`, build, presupuesto gzip y `git diff --check` aprobados.
+  `security:deps` no se repitió porque el entorno bloqueó la consulta externa a
+  npm; no se modificaron `package.json` ni el lockfile.
+- Bloqueos/límites: no se emitió comprobante, no se contactó al SRI, no se
+  modificó Firestore y no se desplegó. La ficha es ayuda de preparación y no
+  sustituye la revisión tributaria ni la factura autorizada por el SRI.
+- Siguiente acción exacta: publicar este modo manual sólo si Sossa lo autoriza;
+  al necesitar una factura, revisar la ficha, completar pendientes y emitirla
+  desde el Facturador SRI oficial.
+
+## Corregir redirect_uri_mismatch del login Google — DONE (2026-09-21)
+
+- Estado: `DONE`; agente: `Codex`; fecha: 2026-09-21.
+- Objetivo: restaurar el URI OAuth ya autorizado después de comprobar que el
+  helper first-party produjo Google Error 400 `redirect_uri_mismatch`.
+- Resumen: se revirtió únicamente el `authDomain` a
+  `licencias-musicales.firebaseapp.com`, cuyo redirect URI sí está registrado
+  en el cliente OAuth. Se añadió una regresión estática para impedir volver a
+  publicar `beatss.app` como authDomain sin configurar antes Google OAuth.
+- Archivos modificados: `firebase-core.js`, `tests/auth-bootstrap.test.mjs` y
+  `CURRENT_STATE.md`.
+- Pruebas: auth 34/34, `security:check`, build y presupuesto aprobados. El
+  despliegue `dpl_BNBXmaZv7R12EjLy6fDsd9P5WR1R` quedó `READY`, alias
+  `https://beatss.app`; portada HTTP 200 y bundle publicado confirmado con el
+  authDomain oficial.
+- Bloqueos/límites: el código y el redirect publicado ya coinciden, pero la
+  confirmación final requiere un nuevo intento de login del usuario. El popup
+  con Error 400 anterior debe cerrarse porque no se actualiza por sí solo.
+- Siguiente acción exacta: cerrar el popup antiguo, recargar `beatss.app` y
+  pulsar nuevamente “Continuar con Google”.
+
+## Diagnosticar y corregir login BEATSS — DONE (2026-09-21)
+
+- Estado: `DONE`; agente: `Codex`; fecha: 2026-09-21.
+- Objetivo: identificar por código y evidencia por qué el acceso no completa,
+  corregirlo sin exponer credenciales y recuperar el ingreso al panel.
+- Resumen: Firebase Auth usaba el dominio externo
+  `licencias-musicales.firebaseapp.com` aunque Vercel ya publicaba el helper
+  `/__/auth/*` y `beatss.app` estaba autorizado. El cliente ahora usa el mismo
+  hostname de BEATSS en producción y conserva el dominio oficial de Firebase
+  sólo fuera de los dominios publicados, evitando la partición del estado del
+  popup. Se publicó el despliegue `dpl_7rBv1R1ckiqLdMNA1H7KeYvRGgPo`, estado
+  `READY`, con alias `https://beatss.app`.
+- Archivos modificados en esta tarea: `firebase-core.js`,
+  `tests/auth-bootstrap.test.mjs` y `CURRENT_STATE.md`. El despliegue incluyó
+  el árbol local previamente autorizado y no descartó cambios heredados.
+- Pruebas: autenticación 34/34; Node 268/268; Python SRI 7/7;
+  `security:check` y build/presupuesto aprobados. `security:deps` sin altas ni
+  críticas y con nueve moderadas. En producción `/` y `/__/auth/handler`
+  responden HTTP 200, y el bundle contiene los dominios first-party esperados.
+- Bloqueos/límites: no se introdujeron credenciales ni se inició sesión como el
+  usuario. La validación humana final consiste en pulsar de nuevo “Continuar
+  con Google” y confirmar que el Studio abre.
+- Siguiente acción exacta: reintentar el acceso en `https://beatss.app`; si el
+  navegador conserva el popup anterior, cerrarlo y recargar una vez la página.
+
+## Operativizar y validar worker SRI — READY_FOR_HANDOFF (2026-09-21)
+
+- Estado: `READY_FOR_HANDOFF`; agente: `Codex`; fecha: 2026-09-21.
+- Objetivo: comprobar la salud real del worker fiscal, preparar una ejecución
+  persistente y validar el flujo en ambiente SRI de pruebas sin emitir en Live.
+- Resumen: se añadió un bloqueo independiente para que el worker acepte sólo
+  ambiente `1` por defecto, omita trabajos de ambientes no autorizados antes
+  de adquirir el lease y exponga un proceso dedicado para alojamiento
+  persistente. También se corrigió la importación global de autenticación que
+  impedía ejecutar directamente la cola remota.
+- Archivos modificados: `sri_contingency.py`, `sri_worker.py`,
+  `Dockerfile.sri-worker`, `.dockerignore`, `tests/test_sri_reliability.py`,
+  `docs/30_SRI/README.md` y `CURRENT_STATE.md`.
+- Pruebas: `.venv/bin/python -m unittest tests.test_sri_reliability`, 7/7
+  aprobadas. El Python del sistema no incluye `lxml`; se usó el entorno del
+  proyecto. No se contactó SRI ni Firestore y no se emitió comprobante.
+- Bloqueos/límites: aún falta desplegar el contenedor en un proveedor de
+  procesos persistentes, registrar heartbeat real y ejecutar el E2E en
+  pruebas. La incidencia nueva de login impide validar el panel autenticado.
+- Siguiente acción exacta: reparar primero el login; después desplegar el
+  worker con `SRI_WORKER_ALLOWED_AMBIENTES=1` y validar el heartbeat.
+
+## Publicar y verificar corrección de rutas SRI — DONE (2026-09-19)
+
+- Estado: `DONE`; agente: `Codex`; fecha: 2026-09-19.
+- Objetivo: publicar en Vercel la corrección SRI autorizada por Sossa y
+  comprobar las rutas sin emitir facturas ni modificar datos fiscales.
+- Resumen: se publicó el árbol local revisado en
+  `dpl_HavmZ9m9Eh11wbdG3itnWomhLBsr`, estado `READY`, alias
+  `https://beatss.app`. Los handlers fiscales consolidados quedaron dentro
+  de las 12 funciones del build oficial de Vercel.
+- Archivos modificados en esta tarea: `CURRENT_STATE.md`. El despliegue
+  incluyó los cambios SRI locales enumerados en la entrada siguiente; no se
+  hizo commit ni se descartaron cambios locales.
+- Pruebas y resultado: Node 267/267; `vercel build --prod` aprobado y 12
+  funciones generadas. En el dominio público, `/` y `/facturacion` dieron
+  HTTP 200; GET al reintento dio 405, descargas RIDE/XML sin sesión dieron
+  401 y OPTIONS en las tres rutas dio 204. No se hizo POST, emisión ni descarga
+  autenticada.
+- Bloqueos/límites: el despliegue verifica el enrutamiento, no la facturación
+  fiscal completa. Aún falta confirmar un worker Python persistente y hacer
+  una prueba controlada en ambiente SRI de pruebas antes de emitir en Live.
+- Siguiente acción exacta: verificar la salud del worker en el panel con
+  sesión del productor; si está desconectado, desplegar/operar el worker
+  persistente fuera de Vercel y validar una emisión de prueba controlada.
+
+## Verificar y reparar flujo SRI publicado — READY_FOR_HANDOFF (2026-09-19)
+
+- Estado: `READY_FOR_HANDOFF`; agente: `Codex`; fecha: 2026-09-19.
+- Objetivo: comprobar rutas y dependencias del facturador SRI y reparar el
+  404 de reintento/descargas sin activar emisiones reales.
+- Resumen: las tres rutas fiscales se reescriben a la función ya existente
+  `api/payments/config.js`; sus handlers compartidos viven en
+  `server-handlers/` y los wrappers excluidos siguen disponibles para pruebas
+  locales. La emisión manual devuelve 503 sin heartbeat reciente del worker;
+  el panel no ofrece emitir en ese caso ni para compras de sandbox.
+- Archivos modificados: `api/payments/config.js`,
+  `api/payments/retry-sri.js`, `api/_sri_download.js`,
+  `server-handlers/sri-download.js`, `server-handlers/sri-retry.js`,
+  `vercel.json`, `.vercelignore`, `dashboard_modules/invoicing.js`,
+  `scripts/security-check.mjs`, tres archivos de pruebas y `CURRENT_STATE.md`.
+- Pruebas y resultado: Node 267/267, Python SRI 8/8, `security:check`,
+  `npm run build` y presupuesto gzip aprobados; `git diff --check` limpio.
+  `security:deps` sin altas/críticas, nueve moderadas. GET de solo lectura a
+  producción `/api/payments/retry-sri`: 404; la corrección sigue local.
+- Bloqueos/límites: no se hizo deploy ni emisión real. No se verificó un worker
+  Python persistente ni el flujo SRI de extremo a extremo; mientras la ruta
+  siga en 404 en producción, el facturador publicado no está reparado.
+- Siguiente acción exacta: con autorización de publicación, desplegar esta
+  corrección y verificar que GET al reintento responde 405 (no 404) y OPTIONS
+  responde 204; confirmar heartbeat del worker antes de cualquier emisión.
 
 ## Rediseño Compacto de Contabilidad, Telemetry Ribbon y Directorio Multi-Productor — DONE (2026-09-17)
 
