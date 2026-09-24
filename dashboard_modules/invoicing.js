@@ -128,21 +128,37 @@ function invoiceConfirmationDetails(invoice) {
 function collectSriInvoiceDetails(invoice) {
     const previous = invoice?.sriInvoiceDetails || {};
     const details = invoice?.formData || {};
+    const existingName = String(previous.buyerName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName || '').trim();
+    const existingId = String(previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId || '').trim();
+    const existingAddress = String(previous.buyerAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress || invoice?.buyerCity || details?.buyerCity || '').trim();
+    const existingEmail = String(previous.buyerEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail || '').trim();
+
+    // Si la venta ya tiene los datos fiscales del cliente guardados, se usan directamente para la factura
+    if (existingName && existingId) {
+        return {
+            mode: 'identified',
+            buyerName: existingName,
+            buyerId: existingId,
+            buyerAddress: existingAddress || 'Ecuador',
+            buyerEmail: existingEmail
+        };
+    }
+
     const promptValue = (label, existing) => window.prompt(label, String(existing || '').slice(0, 254));
     if (Number(invoice?.value) > 0 && Number(invoice.value) <= 50 && window.confirm('¿Esta operación corresponde a Consumidor Final y el comprador no requiere una factura nominativa? Pulsa Aceptar para Consumidor Final (hasta USD 50) o Cancelar para ingresar los datos nominativos.')) {
-        const buyerEmail = promptValue('Correo para entregar XML/RIDE (opcional):', previous.buyerEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail);
+        const buyerEmail = promptValue('Correo para entregar XML/RIDE (opcional):', existingEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail);
         if (buyerEmail === null) return null;
         return { mode: 'consumer_final', consumerFinalConfirmed: true, buyerEmail };
     }
-    const buyerName = promptValue('Nombre completo o razón social EXACTA del comprador para la factura:', previous.buyerName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName);
+    const buyerName = promptValue('Nombre completo o razón social EXACTA del comprador para la factura:', existingName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName);
     if (buyerName === null) return null;
-    const buyerId = promptValue('Cédula, RUC o pasaporte del comprador (confírmalo con él):', previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId);
+    const buyerId = promptValue('Cédula, RUC o pasaporte del comprador (confírmalo con él):', existingId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId);
     if (buyerId === null) return null;
-    const buyerAddress = promptValue('Dirección del comprador para la factura:', previous.buyerAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress);
+    const buyerAddress = promptValue('Dirección del comprador para la factura:', existingAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress);
     if (buyerAddress === null) return null;
-    const buyerEmail = promptValue('Correo para entregar XML/RIDE (opcional):', previous.buyerEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail);
+    const buyerEmail = promptValue('Correo para entregar XML/RIDE (opcional):', existingEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail);
     if (buyerEmail === null) return null;
-    return { mode: 'identified', buyerName, buyerId, buyerAddress, buyerEmail };
+    return { mode: 'identified', buyerName, buyerId, buyerAddress: buyerAddress || 'Ecuador', buyerEmail };
 }
 
 function maskedRuc(ruc) {
