@@ -33,13 +33,17 @@ export function isValidEcuadorBuyerId(value) {
         if (id.slice(-3) === '000') return false;
         const weights = [4, 3, 2, 7, 6, 5, 4, 3, 2];
         const sum = weights.reduce((total, weight, index) => total + Number(id[index]) * weight, 0);
-        return (((11 - (sum % 11)) % 11) % 10) === Number(id[9]);
+        const mod = 11 - (sum % 11);
+        const verifier = mod === 11 ? 0 : mod;
+        return verifier === Number(id[9]);
     }
     if (id.length === 13 && third === 6) {
         if (id.slice(-3) === '000') return false;
         const weights = [3, 2, 7, 6, 5, 4, 3, 2];
         const sum = weights.reduce((total, weight, index) => total + Number(id[index]) * weight, 0);
-        return (((11 - (sum % 11)) % 11) % 10) === Number(id[8]);
+        const mod = 11 - (sum % 11);
+        const verifier = mod === 11 ? 0 : mod;
+        return verifier === Number(id[8]);
     }
     return false;
 }

@@ -182,6 +182,39 @@ class SriInvoicingTests(unittest.TestCase):
         errors = validar_configuracion_emisor_sri(config)
         self.assertTrue(any('dirección de matriz no configurada' in error for error in errors))
 
+    def test_ride_pdf_dynamic_vat_breakdown(self):
+        import tempfile
+        import os
+        import sri_ride
+
+        emission_time = sri_invoicing.ecuador_now()
+        key = sri_invoicing.generar_clave_acceso(
+            emission_time, '01', '0803743111001', '2', '001001', '000000001', '12345678'
+        )
+        xml = sri_invoicing.generar_xml_factura(
+            emisor={
+                'ruc': '0803743111001', 'razonSocial': 'BEATSS TEST',
+                'dirMatriz': 'Quito - Ecuador', 'ambiente': '2',
+                'estab': '001', 'ptoEmi': '001', 'sriIvaTarifa': '15'
+            },
+            comprador={
+                'tipoIdentificacionComprador': '05',
+                'razonSocialComprador': 'CLIENTE TEST',
+                'identificacionComprador': '1710034065'
+            },
+            items=[{'codigoPrincipal': 'BEAT', 'descripcion': 'Licencia Premium', 'cantidad': 1, 'precioUnitario': 30}],
+            secuencial='000000001', clave_acceso=key, fecha_emision=emission_time
+        )
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f:
+            pdf_path = f.name
+        try:
+            sri_ride.generar_ride_pdf(pdf_path, xml, {'numeroAutorizacion': key, 'fechaAutorizacion': '2026-09-24 18:00:00'})
+            self.assertTrue(os.path.exists(pdf_path))
+            self.assertGreater(os.path.getsize(pdf_path), 1000)
+        finally:
+            if os.path.exists(pdf_path):
+                os.remove(pdf_path)
+
 
 if __name__ == '__main__':
     unittest.main()

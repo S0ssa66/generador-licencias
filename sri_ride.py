@@ -476,17 +476,69 @@ def generar_ride_pdf(dest_filepath, factura_xml_str, autorizacion_data=None):
         adicional_flowables.append(Paragraph(f"• {fp_desc}:  <b>$ {float(tp_val):.2f}</b>", s_normal))
 
     # ── Totales (Derecha) ─────────────────────────────────────────────────────
-    iva_0_base = total_sin_impuestos - total_descuento
+    subtotal_iva_grabado = 0.0
+    subtotal_iva_0 = 0.0
+    subtotal_no_objeto = 0.0
+    subtotal_exento = 0.0
+    valor_iva = 0.0
+    iva_etiqueta = "IVA 15%"
+    subtotal_etiqueta = "SUBTOTAL 15%"
+
+    codigo_porc_map = {
+        "4": "15%",
+        "2": "12%",
+        "10": "13%",
+        "3": "14%",
+        "5": "5%",
+        "0": "0%",
+    }
+
+    total_imp_nodes = root.xpath("//infoFactura/totalConImpuestos/totalImpuesto")
+    if total_imp_nodes:
+        for ti in total_imp_nodes:
+            codigo = (ti.xpath("./codigo/text()") or ["2"])[0].strip()
+            cod_porc = (ti.xpath("./codigoPorcentaje/text()") or ["0"])[0].strip()
+            base_str = (ti.xpath("./baseImponible/text()") or ["0.00"])[0].strip()
+            val_str = (ti.xpath("./valor/text()") or ["0.00"])[0].strip()
+            try:
+                base = float(base_str)
+                val = float(val_str)
+            except Exception:
+                base = 0.0
+                val = 0.0
+
+            if codigo == "2":  # IVA
+                if cod_porc in codigo_porc_map and cod_porc != "0":
+                    label_pct = codigo_porc_map[cod_porc]
+                    iva_etiqueta = f"IVA {label_pct}"
+                    subtotal_etiqueta = f"SUBTOTAL {label_pct}"
+                    subtotal_iva_grabado += base
+                    valor_iva += val
+                elif cod_porc == "0":
+                    subtotal_iva_0 += base
+                elif cod_porc == "6":
+                    subtotal_no_objeto += base
+                elif cod_porc == "7":
+                    subtotal_exento += base
+                else:
+                    subtotal_iva_grabado += base
+                    valor_iva += val
+    else:
+        if importe_total > total_sin_impuestos:
+            valor_iva = importe_total - total_sin_impuestos
+            subtotal_iva_grabado = total_sin_impuestos
+        else:
+            subtotal_iva_0 = total_sin_impuestos - total_descuento
 
     totales_data = [
-        [Paragraph("<b>SUBTOTAL 15%</b>",          s_normal), Paragraph("$ 0.00",                          s_normal)],
-        [Paragraph("<b>SUBTOTAL IVA 0%</b>",        s_normal), Paragraph(f"$ {iva_0_base:.2f}",             s_normal)],
-        [Paragraph("<b>SUBTOTAL NO OBJETO IVA</b>", s_normal), Paragraph("$ 0.00",                          s_normal)],
-        [Paragraph("<b>SUBTOTAL EXENTO IVA</b>",    s_normal), Paragraph("$ 0.00",                          s_normal)],
+        [Paragraph(f"<b>{subtotal_etiqueta}</b>",   s_normal), Paragraph(f"$ {subtotal_iva_grabado:.2f}",   s_normal)],
+        [Paragraph("<b>SUBTOTAL IVA 0%</b>",        s_normal), Paragraph(f"$ {subtotal_iva_0:.2f}",         s_normal)],
+        [Paragraph("<b>SUBTOTAL NO OBJETO IVA</b>", s_normal), Paragraph(f"$ {subtotal_no_objeto:.2f}",    s_normal)],
+        [Paragraph("<b>SUBTOTAL EXENTO IVA</b>",    s_normal), Paragraph(f"$ {subtotal_exento:.2f}",       s_normal)],
         [Paragraph("<b>SUBTOTAL SIN IMPUESTOS</b>", s_normal), Paragraph(f"$ {total_sin_impuestos:.2f}",    s_normal)],
         [Paragraph("<b>TOTAL DESCUENTO</b>",        s_normal), Paragraph(f"$ {total_descuento:.2f}",        s_normal)],
         [Paragraph("<b>ICE</b>",                    s_normal), Paragraph("$ 0.00",                          s_normal)],
-        [Paragraph("<b>IVA 15%</b>",                s_normal), Paragraph("$ 0.00",                          s_normal)],
+        [Paragraph(f"<b>{iva_etiqueta}</b>",        s_normal), Paragraph(f"$ {valor_iva:.2f}",              s_normal)],
         [Paragraph("<b>VALOR TOTAL</b>",            s_bold),   Paragraph(f"<b>$ {importe_total:.2f}</b>",   s_bold)],
     ]
 
