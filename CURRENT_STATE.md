@@ -1,11 +1,15 @@
 # Estado operativo actual de BEATSS
 
-## Diagnosticar y corregir el facturador SRI para selección y emisión individual por venta — READY_FOR_HANDOFF (2026-09-24)
+## Diagnosticar y corregir el facturador SRI para selección y emisión individual por venta — DONE (2026-09-24)
 
-- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Estado: `DONE`; lock liberado.
 - Agente: `Antigravity`.
 - Fecha: `2026-09-24`.
 - Objetivo: Que el dueño pueda seleccionar una venta elegible en `/facturacion`, revisar los datos fiscales y confirmar la emisión individual de su factura electrónica al SRI. Nada de emisión automática o por lotes.
+- Despliegue y publicación:
+  - Git Commit: `309537a` en rama `main` enviado a `https://github.com/S0ssa66/generador-licencias.git`.
+  - Vercel Deploy: `dpl_5ucgu2dxd...` completado exitosamente y asociado al alias de producción `https://beatss.app`.
+  - Verificación en vivo: `https://beatss.app/facturacion` responde HTTP 200; `api/payments/retry-sri` y `api/sri-issue` responden HTTP 405 (método permitido POST).
 - Diagnóstico y correcciones aplicadas:
   1. **Normalización de importes multi-esquema (`finalPrice` vs `price` vs `value` vs `amount`)**:
      - En `api/_sri_buyer.js`: `numericTotal` ahora evalúa `payment.finalPrice ?? payment.price ?? payment.value ?? payment.amount`, admitiendo ventas atestiguadas manualmente o registros con esquema `value`/`amount` tanto para Consumidor Final (≤ USD 50) como nominativas sin errores falsos de total no verificado.
@@ -22,8 +26,8 @@
   - Python test suite: 76/76 tests pasados (`python -m unittest discover -s tests -p 'test_*.py'`).
   - Seguridad: `node scripts/security-check.mjs` PASSED (sin fugas de PII ni secretos).
   - Build & Performance: `npm run build` aprobado (HTML gzip 62.48 kB, límites presupuestarios respetados).
-- Límites respetados: No se tocó Firestore en vivo, no se contactaron servicios externos del SRI, no se modificaron archivos no rastreados existentes.
-- Siguiente acción: El dueño puede abrir `/facturacion`, seleccionar la venta elegible, revisar la ficha fiscal detallada (emisor, comprador, IVA, totales) y confirmar la emisión individual hacia el SRI.
+- Siguiente acción: El dueño puede abrir `https://beatss.app/facturacion`, seleccionar la venta elegible, revisar la ficha fiscal detallada (emisor, comprador, IVA, totales) y confirmar la emisión individual hacia el SRI.
+
 
 
 ## Reparar el botón de emisión manual del Facturador SRI — READY_FOR_HANDOFF (2026-09-24)
