@@ -72,7 +72,7 @@ test('la actualización de archivos conserva los campos existentes que no formen
 });
 
 test('el endpoint usa autorización temporal y nunca incorpora secretos de Drive en el cliente', () => {
-    const endpoint = read('api/beatstars-migration.js');
+    const endpoint = read('server-handlers/beatstars-migration.js');
     const helper = read('api/_beatstars-migration.js');
     const html = read('index.html');
     const editor = read('editor.js');
@@ -91,4 +91,13 @@ test('el endpoint usa autorización temporal y nunca incorpora secretos de Drive
     assert.match(html, /btn-create-beatstars-migration-ticket/);
     assert.match(html, /type="password" id="cfg-beatstars-migration-ticket"/);
     assert.match(editor, /navigator\.clipboard\.writeText\(beatStarsMigrationTicket\)/);
+});
+
+test('la ruta pública de migración se conserva dentro del handler consolidado de Drive', () => {
+    const endpoint = read('api/gdrive.js');
+    const rewrites = read('vercel.json');
+    const ignored = read('.vercelignore');
+    assert.match(endpoint, /route === 'beatstars-migration'\) return beatstarsMigration/);
+    assert.match(rewrites, /"source": "\/api\/beatstars-migration"[\s\S]*?"destination": "\/api\/gdrive\?route=beatstars-migration"/);
+    assert.match(ignored, /api\/beatstars-migration\.js/);
 });

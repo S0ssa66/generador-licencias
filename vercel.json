@@ -1,6 +1,22 @@
 {
   "rewrites": [
     {
+      "source": "/api/beatstars-migration",
+      "destination": "/api/gdrive?route=beatstars-migration"
+    },
+    {
+      "source": "/api/payments/retry-sri",
+      "destination": "/api/payments/config?route=retry-sri"
+    },
+    {
+      "source": "/api/payments/download-ride",
+      "destination": "/api/payments/config?route=download-ride"
+    },
+    {
+      "source": "/api/payments/download-xml",
+      "destination": "/api/payments/config?route=download-xml"
+    },
+    {
       "source": "/api/activate-pro",
       "destination": "/api/account?route=activate-pro"
     },
@@ -109,6 +125,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/guia-licencias",
+      "destination": "/index.html"
+    },
+    {
       "source": "/licencias",
       "destination": "/index.html"
     },
@@ -161,6 +181,16 @@
       "destination": "/index.html"
     }
   ],
+  "functions": {
+    "api/**/*.js": {
+      "excludeFiles": "**/*.log"
+    },
+    "api/sri-issue.py": {
+      "maxDuration": 60,
+      "includeFiles": "public/logo.png",
+      "excludeFiles": "{.*/**,.*,*.app/**,api/**/*.js,api/*handlers.py,**/*.{md,log,db,pyc,bak,csv,json},**/__pycache__/**,preview*.png,node_modules/**,{docs,tests,scratch,tmp,work,output,outputs,mcp,graphify-out,_uv,temp_audio_cache}/**}"
+    }
+  },
   "redirects": [
     {
       "source": "/catalogo",

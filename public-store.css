@@ -279,6 +279,26 @@ body[data-beatss-view="store"] {
     border-top: 1px solid #cbd7ef;
 }
 
+#public-store-view .store-license-guide-link {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 44px;
+    align-items: center;
+    gap: 8px;
+    margin-top: 18px;
+    border-bottom: 1px solid #c7d8f5;
+    color: #174fae;
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+#public-store-view .store-license-guide-link:hover,
+#public-store-view .store-license-guide-link:focus-visible {
+    border-color: #174fae;
+    color: #0f3d8f;
+}
+
 #public-store-view .store-catalog-metric {
     display: flex;
     align-items: baseline;

@@ -57,7 +57,11 @@ export function shouldQueueSriInvoice({
     manualOverride = false
 } = {}) {
     if (manualOverride) return true;
-    return publicConfig?.sriAutoQueueEnabled === true
+    // Una preferencia heredada de la antigua cola no puede reactivar emisiones
+    // por sí sola. El modo automático requiere además una activación explícita
+    // que no se ofrece mientras BEATSS opera en modo manual.
+    return publicConfig?.sriIssuanceMode === 'automatic'
+        && publicConfig?.sriAutoQueueEnabled === true
         && invoiceRequested === true
         && isLivePayment === true;
 }
@@ -90,7 +94,8 @@ export async function enqueueSriJob(db, {
     requestedBy = 'payment-confirmation',
     invoiceRequested = false,
     isLivePayment = true,
-    manualOverride = false
+    manualOverride = false,
+    invoiceDetails = null
 }) {
     if (!paymentId || !producerId) throw new Error('Faltan paymentId o producerId para crear el trabajo SRI.');
 
@@ -145,12 +150,55 @@ export async function enqueueSriJob(db, {
         sriUltimoIntento: now,
         sriErrorMensaje: '',
         sriInvoiceRequested: true,
-        sriQueueReason: manualOverride ? 'manual_request' : 'automatic_opt_in'
+        sriQueueReason: manualOverride ? 'manual_request' : 'automatic_opt_in',
+        ...(invoiceDetails ? { sriInvoiceDetails: invoiceDetails } : {})
     };
 
     const previous = existingJob.exists ? existingJob.data() : {};
     const previousStatus = String(previous.status || '');
-    if (['PENDING', 'PROCESSING', 'CONTINGENCY'].includes(previousStatus)) return { queued: true, alreadyQueued: true };
+    const processingLeaseExpired = !previous.leaseExpiresAt || (
+        Number.isFinite(Date.parse(String(previous.leaseExpiresAt))) &&
+        Date.parse(String(previous.leaseExpiresAt)) <= Date.now()
+    );
+    if (['PENDING', 'CONTINGENCY'].includes(previousStatus)) {
+        // Los trabajos heredados no deben despertarse sólo porque se encienda
+        // el worker Live. Se arman únicamente cuando el productor elige esta
+        // venta y confirma su emisión manual desde BEATSS.
+        if (manualOverride) {
+            if (invoiceDetails) {
+                await db.collection('payments').doc(paymentId).set({ sriInvoiceDetails: invoiceDetails }, { merge: true });
+                await licenseRef.set({ sriInvoiceDetails: invoiceDetails }, { merge: true });
+            }
+            const manualSelection = {
+                manualIssueRequested: true,
+                manualIssueRequestedAt: now,
+                manualIssueRequestedBy: requestedBy,
+                updatedAt: now
+            };
+            // Una venta PENDING puede tener una espera de backoff automática.
+            // Al volver a seleccionarla y confirmar, la ejecución puntual debe
+            // poder continuar ahora; esto no toma el lease ni cambia el estado,
+            // y el endpoint procesa exclusivamente el paymentId confirmado.
+            if (previousStatus === 'PENDING') manualSelection.nextAttemptAt = now;
+            await jobRef.set(manualSelection, { merge: true });
+        }
+        return { queued: true, alreadyQueued: true };
+    }
+    if (previousStatus === 'PROCESSING') {
+        if (manualOverride && processingLeaseExpired && existingJob.updateTime) {
+            // Recuperación exclusiva del dueño tras expirar el lease. No
+            // libera ni reinicia el lease: el endpoint puntual intentará
+            // reclamar el mismo trabajo con precondición updateTime.
+            await jobRef.update({
+                manualIssueRequested: true,
+                manualIssueRequestedAt: now,
+                manualIssueRequestedBy: requestedBy,
+                updatedAt: now
+            }, { lastUpdateTime: existingJob.updateTime });
+            return { queued: true, alreadyQueued: true, recoveringExpiredLease: true };
+        }
+        return { queued: false, alreadyProcessing: true };
+    }
 
     const batch = db.batch();
     batch.set(jobRef, {
@@ -159,6 +207,9 @@ export async function enqueueSriJob(db, {
         producerId,
         status: 'PENDING',
         requestedBy,
+        manualIssueRequested: manualOverride === true,
+        manualIssueRequestedAt: manualOverride === true ? now : '',
+        manualIssueRequestedBy: manualOverride === true ? requestedBy : '',
         idempotencyKey: `sri:${paymentId}`,
         attempts: Number(previous.attempts || 0),
         createdAt: previous.createdAt || now,

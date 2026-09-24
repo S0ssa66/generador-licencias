@@ -37,12 +37,16 @@ reporte_consolidado_productores.csv
 transacciones_consolidadas_globales.csv
 firebase-adminsdk.json
 
-# SRI queda preparado localmente, pero aún no se ha configurado el certificado
-# ni el ambiente fiscal. Mantener fuera del despliegue Hobby los endpoints
-# opcionales de emisión/descarga hasta activar el facturador.
+# Las rutas SRI se sirven por rewrites desde api/payments/config.js para no
+# añadir funciones al límite Hobby. Estos wrappers no se despliegan; sus
+# implementaciones compartidas viven en server-handlers/.
 api/payments/download-ride.js
 api/payments/download-xml.js
 api/payments/retry-sri.js
+# Implementación de migración BeatStars consolidada en api/gdrive.js.
+api/beatstars-migration.js
+# Handler del servidor local heredado; no es una función HTTP compatible con Vercel.
+api/payment_handlers.py
 api/sri_handlers.py
 api/_sri_download.js
 * 2.*

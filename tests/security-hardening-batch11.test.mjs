@@ -6,6 +6,8 @@ import { Readable } from 'node:stream';
 
 import { serveSriArtifact } from '../api/_sri_download.js';
 import retrySriHandler from '../api/payments/retry-sri.js';
+import { isSriWorkerHealthy } from '../server-handlers/sri-retry.js';
+import paymentConfigHandler from '../api/payments/config.js';
 import gdriveHandler from '../api/gdrive.js';
 import beatstarsMigrationHandler from '../api/beatstars-migration.js';
 
@@ -102,6 +104,51 @@ test('api/payments/retry-sri.js consolida CORS y preflights OPTIONS con 204', as
     await retrySriHandler(reqUntrusted, resUntrusted);
     assert.equal(resUntrusted.statusCode, 204);
     assert.equal(resUntrusted.headers['access-control-allow-origin'], undefined);
+});
+
+test('las rutas fiscales consolidadas conservan preflight y no crean otra función', async () => {
+    const vercel = JSON.parse(fs.readFileSync(path.join(root, 'vercel.json'), 'utf8'));
+    const expected = {
+        '/api/payments/retry-sri': 'retry-sri',
+        '/api/payments/download-ride': 'download-ride',
+        '/api/payments/download-xml': 'download-xml'
+    };
+    for (const [source, route] of Object.entries(expected)) {
+        assert.ok(vercel.rewrites.some(rule => rule.source === source && rule.destination === `/api/payments/config?route=${route}`));
+        const req = createMockReq({
+            method: 'OPTIONS',
+            url: `/api/payments/config?route=${route}`,
+            headers: { origin: 'https://beatss.app' }
+        });
+        const res = createMockRes();
+        await paymentConfigHandler(req, res);
+        assert.equal(res.statusCode, 204, source);
+        assert.equal(res.headers['access-control-allow-origin'], 'https://beatss.app', source);
+    }
+    const manualPaymentOptions = createMockReq({
+        method: 'OPTIONS',
+        url: '/api/payments/config?route=manual-payment-attestation',
+        headers: { origin: 'https://beatss.app' }
+    });
+    const manualPaymentResponse = createMockRes();
+    await paymentConfigHandler(manualPaymentOptions, manualPaymentResponse);
+    assert.equal(manualPaymentResponse.statusCode, 204);
+    assert.equal(manualPaymentResponse.headers['access-control-allow-origin'], 'https://beatss.app');
+    assert.equal(manualPaymentResponse.headers['access-control-allow-methods'], 'POST, OPTIONS');
+
+    const ignored = fs.readFileSync(path.join(root, '.vercelignore'), 'utf8');
+    assert.match(ignored, /^api\/payments\/retry-sri\.js$/m);
+    assert.match(ignored, /^api\/payments\/download-ride\.js$/m);
+    assert.match(ignored, /^api\/payments\/download-xml\.js$/m);
+    assert.doesNotMatch(ignored, /^server-handlers\/sri-(retry|download)\.js$/m);
+});
+
+test('el indicador del worker sólo reporta saludable un heartbeat fiscal reciente', () => {
+    const now = Date.parse('2026-09-19T22:00:00Z');
+    assert.equal(isSriWorkerHealthy({}, now), false);
+    assert.equal(isSriWorkerHealthy({ lastHeartbeatAt: new Date(now - 11 * 60_000) }, now), false);
+    assert.equal(isSriWorkerHealthy({ lastHeartbeatAt: new Date(now - 5 * 60_000) }, now), true);
+    assert.equal(isSriWorkerHealthy({ lastHeartbeatAt: new Date(now + 2 * 60_000) }, now), false);
 });
 
 test('api/gdrive.js consolida CORS y preflights OPTIONS con 204 en todas sus rutas', async () => {

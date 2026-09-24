@@ -97,15 +97,15 @@ test('server-handlers/log-download.js aplica rate limiting, saneamiento de IP y 
 });
 
 test('Endpoints de descarga y reintento SRI usan helper centralizado isTrustedBeatssOrigin', () => {
-    const sriDownload = fs.readFileSync(path.join(root, 'api/_sri_download.js'), 'utf8');
-    assert.ok(sriDownload.includes("import { isTrustedBeatssOrigin } from './_cors-origin.js'"),
-        '_sri_download.js debe importar isTrustedBeatssOrigin');
+    const sriDownload = fs.readFileSync(path.join(root, 'server-handlers/sri-download.js'), 'utf8');
+    assert.ok(sriDownload.includes("import { isTrustedBeatssOrigin } from '../api/_cors-origin.js'"),
+        'sri-download.js debe importar isTrustedBeatssOrigin');
     assert.ok(sriDownload.includes('isTrustedBeatssOrigin(origin)'),
-        '_sri_download.js debe validar con isTrustedBeatssOrigin');
+        'sri-download.js debe validar con isTrustedBeatssOrigin');
 
-    const retrySri = fs.readFileSync(path.join(root, 'api/payments/retry-sri.js'), 'utf8');
-    assert.ok(retrySri.includes("import { isTrustedBeatssOrigin } from '../_cors-origin.js'"),
-        'retry-sri.js debe importar isTrustedBeatssOrigin');
+    const retrySri = fs.readFileSync(path.join(root, 'server-handlers/sri-retry.js'), 'utf8');
+    assert.ok(retrySri.includes("import { isTrustedBeatssOrigin } from '../api/_cors-origin.js'"),
+        'sri-retry.js debe importar isTrustedBeatssOrigin');
     assert.ok(retrySri.includes('isTrustedBeatssOrigin(origin)'),
-        'retry-sri.js debe validar con isTrustedBeatssOrigin');
+        'sri-retry.js debe validar con isTrustedBeatssOrigin');
 });

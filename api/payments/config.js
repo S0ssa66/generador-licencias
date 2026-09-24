@@ -3,6 +3,11 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { isTrustedBeatssOrigin } from '../_cors-origin.js';
 import { hasCompleteSriConfig } from '../_sri_queue.js';
+import retrySri, { isSriWorkerHealthy } from '../../server-handlers/sri-retry.js';
+import { serveSriArtifact } from '../../server-handlers/sri-download.js';
+import registerManualSriArtifacts from '../../server-handlers/sri-manual-import.js';
+import verifyManualSriArtifacts from '../../server-handlers/sri-manual-verify.js';
+import registerManualSriPayment from '../../server-handlers/sri-manual-payment.js';
 
 const ADMIN_UID = 'paXbnNbHMMPC31X3hf0oTUx4bbr2';
 
@@ -94,14 +99,16 @@ function sriProfileForOwner(config = {}) {
 function sriWorkerReadiness(worker = {}) {
     const heartbeat = worker?.lastHeartbeatAt?.toDate?.() || new Date(worker?.lastHeartbeatAt || 0);
     const heartbeatMs = Number.isFinite(heartbeat.getTime()) ? heartbeat.getTime() : 0;
-    const stale = !heartbeatMs || (Date.now() - heartbeatMs) > 10 * 60 * 1000;
     return {
         // Sólo se entrega salud operativa, nunca rutas internas, tokens ni
         // detalles del certificado. El dashboard necesita saber si es seguro
         // prometer que una cola realmente será procesada.
-        sriWorkerHealthy: !stale,
+        sriWorkerHealthy: isSriWorkerHealthy(worker),
         sriWorkerLastHeartbeatAt: heartbeatMs ? heartbeat.toISOString() : '',
-        sriWorkerPendingCount: Math.max(0, Number(worker?.pendingCount || 0) || 0)
+        sriWorkerPendingCount: Math.max(0, Number(worker?.pendingCount || 0) || 0),
+        sriWorkerAllowedAmbientes: Array.isArray(worker?.allowedAmbientes)
+            ? worker.allowedAmbientes.filter(value => value === '1' || value === '2')
+            : []
     };
 }
 
@@ -170,6 +177,18 @@ function initFirebaseAdmin() {
 }
 
 export default async function handler(req, res) {
+    // Reutilizar esta función ya desplegada para las rutas fiscales. Los
+    // handlers mantienen su propia autenticación, límites y control de acceso.
+    const url = new URL(req.url || '', `http://${req.headers?.host || 'localhost'}`);
+    const route = String(req.query?.route || url.searchParams.get('route') || '').trim().toLowerCase();
+    if (route === 'retry-sri') return retrySri(req, res);
+    if (route === 'download-ride') return serveSriArtifact(req, res, 'ride');
+    if (route === 'download-xml') return serveSriArtifact(req, res, 'xml');
+    if (route === 'manual-sri-import') return registerManualSriArtifacts(req, res);
+    if (route === 'manual-sri-verify') return verifyManualSriArtifacts(req, res);
+    if (route === 'manual-payment-attestation') return registerManualSriPayment(req, res);
+    if (route) return res.status(404).json({ error: 'Acción no encontrada.' });
+
     const origin = req.headers?.origin;
     configureCors(req, res);
 

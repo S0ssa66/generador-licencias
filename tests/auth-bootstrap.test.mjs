@@ -36,7 +36,19 @@ test('el retorno de una sesión expirada carga Inicio junto con el acceso', () =
     const bootstrap = read('app-bootstrap.js');
 
     assert.match(bootstrap, /const isExpiredSessionReturn = params\.get\('session'\) === 'expired';/);
-    assert.match(bootstrap, /if \(isExpiredSessionReturn\) \{[\s\S]*void import\('\.\/relay-home\.js'\);[\s\S]*void loadBeatssAuth\(\);/);
+    assert.match(bootstrap, /if \(isExpiredSessionReturn\) \{[\s\S]*window\.beatssPendingPublicAction = 'login';[\s\S]*void import\('\.\/relay-home\.js'\);[\s\S]*void loadBeatssAuth\(\);/);
+    assert.match(read('auth.js'), /pendingPublicAction === 'login'[\s\S]*window\.openAuthModal\('login'\)/);
+});
+
+test('la sesión expirada vuelve a la ruta privada canónica y no reinicia Facturación a Inicio', () => {
+    const auth = read('auth.js');
+    const main = read('main.js');
+
+    assert.match(auth, /const currentWorkspaceTab = workspaceTabForPath\(window\.location\.pathname\);[\s\S]*const safeReturnPath = workspacePathForTab\(currentWorkspaceTab\) \|\| '\/inicio';/);
+    assert.match(auth, /window\.location\.replace\(`\$\{window\.location\.origin\}\$\{safeReturnPath\}\?session=expired`\)/);
+    assert.match(auth, /if \(!isPrivateWorkspaceRoute && typeof window\.showAppView === 'function'\) \{\s*window\.showAppView\('home'\);/);
+    assert.match(auth, /window\.beatssPendingPublicAction === 'login'\) \{\s*if \(!isPrivateWorkspaceRoute\) window\.showAppView\?\.\('home'\);/);
+    assert.match(main, /if \(urlParams\.get\('session'\) === 'expired'\) \{[\s\S]*urlParams\.delete\('session'\);[\s\S]*workspaceTab/);
 });
 
 test('Configuración actualiza Integraciones aunque Editor se cargue bajo demanda', () => {
@@ -561,3 +573,13 @@ test('el login con Google preserva el gesto del usuario en móvil y evita redire
     assert.equal(authRewrite.destination, 'https://licencias-musicales.firebaseapp.com/__/auth/:path*');
 });
 
+test('Firebase Auth conserva el redirect URI autorizado del proyecto', () => {
+    const firebaseCore = read('firebase-core.js');
+    const vercel = JSON.parse(read('vercel.json'));
+
+    assert.match(firebaseCore, /authDomain:\s*'licencias-musicales\.firebaseapp\.com'/);
+    assert.doesNotMatch(firebaseCore, /authDomain:\s*['"](?:www\.)?beatss\.app['"]/);
+    const authRewrite = vercel.rewrites.find((entry) => entry.source === '/__/auth/:path*');
+    assert.ok(authRewrite, 'falta el rewrite del helper de Firebase');
+    assert.equal(authRewrite.destination, 'https://licencias-musicales.firebaseapp.com/__/auth/:path*');
+});

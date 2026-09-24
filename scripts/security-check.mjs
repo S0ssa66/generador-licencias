@@ -182,16 +182,16 @@ assert(chatbot.includes('formatChatMessage') && chatbot.includes('escapeChatHtml
 const stripeCreateCheckout = read('server-handlers/stripe-create-checkout-session.js');
 assert(stripeCreateCheckout.includes('checkStripeCheckoutRateLimit'), 'server-handlers/stripe-create-checkout-session.js debe implementar rate limiting.');
 
-const sriDownload = read('api/_sri_download.js');
-assert(sriDownload.includes('checkSriDownloadRateLimit'), 'api/_sri_download.js debe implementar rate limiting.');
+const sriDownload = read('server-handlers/sri-download.js');
+assert(sriDownload.includes('checkSriDownloadRateLimit'), 'server-handlers/sri-download.js debe implementar rate limiting.');
 
-const retrySri = read('api/payments/retry-sri.js');
-assert(retrySri.includes('checkRetrySriRateLimit'), 'api/payments/retry-sri.js debe implementar rate limiting.');
+const retrySri = read('server-handlers/sri-retry.js');
+assert(retrySri.includes('checkRetrySriRateLimit'), 'server-handlers/sri-retry.js debe implementar rate limiting.');
 
 const gdrive = read('api/gdrive.js');
 assert(gdrive.includes('checkDriveUploadRateLimit'), 'api/gdrive.js debe limitar la creación de sesiones de subida.');
 
-const beatstarsMigration = read('api/beatstars-migration.js');
+const beatstarsMigration = read('server-handlers/beatstars-migration.js');
 assert(beatstarsMigration.includes('checkMigrationTicketRateLimit'), 'api/beatstars-migration.js debe limitar la emisión de tickets de migración.');
 
 const activatePro = read('server-handlers/activate-pro.js');
@@ -244,10 +244,10 @@ assert(sales.includes('sanitizeHtml(pay.reference') && sales.includes('sanitizeH
 assert(sales.includes('decodeURIComponent') && sales.includes('encodeURIComponent'), 'dashboard_modules/sales.js debe codificar IDs en botones inline.');
 assert(sales.includes('isSafeArtworkUrl'), 'dashboard_modules/sales.js debe validar URLs de portadas y comprobantes.');
 
-assert(sriDownload.includes("res.status(204).end()") && !sriDownload.includes("corsOrigin(req)"), 'api/_sri_download.js debe usar OPTIONS 204 y no recurrir a fallback de CORS inseguro.');
-assert(retrySri.includes("res.status(204).end()") && !retrySri.includes("corsOrigin(req)"), 'api/payments/retry-sri.js debe usar OPTIONS 204 y no recurrir a fallback de CORS inseguro.');
+assert(sriDownload.includes("res.status(204).end()") && !sriDownload.includes("corsOrigin(req)"), 'server-handlers/sri-download.js debe usar OPTIONS 204 y no recurrir a fallback de CORS inseguro.');
+assert(retrySri.includes("res.status(204).end()") && !retrySri.includes("corsOrigin(req)"), 'server-handlers/sri-retry.js debe usar OPTIONS 204 y no recurrir a fallback de CORS inseguro.');
 assert(gdrive.includes("res.status(204).end()") && !gdrive.includes("getCorsOrigin(req)"), 'api/gdrive.js debe responder OPTIONS 204 y no usar getCorsOrigin.');
-assert(beatstarsMigration.includes("res.setHeader('Vary', 'Origin')") && !beatstarsMigration.includes("corsOrigin(req)"), 'api/beatstars-migration.js debe usar Vary: Origin y no recurrir a corsOrigin.');
+assert(beatstarsMigration.includes("res.setHeader('Vary', 'Origin')") && !beatstarsMigration.includes("corsOrigin(req)"), 'server-handlers/beatstars-migration.js debe usar Vary: Origin y no recurrir a corsOrigin.');
 
 // Lote 12: Inyección de fórmulas CSV, DOM XSS en archivos y consolidación universal OPTIONS 204
 const history = read('dashboard_modules/history.js');

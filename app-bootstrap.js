@@ -63,6 +63,7 @@ window.ensureBeatssMaterialSymbols = loadMaterialSymbols;
 
 const path = window.location.pathname.replace(/\/+$/, '') || '/';
 const isPublicStoreRoute = path.startsWith('/tienda/');
+const isPublicLicenseGuideRoute = path === '/guia-licencias';
 const isBuyerDownloadRoute = path.startsWith('/descargas/');
 const isPublicPurchaseRoute = path === '/compra/stripe' || path === '/compra/gracias' || path === '/compra/cancelada';
 const privateRouteTab = workspaceTabForPath(path);
@@ -126,13 +127,17 @@ if (legacyStripeSessionId) {
     window.location.replace(`${SOSSA_STORE_PATH}${query ? `?${query}` : ''}`);
 } else if (isExpiredSessionReturn) {
     // El vencimiento deja al usuario sin sesión, pero aún debe conservar una
-    // página completa detrás del acceso. Cargamos la portada junto con Auth:
-    // el aviso de expiración puede abrir el modal una vez y, al cerrarlo, queda
-    // Inicio visible en lugar de un workspace privado vacío.
+    // página completa detrás del acceso. Marcamos la intención antes de cargar
+    // Auth para que su primer callback sin usuario abra el modal de Login en
+    // vez de dejar la portada visible con el área privada inaccesible.
+    window.beatssPendingPublicAction = 'login';
     void import('./relay-home.js');
     void loadBeatssAuth();
 } else if (isPublicStoreRoute) {
     void import('./public-store-router.js');
+} else if (isPublicLicenseGuideRoute) {
+    // Guía pública estática: no requiere Auth, Firebase ni el Studio.
+    void import('./license-guide-router.js');
 } else if (isPublicPurchaseRoute || isBuyerDownloadRoute) {
     // Comprar o volver a descargar no requiere una cuenta de productor.
     // Este router no importa Auth ni monta el Studio.

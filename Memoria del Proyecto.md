@@ -24,7 +24,7 @@ Esta nota actúa como la memoria persistente de desarrollo de BEATSS. Tanto tú 
 ---
 
 ## 🧾 2. Facturación Electrónica SRI y Privacidad
-*   **Dirección Oficial del Emisor:** **"Quito - Ecuador"** (registrado así en el facturador y los contratos de licencia para proteger la privacidad del domicilio del productor).
+*   **Dirección oficial del emisor:** usar la dirección de matriz que conste en el RUC vigente y guardarla sólo en la configuración privada del productor; no fijar una ciudad genérica en el código. Esta dirección aparecerá en las facturas.
 *   **Datos del Productor:**
     *   **Nombre:** Joao David Dominguez (Sossa)
     *   **Email:** `admin@sossamusic.com` (alias vigentes: `masterjuego25@gmail.com`, `sossabeatz1@gmail.com`)

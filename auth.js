@@ -12,7 +12,7 @@ import {
     signOut,
     unlink
 } from "./firebase-core.js";
-import { workspaceTabForPath } from './workspace-routes.js';
+import { workspacePathForTab, workspaceTabForPath } from './workspace-routes.js';
 import './auth-access.css';
 
 // Initialize global variables on window if not present
@@ -119,6 +119,9 @@ async function expireAuthenticatedSession(reason) {
         // El redirect sigue siendo seguro aunque no pueda conservar el aviso.
     }
 
+    const currentWorkspaceTab = workspaceTabForPath(window.location.pathname);
+    const safeReturnPath = workspacePathForTab(currentWorkspaceTab) || '/inicio';
+
     clearAuthenticatedSessionSecurityState();
     try {
         localStorage.removeItem('beatss_has_session');
@@ -135,7 +138,9 @@ async function expireAuthenticatedSession(reason) {
     } catch (error) {
         console.error('No se pudo completar el cierre automático de Firebase:', error);
     } finally {
-        window.location.replace(`${window.location.origin}/inicio?session=expired`);
+        // Conserva únicamente una ruta privada canónica conocida; nunca
+        // arrastra parámetros de pago, tokens ni una URL arbitraria al login.
+        window.location.replace(`${window.location.origin}${safeReturnPath}?session=expired`);
     }
 }
 
@@ -640,7 +645,7 @@ export function initAuthAndApp() {
             
             if (window.isManualLoginAttempt) {
                 window.isManualLoginAttempt = false;
-                if (typeof window.showAppView === 'function') {
+                if (!isPrivateWorkspaceRoute && typeof window.showAppView === 'function') {
                     window.showAppView('home');
                 }
             }
@@ -648,7 +653,7 @@ export function initAuthAndApp() {
                 window.showAppView?.('catalog');
                 window.beatssPendingPublicAction = null;
             } else if (window.beatssPendingPublicAction === 'login') {
-                window.showAppView?.('home');
+                if (!isPrivateWorkspaceRoute) window.showAppView?.('home');
                 window.beatssPendingPublicAction = null;
             }
             window.dismissBeatssBootScreen?.();

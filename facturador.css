@@ -68,6 +68,7 @@
 .sri-facturador-state { display: inline-flex; border-radius: 999px; padding: 6px 9px; font-size: 10px; font-weight: 800; letter-spacing: .03em; }
 .sri-facturador-state.authorized { color: #137a53; background: #e7f7ef; }
 .sri-facturador-state.pending { color: #9a6700; background: #fff5d6; }
+.sri-facturador-state.manual { color: #3157a4; background: #edf3ff; }
 .sri-facturador-state.failed { color: #b43646; background: #fff0f2; }
 .sri-facturador-state.none { color: #697993; background: #eef1f6; }
 .sri-facturador-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -75,6 +76,7 @@
 .sri-facturador-row-actions button:hover { border-color: #3157e8; background: #f5f7ff; }
 .sri-facturador-row-actions button.retry { color: #9a6700; }
 .sri-facturador-tracking { color: #9a6700; font-size: 11px; font-weight: 800; }
+.sri-facturador-tracking-note { color: #697993; font-size: 10px; font-weight: 600; margin-left: 5px; }
 .sri-facturador-empty { padding: 42px 22px; text-align: center; color: #697993; }
 .sri-facturador-empty strong { display: block; color: #17233d; margin-bottom: 5px; }
 .sri-facturador-help { padding: 14px; }

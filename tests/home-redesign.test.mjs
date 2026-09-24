@@ -33,6 +33,18 @@ test("el rediseño de portada incluye la plataforma integral y preserva las acci
     assert.match(css, /\.ledger-cta-banner/);
 });
 
+test("la portada describe facturación manual por operación sin prometer emisión automática", () => {
+    const relay = read("relay-home.js");
+
+    assert.match(relay, /SRI bajo demanda/);
+    assert.match(relay, /Tú eliges cada venta y confirmas su emisión desde Facturación/);
+    assert.match(relay, /La factura no se emite sola/);
+    assert.match(relay, /RIDE y XML.*autorización del SRI/);
+    assert.match(relay, /Emisión manual por venta en Facturación/);
+    assert.doesNotMatch(relay, /Emisión automática de RIDE y XML legal en cada venta/);
+    assert.doesNotMatch(relay, /Emisión automática de facturación electrónica SRI/);
+});
+
 test("el respaldo exacto relay-home.v1-backup.js existe y conserva el diseño V1 intacto", () => {
     assert.ok(existsSync(new URL("../relay-home.v1-backup.js", import.meta.url)));
     const backup = read("relay-home.v1-backup.js");

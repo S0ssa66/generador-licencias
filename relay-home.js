@@ -77,7 +77,7 @@ const sonicLedgerMarkup = `
                 <span class="sri-icon">🧾</span>
                 <div>
                   <strong>Factura Electrónica SRI (Solo Ecuador)</strong>
-                  <small>RIDE generado · Clave de acceso autorizada</small>
+                  <small>Ejemplo: comprobante autorizado tras emisión manual</small>
                 </div>
               </div>
             </div>
@@ -106,9 +106,9 @@ const sonicLedgerMarkup = `
           <small class="metric-desc">Cláusulas estructuradas para registro internacional y sincronización.</small>
         </div>
         <div class="metric-item">
-          <strong class="metric-value">SRI Directo</strong>
+          <strong class="metric-value">SRI bajo demanda</strong>
           <span class="metric-label">Facturación electrónica (Solo Ecuador)</span>
-          <small class="metric-desc">Emisión automática de RIDE y XML legal en cada venta (exclusivo para Ecuador).</small>
+          <small class="metric-desc">Tú eliges cada venta y confirmas su emisión desde Facturación; RIDE y XML quedan disponibles tras la autorización del SRI.</small>
         </div>
         <div class="metric-item">
           <strong class="metric-value">Multi-Pasarela</strong>
@@ -168,10 +168,10 @@ const sonicLedgerMarkup = `
           <!-- Pilar 4 -->
           <article class="ledger-bento-card">
             <span class="bento-num">04 / CUMPLIMIENTO</span>
-            <h3>Entrega inmediata y facturación SRI (Solo Ecuador)</h3>
-            <p>La entrega es automática y segura: al confirmarse el cobro, el cliente recibe un portal firmado para descargar sus masters y, para operaciones en Ecuador, su factura electrónica autorizada por el SRI.</p>
+            <h3>Entrega inmediata y facturación SRI por operación</h3>
+            <p>Al confirmarse el cobro, el cliente recibe automáticamente un portal firmado para descargar sus archivos. La factura no se emite sola: tú seleccionas y confirmas cada operación en Facturación; el RIDE y el XML se ofrecen cuando el SRI autoriza el comprobante.</p>
             <div class="bento-chips">
-              <span>RIDE y XML (Solo Ecuador)</span>
+              <span>RIDE y XML tras autorización</span>
               <span>Tokens HMAC</span>
               <span>Historial trazable</span>
             </div>
@@ -212,7 +212,7 @@ const sonicLedgerMarkup = `
               <li><span class="icon-check">✓</span> Bóveda de entrega con enlace privado firmado criptográficamente anti-leaks.</li>
               <li><span class="icon-check">✓</span> Contrato formal en PDF con splits protegidos para registro en BMI / ASCAP.</li>
               <li><span class="icon-check">✓</span> Cobro instantáneo con Deuna! QR directo, tarjetas locales e internacionales y PayPal.</li>
-              <li><span class="icon-check">✓</span> Emisión automática de facturación electrónica SRI para ventas en Ecuador (RIDE y XML autorizados).</li>
+              <li><span class="icon-check">✓</span> Emisión manual por venta en Facturación; RIDE y XML disponibles después de la autorización del SRI.</li>
             </ul>
           </div>
         </div>

@@ -5,6 +5,7 @@ import base64
 import hashlib
 import binascii
 import datetime
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import urllib.request
 import urllib.error
 from random import random
@@ -18,6 +19,41 @@ from OpenSSL import crypto
 # Constantes del estándar de firma digital
 XMLNS = 'xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:etsi="http://uri.etsi.org/01903/v1.3.2#"'
 MAX_LINE_SIZE = 76
+
+
+def _load_ecuador_timezone():
+    try:
+        return ZoneInfo('America/Guayaquil')
+    except ZoneInfoNotFoundError:
+        # Ecuador continental (incluidos Quito y Esmeraldas) usa UTC−05:00 y
+        # no aplica horario de verano. Mantiene el emisor operativo en runtimes
+        # mínimos sin tzdb, sin agregar dependencia externa.
+        return datetime.timezone(datetime.timedelta(hours=-5), 'Ecuador continental')
+
+
+ECUADOR_TIMEZONE = _load_ecuador_timezone()
+
+
+def ecuador_now():
+    """Instante actual con zona horaria explícita de Ecuador continental."""
+    return datetime.datetime.now(ECUADOR_TIMEZONE)
+
+
+def _as_ecuador_datetime(value=None):
+    value = value or ecuador_now()
+    if isinstance(value, datetime.datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=ECUADOR_TIMEZONE)
+        return value.astimezone(ECUADOR_TIMEZONE)
+    if isinstance(value, datetime.date):
+        return datetime.datetime.combine(value, datetime.time.min, tzinfo=ECUADOR_TIMEZONE)
+    raise TypeError('La fecha de emisión debe ser date o datetime.')
+
+
+def formato_timestamp_firma_ecuador(now=None):
+    """Timestamp XAdES ISO-8601 de Ecuador, con el offset expresado con dos puntos."""
+    timestamp = _as_ecuador_datetime(now).strftime('%Y-%m-%dT%H:%M:%S%z')
+    return f'{timestamp[:-2]}:{timestamp[-2:]}'
 
 # WS Endpoints de Pruebas del SRI
 WS_RECEPCION_PRUEBAS = "https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl"
@@ -207,7 +243,7 @@ def firmar_xml_comprobante(xml_content, p12_bytes, password_str):
     signature_value_number = p_obtener_aleatorio()
     object_number = p_obtener_aleatorio()
     
-    signing_time = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S-05:00") # Zona horaria Ecuador
+    signing_time = formato_timestamp_firma_ecuador()
     
     # Generar SignedProperties y su hash
     signed_properties = get_signed_properties(
@@ -324,7 +360,9 @@ def generar_clave_acceso(fecha_emision, tipo_comprobante, ruc, ambiente, serie, 
       serie: '001001' (Estab + PtoEmi)
       secuencial: '000000001' (9 dígitos)
     """
-    if isinstance(fecha_emision, (datetime.date, datetime.datetime)):
+    if isinstance(fecha_emision, datetime.datetime):
+        fecha_str = _as_ecuador_datetime(fecha_emision).strftime('%d%m%Y')
+    elif isinstance(fecha_emision, datetime.date):
         fecha_str = fecha_emision.strftime("%d%m%Y")
     else:
         fecha_str = str(fecha_emision).replace("/", "").replace("-", "")
@@ -553,7 +591,7 @@ def obtener_configuracion_iva(emisor):
     codigo, tarifa = IVA_TARIFFS[raw_tarifa]
     return codigo, tarifa, incluido
 
-def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
+def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso, fecha_emision=None):
     """
     Genera el XML de la factura de acuerdo a la estructura oficial del SRI (v2.1.0).
     emisor: dict con llaves ruc, razonSocial, nombreComercial, dirMatriz, dirEstablecimiento, estab, ptoEmi, obligadoContabilidad, ambiente, sriRimpe, contribuyenteEspecial, agenteRetencion y rucProveedor opcional
@@ -562,8 +600,6 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
     secuencial: string de 9 dígitos.
     clave_acceso: string de 49 dígitos.
     """
-    import datetime
-    
     # Limpieza de valores del comprador y emisor
     razon_social_comprador = comprador.get('razonSocialComprador') or 'CONSUMIDOR FINAL'
     identificacion_comprador = comprador.get('identificacionComprador') or '9999999999999'
@@ -572,7 +608,7 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
     dir_comprador = comprador.get('dirComprador') or 'Quito'
     forma_pago = normalizar_forma_pago_sri(comprador.get('formaPago'))
     
-    fecha_emision = datetime.datetime.now().strftime("%d/%m/%Y")
+    fecha_emision_xml = _as_ecuador_datetime(fecha_emision).strftime('%d/%m/%Y')
     
     iva_codigo, iva_tarifa, iva_incluido = obtener_configuracion_iva(emisor)
 
@@ -620,7 +656,7 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
     etree.SubElement(info_trib, "estab").text = str(emisor.get('estab', '001')).zfill(3)
     etree.SubElement(info_trib, "ptoEmi").text = str(emisor.get('ptoEmi', '001')).zfill(3)
     etree.SubElement(info_trib, "secuencial").text = str(secuencial).zfill(9)
-    etree.SubElement(info_trib, "dirMatriz").text = emisor.get('dirMatriz') or 'Quito - Ecuador'
+    etree.SubElement(info_trib, "dirMatriz").text = emisor.get('dirMatriz') or ''
     
     if emisor.get('contribuyenteEspecial'):
         etree.SubElement(info_trib, "contribuyenteEspecial").text = emisor.get('contribuyenteEspecial')
@@ -637,8 +673,8 @@ def generar_xml_factura(emisor, comprador, items, secuencial, clave_acceso):
         
     # infoFactura
     info_fact = etree.SubElement(root, "infoFactura")
-    etree.SubElement(info_fact, "fechaEmision").text = fecha_emision
-    etree.SubElement(info_fact, "dirEstablecimiento").text = emisor.get('dirEstablecimiento') or emisor.get('dirMatriz') or 'Quito - Ecuador'
+    etree.SubElement(info_fact, "fechaEmision").text = fecha_emision_xml
+    etree.SubElement(info_fact, "dirEstablecimiento").text = emisor.get('dirEstablecimiento') or emisor.get('dirMatriz') or ''
     
     etree.SubElement(info_fact, "obligadoContabilidad").text = emisor.get('obligadoContabilidad', 'NO').upper()
     etree.SubElement(info_fact, "tipoIdentificacionComprador").text = tipo_id_comprador

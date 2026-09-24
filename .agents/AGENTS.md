@@ -22,8 +22,7 @@ Estas reglas definen el contexto operativo de la plataforma BEATSS. La direcció
 ---
 
 ## 🧾 2. Facturación Electrónica SRI y Privacidad
-*   **Dirección Matriz Protegida:** Para proteger la privacidad del productor (Joao David Dominguez / Sossa), las facturas electrónicas y los contratos de licencia **nunca deben mostrar la dirección real de su domicilio**.
-*   **Dirección Oficial del Emisor:** La dirección del emisor registrada por defecto en el facturador y contratos debe ser **"Quito - Ecuador"**. Esta configuración ya ha sido validada y es técnicamente aceptada por el validador del SRI.
+*   **Dirección Matriz:** Por instrucción expresa de Sossa (2026-09-23), la dirección de emisor en las facturas debe ser la dirección de matriz que consta en su RUC vigente. No reemplazarla por una ciudad genérica ni incrustarla en código público; mantenerla en la configuración privada del productor. Esta dirección se reflejará en las facturas entregadas a clientes.
 
 ---
 

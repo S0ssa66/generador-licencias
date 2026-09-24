@@ -1,5 +1,685 @@
 # Estado operativo actual de BEATSS
 
+## Diagnosticar y corregir el facturador SRI para selección y emisión individual por venta — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Agente: `Antigravity`.
+- Fecha: `2026-09-24`.
+- Objetivo: Que el dueño pueda seleccionar una venta elegible en `/facturacion`, revisar los datos fiscales y confirmar la emisión individual de su factura electrónica al SRI. Nada de emisión automática o por lotes.
+- Diagnóstico y correcciones aplicadas:
+  1. **Normalización de importes multi-esquema (`finalPrice` vs `price` vs `value` vs `amount`)**:
+     - En `api/_sri_buyer.js`: `numericTotal` ahora evalúa `payment.finalPrice ?? payment.price ?? payment.value ?? payment.amount`, admitiendo ventas atestiguadas manualmente o registros con esquema `value`/`amount` tanto para Consumidor Final (≤ USD 50) como nominativas sin errores falsos de total no verificado.
+     - En `server-handlers/sri-manual-payment.js`: se añaden `price` y `finalPrice` en el objeto de pago junto con `value` y `amount`, y se propagan los campos del comprador (`buyerDni`, `invoiceCompany`, `invoiceRuc`, `invoiceAddress`, `invoiceEmail`).
+     - En `sri_service.py`: se expandió la resolución de importe a considerar `finalPrice`, `price`, `value` y `amount` en `_apply_manual_sri_invoice_details`, en `emitir_factura_sri` y en el cargador fallback de ítems.
+  2. **Compatibilidad de autorización en la solicitud de emisión manual**:
+     - En `sri_contingency.py`: la comprobación de `manualIssueRequestedBy` ahora admite tanto el UID limpio como el formato histórico prefijado `producer-manual-action-{uid}`.
+  3. **CORS y orígenes permitidos en endpoint puntual**:
+     - En `api/sri-issue.py`: se integró la verificación de orígenes de confianza (`is_trusted_origin`) alineada con `api/_cors-origin.js` (`beatss.app`, `generador-licencias.vercel.app`, previews y localhost).
+  4. **Ficha y selección en el Facturador Frontend**:
+     - En `dashboard_modules/invoicing.js`: `currentHistory()` normaliza `item.value` garantizando visualización de importes reales; si el usuario cancela la confirmación de emisión, se limpian los datos en memoria temporales para permitir reingreso inmediato; se conserva el flujo estricto de selección individual, confirmación modal con resumen fiscal completo y sin emisión automática.
+- Verificación ejecutada:
+  - Node test suite: 295/295 tests pasados (`node --test tests/*.test.mjs`).
+  - Python test suite: 76/76 tests pasados (`python -m unittest discover -s tests -p 'test_*.py'`).
+  - Seguridad: `node scripts/security-check.mjs` PASSED (sin fugas de PII ni secretos).
+  - Build & Performance: `npm run build` aprobado (HTML gzip 62.48 kB, límites presupuestarios respetados).
+- Límites respetados: No se tocó Firestore en vivo, no se contactaron servicios externos del SRI, no se modificaron archivos no rastreados existentes.
+- Siguiente acción: El dueño puede abrir `/facturacion`, seleccionar la venta elegible, revisar la ficha fiscal detallada (emisor, comprador, IVA, totales) y confirmar la emisión individual hacia el SRI.
+
+
+## Reparar el botón de emisión manual del Facturador SRI — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: hacer que el productor pueda seleccionar una venta y confirmar una emisión manual desde BeatSS, sin procesar otras ventas ni duplicar una solicitud pendiente.
+- Resultado: el diálogo de confirmación de una venta nueva referenciaba `isQueued` e `isStaleProcessing`, variables inexistentes; el clic podía terminar con `ReferenceError` antes de llamar a los endpoints. Eliminé esas ramas muertas y dejé un mensaje explícito distinto para emisión nueva y conciliación. La captura de datos ahora precarga `invoiceCompany`, `invoiceRuc`, `invoiceAddress` e `invoiceEmail` (incluidos `formData`) antes de pedirlos de nuevo.
+- Archivos modificados por esta tarea: `dashboard_modules/invoicing.js`, `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`. Se preservaron cambios locales preexistentes ajenos a esta corrección.
+- Pruebas: regresión SRI 23/23; Node 295/295; Python 76/76; `npm run build` y presupuesto aprobados (HTML gzip 62,488 bytes, límite 65 kB); `npm run security:check` aprobado con aviso local esperado de `DOWNLOAD_SIGNING_KEY` ausente; `node --check` y `git diff --check` aprobados.
+- Consulta fiscal read-only: el portal SRI no mostró comprobantes del 13/09/2026 para Factura en Autorizados, Por Procesar ni No Autorizados. Esto no descarta una factura emitida en otra fecha sin una clave de acceso para buscarla.
+- Límites: no emití ni envié comprobantes, no escribí Firestore, no modifiqué datos o configuración fiscal, no envié correos ni desplegué. Las solicitudes heredadas pendientes siguen en modo de conciliación y no se reenvían sin una clave/reserva verificable.
+- Siguiente acción exacta: publicar esta corrección sólo con autorización expresa; después, en `/facturacion`, elegir una venta Live sin trámite previo, revisar emisor, comprador, fecha, importe e impuestos y confirmar esa factura individual.
+
+## Desbloquear conciliación segura de solicitudes SRI heredadas — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: permitir que solicitudes pendientes consulten la clave fiscal existente sin volver a enviar una factura; no borrar la cola.
+- Resumen: Facturación ofrece ahora “Consultar / conciliar en SRI” para todos los estados pendientes (`EN_COLA_EMISION`, `EN_PROCESO`, `PENDIENTE`, `PENDIENTE_AUTORIZACION`, `PENDING_AUTORIZACION`, `CONTINGENCIA`). La ruta omite la ficha normalizada del comprador sólo al conciliar; servidor y ejecutor exigen un job de la venta, reserva del mismo productor, clave/secuencial existentes y ningún lease activo. La ejecución consulta esa misma clave y no ejecuta SOAP de Recepción ni crea otra factura. Si falta la reserva verificable, devuelve un bloqueo explícito y preserva los datos.
+- Archivos modificados: `dashboard_modules/invoicing.js`, `server-handlers/sri-retry.js`, `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`.
+- Pruebas: regresión SRI 22/22; Node 294/294; Python 76/76; `npm run build` aprobado (HTML gzip 62,488 bytes; presupuesto aprobado); `npm run security:check` aprobado con aviso local esperado por `DOWNLOAD_SIGNING_KEY` ausente; `git diff --check` aprobado.
+- Límites: no se eliminó ningún trabajo ni solicitud de producción; no hubo cambios en Firestore, consulta/emisión real al SRI, correos ni deploy. Las solicitudes que no tengan reserva/clave existentes siguen requiriendo revisión individual en el portal SRI; no se presume que estén emitidas ni que nunca se hayan enviado.
+- Siguiente acción exacta: autorizar explícitamente el deploy de este cambio para publicar el botón de conciliación; después, en `/facturacion`, conciliar una solicitud pendiente cada vez. Si BeatSS informa que no hay reserva verificable, revisar esa operación en el SRI antes de cualquier nueva emisión.
+
+## Rastrear datos fiscales ya existentes de la venta Wow — DONE (2026-09-24)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: determinar por qué Facturación marca incompleta la venta Wow y si el dato falta realmente o no se proyecta a la solicitud heredada.
+- Resultado: la comprobación del flujo encontró que Facturación sí admite y conserva campos de compra heredados (`invoiceRuc`, `invoiceCompany`, `invoiceAddress`, `invoiceEmail` y datos del comprador), mientras el guard de reintento de solicitudes antiguas comprueba únicamente la presencia de `sriInvoiceDetails`. Si falta ese objeto normalizado, el flujo se detiene antes de reutilizar los campos heredados; por tanto, el aviso no demuestra por sí solo que falten los datos originales. No se pudo confirmar campo por campo el documento privado de la venta Wow en esta revisión.
+- Archivos modificados: `CURRENT_STATE.md` únicamente. No se modificó código ni Firestore.
+- Verificación ejecutada: búsquedas dirigidas en `checkout.js`, `server-handlers/stripe-create-checkout-session.js`, `api/_fulfill-beat-purchase.js`, `dashboard_modules/invoicing.js` y `server-handlers/sri-retry.js`; contraste con la evidencia de la fila autenticada y la consulta de sólo lectura al portal SRI registrada abajo.
+- Bloqueo: la venta sigue siendo una solicitud antigua en cola. El portal no mostró un comprobante el 13/09/2026 en los tres estados consultados, pero falta una clave de acceso del SRI para cerrar la conciliación; la referencia interna `BS3-...` no la sustituye. No se reenvió ni emitió.
+- Siguiente acción exacta: revisar de forma privada y de sólo lectura los campos heredados del documento Wow; si son completos, corregir el mapeo de la solicitud a `sriInvoiceDetails`. Antes de cualquier reintento, conciliar la solicitud previa por su clave de acceso SRI.
+
+## Conciliar solicitud fiscal antigua de la última venta — DONE (2026-09-24)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: identificar la solicitud antigua que BeatSS bloquea por falta de ficha fiscal y consultar en modo de sólo lectura su estado existente en el portal SRI, sin reenviarla a ciegas.
+- Resultado: la fila exacta es la venta `Wow` del 2026-09-13 por USD 30, referencia interna `BS3-20260913-BAS-EQTS-W2T4-YQZS-H3QB-43PN`. El portal SRI, autenticado en el RUC emisor, no encontró comprobantes con fecha 13/09/2026 al consultar Factura en estados Autorizados, Por Procesar y No Autorizados. Se restauraron los filtros visibles originales del portal.
+- Diagnóstico: BeatSS bloquea “Continuar esta solicitud” porque el trabajo antiguo no tiene `sriInvoiceDetails` guardado. Esa ausencia no prueba que el documento de venta carezca de todos los campos: el facturador reconoce campos heredados, pero el guard antiguo no los reconstruye. La referencia BS3 no es una clave de acceso del SRI; sin esta última no se puede conciliar una posible emisión hecha en otra fecha. El guard evita el reenvío automático.
+- Archivos modificados: `CURRENT_STATE.md` únicamente.
+- Verificación ejecutada: inspección autenticada de la fila y consulta oficial de SRI en sólo lectura para los tres estados; revisión de la condición en `dashboard_modules/invoicing.js` y `server-handlers/sri-retry.js`. No se emitió ni consultó una clave individual, no se escribió Firestore, no se modificó configuración, no se enviaron correos y no se hizo deploy.
+- Bloqueo para emitir: no se confirmó en esta revisión si los campos heredados del documento Wow están completos; además, se necesita conciliar cualquier solicitud previa por su clave SRI exacta, que no figura en el registro visible.
+- Siguiente acción exacta: verificar la ficha fiscal existente de Wow sin volver a pedir datos al comprador si ya están guardados; corregir su mapeo si procede y resolver la solicitud heredada por la clave SRI antes de cualquier reintento. Emitir sólo tras revisión y confirmación de esa factura individual.
+
+## Publicar y verificar flujo manual SRI con retorno a Facturación — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: avanzar la operación de facturación manual, en que Sossa escoge y confirma cada factura en BeatSS, verificando el despliegue y la ruta privada sin emitir comprobantes en esta tarea.
+- Resumen: se publicó el árbol actual validado en Vercel `dpl_BBtDS7AJ2mm1yc6GqmmNZpQdHeHT`, estado `READY`, producción, alias `https://beatss.app`. Incluye el ajuste para que la sesión expirada conserve la ruta canónica `/facturacion` y el login no redirija forzosamente a Inicio. La compilación remota completó con Python 3.12 y el presupuesto pasó.
+- Verificación local: Node 293/293; Python 76/76; `npm run build` + presupuesto aprobado (HTML gzip 62,489 bytes); `npm run security:check` aprobado con aviso local esperado de `DOWNLOAD_SIGNING_KEY` ausente; `npm run security:deps` aprobado bajo umbral alto/crítico, con 9 avisos moderados (`qs`, `uuid` y dependencias transitivas); `git diff --check` aprobado.
+- Verificación Live: GET `/`, `/inicio`, `/tienda/sossa`, `/ventas`, `/pedidos`, `/contabilidad`, `/facturacion` = 200; GET `/api/sri-issue`, `/api/payments/retry-sri`, `/api/payments/stripe/webhook` = 405; POST anónimo `/api/sri-issue` = 401. Los SHA-256 de `auth-5sPlPfDN.js` y `main-B0go5lYD.js` Live coinciden con `dist` local. No se inició sesión ni se probó una emisión autenticada.
+- Archivos de código modificados directamente por esta tarea: `auth.js`, `main.js`, `tests/auth-bootstrap.test.mjs`, `tests/workspace-routes.test.mjs`; se preservó el resto del árbol local. La publicación incluyó el árbol de trabajo presente y validado.
+- Límites: no se emitió ni consultó una factura, no se escribió Firestore, no hubo cobros ni correos. La configuración fiscal privada de Producción/Real no se releyó en esta sesión; la evidencia autenticada previa la había mostrado en ambiente 2. Los dos trámites antiguos pendientes de conciliación permanecen intactos.
+- Siguiente acción exacta: Sossa inicia sesión en BeatSS (no en Vercel), abre `/facturacion`, elige una venta nueva elegible que no esté en trámite, revisa los datos fiscales y confirma sólo esa emisión. No reintentar ventas con autorización pendiente; conciliarlas por separado.
+
+## Revalidar flujo manual SRI con pruebas locales y GET Live — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: revalidar en modo seguro el flujo de facturación manual seleccionada, ejecutar pruebas locales y comprobar rutas públicas sin emitir facturas.
+- Resultado de código: comprobé que `/facturacion` conserva selección por venta, confirmación expresa, bloqueo de compras Sandbox y separación entre emisión y conciliación con clave fiscal existente. Las pruebas del flujo SRI cubren su selección, confirmación, autorización y manejo idempotente.
+- Pruebas: Node 292/292; Python 76/76; `npm run build` y presupuesto aprobados (`htmlGzip: 62,487`); `npm run security:check` aprobado; `git diff --check` aprobado. Python mantiene avisos deprecados preexistentes de `datetime.utcnow()`.
+- Verificación Live actual: no disponible desde este entorno, porque la resolución DNS de `beatss.app` falló (`ENOTFOUND`) tanto con Node fetch como con el navegador web. La última evidencia autenticada ya registrada indica modo manual, ambiente 2 Producción/Real; esta sesión no pudo revalidar las rutas públicas.
+- Archivos modificados por esta tarea: `CURRENT_STATE.md` únicamente. No se cambió código, configuración, ventas, Firestore o facturas; tampoco hubo consultas/emisiones fiscales ni correos.
+- Siguiente acción exacta: desde BeatSS autenticado, Sossa debe elegir una venta sin trámite SRI en curso, comprobar comprador, concepto e impuestos y confirmar esa emisión única. No reintentar las dos ventas antiguas en proceso sin conciliarlas previamente.
+
+## Corregir aviso XML obsoleto en facturas SRI autorizadas — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Objetivo: evitar que una factura autorizada conserve o muestre un error XML antiguo, sin alterar registros fiscales existentes.
+- Resumen: al persistir una nueva autorización se limpia `sriErrorMensaje` tanto en el pago como en el historial local; la interfaz oculta errores heredados cuando el estado ya es `AUTORIZADO`. No cambié datos de ventas ni documentos fiscales históricos.
+- Archivos modificados por esta tarea: `sri_service.py`, `dashboard_modules/invoicing.js`, `tests/test_sri_reliability.py`, `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`.
+- Pruebas: Node 292/292; Python 76/76; `npm run build` + presupuesto (HTML gzip 62,281 bytes) aprobado; `npm run security:check` aprobado con aviso local esperado por `DOWNLOAD_SIGNING_KEY` ausente; `git diff --check` aprobado. Python conserva avisos deprecados preexistentes de `datetime.utcnow()`.
+- Publicación: Vercel `dpl_CXb4v7yWGiAcypAw7b8MtpUHgQN4`, `READY`, producción, alias `https://beatss.app`.
+- Verificación Live de sólo lectura: GET `/facturacion` = 200; GET `/api/sri-issue` = 405; GET `/api/payments/retry-sri` = 405. SHA-256 del bundle Live y local `invoicing-ONtHHPtG.js` coincide (`5f696f0dceb4294491b3bd80b8c23df1630cbaed2f9dbb7f8b5be040828d48f3`).
+- Ambiente SRI: la evidencia autenticada previa muestra `Modo manual · Producción` / ambiente 2. No hizo falta entrar a Vercel ni cambiar claves o configuración. No emití/consulté facturas, no escribí Firestore ni envié correos.
+- Límite: no verifiqué la integridad material del XML/RIDE de la factura histórica; sólo corregí la contradicción del aviso de error. La autorización SRI registrada no fue modificada.
+- Siguiente acción exacta: recargar `/facturacion` para ver la UI publicada. Para probar emisión real, Sossa debe elegir una venta Live nueva y elegible, revisar comprador e impuestos y confirmar sólo esa factura; no reintentar operaciones que ya estén en proceso.
+
+## Revalidar y cerrar el flujo manual SRI por venta seleccionada — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: revalidar el flujo manual por venta elegida y corregir defectos reproducibles.
+- Resultado autenticado Live: `/facturacion` muestra `Modo manual · Producción`; 53 operaciones, 1 autorizada, 2 en proceso y 0 que requieren revisión. La UI separa Sandbox, muestra controles por venta y aclara que no se factura automáticamente. Los registros sin pago aprobado requieren la confirmación manual de cobro antes de habilitar emisión; esto evita presumir pagos históricos.
+- Resultado de código: revisados UI, `retry-sri`, endpoint puntual y reserva/idempotencia Python. Se conserva la doble confirmación y el procesamiento limitado al `paymentId` seleccionado; las conciliaciones consultan la misma clave existente. No se encontró un defecto reproducible que amerite editar lógica.
+- Rutas Live de sólo lectura: GET `/facturacion` = 200; GET `/api/sri-issue` = 405; GET `/api/payments/retry-sri` = 405. SHA-256 del bundle Live y del build local `invoicing-FASRroBb.js` coincide (`eec93096e11cb3f2074cd2066c8001e05d8eecd36f50fff1ef726c3da6225897`).
+- Pruebas: Node 291/291; Python 75/75; `npm run build` y presupuesto aprobados (HTML gzip 62,488 bytes); `npm run security:check` aprobado con aviso local esperado de `DOWNLOAD_SIGNING_KEY` ausente; `git diff --check` aprobado. Python mantiene avisos deprecados preexistentes por `datetime.utcnow()`.
+- Archivos modificados por esta verificación: `CURRENT_STATE.md` únicamente. El resto del árbol local sucio se preservó.
+- Límites: no emití ni consulté facturas al SRI, no escribí Firestore ni envié correos. Los dos registros en proceso permanecen intactos. La disponibilidad del sitio y la UI autenticada se verificaron, pero no se ejecutó una emisión real por no haber una venta elegida y confirmada en este turno.
+- Siguiente acción exacta: Sossa elige una sola venta sin trámite previo en `/facturacion`, revisa comprador/concepto/importe/IVA y confirma expresamente la emisión Live. No reintentar los dos registros en proceso; conciliarlos por separado con su clave existente.
+
+## Actualizar evidencia Live del facturador SRI — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado al cierre.
+- Agente: `Codex`.
+- Objetivo: verificar el servicio público y que producción sirva el flujo de emisión manual desde BeatSS.
+- Resultado Live de sólo lectura: GET `/facturacion` → 200; GET `/api/sri-issue` → 405; GET `/api/payments/retry-sri` → 405. El bundle `/assets/invoicing-FASRroBb.js` → 200 e incluye “Tú eliges cada factura”, “Emitir esta venta en SRI”, `retry-sri` y `sri-issue`. POST anónimo a `/api/sri-issue` → 401, sin sesión y antes del procesamiento.
+- Pruebas locales vigentes: Node 291/291; Python 75/75; `npm run build` aprobado (HTML gzip 62,488 bytes); `npm run security:check` aprobado con aviso esperado por la variable local ausente `DOWNLOAD_SIGNING_KEY`; `git diff --check` aprobado.
+- Archivos modificados por esta tarea: `CURRENT_STATE.md` únicamente. Se preservó el resto del árbol local.
+- Límites: el único POST fue anónimo y rechazado con 401; no inicié sesión, no leí datos privados, no escribí Firestore, no emití/consulté facturas ni envié correos. La pestaña privada continúa requiriendo login; la emisión real todavía no se ha probado.
+- Siguiente acción exacta: Sossa inicia sesión en BeatSS (no Vercel), elige una venta fiscal aprobada sin trámite previo, revisa los datos fiscales y confirma esa sola emisión; antes de tocar cualquiera de las dos ventas antiguas en proceso, conciliarlas con el SRI.
+
+## Auditar flujo de facturación manual y registrar límites de verificación Live — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado al cierre.
+- Agente: `Codex`.
+- Objetivo: auditar el flujo de facturación manual por venta desde la interfaz hasta el endpoint SRI, ejecutar validaciones locales y dejar claro qué falta para probarlo de punta a punta en producción.
+- Resultado: el código de `/facturacion` presenta operaciones individualmente, solicita datos fiscales y confirmación antes de emitir, encola sólo el `paymentId` elegido y llama al ejecutor puntual. El servidor vuelve a validar sesión, propietario, pago aprobado, modo Live, ambiente 2 y consentimiento; los estados pendientes se concilian con la misma clave en vez de reenviarse. XML/RIDE autorizados se almacenan en Storage privado y se descargan con sesión.
+- Verificaciones locales: Node 291/291; Python 75/75; `npm run build` aprobado (HTML gzip 62,488 bytes; presupuesto <=65 kB); `npm run security:check` aprobado con aviso local esperado de `DOWNLOAD_SIGNING_KEY` ausente. Las pruebas Python muestran avisos `datetime.utcnow()` preexistentes.
+- Verificación Live: no pudo completarse desde este entorno: `curl` no resuelve `beatss.app` (HTTP 000); la pestaña in-app de BeatSS muestra `/inicio?session=expired`. No pude validar una sesión actual, el estado de una nueva venta, la autorización del SRI ni descargas de un comprobante real.
+- Archivos modificados por esta tarea: `CURRENT_STATE.md` únicamente. Se conservaron todos los cambios locales preexistentes.
+- Límites: no se escribió Firestore, no se emitió/consultó factura, no se envió correo ni se desplegó. La configuración Producción/Real consta como verificada en una sesión autenticada anterior del 2026-09-24, pero no se pudo revalidar ahora.
+- Siguiente acción exacta: Sossa abre BeatSS e inicia sesión (no hace falta entrar a Vercel); en `/facturacion` escoge una venta fiscal aprobada sin trámite previo, revisa identidad del comprador e impuesto, y confirma expresamente “Emitir esta venta en SRI”. Si elige una de las dos solicitudes antiguas en proceso, primero debe conciliarlas en el SRI; no reemitirlas a ciegas.
+
+## Blindar prueba fiscal RIMPE Popular para facturación manual — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado al cierre.
+- Agente: `Codex`.
+- Objetivo: añadir una regresión local para verificar que el XML de una operación configurada como RIMPE Negocio Popular expresa el régimen y conserva el importe cobrado con IVA 0% configurado, sin modificar ajustes ni emitir comprobantes.
+- Resumen: añadí una prueba que genera un XML RIMPE Popular con el fallback de tarifa 0% y verifica la leyenda, base, IVA, importe total y total del pago. El ambiente de producción ya constaba como activo; no se necesitó iniciar sesión en Vercel ni cambiar la configuración.
+- Archivos modificados por esta tarea: `tests/test_sri_invoicing.py` y `CURRENT_STATE.md`. Se preservó el resto del árbol local.
+- Pruebas: `./.venv/bin/python -m unittest discover -s tests -p 'test_sri_invoicing.py' -v` pasó 8/8; suite Python completa pasó 75/75; `git diff --check` pasó. La suite muestra advertencias deprecadas preexistentes por `datetime.utcnow()` en `sri_contingency.py`.
+- Límites: no cambié datos fiscales, no escribí Firestore, no emití ni consulté facturas al SRI, no envié correos y no desplegué; una prueba local no confirma aceptación fiscal del caso real.
+- Siguiente acción exacta: Sossa debe escoger la venta concreta que desea facturar, comprobar ficha fiscal e impuesto con su asesor/criterio tributario y confirmar esa emisión individual en BeatSS. No reintentar las dos operaciones antiguas en proceso sin conciliarlas.
+
+## Publicar registro manual de cobros históricos para facturación SRI — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: habilitar en producción que Sossa seleccione una licencia histórica realmente cobrada fuera de BEATSS, registre esa confirmación de forma auditable y, en un paso separado, solicite la factura SRI de esa operación.
+- Resultado: se publicó el árbol precompilado de producción en Vercel `dpl_6VocadSPTuijxwTKjhFtDtch95tF`, estado `READY`, alias `https://beatss.app`. El paquete oficial incluyó 12 funciones y el handler `manual-payment-attestation` consolidado en `api/payments/config`; el bundle público de Facturación confirma el botón `Registrar cobro recibido`.
+- Archivos de código incluidos en el flujo publicado (ya estaban en el árbol local; este turno no los editó): `dashboard_modules/invoicing.js`, `api/payments/config.js`, `server-handlers/sri-manual-payment.js`, `facturador.css`, además de las rutas consolidadas SRI. Este turno sólo editó `CURRENT_STATE.md`.
+- Pruebas: Node 291/291; Python 74/74; `npm run security:check` aprobado (aviso local esperado: falta `DOWNLOAD_SIGNING_KEY`); `npm run build` aprobado, HTML gzip 62,488 bytes; build oficial `vercel build --prod` aprobado con 12 funciones; `git diff --check` aprobado. `npm run security:deps` encontró 9 vulnerabilidades moderadas, ninguna alta/crítica bajo el umbral del proyecto; no se aplicó una actualización forzada de `firebase-admin`.
+- Verificación Live: GET `/facturacion` = 200; GET `/api/sri-issue` = 405 (`Allow: POST, OPTIONS`); GET del endpoint manual = 405; POST anónimo al endpoint manual = 401; el bundle `invoicing-FASRroBb.js` responde 200 y contiene el botón manual.
+- Límites: no se creó un pago manual, no hubo escrituras en Firestore, no se emitió ni consultó factura en el SRI y no se enviaron correos. La configuración permanece en Producción/Real. La tarifa IVA configurada y su aplicación a licencias de derechos musicales requieren validación fiscal antes de emitir.
+- Siguiente acción exacta: Sossa debe escoger una venta concreta y revisar comprador, concepto e impuestos antes de confirmar; no reintentar las dos solicitudes que ya figuran en proceso hasta conciliarlas en el SRI. Para ventas históricas sin pago asociado, usar `Registrar cobro recibido` sólo si el dinero fue efectivamente recibido; después solicitar la factura como acción separada.
+
+## Revalidar acceso y ambiente fiscal SRI — DONE (2026-09-24)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: revalidar el acceso autenticado y el ambiente SRI en el Facturador sin emitir ni modificar datos.
+- Resultado: `/facturacion` cargó con sesión autenticada. La configuración muestra modo manual, ambiente `2 - Producción / Real`, firma electrónica protegida configurada y el RUC enmascarado. El resumen visible registra 53 operaciones: 1 autorizada, 2 en proceso y 0 que requieren revisión. El registro contiene una solicitud en cola y otra pendiente de autorización; no se reintentaron.
+- Dirección: no volví a revelar el dato privado ni lo edité. La verificación autenticada del 2026-09-23 ya indicaba que la dirección matriz coincidía con el RUC vigente.
+- Archivos modificados: `CURRENT_STATE.md` únicamente.
+- Pruebas: revisión visual de la configuración y el registro autenticados; ajustes cerrados con “Cancelar” sin guardar. No se emitió ni consultó al SRI, no se escribió Firestore, no se cambiaron datos fiscales y no se desplegó.
+- Siguiente acción exacta: ninguna para poner el ambiente en Producción, ya está así. Para emitir, Sossa debe escoger una operación nueva elegible y confirmar sus datos; primero hay que conciliar las dos solicitudes en proceso antes de cualquier reintento.
+
+## Verificar acceso privado actual al facturador — DONE (2026-09-24)
+
+> Esta observación histórica de sesión expirada quedó supersedida por la verificación autenticada de arriba.
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: comprobar si había sesión BeatSS disponible para releer ajustes fiscales privados y avanzar el E2E, sin alterar datos ni emitir.
+- Evidencia UI: la única pestaña BeatSS está en `https://beatss.app/inicio?session=expired`; la página muestra el modal de acceso y que la sesión se cerró por inactividad. No hay sesión autenticada actual para consultar Datos fiscales o historial privado.
+- Contexto previo no revalidado: las notas autenticadas del 2026-09-23 registran `sriAmbiente = 2 - Producción / Real`, dirección matriz coincidente con el RUC vigente y firma configurada. No se cambió esa configuración en este turno.
+- Archivos modificados por esta comprobación: `CURRENT_STATE.md` únicamente.
+- Límites: no ingresé credenciales, no leí datos privados de Firestore, no cambié configuración ni operé ventas/facturas.
+- Siguiente acción exacta: Sossa inicia sesión en BeatSS (no en Vercel) y abre `/facturacion`; después elige la venta que quiere facturar y revisa la ficha antes de confirmar.
+
+## Flujo manual SRI por venta, respuesta HTTP y publicación — DONE (2026-09-24)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: mantener Facturación manual desde BeatSS, mejorar la respuesta de método no admitido del endpoint puntual y publicar el árbol autorizado.
+- Cambio de código: `GET /api/sri-issue` devuelve explícitamente 405 con `Allow: POST, OPTIONS`; el POST de emisión queda sin cambios. Añadí la regresión en `tests/test_sri_issue_api.py`.
+- Publicación: Vercel `dpl_7sVB9AGkRPgxcFsZFH1puT2XAYdp`, `READY`, target `production`, alias `https://beatss.app`.
+- Verificación Live: GET `/facturacion` = 200; GET `/api/sri-issue` = 405 + `Allow: POST, OPTIONS`; POST sin sesión a `/api/sri-issue` = 401; POST sin sesión a `/api/payments/config?route=manual-payment-attestation` = 401; GET `/api/payments/stripe/webhook` = 405 + `Allow: POST`.
+- Pruebas: Node 291/291; Python 74/74; `npm run security:check` aprobado (aviso local esperado: `DOWNLOAD_SIGNING_KEY` no está disponible); `npm run build` y presupuesto aprobados (HTML gzip 62,488 bytes local; 62,281 remoto); `git diff --check` aprobado.
+- Archivos tocados por esta sesión: `api/sri-issue.py`, `tests/test_sri_issue_api.py`, `CURRENT_STATE.md`. Se conservaron los cambios locales preexistentes.
+- Límites: no accedí a compras privadas, no escribí Firestore, no cambié la dirección/RUC ni la configuración privada de ambiente, no emití ni consulté factura al SRI, ni envié correos.
+- Pendiente para validar la operación real: Sossa debe elegir una venta, revisar los datos del emisor y comprador, importe, impuesto y correo de entrega; sólo su confirmación debe iniciar la emisión individual. No reintentar estados antiguos `EN_PROCESO` sin conciliarlos.
+- Siguiente acción exacta: abrir `https://beatss.app/facturacion`, iniciar sesión, seleccionar la operación deseada y comprobar que el indicador muestre Producción y que la ficha fiscal esté completa antes de confirmar.
+
+## Auditar flujo Live de facturación manual por venta — DONE (2026-09-24)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: validar que `/facturacion` permite seleccionar una operación, registrar un pago histórico sólo con confirmación del dueño y solicitar la emisión individual con autenticación, sin ejecutar ninguna factura durante la auditoría.
+- Evidencia del flujo: el bundle Live de Facturación devuelve 200 y contiene el registro manual separado de emisión. Código y simulaciones prueban ficha fiscal, confirmación expresa, propietario, pago aprobado, ambiente 2 y procesamiento sólo del `paymentId` elegido.
+- Pruebas Live anónimas: POST a `/api/payments/config?route=manual-payment-attestation` = 401 «Sesión requerida»; POST a `/api/sri-issue` = 401 «Inicia sesión nuevamente». Ambos rechazan sin sesión antes de leer la venta/procesar la operación. GET del endpoint manual = 405; GET del webhook Stripe = 405.
+- Pruebas locales focalizadas: Node 27/27 (`sri-manual-payment` + hardening); Python SRI 46/46, incluido el caso simulado que finaliza únicamente `order_selected`.
+- Límites: no seleccioné ninguna venta, no leí operaciones privadas de Firestore, no emití ni consulté al SRI, no cambié la configuración fiscal ni envié correos. La emisión real sigue pendiente de que Sossa seleccione y confirme una venta.
+- Hallazgo por corregir: GET `/api/sri-issue` respondía 501 por el handler HTTP predeterminado, aunque la ruta es POST-only y el flujo de BeatSS usa POST. La próxima acción es devolver 405 explícito, añadir regresión y publicar.
+
+## Publicar cambios autorizados de facturación SRI manual — DONE (2026-09-24)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Codex`.
+- Objetivo: publicar el árbol local autorizado en el proyecto Vercel existente y comprobar el acceso a las rutas, sin emitir facturas ni tocar datos fiscales.
+- Publicación: deployment `dpl_ErwmQshd2mTHXJkxwLjS6ffKZfYW`, `READY`, target `production`; Vercel confirma los alias `https://beatss.app` y `https://generador-licencias.vercel.app`.
+- Alcance publicado: incluye `api/sri-issue.py` autorizado y la acción `manual-payment-attestation` dentro de `api/payments/config`, sin añadir otra función. El bundle Live `assets/invoicing-FASRroBb.js` respondió 200 y contiene el botón de registro de cobro manual, su endpoint y el aviso de que no emite factura.
+- Verificación Live: GET `/`, `/inicio`, `/tienda/sossa`, `/ventas`, `/pedidos`, `/contabilidad` y `/facturacion` = 200; GET `/api/payments/config?route=manual-payment-attestation` = 405; GET `/api/payments/stripe/webhook` = 405. GET `/api/sri-issue` = 501 porque el handler Python no implementa GET; no se hizo POST ni se emitió factura.
+- Pruebas previas al deploy: `node --test tests/*.test.mjs` 291/291; `./.venv/bin/python -m unittest discover -s tests` 73/73; `npm run security:check` aprobado (aviso local esperado: `DOWNLOAD_SIGNING_KEY` no está disponible); `npm run build` y presupuesto aprobados (HTML gzip 62,488 bytes local; 62,281 bytes remoto, límite 65 kB); `git diff --check` aprobado.
+- Archivos editados en esta sesión: `CURRENT_STATE.md`. Se preservaron los cambios locales preexistentes y se publicó el árbol completo tal como Sossa autorizó.
+- Límites: no hubo cambios en Firestore/configuración fiscal privada, no se cambió el ambiente SRI desde esta publicación, no hubo cobros, correos ni solicitudes al SRI. La emisión sigue siendo manual y requiere revisar y confirmar una venta concreta.
+- Siguiente acción exacta: en `/facturacion`, registrar únicamente una venta histórica cuyo cobro Sossa confirme como recibido; revisar comprador, concepto e impuestos y confirmar por separado la emisión individual. No reintentar filas antiguas `EN_PROCESO` sin conciliarlas.
+
+## Habilitar registro explícito de cobros históricos para facturación SRI manual — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente activo: `Codex`
+- Objetivo: permitir que Sossa elija desde BeatSS una venta histórica efectivamente cobrada fuera de la plataforma, registre esa verificación manual de forma auditable y luego solicite por separado la factura de esa sola operación.
+- Hallazgo Live: `https://beatss.app/facturacion` abrió con sesión autenticada. Tras “Actualizar”, el registro cargó 53 operaciones: 1 autorizada, 2 en proceso y múltiples licencias históricas con `SIN EMITIR`; éstas no ofrecen emisión porque no tienen pago aprobado paralelo en `/payments`. Las dos filas pendientes se dejan intactas para conciliación.
+- Resumen: añadí `manual-payment-attestation` a la función de pagos ya consolidada. La ruta exige sesión, actúa sólo sobre una licencia Firestore de esa misma cuenta, exige confirmación explícita, método e importe USD válidos, bloquea Sandbox/archivadas/referencias duplicadas y cualquier trámite/reserva/artefacto SRI previo; crea payment + espejo de licencia dentro de una transacción e implementa idempotencia estricta. En `/facturacion` aparece “Registrar cobro recibido” sólo para filas elegibles. Tras registrarlo, la emisión sigue siendo otro paso separado con su propio resumen y confirmación.
+- Archivos modificados por este cambio: `CURRENT_STATE.md`, `dashboard_modules/invoicing.js`, `api/payments/config.js`, `server-handlers/sri-manual-payment.js`, `facturador.css`, `tests/sri-manual-payment.test.mjs`, `tests/sri-issuance-hardening.test.mjs`, `tests/security-hardening-batch11.test.mjs`.
+- Pruebas: `node --test tests/*.test.mjs` 291/291; pruebas dirigidas del nuevo handler y hardening 34/34; `./.venv/bin/python -m unittest discover -s tests` 73/73; `npm run security:check` aprobado (aviso local esperado: `DOWNLOAD_SIGNING_KEY` ausente); `npm run build` y presupuesto aprobados (HTML gzip 62,488 bytes, límite 65 kB); `git diff --check` aprobado. No se modificaron dependencias.
+- Límites y despliegue: no escribí Firestore, no emití ni consulté al SRI, no cambié certificados, no procesé cobros ni envié correos. No desplegué este flujo nuevo; la evidencia Live previa no verifica esta ruta recién añadida.
+- Siguiente acción exacta: desplegar sólo con autorización explícita para este cambio; después, en `/facturacion`, Sossa registra únicamente cobros que confirme como realmente recibidos y sólo entonces selecciona y confirma la emisión individual. No tocar las filas fiscales pendientes antiguas.
+
+## Auditar orígenes elegibles del Facturador SRI — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Agente: `Codex`
+- Objetivo: comprobar que ventas Live pagadas, incluyendo métodos manuales aprobados, aparecen para que Sossa las facture selectivamente desde BeatSS.
+- Evidencia de código: el checkout/webhook de Stripe y `api/confirm-purchase.js` (PayPal y otros pagos confirmados) registran `payments/{paymentId}` como aprobado y una licencia espejo en `users/{producerId}/licencias/{paymentId}`. `loadHistory()` lee esa colección y `/facturacion` presenta las filas. Las transferencias con comprobante se vuelven elegibles al aprobar su documento de pago.
+- Gate: la acción de emisión comprueba pago aprobado, modo Live, dueño autenticado, configuración/firma, ambiente 2, datos fiscales completos y confirmación expresa; procesa sólo el ID seleccionado. API Live anónima sigue respondiendo 401 en ambos endpoints. La cobertura actual queda respaldada por Node 283/283 y Python 73/73 de la última verificación.
+- Límite encontrado: una licencia añadida directamente al historial, sin un `payments/{paymentId}` aprobado asociado, puede prepararse o asociarse con XML/RIDE manuales, pero no emitirse desde el endpoint SRI puntual. El gate es deliberado para no convertir un contrato/licencia en prueba de pago.
+- Archivos modificados por esta auditoría: `CURRENT_STATE.md` únicamente.
+- Límites externos: no leí compras privadas, no creé documentos de pago, no modifiqué Firestore, no emití facturas ni envié correos.
+- Siguiente acción exacta: Sossa debe elegir una venta Live aprobada de `/facturacion`, revisar comprador/importe/impuestos y confirmar la emisión individual. Si también quiere emisión directa para registros creados sólo como licencia manual, definir un paso explícito de confirmación de pago y conciliación sin duplicar la contabilidad antes de implementarlo.
+
+## Verificar rutas Live del facturador SRI manual — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Agente: `Codex`
+- Objetivo: verificar en producción que las rutas manuales estén desplegadas y protegidas sin emitir factura, y confirmar los tests Python.
+- Evidencia Live de sólo prueba: POST anónimo a `/api/sri-issue` = 401 «Inicia sesión nuevamente» y a `/api/payments/retry-sri` = 401 «Sesión requerida». El código valida autenticación antes de inspeccionar/procesar la venta, por lo que el probe no eligió ni alteró ningún pago.
+- Pruebas: `./.venv/bin/python -m unittest discover -s tests` 73/73; suite SRI `-p 'test_sri*.py'` 46/46; `git diff --check` aprobado. Avisos deprecados existentes: `datetime.utcnow()` en `sri_contingency.py`.
+- Límites: no consulté ni emití al SRI, no se escribió Firestore, no se procesó un cobro y no se envió correo.
+- Archivos modificados por esta auditoría: `CURRENT_STATE.md` únicamente.
+- Pendiente del objetivo: demostrar autorización fiscal real y descarga XML/RIDE para una factura Live seleccionada por Sossa. La inspección de código/tests y el rechazo 401 no prueban el acceso de Firebase/Vercel a la configuración privada ni la aceptación del SRI.
+- Siguiente acción exacta: en `/facturacion`, Sossa elige una venta Live aprobada que no tenga trámite previo, verifica comprador/dirección/total/impuestos y confirma esa sola emisión. Luego se comprueba la autorización SRI y la descarga XML/RIDE; evitar ventas antiguas en `EN_PROCESO` hasta conciliarlas.
+
+## Publicar corrección de copia fiscal manual — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`; lock liberado.
+- Agente: `Codex`
+- Fecha: `2026-09-24`
+- Objetivo: publicar la corrección local, previamente verificada, para que la portada explique la facturación manual por operación.
+- Resumen: eliminé las promesas de factura automática por cada venta. La portada separa la entrega digital automática de archivos de la emisión manual SRI, y describe RIDE/XML como disponibles tras autorización. Añadí una regresión para evitar que reaparezcan esas promesas.
+- Archivos del cambio: `relay-home.js`, `tests/home-redesign.test.mjs`, `CURRENT_STATE.md`.
+- Pruebas: `node --test tests/home-redesign.test.mjs` 3/3; suite `node --test tests/*.test.mjs` 283/283; `npm run security:check` aprobado (aviso local esperado: `DOWNLOAD_SIGNING_KEY` ausente); `npm run build` y presupuesto aprobados (HTML gzip 62,487 bytes local; 62,280 bytes en el build Vercel); `git diff --check` aprobado.
+- Publicación: Vercel `dpl_DDxFGSnJ6akMYEXRo5d4qmGRknUR`, `READY`, `production`, alias `https://beatss.app`.
+- Verificación Live de sólo lectura: GET `/` = 200, `/facturacion` = 200; asset `/assets/relay-home-lqKu-eXd.js` = 200, incluye «SRI bajo demanda», «La factura no se emite sola» y «Emisión manual por venta en Facturación», y no contiene las dos promesas automáticas retiradas.
+- Límites: no emití facturas, no consulté servicios SRI, no modifiqué ventas ni Firestore, y no envié correos.
+- Siguiente acción exacta: ninguna para esta corrección; revisar/recargar la portada pública si el navegador conserva caché.
+
+## Recuperar acceso automático tras expirar sesión y publicar — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF` para la corrección de acceso; el E2E fiscal Live aún requiere una venta seleccionada y confirmada.
+- Agente: `Codex`
+- Fecha: `2026-09-24`
+- Objetivo: hacer que quien vuelve de una sesión expirada vea el Login de inmediato y pueda continuar hacia el Facturador.
+- Cambio: `app-bootstrap.js` establece `window.beatssPendingPublicAction = 'login'` antes de cargar landing/Auth; el callback Firebase sin usuario abre el modal. Añadí regresión a `tests/auth-bootstrap.test.mjs`.
+- Verificación local: auth + SRI dirigidos 53/53; gates completos previos Node 282/282 y Python 73/73; `npm run security:check` aprobado; `npm run build` y presupuesto aprobados (HTML gzip remoto 62,281 bytes; el local 62,488); `git diff --check` aprobado.
+- Dependencias: `npm run security:deps` no pudo consultar npm por DNS (`ENOTFOUND`); no se modificaron `package.json` ni `package-lock.json`, así que no hubo cambio de dependencias.
+- Publicación: Vercel `dpl_AzFJiK4fFdCdjjyFkf3UinHRcrgy`, `READY`, target `production`, alias `https://beatss.app`.
+- Verificación Live sin autenticación ni emisión: GET `/`, `/inicio?session=expired` y `/facturacion` = 200; GET `/api/sri-issue` = 501 y GET `/api/payments/retry-sri` = 405, métodos GET no admitidos por esos endpoints POST. El bundle público `assets/main-DGdfuq67.js` respondió 200 y contiene la nueva intención automática de Login.
+- Límites: no se inició OAuth, no se abrió sesión autenticada, no se consultó ni emitió al SRI, no hubo escritura Firestore, cobro ni correo. No se imprimió ni modificó ninguna credencial.
+- Siguiente acción exacta: recargar la pestaña BeatSS; el retorno expirado debe presentar el modal de Login. Tras autenticarte, abre `/facturacion`, elige una venta aprobada nueva sin trámite previo, revisa comprador/concepto/IVA y confirma esa sola emisión. No reintentar las siete filas `EN_PROCESO` sin conciliarlas.
+
+## Registrar verificación actual de acceso al Facturador SRI — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Objetivo: comprobar el estado visible de acceso a BeatSS tras no poder resolver el dominio mediante HTTP desde este entorno.
+- Evidencia: Chrome mantiene la pestaña BeatSS en `https://beatss.app/inicio?session=expired`; no hay sesión autenticada disponible para inspeccionar `/facturacion`. La selección `getTab` fue bloqueada por una interfaz abierta de extensión de Chrome.
+- Acciones: no se inició OAuth, no se modificó la pestaña por otro medio, no se tocó Firestore/configuración fiscal y no se emitió factura.
+- Bloqueo restante: renovar la sesión en BeatSS es requisito para abrir el Facturador privado y para que Sossa elija y confirme una venta.
+- Siguiente acción exacta: Sossa inicia sesión en la pestaña habitual de BeatSS y abre `/facturacion`; después elige una venta nueva aprobada sin trámite previo y revisa sus datos antes de la confirmación final.
+
+## Verificar E2E simulado y estado actual del facturador SRI manual — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF` para verificación local; no equivale a una factura Live E2E autorizada.
+- Agente: `Codex`
+- Fecha: `2026-09-24`
+- Objetivo: aportar evidencia de que BeatSS ejecuta sólo la venta seleccionada, comprobar los gates actuales y distinguir el estado publicado de una emisión fiscal real.
+- Resultado: el flujo ya está implementado en `/facturacion`: botón por venta, confirmación con ficha, endpoint autenticado que arma ese `paymentId`, ejecutor puntual, consulta de autorización y descargas XML/RIDE. El ambiente `2 - Producción / Real`, la matriz cotejada con el RUC y la firma configurada constan en evidencia autenticada del 2026-09-23. El worker/heartbeat no es requisito para esta emisión puntual.
+- Cambio de auditoría: corregí el nombre engañoso del test de heartbeat en `tests/security-hardening-batch11.test.mjs`; no alteré la lógica fiscal.
+- Pruebas: Node completo `node --test tests/*.test.mjs` 282/282; Python `./.venv/bin/python -m unittest discover -s tests` 73/73; `npm run security:check` aprobado (aviso local esperado por `DOWNLOAD_SIGNING_KEY` ausente); `npm run build` + presupuesto aprobados (HTML gzip 62,488 bytes); `git diff --check` aprobado. La integración simulada verifica que se procese únicamente `order_selected`, llegue a `DONE`, y no liste la cola global ni publique heartbeat.
+- Verificación Live: la resolución actual del dominio falló con `ENOTFOUND` en Node; la herramienta web tampoco pudo abrir las rutas. Por ello no confirmo disponibilidad Live nueva. La última evidencia registrada en las entradas inferiores sí muestra respuestas HTTP anteriores y estado de despliegue `READY`.
+- Límites: no hubo consulta/emisión al SRI, escritura Firestore, cambio de configuración, correo, cobro ni deployment. Se preservaron los cambios locales preexistentes.
+- Bloqueos del E2E fiscal real: sólo Sossa puede elegir y revisar en `/facturacion` una venta concreta sin solicitud previa y confirmar sus datos/concepto/IVA antes de emitirla. Las siete filas antiguas `EN_PROCESO` requieren conciliación individual y no deben reintentarse a ciegas.
+- Siguiente acción exacta: abrir BeatSS autenticado en `/facturacion`, elegir una nueva venta aprobada no Sandbox sin trámite fiscal previo, revisar sus datos y confirmar «Emitir esta venta en SRI». Después verificar la autorización y descargar XML/RIDE. No usar las filas `EN_PROCESO` para la primera prueba.
+
+## Auditar flujo manual SRI y confirmar ambiente activo — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF` para la auditoría; no equivale a una factura Live E2E autorizada.
+- Agente: `Codex`
+- Fecha: `2026-09-24`
+- Objetivo: dejar claro si hace falta tocar Vercel/configuración y comprobar el flujo manual que procesa sólo la venta elegida.
+- Resultado: la evidencia autenticada previa de BeatSS confirma `sriAmbiente = 2 - Producción / Real`, dirección matriz cotejada con el RUC vigente y firma configurada. No hace falta iniciar sesión en Vercel ni cambiar Firestore. El flujo web exige propietario autenticado, pago aprobado/Live, datos del comprador, venta seleccionada, confirmación y ambiente 2; el endpoint puntual no depende del heartbeat del worker ni recorre la cola global.
+- Cambio de esta auditoría: corregí el nombre de un test para que describa que el heartbeat mide salud del worker opcional, no que la emisión manual dependa de él (`tests/security-hardening-batch11.test.mjs`). No hubo cambio de lógica de emisión.
+- Verificación: Node focalizado `tests/sri-issuance-hardening.test.mjs` + `tests/security-hardening-batch11.test.mjs` 26/26; Python SRI/API con `.venv` 39/39; `npm run security:check` aprobado (aviso local esperado: `DOWNLOAD_SIGNING_KEY` no está disponible); `npm run build` y presupuesto aprobados (HTML gzip 62,488 bytes); `git diff --check` aprobado. Python emitió avisos deprecados preexistentes sobre `datetime.utcnow()`.
+- Seguridad/alcance: las pruebas HTTP Live anónimas anteriores respondieron 401 antes de tocar Firestore/SRI. No se consultó ni emitió al SRI, no se escribió Firestore, no se cambió ambiente/credenciales/certificado, no se procesaron cobros ni correos, y no se desplegó este cambio de nombre de test.
+- Archivos modificados por esta auditoría: `CURRENT_STATE.md`, `tests/security-hardening-batch11.test.mjs`. El resto de cambios locales preexistentes se preservó.
+- Bloqueos restantes para el E2E fiscal: debe elegirse una venta no Sandbox que no tenga una solicitud previa, revisar comprador/concepto/total/IVA y confirmar la emisión; las siete filas antiguas `EN_PROCESO` necesitan conciliación individual antes de cualquier reintento. Sin una factura seleccionada y confirmación no corresponde ejecutar el envío Live.
+- Siguiente acción exacta: abrir `/facturacion`, seleccionar una venta nueva aprobada y no Sandbox, verificar todos sus datos fiscales y pulsar «Emitir esta venta en SRI» sólo después de confirmar. No reintentar las filas `EN_PROCESO` sin conciliarlas individualmente.
+
+## Auditar login Google vigente para acceso al facturador — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Objetivo: verificar la configuración actual del login Google que protege el Facturador SRI.
+- Resumen: la rama actual conserva `authDomain: licencias-musicales.firebaseapp.com`, usa `signInWithPopup` y mantiene el rewrite `/__/auth/*` al handler oficial; la última nota histórica registra el rollback del helper first-party tras el `redirect_uri_mismatch`. La ruta privada en Chrome redirigió a `inicio?session=expired`, coherente con una pestaña sin sesión y no una prueba de fallo de Google.
+- Archivos modificados: `CURRENT_STATE.md` únicamente.
+- Pruebas: `node --test tests/auth-bootstrap.test.mjs` 34/34; la regresión comprueba dominio Firebase y rewrite. No se inició OAuth ni se ingresó a la cuenta.
+- Bloqueo/límite: el inicio de sesión real sigue sin validación humana; no atribuir `session=expired` a Google OAuth.
+- Siguiente acción exacta: Sossa abre/recarga `https://beatss.app`, cierra cualquier popup OAuth antiguo y pulsa “Continuar con Google”; una vez autenticado, elegir una venta y confirmar los datos antes de la emisión manual.
+
+## Confirmar estado del deployment y acceso al facturador en Chrome — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Objetivo: confirmar el deployment de producción en el dashboard y revisar la respuesta de la ruta privada en Chrome.
+- Resumen: el dashboard autenticado de Vercel muestra el proyecto `generador-licencias`, deployment `dpl_9W8MKjetf47RUptAqrPiz51nkaT7`, estado `Ready`, entorno `Production` y dominio actual `beatss.app`; commit indicado `5494536`. Al abrir `/facturacion` en una pestaña Chrome nueva, la app redirigió a `/inicio?session=expired`.
+- Archivos modificados: `CURRENT_STATE.md` únicamente.
+- Verificación: estado/entorno/dominio observados en el dashboard Vercel; redirección de sesión vista en Chrome. No se modificó Vercel, autenticación, Firestore, SRI ni se emitió factura.
+- Límite: la pestaña recién abierta no tenía sesión BEATSS; no se pudo inspeccionar el contenido privado del facturador ni confirmar un inicio de sesión exitoso.
+- Siguiente acción exacta: Sossa inicia sesión en BEATSS en la pestaña habitual o comparte una venta concreta con sus datos fiscales confirmados; luego puede completar la revisión y confirmación de una sola emisión manual.
+
+## Revalidar flujo manual SRI y pruebas locales — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Objetivo: revalidar que la facturación manual siga limitada a una venta seleccionada y confirmar pruebas actuales sin emitir factura.
+- Resumen: se verificó en código y regresiones que la emisión requiere seleccionar/confirmar una venta, autenticar al propietario y establecer la ficha fiscal; no se procesa la cola global ni se emite automáticamente.
+- Archivos modificados por esta verificación: `CURRENT_STATE.md` únicamente.
+- Pruebas: `node --test tests/*.test.mjs` 281/281; Python SRI 42/42; `npm run security:check` aprobado (aviso local esperado por `DOWNLOAD_SIGNING_KEY` ausente); `npm run build` y presupuesto aprobados (HTML gzip 62,488 bytes); `git diff --check` aprobado.
+- Producción: el despliegue vigente registrado sigue siendo `dpl_9W8MKjetf47RUptAqrPiz51nkaT7` (`READY`, production, alias `beatss.app`). La revalidación HTTP de este turno no pudo resolver el dominio (`ENOTFOUND`), así que no se afirma una comprobación live nueva.
+- Límites: no se hizo solicitud al SRI, no se emitió factura, no se modificó Firestore ni se envió correo.
+- Siguiente acción exacta: cuando Sossa esté listo, elegir una venta concreta en `/facturacion`, revisar comprador/concepto/impuestos y confirmar esa única emisión. Para completar E2E hay que comprobar la autorización del SRI y descargar XML/RIDE.
+
+## Exigir datos fiscales del comprador antes de emisión SRI manual — READY_FOR_HANDOFF (2026-09-24)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente activo: `(ninguno)`
+- Fecha: `2026-09-24`
+- Objetivo: emitir desde BeatSS sólo la venta que Sossa elija, con datos fiscales confirmados y validados antes de enviar la solicitud al SRI.
+- Resumen: el Facturador pide y confirma ficha nominativa (nombre, cédula/RUC o pasaporte, dirección, correo opcional) antes de encolar una nueva emisión; Consumidor Final requiere confirmación explícita y pago positivo de hasta USD 50. El backend persiste la ficha ligada al pago elegido y la aplica al XML antes de reservar secuencial o contactar al SRI. Los trabajos anteriores sin esos datos quedan para conciliación y no se reenvían a ciegas. La dirección matriz del RUC y el ambiente de producción ya existentes no se cambiaron.
+- Archivos de implementación: `api/_sri_buyer.js`, `api/_sri_queue.js`, `dashboard_modules/invoicing.js`, `server-handlers/sri-retry.js`, `sri_service.py` y pruebas SRI.
+- Pruebas: Node 281/281; Python SRI 42/42; `npm run security:check` aprobado (aviso local esperado: `DOWNLOAD_SIGNING_KEY` no está disponible localmente); `npm run build` aprobado, HTML gzip 62,282 bytes; dry-run Vercel con 12 funciones reales y sin archivos de nombres sensibles; `git diff --check` aprobado.
+- Publicación: Vercel `dpl_9W8MKjetf47RUptAqrPiz51nkaT7`, `READY`, target `production`, alias `https://beatss.app`.
+- Verificación Live: HEAD devolvió 200 en `/`, `/inicio`, `/tienda/sossa`, `/ventas`, `/pedidos`, `/contabilidad` y `/facturacion`; 405 en `/api/payments/stripe/webhook`, `/api/payments/webhook` y `/api/payments/retry-sri`; 501 en `/api/sri-issue` para GET/HEAD no soportados por el handler Python. El bundle `/assets/invoicing-D9dtuVz3.js` responde 200 e incluye el diálogo de Consumidor Final. No se hizo POST fiscal ni se probó emisión real.
+- Límites: no se contactó al SRI, no se emitió factura, no hubo escrituras Firestore ni correo. La venta Wow en cola no se modificó y requiere conciliación individual antes de cualquier reintento.
+- Siguiente acción exacta: en `/facturacion`, Sossa debe elegir una venta nueva confirmada, revisar emisor, comprador, concepto e impuestos y confirmar personalmente la emisión. Luego verificar autorización SRI, XML/RIDE y descarga para completar la prueba fiscal Live E2E.
+
+## Diagnosticar y corregir la verificación Firebase del flujo manual SRI — DONE (2026-09-24)
+
+- Estado: `DONE` para la corrección de autenticación; la emisión fiscal Live E2E sigue sin verificarse.
+- Agente: `Codex`
+- Objetivo: reducir fallos de sesión en una emisión manual elegida y evitar que un error de renovación ocurra después de dejar una solicitud nueva en cola.
+- Resumen: BeatSS renueva el ID token antes de llamar al endpoint que crea/actualiza la cola y reutiliza esos encabezados en la ejecución puntual. El verificador Python refresca una vez las claves públicas si el `kid` Firebase no aparece en una caché aún vigente; sigue exigiendo la firma RS256 y todos los claims originales.
+- Archivos modificados por esta tarea: `dashboard_modules/invoicing.js`, `api/sri-issue.py`, `tests/sri-issuance-hardening.test.mjs`, `tests/test_sri_issue_api.py`, `CURRENT_STATE.md`.
+- Pruebas: Node completa 280/280; suite Python SRI 40/40; `npm run build` aprobado y HTML gzip 62,488 bytes local / 62,281 bytes en build Vercel; `npm run security:check` aprobado con aviso local esperado de `DOWNLOAD_SIGNING_KEY`; `git diff --check` aprobado. La suite enfocada del endpoint pasó 13/13.
+- Publicación: Vercel `dpl_CGrYLCUWEp5RdeqkK1jdXrvQzPnS`, `READY`, `production`, alias `https://beatss.app`.
+- Verificación Live sin emisión: `HEAD /facturacion` 200; `HEAD /api/payments/retry-sri` 405; `HEAD /api/sri-issue` 501 (método HEAD no implementado por el handler); asset `/assets/invoicing-LN0F-ud3.js` 200. No se ejecutó POST a rutas SRI. La lectura de logs Vercel no devolvió registros ni error utilizable; por eso no queda demostrado cuál rama causó el fallo original.
+- Bloqueos restantes del objetivo: la venta Wow existente sigue `EN COLA DE EMISIÓN` en la vista BeatSS y se debe conciliar su clave en el portal oficial antes de reintentar; falta confirmar los datos del comprador y la tarifa de IVA aplicable a esa operación. No se intentó emitir ni cambiar Firestore, SRI o enviar correo.
+- Siguiente acción exacta: conciliar primero la solicitud Wow en SRI; luego completar/confirmar datos fiscales del comprador y la tarifa correcta. Con ello resuelto, Sossa revisa la ficha y realiza la confirmación final de una sola venta para completar la verificación Live E2E.
+
+## Reconciliar Wow en cola y hacer operativo el arreglo de sesión del facturador — BLOCKED (2026-09-24)
+
+- Estado: `BLOCKED` para completar la conciliación/emisión; la corrección de autenticación sí quedó publicada.
+- Agente: `Codex`
+- Objetivo: revisar la última venta solicitada sin duplicar una factura y publicar/verificar la corrección autenticada del flujo manual.
+- Resultado: producción muestra el facturador en modo manual y Producción. La venta Wow (USD 30, fecha 2026-09-13) sigue `EN COLA DE EMISIÓN`; no hay evidencia visible de autorización ni de RIDE/XML. No se volvió a iniciar una solicitud ni se consultó/transmitió al SRI. El arreglo de renovación del token se publicó en Vercel `dpl_9jdArPxLPYihvdFr4fbEr61Lmdbv` (`READY`, alias `https://beatss.app`).
+- Archivos de la corrección: `dashboard_modules/invoicing.js`, `api/sri-issue.py`, `tests/sri-issuance-hardening.test.mjs`, `tests/test_sri_issue_api.py`; esta actualización modifica sólo `CURRENT_STATE.md`.
+- Verificación: Node 280/280; pruebas Python SRI/API 39/39; `npm run build` aprobado (HTML gzip 62,488 bytes); `npm run security:check` aprobado con el aviso local esperado de `DOWNLOAD_SIGNING_KEY`; `git diff --check` aprobado. Producción: `/facturacion` 200; `HEAD /api/sri-issue` 501 (la ruta Python respondió al método no soportado); `HEAD /api/payments/retry-sri` 405. Bundle público confirma renovación forzada del ID token. No se llamó a ningún endpoint de emisión.
+- Bloqueo: antes de una emisión hay que resolver los datos fiscales faltantes del comprador y confirmar que la tarifa IVA configurada para esta operación corresponde al régimen/servicio. El registro de la venta muestra nombre/correo pero no una identificación y dirección completas; BeatSS está configurado con IVA 0%. No asumir `CONSUMIDOR FINAL` ni cambiar la tarifa por inferencia. El SRI permite factura a consumidor final en operaciones de hasta USD 50 sólo cuando el comprador no necesita usarla para sustentar costos/gastos o crédito tributario.
+- Siguiente acción exacta: Sossa debe confirmar si el comprador requiere factura nominativa y proporcionar/validar su identificación y dirección, o confirmar que procede consumidor final bajo esa condición; además validar la tarifa IVA aplicable a esta operación. Luego revisar la ficha completa en BeatSS y realizar personalmente la confirmación final de emisión.
+
+## Recuperar flujo manual SRI ante token vencido o fallo temporal de Firebase — DONE (2026-09-24)
+
+- Estado: `DONE` (arreglo local verificado; no publicado ni equivale a una factura emitida).
+- Agente: `Codex`
+- Objetivo: evitar enviar un ID token Firebase vencido al ejecutor puntual y no confundir una caída temporal al descargar certificados públicos con una sesión inválida.
+- Resumen: la llamada a `/api/sri-issue` renueva el ID token; el endpoint responde `503` si Firebase no permite validar temporalmente, sin procesar el pago, y conserva `401` para tokens inválidos. Los errores de validación después de autenticar devuelven `409`, no un falso error de sesión. La interfaz mantiene la solicitud aceptada y no inicia otra.
+- Archivos modificados en esta tarea: `dashboard_modules/invoicing.js`, `api/sri-issue.py`, `tests/sri-issuance-hardening.test.mjs`, `tests/test_sri_issue_api.py`, `CURRENT_STATE.md`.
+- Pruebas: Node completa 277/277; SRI Node 17/17; Python SRI/API 39/39; `npm run build` y presupuesto aprobados (HTML gzip 62,408 bytes); `npm run security:check` aprobado; `git diff --check` aprobado. Python muestra dos avisos preexistentes de `datetime.utcnow()`.
+- Límites: no se desplegó, no se volvió a intentar la fila Wow, no se consultó el SRI y no se cambió Firestore ni se envió correo. La venta Wow sigue `EN COLA DE EMISIÓN`; no se ha comprobado si un worker externo la consumió.
+- Siguiente acción exacta: revisar el estado fiscal de la referencia `BS3-20260913-BAS-EQTS-W2T4-YQZS-H3QB-43PN` en BeatSS/SRI y sólo continuar esa misma solicitud tras confirmar que no hay una factura ya recibida/autorizada. Desplegar el arreglo requiere autorización explícita vigente; emitir requiere revisar la ficha fiscal.
+
+## Intento de emisión de la venta más reciente interrumpido por fallo de sesión — BLOCKED (2026-09-24)
+
+- Estado: `BLOCKED` para emitir; se preservó la solicitud durable existente.
+- Agente: `Codex`
+- Objetivo: responder a “Hazlo tú con la última” sin duplicar ni transmitir una factura sin revisión fiscal confirmada.
+- Evidencia UI: la venta más reciente visible era `Wow`, comprador Jefferson Andrés Ambuludi Ordóñez, USD 30.00, fecha 2026-09-13, referencia `BS3-20260913-BAS-EQTS-W2T4-YQZS-H3QB-43PN`, inicialmente `SIN EMITIR`. Tras la confirmación del navegador, BeatSS la mostró `EN COLA DE EMISIÓN` y notificó que no pudo verificar la sesión Firebase.
+- Evidencia de código: `dashboard_modules/invoicing.js` primero llama `POST /api/payments/retry-sri` y marca la cola aceptada, después llama `POST /api/sri-issue`. En `api/sri-issue.py`, la verificación del token Firebase ocurre antes de `inspect_target_sri_job` y `process_firestore_jobs`; el error observado corresponde a rechazo de sesión y no a una respuesta de autorización SRI. No se repitió ninguna llamada.
+- Alcance/precaución: no está demostrado que el SRI haya recibido o autorizado una factura; tampoco se ha comprobado en este turno si un worker externo podría consumir la solicitud en cola. No continuar ni reintentar la solicitud hasta confirmar manualmente su estado y revisar la ficha fiscal completa.
+- Archivos modificados: `CURRENT_STATE.md` únicamente.
+- Verificación: sesión visible de `/facturacion` mostraba la fila en cola y la notificación; lectura del flujo frontend/backend confirmó el orden de validaciones. No se volvió a llamar a endpoints ni se consultó el SRI.
+- Siguiente acción exacta: Sossa debe comprobar el estado de la fila Wow en `/facturacion` y, antes de cualquier continuación, revisar pago, identificación/datos del comprador, concepto, fecha e impuestos. La emisión real requiere que Sossa complete personalmente la confirmación final en BeatSS.
+
+## Hacer explícito el envío de factura al comprador antes de confirmar emisión manual — DONE (2026-09-24)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: explicar en la confirmación manual que, tras autorización SRI, el backend intenta enviar XML/RIDE al correo registrado.
+- Resumen: el diálogo de confirmación ahora advierte que BEATSS intentará mandar automáticamente XML y RIDE si hay correo registrado, e indica verificar el destinatario antes de confirmar. La lógica de emisión y envío no cambió.
+- Archivos modificados por esta tarea: `dashboard_modules/invoicing.js`, `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`.
+- Pruebas: SRI enfocado 17/17; Node 277/277; `npm run build` y presupuesto aprobados (HTML gzip 62,409 bytes); `npm run security:check` aprobado; `git diff --check` aprobado.
+- Publicación: Vercel `dpl_DFQjfQ8W3XxTsyCNPwFWgg7i6h11`, `READY`, production; alias `https://beatss.app`.
+- Verificación Live: descargué sólo el bundle `invoicing-BtI0qJop.js` mediante Vercel CLI y confirmé que contiene “ENTREGA AL COMPRADOR”, el aviso de envío XML/RIDE y “Verifica el correo antes de confirmar”.
+- Límites: no se emitió ni consultó una factura, no hubo escrituras Firestore, no se procesó pago ni se envió correo. Esta publicación no demuestra la emisión fiscal Live E2E.
+- Siguiente acción exacta para el objetivo general: Sossa elige una venta aprobada no Sandbox y sin una solicitud previa en `/facturacion`, verifica emisor, comprador, concepto, total e IVA y confirma la emisión; cualquier fila `EN_PROCESO` se concilia individualmente antes de reintentar.
+
+## Auditar flujo SRI manual seleccionado y cerrar bloqueos verificables — DONE (2026-09-24)
+
+- Estado: `DONE` (auditoría de código y pruebas locales; no significa que una factura Live E2E esté demostrada).
+- Agente: `Codex`
+- Objetivo: verificar el flujo manual por venta desde selección hasta autorización/descarga sin emitir una factura real.
+- Resultado: el frontend muestra la ficha fiscal y requiere confirmación; el endpoint autenticado encola únicamente el `paymentId` elegido, exige pago aprobado/Live, propietario y ambiente `2`; el ejecutor puntual procesa esa selección sin depender del worker permanente. La emisión conserva clave/reserva para conciliar respuestas inciertas y almacena XML/RIDE autorizados en Storage privado. El ambiente fiscal ya figura como `2 - Producción / Real`; no fue necesario cambiar configuración.
+- Archivos modificados en esta auditoría: `CURRENT_STATE.md` únicamente. Se preservaron los cambios preexistentes del árbol.
+- Pruebas: Node 277/277; Python SRI/API 36/36; `npm run build` + presupuesto aprobados (HTML gzip 62,408 bytes); `npm run security:check` aprobado; `git diff --check` aprobado.
+- Dependencias: `npm run security:deps` no pudo consultar `registry.npmjs.org` por DNS (`ENOTFOUND`); esto no constituye un resultado de auditoría de vulnerabilidades.
+- Verificación Live de esta sesión: no disponible desde este entorno (curl no está instalado, Node fetch falla al resolver/conectar y el navegador web no pudo abrir el dominio). No se usó sesión autenticada ni se consultó Firestore/SRI. La evidencia Live previa de `/facturacion`, gates HTTP y autenticación se conserva en las entradas de despliegue inferiores, pero no sustituye una emisión real.
+- Pendientes reales: una emisión fiscal Live E2E exige que Sossa elija una venta concreta no Sandbox, revise la ficha y confirme expresamente. Hay siete operaciones antiguas `EN_PROCESO`; deben conciliarse una por una antes de reintentar cualquiera. El checklist también deja pendiente validar visualmente una importación con XML/RIDE oficiales; no encontré fixtures oficiales en el conjunto `tests`.
+- Límites: no se emitió ni consultó una factura, no se modificó Firestore/configuración, no se procesó pago, no se envió correo y no se desplegó.
+- Siguiente acción exacta: Sossa selecciona en `/facturacion` una sola venta aprobada, no Sandbox y sin solicitud fiscal previa; revisa emisor, comprador, concepto, total e IVA y confirma explícitamente «Emitir esta venta en SRI». No reintentar filas `EN_PROCESO` sin conciliarlas primero.
+
+## Cotejar domicilio matriz del RUC vigente con configuración fiscal privada — DONE (2026-09-23)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: verificar que las facturas usen el domicilio matriz del RUC vigente, sólo desde la configuración fiscal privada.
+- Resultado: cotejé `RUC JOAO.pdf` con la sesión autenticada de BeatSS. La matriz de Esmeraldas que consta en el documento ya estaba guardada en `users/{uid}/private_config/sri.sriDirMatriz` y coincidía con el RUC; no se guardó ni modificó Firestore. La dirección quedó oculta y se cerró el modal.
+- Aclaración de evidencia: una nota histórica posterior del 2026-09-23 decía que la dirección era “Quito - Ecuador”; esa afirmación no coincide con el RUC vigente ni con la configuración observada ahora y debe considerarse supersedida.
+- Archivos modificados por esta tarea: `CURRENT_STATE.md` únicamente.
+- Verificación: lectura del RUC PDF; panel autenticado «Datos fiscales» mostró razón social, RUC parcialmente enmascarado, matriz coincidente, ambiente `2 - Producción / Real` y firma configurada. No se emitió factura, no se consultó el SRI y no se guardó configuración.
+- Bloqueos: ninguno para la verificación del domicilio. La emisión real sigue requiriendo seleccionar una venta y confirmarla explícitamente.
+- Siguiente acción exacta: Sossa puede continuar usando Facturación; la matriz ya corresponde al RUC. Revisar las siete operaciones `EN PROCESO` antes de cualquier reintento.
+
+## Permitir conciliación segura de una emisión SRI con lease vencido — DONE (2026-09-23)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: permitir que el propietario revise una solicitud `EN_PROCESO` sólo tras vencer su lease, sin interrumpir un proceso activo ni cambiar su estado/reserva fiscal antes de reclamar el mismo trabajo.
+- Resumen: el facturador ofrece «Revisar solicitud» para `EN_PROCESO`; la cola acepta la confirmación manual sólo si el lease venció y conserva estado, lease y clave. La actualización usa precondición `lastUpdateTime` para evitar carreras. La inspección Python también exige propietario autenticado y lease vencido; un lease activo sigue bloqueado.
+- Archivos modificados por esta tarea: `api/_sri_queue.js`, `sri_contingency.py`, `dashboard_modules/invoicing.js`, `tests/sri-issuance-hardening.test.mjs`, `tests/test_sri_reliability.py`, `CURRENT_STATE.md`.
+- Pruebas: SRI Node 17/17; pruebas SRI Python 36/36; suite Node 277/277; `npm run build` y presupuesto aprobados (`htmlGzip=62408`); `npm run security:check` aprobado con aviso local esperado de `DOWNLOAD_SIGNING_KEY` ausente; `git diff --check` aprobado.
+- Publicación: Vercel `dpl_2H6ijVitD4HxYXSFXTH1ztFuNjHs`, `READY`, producción, alias `https://beatss.app`.
+- Verificación Live: `/facturacion` HTTP 200; GET `/api/payments/retry-sri` 405; GET `/api/sri-issue` 501; POST sintético no autenticado a `/api/sri-issue` 401 antes de procesar. No se hizo emisión autenticada, consulta SRI ni cambio de Firestore.
+- Bloqueos: siguen pendientes de conciliación individual siete operaciones históricas `EN_PROCESO`; no se modificaron. No se emitió factura.
+- Siguiente acción exacta: iniciar una tarea separada para comprobar el domicilio matriz del RUC vigente y confirmar que se configura en el registro fiscal privado del productor; después Sossa podrá elegir y confirmar una venta Live concreta para la prueba de emisión.
+
+## Permitir conciliación segura de una emisión SRI con lease vencido — BLOCKED (superseded by DONE, 2026-09-23)
+
+- Estado: `BLOCKED`
+- Resolución: esta entrada antigua quedó supersedida por la finalización documentada posteriormente en este mismo archivo; se conserva su contenido como historial y no representa una tarea activa.
+- Agente activo: `Codex`
+- Objetivo: dejar que Sossa recupere desde el facturador una solicitud `EN_PROCESO` sólo después de vencer su lease; nunca interrumpir un trabajo activo ni crear una clave fiscal nueva si ya existe una reserva.
+- Archivos: `api/_sri_queue.js`, `sri_contingency.py`, `dashboard_modules/invoicing.js`, `tests/sri-issuance-hardening.test.mjs`, `tests/test_sri_reliability.py`, `tests/test_sri_issue_api.py`, `CURRENT_STATE.md`.
+- Verificación prevista: regresiones de lease activo/vencido, pruebas Python SRI y Node, build, seguridad estática y diff; publicar bajo la autorización vigente y verificar las rutas/gates sin realizar emisión autenticada.
+- Siguiente acción: agregar conciliación UI para `EN_PROCESO`, gate de lease vencido en servidor y actualización optimista del marcador manual; ejecutar pruebas y publicar.
+
+## Alinear la emisión fiscal con el ID canónico del pago — DONE (2026-09-23)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: garantizar que la emisión SRI localice pago y reserva fiscal por el `paymentId` canónico, incluso si el trabajo tiene una referencia legible distinta.
+- Resumen: el procesador ahora pasa `payment_id` al servicio fiscal y conserva `reference` sólo para identificar el trabajo en el log. La regresión simula ambos valores distintos y comprueba que se use el ID del pago para emitir.
+- Archivos modificados por esta tarea: `sri_contingency.py`, `tests/test_sri_reliability.py`, `CURRENT_STATE.md`; se preservó el resto del árbol local.
+- Pruebas: Python SRI 35/35 (con `./.venv/bin/python`; `uv run` no pudo inicializar caché fuera del workspace); suite Node 277/277; `npm run build` y presupuesto aprobados; `npm run security:check` aprobado con aviso local esperado de `DOWNLOAD_SIGNING_KEY` ausente; `git diff --check` aprobado.
+- Publicación: Vercel `dpl_96FZAMwWT97YfwXq6u29mXt885rM`, `READY`, producción, alias `https://beatss.app`.
+- Verificación Live: `/facturacion` HTTP 200; `/api/payments/retry-sri` GET 405; `/api/sri-issue` GET 501; POST sintético sin sesión a `/api/sri-issue` HTTP 401, rechazado antes de procesar. No se usó sesión de Sossa ni un ID de venta real, ni se consultó o emitió en SRI, ni se modificó Firestore.
+- Bloqueos: falta una prueba fiscal real seleccionada y confirmada por Sossa; no se reintentaron las siete operaciones históricas en proceso.
+- Siguiente acción exacta para el objetivo general: Sossa elige una venta Live aprobada y no Sandbox en `/facturacion`; revisar la ficha fiscal y confirmar expresamente antes de emitir. Si se elige una fila antigua en proceso, conciliar la misma clave antes de cualquier reintento.
+
+## Desbloquear continuación manual confirmada de un trabajo SRI pendiente — DONE (2026-09-23)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: al seleccionar y confirmar desde BeatSS una venta cuyo trabajo SRI sigue `PENDING`, permitir que la ejecución puntual continúe ese mismo trabajo aunque su `nextAttemptAt` automático sea futuro; preservar la idempotencia y no tocar ventas no seleccionadas.
+- Resumen: la confirmación del propietario ahora adelanta `nextAttemptAt` sólo en un trabajo `PENDING`, conservando su estado y referencia. `CONTINGENCY` sigue requiriendo la vía de conciliación; `PROCESSING` no se modifica ni pierde su lease. Sólo se despierta el ID de pago confirmado por la invocación puntual.
+- Archivos modificados por esta tarea: `api/_sri_queue.js`, `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`; se preservó el resto del árbol local.
+- Pruebas: regresión SRI 17/17; suite Node 277/277; `npm run build` y presupuesto de rendimiento aprobados (HTML gzip 62,205 bytes); `npm run security:check` aprobado; `git diff --check` aprobado.
+- Publicación: Vercel `dpl_Gh7Sb8zuFBU89jVc493UQCBq7D1s`, `READY`, producción, alias `https://beatss.app`.
+- Verificación Live: `/facturacion` HTTP 200; `/api/payments/retry-sri` GET 405 y `/api/sri-issue` GET 501, ambos alcanzan sus handlers/métodos protegidos esperados. No se envió POST autenticado, no se consultó ni emitió en SRI, no se modificó Firestore ni se procesaron pagos.
+- Bloqueos: no se puede completar una factura E2E ni reconciliar registros heredados sin que Sossa elija una venta concreta, revise los datos fiscales presentados y confirme expresamente la operación Live.
+- Siguiente acción exacta para el objetivo general: Sossa abre `/facturacion`, selecciona una sola venta aprobada no Sandbox y confirma que la ficha (emisor, comprador, concepto, fecha e IVA) está correcta. Sólo tras su confirmación expresa se ejecutará esa factura; no reintentar sin revisar antes los trabajos previos en proceso.
+
+## Mostrar la ficha fiscal de la venta antes de confirmar emisión Live — DONE (2026-09-24)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: antes de la confirmación que puede emitir una factura real, mostrar la referencia, fecha, producto/licencia, pago, importe, identidad/contacto/dirección del comprador y configuración IVA usada; no inferir campos faltantes.
+- Resumen: los diálogos de emisión, continuación y consulta presentan emisor/RUC/matriz, referencia y fecha, beat/licencia, estado de pago/importe/método, comprador (razón social, identificación, correo y dirección) y tarifa/modalidad IVA efectivas. Los valores ausentes se muestran como `NO REGISTRADO`; se advierte que hay que verificar régimen y operación. No se inventa el desglose o valor de impuestos.
+- Archivos: `dashboard_modules/invoicing.js`, `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`.
+- Pruebas: regresión SRI enfocada 16/16; suite Node 276/276; `npm run build` y presupuesto aprobados (HTML gzip 61.95 kB/65 kB); `npm run security:check` aprobado con aviso local esperado de `DOWNLOAD_SIGNING_KEY` ausente; `git diff --check` aprobado.
+- Publicación: Vercel `dpl_CYDDbJAPyQYpTPTtRHGwSP7cBiLS`, `READY`, producción, alias `https://beatss.app`.
+- Verificación Live: `/facturacion` HTTP 200; el módulo `invoicing-B4whC_i2.js` HTTP 200 contiene todos los campos y avisos del resumen. Sin sesión autenticada no se inspeccionó una venta real; no se realizó POST autenticado, emisión, consulta SRI ni cambio de Firestore.
+- Siguiente acción exacta para el objetivo general: Sossa selecciona una venta cobrada concreta en `/facturacion`, revisa esta ficha y confirma expresamente emisión Live. Las siete operaciones anteriores en proceso deben conciliarse antes de reintentar cualquiera.
+
+## Verificar gates de autenticación de emisión manual en producción — DONE (2026-09-24)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: verificar que las rutas Live de emisión manual sólo admitan el flujo fiscal tras autenticar al productor.
+- Resultado: GET `/api/payments/retry-sri` respondió 405 y GET `/api/sri-issue` respondió 501 (handler Python sin método GET). POST a ambas rutas sin sesión válida respondió 401 («Sesión requerida» / «Inicia sesión nuevamente»), antes de inspección o procesamiento de pago. No se envió token ni se incluyó referencia de venta.
+- Archivos modificados: `CURRENT_STATE.md` únicamente.
+- Verificación: pruebas previas en este checkout Node 276/276 y Python SRI 35/35; `git diff --check` aprobado. El endpoint Python se cubre además con un POST simulado autenticado que limita procesamiento al pago seleccionado; no equivale a una emisión real en SRI.
+- Límites: ninguna solicitud autenticada, lectura/escritura de Firestore, consulta SRI, emisión o deploy.
+- Siguiente acción exacta: Sossa debe elegir la venta y confirmar explícitamente sus datos para ejecutar la primera emisión Live controlada; conciliar individualmente las 7 operaciones pendientes antes de cualquier retry.
+
+## Regresión: emisión SRI puntual independiente del worker — DONE (2026-09-24)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: dejar cubierto por una prueba que la emisión manual de una venta seleccionada se ejecuta puntualmente y no depende del heartbeat del worker persistente.
+- Resumen: añadí aserciones que verifican que el handler de cola manual no exige salud/heartbeat del worker y que `/api/sri-issue` procesa sólo el `paymentId` seleccionado con identidad autenticada. La prueba Python integrada existente comprueba el procesamiento simulado de una venta hasta `DONE` sin publicar heartbeat ni recorrer cola global.
+- Archivos modificados por esta tarea: `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`.
+- Pruebas: suite Node 276/276; Python SRI 35/35; `git diff --check` aprobado. Los avisos `DeprecationWarning` de `datetime.utcnow()` no afectan el resultado y quedan como deuda técnica.
+- Verificación Live sólo lectura: `/api/payments/retry-sri` GET respondió HTTP 405; `/api/sri-issue` GET respondió HTTP 501 del `BaseHTTPRequestHandler`, esperado porque el endpoint implementa POST/OPTIONS y no GET. Ninguna solicitud POST se ejecutó.
+- Límites: no hubo cambios de código de runtime ni nuevo deploy; el ajuste del facturador está publicado en `dpl_7xKJPhy1EhaQ5h1CWZja8iBfyUwH`. No se consultó ni emitió en el SRI ni se cambió Firestore/configuración.
+- Siguiente acción exacta para el objetivo general: Sossa selecciona una venta cobrada específica en `/facturacion`; revisar esos datos y confirmar explícitamente el envío Live antes de llamar al POST. Reconciliar las siete operaciones en proceso antes de reintentar cualquiera.
+
+## Separar registros Sandbox de operaciones fiscales — DONE (2026-09-24)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: que las compras Sandbox no contaminen los contadores fiscales ni muestren controles de emisión/consulta SRI, manteniéndolas accesibles mediante un filtro explícito.
+- Resumen: agregué el filtro «Compras de prueba · no fiscales», excluí las filas Sandbox de métricas/estados fiscales y reemplacé en esas filas el estado SRI, clave, errores y controles por una etiqueta informativa. La separación usa exclusivamente `providerLivemode === false` o referencias `cs_test_`; la emisión/consulta desde Sandbox ya estaba bloqueada en servidor y ahora también en la interfaz.
+- Archivos: `dashboard_modules/invoicing.js`, `index.html`, `tests/sri-issuance-hardening.test.mjs`, `CURRENT_STATE.md`.
+- Pruebas: regresión enfocada 16/16; Node completo 276/276; `npm run build` aprobado y presupuesto dentro de límites (HTML gzip 61.95 kB/65 kB); `npm run security:check` aprobado con aviso local esperado por `DOWNLOAD_SIGNING_KEY` ausente; `git diff --check` aprobado.
+- Publicación: Vercel `dpl_7xKJPhy1EhaQ5h1CWZja8iBfyUwH`, `READY`, producción, alias `https://beatss.app`.
+- Verificación Live: GET `/facturacion` devolvió HTTP 200; el HTML del alias contiene el filtro Sandbox; el bundle del facturador devolvió HTTP 200 y contiene el estado «Prueba · no fiscal · sin acciones SRI» y el mensaje para separar operaciones fiscales. No se inspeccionaron datos privados ni se consultó o emitió nada al SRI, no se modificó Firestore/configuración fiscal ni se tocaron las 7 operaciones en proceso.
+- Siguiente acción exacta para el objetivo general: revisar esas 7 operaciones pendientes individualmente antes de reintentos; para una emisión nueva, Sossa debe seleccionar una venta cobrada concreta, revisar sus datos y confirmar expresamente la emisión Live.
+
+## Verificar ambiente SRI Producción en BeatSS — DONE (2026-09-23)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: confirmar que el ambiente fiscal activo de BeatSS esté en Producción, preservando la emisión manual por venta.
+- Resultado: la sesión autenticada de `/facturacion` mostró `Modo manual · Producción` y la configuración guardada `2 - Producción / Real`. Por tanto, ya estaba en Producción; no fue necesario guardar ni cambiar nada. Se cerró el modal sin modificar datos.
+- Archivos modificados por esta verificación: `CURRENT_STATE.md` únicamente. No se cambió Firestore/configuración fiscal, no se emitió ni consultó ningún comprobante, y no se desplegó.
+- Verificación: panel fiscal autenticado; 59 operaciones, 1 autorizada, 7 en proceso y 0 que requieren revisión. Los registros en proceso se dejaron intactos; su estado debe conciliarse individualmente antes de cualquier acción, no se asume que sean pruebas ni se reenvían.
+- Siguiente acción exacta: cuando Sossa quiera facturar, elegir una sola venta confirmada, revisar sus datos y confirmar expresamente la emisión Live. Antes, revisar aparte las 7 operaciones en proceso para evitar duplicar o reenviar una factura.
+
+## Publicar y verificar el arreglo SRI manual en producción — DONE (2026-09-23)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: publicar el árbol validado para corregir el bloqueo antiguo de dirección en `/facturacion`.
+- Publicación: Vercel `dpl_8Awz6ZY7YinUvm4CDwNA16GYg4Pm`, `READY`, producción; alias `https://beatss.app`. El build remoto aprobó y el presupuesto HTML gzip fue 62.16 kB. Se conservaron los filtros de secretos de `.vercelignore`; no se creó commit.
+- Verificación Live: se recargó `/facturacion` autenticado después del deploy. Continúa mostrando Modo manual / Producción; la venta con pago aprobado ahora muestra “Emitir esta venta en SRI” y ya no aparece el bloqueo de dirección fija. El panel mantiene 59 operaciones: 1 autorizada, 7 en proceso y 0 requieren revisión.
+- Preflight: Node 275/275; Python SRI/API 35/35; build + presupuesto aprobados; `npm run security:check` aprobado con aviso local esperado por falta de `DOWNLOAD_SIGNING_KEY`; `git diff --check` aprobado.
+- Límites: no se seleccionó ni emitió una factura, no se consultó al SRI, no se cambió Firestore ni la configuración fiscal, y no se reintentaron los siete registros en proceso.
+- Siguiente acción exacta: Sossa elige una venta concreta en `/facturacion`, revisa comprador, concepto, fecha e impuestos, y confirma expresamente “Emitir esta venta en SRI”. Antes de cualquier nuevo envío de las filas en proceso, consultar la misma clave para evitar duplicados.
+
+## Auditar emisión manual SRI Live y reconciliar operaciones en proceso — DONE (diagnóstico previo al deploy, 2026-09-23)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: comprobar si el flujo manual desde BeatSS está desplegado y listo, y determinar sin mutaciones por qué el panel muestra siete operaciones en proceso.
+- Evidencia Live anterior al deployment de arriba: `/facturacion` cargó autenticado en modo manual y Producción; mostró 59 operaciones, 1 autorizada, 7 en proceso y 0 que requieren revisión. GET a `/api/sri-issue` llegó al handler Python y respondió 501 por método GET no soportado (confirma ruta alcanzable, no emisión POST). En esa versión la primera venta estaba bloqueada por la dirección fija. El deployment de arriba corrigió ese bloqueo; no usar esta observación como estado vigente.
+- Verificación local: Node 275/275; Python SRI/API 35/35; `npm run build` aprobado, HTML gzip 61.90 kB y presupuesto aprobado; `npm run security:check` aprobado con aviso esperado de `DOWNLOAD_SIGNING_KEY` ausente en el entorno local; `git diff --check` aprobado.
+- Archivos editados en esta auditoría: `CURRENT_STATE.md` únicamente. Se preservó el árbol heredado. No hubo consultas ni envíos al SRI, reintentos, cambios de Firestore/configuración, emisión de comprobantes ni deploy.
+- Bloqueo: no hubo bloqueo permanente; se encontró la CLI en caché y se restableció acceso autenticado a Vercel en la tarea siguiente. Los siete estados en proceso se dejaron intactos porque conciliarlos exige consultar operaciones individuales en el SRI.
+- Siguiente acción: completada por el deployment documentado arriba; falta que Sossa seleccione y confirme una venta para una prueba fiscal Live.
+
+## Completar y verificar facturación SRI manual seleccionada desde BeatSS — DONE (2026-09-23; implementación publicada abajo)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Objetivo: permitir que Sossa seleccione una venta concreta desde BeatSS, genere/firme/envíe su factura al SRI y gestione autorización/XML/RIDE, manteniendo facturación manual por venta.
+- Archivos modificados: `sri_contingency.py`, `tests/test_sri_reliability.py` y este archivo. Se preservan los cambios heredados.
+- Resumen: corregí una brecha de configuración que hacía que la inspección previa a emisión leyera `sriAmbiente` sólo desde `config/producer`, aunque la versión actual lo guarda en `private_config/sri`. Ahora prioriza el valor privado mediante una lectura Firestore con field mask de `sriAmbiente`, sin devolver ni decodificar el certificado/contraseña en esta etapa.
+- Verificación: suite Node 275/275; Python SRI/API 35/35; `npm run build` y presupuesto aprobados (HTML gzip 61.90 kB); `npm run security:check` aprobado con aviso local esperado por clave de firma ausente; `git diff --check` aprobado. `npm run security:deps` no pudo consultar registry.npmjs.org por DNS de red, no es un resultado de vulnerabilidades.
+- Límites al registrar esta instantánea: la corrección estaba sólo en el árbol local, antes de restablecer la CLI autenticada. La publicación y verificación Live posterior constan en la entrada superior. No se cambió Firestore ni se emitieron facturas.
+- Capacidad de funciones: el análisis estático de `.vercelignore` + `vercel.json` cuenta 12 funciones HTTP desplegables, justo dentro del límite documentado; `api/sri-issue.py` ocupa la última plaza.
+- Siguiente acción: la publicación y confirmación de Producción están completadas en las entradas superiores; falta que Sossa elija y confirme una venta concreta para la prueba de emisión Live.
+
+## Cambiar ambiente SRI de la cuenta a Producción — BLOCKED (2026-09-23)
+
+- Estado: `BLOCKED`
+- Agente: `Codex`
+- Objetivo: cambiar únicamente `sriAmbiente` de la cuenta del productor a Producción desde la configuración autenticada de BeatSS.
+- Evidencia: la pestaña autenticada de BeatSS muestra `session=expired`; no se pudo abrir/guardar configuración con una sesión válida.
+- Hecho: se revisó el código. La emisión web se solicita por venta elegida; la cola persistente exige marca de confirmación manual y ambiente permitido por el proceso. No se cambió el ambiente, no se modificó Firestore, no se emitió factura ni se desplegó.
+- Archivos modificados: `CURRENT_STATE.md` únicamente; se preservaron todos los cambios preexistentes.
+- Verificación: estado de la pestaña de Chrome leído; guardia liberada sin cambiar configuración externa.
+- Siguiente acción exacta: Sossa debe iniciar sesión en BeatSS y avisar “ya inicié sesión”; después revisar el modo guardado y las solicitudes manuales pendientes antes de cambiar `sriAmbiente` a producción.
+
+## Alinear dirección fiscal con RUC vigente — READY_FOR_HANDOFF (2026-09-23)
+
+- Estado: `READY_FOR_HANDOFF`
+- Agente: `Codex`
+- Objetivo: eliminar la dirección genérica fija y usar el domicilio matriz del RUC vigente desde configuración privada.
+- Resumen: el código local dejó de fijar “Quito - Ecuador”; el formulario, la validación del emisor y el XML usan el campo privado `sriDirMatriz` y bloquean la emisión si falta. Sossa autorizó usar el RUC vigente y el valor fue guardado en la configuración privada de BeatSS; la interfaz confirmó “Configuración del productor actualizada en la nube”. No se incluye el domicilio en este registro.
+- Archivos modificados por esta tarea: `sri_service.py`, `sri_invoicing.py`, `dashboard_modules/invoicing.js`, `main.js`, `tests/test_sri_invoicing.py`, `tests/sri-issuance-hardening.test.mjs`, `docs/30_SRI/README.md`, `.agents/AGENTS.md`, `Memoria del Proyecto.md` y este archivo. El árbol tenía otros cambios previos, preservados.
+- Pruebas/verificación: Python SRI/API 34/34; suite Node 275/275; build aprobado (HTML gzip 61.90 kB dentro del límite); `npm run security:check` aprobado con aviso local esperado por `DOWNLOAD_SIGNING_KEY` ausente; `git diff --check` aprobado.
+- Límites: no se emitió factura ni se hizo deploy. La configuración SRI que mostraba la interfaz permaneció en entorno `Pruebas/Sandbox`; no se cambió. El código actualizado sigue local y no está publicado.
+- Siguiente acción exacta: con autorización de publicación, desplegar el cambio de código y verificar `/facturacion`; antes de emitir, confirmar la venta y el entorno fiscal de forma explícita.
+
+Esta entrada actualiza y reemplaza para la operación vigente la regla histórica de dirección fija descrita más abajo; no se altera el historial.
+
+## Blindar dirección fiscal privada en facturación SRI — DONE (2026-09-23)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: impedir que la ficha o la factura emitida por BeatSS divulguen una dirección distinta de la dirección fiscal aprobada por la política del proyecto.
+- Resumen: la ficha manual muestra exclusivamente “Quito - Ecuador”. La validación de emisor en servidor detiene la emisión si la dirección guardada no coincide, sin devolver el domicilio ingresado; la UI muestra que debe corregirse antes de emitir.
+- Archivos modificados: `sri_service.py`, `dashboard_modules/invoicing.js`, `tests/test_sri_invoicing.py`, `tests/sri-issuance-hardening.test.mjs` y `CURRENT_STATE.md`.
+- Pruebas/verificación: Python SRI/API 33/33; Node 275/275; `npm run build` y presupuesto aprobados (HTML gzip 62.36 kB); `npm run security:check` aprobado con aviso local esperado de `DOWNLOAD_SIGNING_KEY` ausente; `git diff --check` aprobado.
+- Publicación: Vercel `dpl_DEPn7hPKiVemK1m1YSmACBPLScPP`, `READY`, producción, alias `https://beatss.app`.
+- Verificación Live: `/` y `/facturacion` HTTP 200; bundle de facturación HTTP 200 y contiene texto fijo y bloqueo por dirección no aprobada; webhook Stripe GET 405; `/api/sri-issue` OPTIONS 204 y POST sin sesión 401. No se autenticó ni emitió factura.
+- Siguiente acción exacta: Sossa debe confirmar que en **Datos fiscales** la dirección matriz guardada sea “Quito - Ecuador”. Si no coincide, la emisión será bloqueada hasta corregirla; después podrá elegir y confirmar una venta Live desde Facturación para probar el recorrido fiscal.
+
+## Publicar emisión SRI manual seleccionada — DONE (2026-09-23)
+
+- Estado: `DONE`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: publicar el flujo que permite emitir únicamente la venta seleccionada y confirmada por Sossa desde BeatSS.
+- Resumen: Sossa autorizó publicar `/api/sri-issue` para emitir sólo facturas que seleccione y confirme en BeatSS. Deployment Vercel `dpl_AP1W8BymP1SXuRG1Udfr7A4iBf8q` quedó `READY` en producción y alias `https://beatss.app`. El handler protegido está desplegado sin emitir ningún comprobante durante la validación.
+- Archivos editados por esta tarea: `CURRENT_STATE.md`. Se desplegó el árbol local existente, preservando los cambios heredados; no se modificó `.vercelignore`.
+- Pruebas locales: Node 275/275; Python SRI/API 32/32; `npm run build` y presupuesto aprobados (HTML gzip 62.36 kB local; Vercel build remoto también aprobó); `npm run security:check` aprobado; `npm run security:deps` sin hallazgos altos/críticos, 9 moderados; `git diff --check` aprobado.
+- Verificación Live: `/`, `/inicio`, `/tienda/sossa`, `/ventas`, `/pedidos`, `/contabilidad`, `/facturacion` → HTTP 200; `/api/payments/stripe/webhook` GET → 405; `/api/payments/webhook` GET → 405; `/api/sri-issue` OPTIONS desde `https://beatss.app` → 204; POST sin sesión → 401; bundle de facturación → 200 y contiene los controles de emisión individual y asociación XML/RIDE.
+- Límites: no se inició sesión ni se probó una emisión fiscal con una venta real; no se tocó Firestore, no se envió correo y no se modificaron pagos. La auditoría npm reporta 9 vulnerabilidades moderadas, ninguna alta/crítica.
+- Siguiente acción exacta: Sossa debe abrir `/facturacion`, elegir una venta Live aprobada, revisar datos del cliente/fecha/concepto/impuestos y confirmar explícitamente “Emitir esta venta en SRI”. Después verificar que el estado llegue a `AUTORIZADO` y descargar XML/RIDE. No repetir la solicitud si queda pendiente; consultar la misma venta.
+
+## Completar flujo manual de facturación SRI en BeatSS — BLOCKED (2026-09-23)
+
+- Estado: `BLOCKED`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: permitir que Sossa seleccione cada venta en BeatSS, solicite su factura de forma individual y recupere con claridad una solicitud que quedó en cola si falla la ejecución puntual.
+- Resumen: el facturador conserva la selección y confirmación por venta. Si la solicitud durable entra en cola pero falla el ejecutor puntual, la fila ya no aparenta estar sin emitir y permite continuar la misma solicitud; los estados que requieren conciliación o siguen en proceso no muestran un botón de reemisión.
+- Archivos modificados: `dashboard_modules/invoicing.js`, `tests/sri-issuance-hardening.test.mjs`, `task.md` y este estado operativo. No se modificó `.vercelignore`.
+- Pruebas/verificación: prueba específica del facturador 15/15; pruebas Python SRI/API 32/32; suite Node 275/275; `npm run build` y presupuesto aprobados (HTML gzip 61.90 kB); `npm run security:check` aprobado con aviso local esperado de `DOWNLOAD_SIGNING_KEY` ausente; `git diff --check` aprobado.
+- Bloqueo de publicación: la llamada autorizada a `npx vercel --prod --yes` fue rechazada por la revisión de seguridad porque el despliegue expondría `/api/sri-issue` en producción. La autorización de despliegue anterior reservó la activación SRI para una autorización separada. No se emitieron facturas, no se tocó Firestore ni se enviaron correos.
+- Siguiente acción exacta: Sossa debe autorizar explícitamente que el endpoint protegido `/api/sri-issue` quede publicado en producción para ejecutar sólo ventas Live seleccionadas tras confirmación, o indicar otra forma autorizada de mantenerlo excluido. Después se podrá publicar y verificar las rutas Live; el facturador aún no está publicado con este ajuste.
+
+## Publicar cambios locales autorizados — BLOCKED (2026-09-23)
+
+- Estado: `BLOCKED`
+- Agente: `Codex`
+- Fecha: `2026-09-23`
+- Objetivo: publicar el árbol de trabajo actual al proyecto Vercel existente y verificar producción.
+- Resumen: no se desplegó. `vercel.json` configura `api/sri-issue.py` y `.vercelignore` no lo excluye; desplegar activaría un endpoint SRI en producción sin la autorización aparte requerida. Se respetó la instrucción de no modificar `.vercelignore`.
+- Archivos modificados por esta tarea: `CURRENT_STATE.md` únicamente. Se preservaron los demás cambios locales.
+- Pruebas/verificación: `npm run build` aprobado y presupuesto aprobado (HTML gzip 61.90 kB); `node --test tests/*.test.mjs` aprobado, 275/275; `npm run security:check` aprobado con aviso local esperado por `DOWNLOAD_SIGNING_KEY` ausente. GET a las siete rutas solicitadas no pudo resolverse porque este entorno no resuelve DNS de `beatss.app`; no se verificó el webhook ni un deploy nuevo.
+- Bloqueos: para publicar sin habilitar SRI hace falta definir una exclusión de `api/sri-issue.py`; la instrucción actual prohíbe cambiar `.vercelignore`. Esto es independiente del plan Vercel.
+- Siguiente acción exacta: Sossa debe autorizar una forma concreta de excluir esa función (por ejemplo, una excepción puntual en `.vercelignore`) o autorizar por separado su publicación en producción. Después se puede repetir deploy y verificación Live.
+
 ## Publicado por OpenCode — desbloqueo del deploy — DONE (2026-09-23)
 
 - Estado: `DONE`

@@ -9,6 +9,7 @@ import {
     refreshDriveAccessToken,
     validateDriveUpload
 } from './_gdrive-storage.js';
+import beatstarsMigration from '../server-handlers/beatstars-migration.js';
 
 const RATE_WINDOW_MS = 5 * 60 * 1000;
 const RATE_LIMIT = 20;
@@ -199,6 +200,8 @@ async function importEmailHistory(req, res) {
 export default async function handler(req, res) {
     const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
     const pathname = url.pathname;
+    const route = String(req.query?.route || url.searchParams.get('route') || '').trim().toLowerCase();
+    if (route === 'beatstars-migration') return beatstarsMigration(req, res);
     
     const isStatus = pathname.includes('/gdrive-status');
     const isOauthClient = pathname.includes('/gdrive-oauth-client');

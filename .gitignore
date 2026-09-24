@@ -38,7 +38,9 @@ subagent_memories.json
 .cache_ggshield
 
 # Lock local del guardián de estado (no se versiona; la fuente es CURRENT_STATE.md)
-.state-claim.json
+.state-claim*.json
+* 4.*
+_uv/
 
 # Graphify artifacts
 graphify-out/

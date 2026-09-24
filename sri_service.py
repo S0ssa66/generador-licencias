@@ -9,6 +9,7 @@ import datetime
 import time
 import hashlib
 import math
+import tempfile
 import sri_invoicing
 import sri_ride
 from server_utils import get_admin_token, resolve_backup_file
@@ -87,6 +88,50 @@ def _firestore_field_value(fields, key, default=''):
         if value_key in field:
             return field[value_key]
     return default
+
+
+def _apply_manual_sri_invoice_details(buyer, payment_fields):
+    """Aplica los datos fiscales confirmados y guardados en el pago seleccionado."""
+    raw = ((payment_fields or {}).get('sriInvoiceDetails') or {}).get('mapValue', {}).get('fields', {})
+    if not raw:
+        return buyer
+    mode = _firestore_field_value(raw, 'mode')
+    updated = dict(buyer or {})
+    if mode == 'consumer_final':
+        try:
+            total_raw = _firestore_field_value(payment_fields, 'finalPrice')
+            if total_raw in (None, ''):
+                total_raw = _firestore_field_value(payment_fields, 'price')
+            if total_raw in (None, ''):
+                total_raw = _firestore_field_value(payment_fields, 'value')
+            if total_raw in (None, ''):
+                total_raw = _firestore_field_value(payment_fields, 'amount', 0)
+            total = float(total_raw or 0)
+        except (TypeError, ValueError):
+            total = 0
+        confirmed = _firestore_field_value(raw, 'consumerFinalConfirmed', False) is True
+        if not confirmed or not 0 < total <= 50:
+            raise ValueError('Consumidor Final requiere confirmación expresa y total aprobado de hasta USD 50.')
+        updated.update({
+            'buyerName': 'CONSUMIDOR FINAL',
+            'buyerDni': '9999999999999',
+            'buyerAddress': 'CONSUMIDOR FINAL',
+            'buyerEmail': _firestore_field_value(raw, 'buyerEmail'),
+            '_manualFiscalDetailsConfirmed': True,
+        })
+        return updated
+    if mode != 'identified':
+        raise ValueError('Los datos fiscales guardados para esta emisión no son nominativos válidos.')
+    updated.update({
+        'buyerName': _firestore_field_value(raw, 'buyerName'),
+        'buyerDni': _firestore_field_value(raw, 'buyerId'),
+        'buyerAddress': _firestore_field_value(raw, 'buyerAddress'),
+        'buyerEmail': _firestore_field_value(raw, 'buyerEmail'),
+        '_manualFiscalDetailsConfirmed': True,
+    })
+    if not all(str(updated.get(key) or '').strip() for key in ('buyerName', 'buyerDni', 'buyerAddress')):
+        raise ValueError('Faltan nombre, identificación o dirección fiscal del comprador confirmado.')
+    return updated
 
 
 def _mark_sri_job_done(payment_id, token):
@@ -259,7 +304,7 @@ def validar_configuracion_emisor_sri(producer_config):
     errors = []
     ruc = str(config.get('sriRuc') or '').strip()
     razon_social = str(config.get('sriRazonSocial') or '').strip()
-    direccion = str(config.get('sriDirMatriz') or 'Quito - Ecuador').strip()
+    direccion = str(config.get('sriDirMatriz') or '').strip()
     estab = str(config.get('sriEstab') or '001').strip()
     pto_emi = str(config.get('sriPtoEmi') or '001').strip()
     ambiente = str(config.get('sriAmbiente') or '1').strip()
@@ -273,7 +318,7 @@ def validar_configuracion_emisor_sri(producer_config):
     if not razon_social:
         errors.append('razón social del emisor no configurada')
     if not direccion:
-        errors.append('dirección de matriz no configurada')
+        errors.append('dirección de matriz no configurada; ingresa la que consta en el RUC vigente')
     if not re.fullmatch(r'\d{3}', estab):
         errors.append('establecimiento inválido: debe tener 3 dígitos')
     if not re.fullmatch(r'\d{3}', pto_emi):
@@ -539,6 +584,10 @@ def actualizar_estado_factura_db(payment_id, producer_id, estado, clave_acceso=N
             fields_to_update[name] = {'integerValue': str(value)}
     if error_msg:
         fields_to_update["sriErrorMensaje"] = {"stringValue": error_msg[:1000]}
+    elif estado == "AUTORIZADO":
+        # Una autorización válida cierra cualquier error de emisión anterior.
+        # El empty string también limpia el campo con updateMask en Firestore.
+        fields_to_update["sriErrorMensaje"] = {"stringValue": ""}
         
     # Validar que el payment_id sea real
     is_valid_payment_id = payment_id and str(payment_id).strip() != "" and str(payment_id).lower() != "undefined"
@@ -645,6 +694,7 @@ def actualizar_estado_factura_db(payment_id, producer_id, estado, clave_acceso=N
                                 if ride_path: x['sriRidePath'] = ride_path
                                 if ride_storage_path: x['sriRideStoragePath'] = ride_storage_path
                                 if error_msg: x['sriErrorMensaje'] = error_msg
+                                elif estado == "AUTORIZADO": x['sriErrorMensaje'] = ""
                                 if xml_storage_path:
                                     x['sriXmlStoragePath'] = xml_storage_path
                                 key_updated = True
@@ -672,14 +722,12 @@ def _persist_authorized_sri(payment_id, producer_id, reference_id, secuencial, c
     if not xml_autorizado:
         raise SriReconciliationRequired('El SRI autorizó la clave, pero no devolvió XML recuperable.')
     secuencial_str = str(secuencial).zfill(9)
-    target_dir = os.path.expanduser('~/Documents/Licencias')
-    os.makedirs(target_dir, exist_ok=True)
-    ride_filepath = os.path.join(target_dir, f'Factura_{secuencial_str}_{clave_acceso}.pdf')
+    ride_filepath = None
     ride_bytes = None
     try:
-        sri_ride.generar_ride_pdf(ride_filepath, xml_autorizado, aut)
-        with open(ride_filepath, 'rb') as handle:
-            ride_bytes = handle.read()
+        ride_bytes, ride_filepath = _generate_authorized_ride_pdf(
+            xml_autorizado, aut, secuencial_str, clave_acceso
+        )
     except Exception as exc:
         print(f'[-] [SRI] No se pudo generar RIDE de una factura autorizada: {exc}')
 
@@ -717,6 +765,38 @@ def _persist_authorized_sri(payment_id, producer_id, reference_id, secuencial, c
     return state
 
 
+def _generate_authorized_ride_pdf(xml_autorizado, autorizacion, secuencial, clave_acceso):
+    """Genera el RIDE en Storage privado y evita rutas locales no escribibles en serverless.
+
+    En el servidor local conserva una copia en Documents/Licencias. En Vercel
+    usa el directorio temporal de la función y lo elimina después de leerlo;
+    el artefacto durable se sube a Firebase Storage en `_persist_authorized_sri`.
+    """
+    filename = f'Factura_{secuencial}_{clave_acceso}.pdf'
+    serverless = os.environ.get('SRI_SERVERLESS_EXECUTION') == '1'
+    if serverless:
+        descriptor, ride_filepath = tempfile.mkstemp(prefix='beatss-sri-', suffix='.pdf')
+        os.close(descriptor)
+    else:
+        target_dir = os.path.expanduser('~/Documents/Licencias')
+        os.makedirs(target_dir, exist_ok=True)
+        ride_filepath = os.path.join(target_dir, filename)
+
+    try:
+        sri_ride.generar_ride_pdf(ride_filepath, xml_autorizado, autorizacion)
+        with open(ride_filepath, 'rb') as handle:
+            ride_bytes = handle.read()
+        if not ride_bytes.startswith(b'%PDF-'):
+            raise ValueError('El generador no produjo un PDF RIDE válido.')
+        return ride_bytes, None if serverless else ride_filepath
+    finally:
+        if serverless:
+            try:
+                os.unlink(ride_filepath)
+            except FileNotFoundError:
+                pass
+
+
 def _reconcile_sri_reservation(payment_id, producer_id, producer_config, fields, token):
     """Consulta la misma clave de acceso; nunca vuelve a SOAP Recepción."""
     key = _firestore_field_value(fields, 'accessKey')
@@ -737,7 +817,7 @@ def _reconcile_sri_reservation(payment_id, producer_id, producer_config, fields,
     return _persist_authorized_sri(payment_id, producer_id, payment_id, int(sequence), key, aut, token)
 
 
-def emitir_factura_sri_background(reference_id, producer_id):
+def emitir_factura_sri_background(reference_id, producer_id, reconciliation_only=False):
     """
     Función que corre en un hilo secundario para procesar la facturación electrónica del SRI de forma asíncrona.
     """
@@ -747,6 +827,19 @@ def emitir_factura_sri_background(reference_id, producer_id):
     if prior_state == 'AUTORIZADO':
         print(f"[=] [SRI] La transacción {reference_id} ya tiene factura autorizada; se omite duplicado.")
         return
+    if reconciliation_only:
+        reservation = _read_sri_reservation(reference_id, token)
+        fields = reservation.get('fields', {}) if reservation else {}
+        reservation_status = _firestore_field_value(fields, 'status')
+        reservation_producer = _firestore_field_value(fields, 'producerId')
+        if (reservation_producer != producer_id or
+                reservation_status not in {'SIGNED_READY', 'SENDING', 'RECEIVED', 'AUTHORIZED'} or
+                not _firestore_field_value(fields, 'accessKey') or
+                not _firestore_field_value(fields, 'sequence')):
+            raise SriReconciliationRequired(
+                'No existe una reserva fiscal enviada y verificable para consultar; '
+                'no se generó ni reenvió una factura.'
+            )
     
     # 1. Cargar la configuración del emisor y sus llaves privadas
     producer_config = {}
@@ -903,6 +996,10 @@ def emitir_factura_sri_background(reference_id, producer_id):
         amount = _firestore_field_value(payment_fields, 'finalPrice')
         if amount in (None, ''):
             amount = _firestore_field_value(payment_fields, 'price')
+        if amount in (None, ''):
+            amount = _firestore_field_value(payment_fields, 'value')
+        if amount in (None, ''):
+            amount = _firestore_field_value(payment_fields, 'amount')
         amount = float(amount)
         if not math.isfinite(amount) or amount <= 0:
             raise ValueError('El pago no tiene un importe válido para facturar.')
@@ -920,6 +1017,7 @@ def emitir_factura_sri_background(reference_id, producer_id):
             'payment_id': reference_id,
             'payment_method': _firestore_field_value(payment_fields, 'paymentMethod') or _firestore_field_value(payment_fields, 'method') or 'otros'
         }
+        comprador_info = _apply_manual_sri_invoice_details(comprador_info, payment_fields)
     except Exception as exc:
         raise RuntimeError('No se pudo verificar los datos del pago para facturar; se reintentará sin enviar XML.') from exc
 
@@ -1025,7 +1123,11 @@ def emitir_factura_sri_background(reference_id, producer_id):
             license_type = _firestore_field_value(payment_fields, 'licenseType', 'basic')
             raw_price = _firestore_field_value(payment_fields, 'finalPrice', '')
             if raw_price in ('', None):
-                raw_price = _firestore_field_value(payment_fields, 'price', '0')
+                raw_price = _firestore_field_value(payment_fields, 'price', '')
+            if raw_price in ('', None):
+                raw_price = _firestore_field_value(payment_fields, 'value', '')
+            if raw_price in ('', None):
+                raw_price = _firestore_field_value(payment_fields, 'amount', '0')
             price = float(raw_price or 0)
             items_para_factura.append({
                 'codigoPrincipal': str(beat_id or 'BEAT')[:25],
@@ -1062,6 +1164,29 @@ def emitir_factura_sri_background(reference_id, producer_id):
         return
         
     payment_id = comprador_info.get('payment_id') if comprador_info else None
+
+    if not comprador_info or comprador_info.get('_manualFiscalDetailsConfirmed') is not True:
+        actualizar_estado_factura_db(
+            payment_id or reference_id, producer_id, 'ERROR_DATOS',
+            error_msg='Completa y confirma los datos fiscales nominativos del comprador en BEATSS antes de emitir.',
+            token=token, ref_code=reference_id
+        )
+        return
+    if not str(comprador_info.get('buyerAddress') or '').strip():
+        actualizar_estado_factura_db(
+            payment_id or reference_id, producer_id, 'ERROR_DATOS',
+            error_msg='Falta la dirección fiscal confirmada del comprador.',
+            token=token, ref_code=reference_id
+        )
+        return
+    try:
+        normalizar_identificacion_comprador(comprador_info.get('buyerDni'), comprador_info.get('buyerName'))
+    except ValueError as exc:
+        actualizar_estado_factura_db(
+            payment_id or reference_id, producer_id, 'ERROR_DATOS',
+            error_msg=str(exc), token=token, ref_code=reference_id
+        )
+        return
 
     # No enviar al SRI una factura con datos fiscales incompletos. El XML
     # puede tener la forma correcta y aun así ser rechazado por un RUC inválido
@@ -1101,7 +1226,7 @@ def emitir_factura_sri_background(reference_id, producer_id):
     secuencial_str = str(secuencial).zfill(9)
     
     # 4. Generar Clave de Acceso
-    fecha_emision_dt = datetime.datetime.now()
+    fecha_emision_dt = sri_invoicing.ecuador_now()
     ambiente = producer_config.get('sriAmbiente', '1')
     serie = f"{producer_config.get('sriEstab', '001')}{producer_config.get('sriPtoEmi', '001')}"
     
@@ -1132,7 +1257,7 @@ def emitir_factura_sri_background(reference_id, producer_id):
         'tipoIdentificacionComprador': buyer_dni_type,
         'razonSocialComprador': buyer_name,
         'identificacionComprador': buyer_dni,
-        'dirComprador': (comprador_info.get('buyerCity') or 'Quito') if comprador_info else 'Quito',
+        'dirComprador': comprador_info.get('buyerAddress') if comprador_info else '',
         'emailComprador': comprador_info.get('buyerEmail', '') if comprador_info else '',
         'formaPago': sri_invoicing.normalizar_forma_pago_sri(comprador_info.get('payment_method'))
     }
@@ -1143,7 +1268,7 @@ def emitir_factura_sri_background(reference_id, producer_id):
             'ruc': producer_config.get('sriRuc', ruc_emisor),
             'razonSocial': producer_config.get('sriRazonSocial', ''),
             'nombreComercial': producer_config.get('sriNombreComercial', ''),
-            'dirMatriz': producer_config.get('sriDirMatriz') or 'Quito - Ecuador',
+            'dirMatriz': producer_config.get('sriDirMatriz') or '',
             'estab': producer_config.get('sriEstab', '001'),
             'ptoEmi': producer_config.get('sriPtoEmi', '001'),
             'ambiente': producer_config.get('sriAmbiente', '1'),
@@ -1162,7 +1287,8 @@ def emitir_factura_sri_background(reference_id, producer_id):
             comprador=comprador,
             items=items_para_factura,
             secuencial=secuencial_str,
-            clave_acceso=clave_acceso
+            clave_acceso=clave_acceso,
+            fecha_emision=fecha_emision_dt
         )
         sri_invoicing.validar_xml_factura_basico(xml_factura)
     except Exception as e:

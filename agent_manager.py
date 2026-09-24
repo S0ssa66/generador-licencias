@@ -150,7 +150,7 @@ OBSIDIAN_ROOT = os.path.realpath(os.path.join(os.path.dirname(PROJECT_ROOT), "Be
 # consumes the sanitized manifest produced by the local monitor instead.
 READ_ROOTS = (PROJECT_ROOT,)
 
-_HIDDEN_DIRS = {".git", "node_modules", ".venv", ".vercel", "dist", ".beatss_memory"}
+_HIDDEN_DIRS = {".git", "node_modules", ".venv", ".vercel", "dist", ".beatss_memory", "__pycache__"}
 _SENSITIVE_BASENAMES = {
     ".env",
     ".env.local",

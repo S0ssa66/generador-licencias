@@ -17,6 +17,9 @@ import {
 
 const firebaseConfig = {
     apiKey: 'AIzaSyDV2GaYmyXXF6cYACk--bQLbAJZhyrng6k',
+    // Este dominio coincide con el redirect URI ya autorizado en el cliente
+    // OAuth de Google. No cambiarlo a beatss.app sin registrar primero
+    // https://beatss.app/__/auth/handler en ese cliente OAuth.
     authDomain: 'licencias-musicales.firebaseapp.com',
     projectId: 'licencias-musicales',
     storageBucket: 'licencias-musicales.firebasestorage.app',

@@ -9,7 +9,7 @@ import { checkStripeCheckoutRateLimit, resetStripeCheckoutRateLimit, getSanitize
 import { checkSriDownloadRateLimit, resetSriDownloadRateLimit, getSanitizedClientIp as getSriDownloadIp } from '../api/_sri_download.js';
 import { checkRetrySriRateLimit, resetRetrySriRateLimit, getSanitizedClientIp as getRetrySriIp } from '../api/payments/retry-sri.js';
 import { checkDriveUploadRateLimit, resetDriveUploadRateLimit, getSanitizedClientIp as getDriveIp } from '../api/gdrive.js';
-import { checkMigrationTicketRateLimit, resetMigrationTicketRateLimit, getSanitizedClientIp as getMigrationIp } from '../api/beatstars-migration.js';
+import { checkMigrationTicketRateLimit, resetMigrationTicketRateLimit, getSanitizedClientIp as getMigrationIp } from '../server-handlers/beatstars-migration.js';
 
 const root = process.cwd();
 
@@ -185,6 +185,6 @@ test('api/beatstars-migration.js aplica rate limiting en emisión de tickets de 
     const mockReq = { headers: { 'x-vercel-forwarded-for': '198.51.100.666' } };
     assert.equal(getMigrationIp(mockReq), '198.51.100.666');
 
-    const content = fs.readFileSync(path.join(root, 'api/beatstars-migration.js'), 'utf8');
+    const content = fs.readFileSync(path.join(root, 'server-handlers/beatstars-migration.js'), 'utf8');
     assert.ok(content.includes('checkMigrationTicketRateLimit(clientIp)'), 'Debe chequear rate limit en createTicket');
 });

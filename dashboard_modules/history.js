@@ -62,6 +62,10 @@ function getLegacyUser() {
     return legacyUser;
 }
 
+function sriRecordId(license) {
+    return String(license?.firestoreId || license?.id || license?.refCode || license?.reference || '').trim();
+}
+
 async function openSriArtifact(url, filename) {
     const token = auth.currentUser ? await auth.currentUser.getIdToken() : '';
     const localHeaders = window.getLocalHeaders ? await window.getLocalHeaders() : {};
@@ -714,10 +718,19 @@ function updateHistoryTable() {
         const sriEstado = lic.sriEstado || '';
         const sriError = lic.sriErrorMensaje || '';
         
-        if (sriEstado === 'AUTORIZADO') {
+        const manualFilesPending = sriEstado === 'ARCHIVOS_MANUALES_REGISTRADOS' && lic.sriManualArtifactsStatus === 'PENDING_OWNER_VERIFICATION';
+        const manualFilesVerified = sriEstado === 'ARCHIVOS_MANUALES_VERIFICADOS' && lic.sriManualArtifactsStatus === 'OWNER_VERIFIED';
+        if (sriEstado === 'AUTORIZADO' || manualFilesPending || manualFilesVerified) {
             const badge = document.createElement('span');
-            badge.className = 'sri-badge autorizado';
-            badge.textContent = currentLang === 'es' ? 'AUTORIZADO' : 'AUTHORIZED';
+            const manualImport = manualFilesPending || manualFilesVerified;
+            badge.className = manualImport ? 'sri-badge pendiente' : 'sri-badge autorizado';
+            badge.textContent = manualFilesPending
+                ? (currentLang === 'es' ? 'ARCHIVOS MANUALES · REVISAR' : 'MANUAL FILES · REVIEW')
+                : manualFilesVerified
+                    ? (currentLang === 'es' ? 'REVISIÓN HUMANA CONFIRMADA' : 'HUMAN REVIEW CONFIRMED')
+                    : (currentLang === 'es' ? 'AUTORIZADO' : 'AUTHORIZED');
+            if (manualFilesPending) badge.title = 'Archivos adjuntados manualmente; confirma autenticidad y datos en SRI.';
+            if (manualFilesVerified) badge.title = 'El titular confirmó la revisión en el portal SRI. BEATSS no validó criptográficamente la firma.';
             sriContainer.appendChild(badge);
             
             const actions = document.createElement('div');
@@ -726,12 +739,12 @@ function updateHistoryTable() {
             // Botón RIDE PDF
             const btnRide = document.createElement('a');
             btnRide.className = 'btn-sri-action';
-            const rideUrl = `/api/payments/download-ride?paymentId=${encodeURIComponent(lic.id || lic.refCode || lic.reference)}&user=${encodeURIComponent(legacyUser)}`;
+            const rideUrl = `/api/payments/download-ride?paymentId=${encodeURIComponent(sriRecordId(lic))}&user=${encodeURIComponent(legacyUser)}`;
             btnRide.href = rideUrl;
             btnRide.addEventListener('click', async (event) => {
                 event.preventDefault();
                 try {
-                    await openSriArtifact(rideUrl, `Factura_${lic.id || lic.refCode || lic.reference}.pdf`);
+                    await openSriArtifact(rideUrl, `Factura_${sriRecordId(lic)}.pdf`);
                 } catch (error) {
                     showToast(`❌ ${error.message}`, true);
                 }
@@ -743,12 +756,12 @@ function updateHistoryTable() {
             // Botón XML
             const btnXml = document.createElement('a');
             btnXml.className = 'btn-sri-action';
-            const xmlUrl = `/api/payments/download-xml?paymentId=${encodeURIComponent(lic.id || lic.refCode || lic.reference)}&user=${encodeURIComponent(legacyUser)}`;
+            const xmlUrl = `/api/payments/download-xml?paymentId=${encodeURIComponent(sriRecordId(lic))}&user=${encodeURIComponent(legacyUser)}`;
             btnXml.href = xmlUrl;
             btnXml.addEventListener('click', async (event) => {
                 event.preventDefault();
                 try {
-                    await openSriArtifact(xmlUrl, `Factura_${lic.id || lic.refCode || lic.reference}.xml`);
+                    await openSriArtifact(xmlUrl, `Factura_${sriRecordId(lic)}.xml`);
                 } catch (error) {
                     showToast(`❌ ${error.message}`, true);
                 }
@@ -791,24 +804,29 @@ function updateHistoryTable() {
                 ? 'La factura ya fue autorizada; falta recuperar sus archivos. No vuelvas a emitirla.'
                 : 'Verifica la operación y su clave de acceso antes de cualquier nuevo intento.';
             sriContainer.appendChild(badge);
-        } else if (['NO_CONFIGURADO', 'ERROR_COLA'].includes(sriEstado) || sriEstado.startsWith('ERROR_') || sriEstado.startsWith('RECHAZADO_')) {
+        } else if (sriEstado === 'NO_CONFIGURADO') {
+            const badge = document.createElement('span');
+            badge.className = 'sri-badge fallido tooltip-left';
+            badge.textContent = currentLang === 'es' ? 'CONFIGURACIÓN PENDIENTE' : 'SETUP REQUIRED';
+            badge.title = sriError || 'Completa la configuración SRI antes de solicitar la emisión.';
+            sriContainer.appendChild(badge);
+            const actions = document.createElement('div');
+            actions.className = 'sri-actions';
+            const btnRetry = document.createElement('button');
+            btnRetry.className = 'btn-sri-action btn-sri-retry';
+            btnRetry.dataset.id = lic.firestoreId || lic.id || lic.refCode;
+            btnRetry.textContent = currentLang === 'es' ? 'Solicitar' : 'Request';
+            actions.appendChild(btnRetry);
+            sriContainer.appendChild(actions);
+        } else if (sriEstado === 'ERROR_COLA' || sriEstado.startsWith('ERROR_') || sriEstado.startsWith('RECHAZADO_')) {
             const badge = document.createElement('span');
             badge.className = 'sri-badge fallido tooltip-left';
             badge.textContent = currentLang === 'es' ? 'FALLIDO' : 'FAILED';
             badge.title = sriError || sriEstado;
             sriContainer.appendChild(badge);
-            
-            const actions = document.createElement('div');
-            actions.className = 'sri-actions';
-            
-            const btnRetry = document.createElement('button');
-            btnRetry.className = 'btn-sri-action btn-sri-retry';
-            btnRetry.dataset.id = lic.id || lic.refCode;
-            btnRetry.title = currentLang === 'es' ? 'Reemitir Factura' : 'Reissue Invoice';
-            btnRetry.innerHTML = `<i data-lucide="refresh-cw"></i> ${currentLang === 'es' ? 'Reemitir' : 'Retry'}`;
-            actions.appendChild(btnRetry);
-            
-            sriContainer.appendChild(actions);
+
+            // Después de un error podría existir una clave ya recibida por el
+            // SRI. No ofrecer otro envío hasta conciliar ese comprobante.
         } else {
             const badge = document.createElement('span');
             badge.className = 'sri-badge no-emitida';
@@ -820,9 +838,9 @@ function updateHistoryTable() {
             
             const btnRetry = document.createElement('button');
             btnRetry.className = 'btn-sri-action btn-sri-retry';
-            btnRetry.dataset.id = lic.id || lic.refCode;
-            btnRetry.title = currentLang === 'es' ? 'Emitir Factura' : 'Issue Invoice';
-            btnRetry.innerHTML = `<i data-lucide="plus"></i> ${currentLang === 'es' ? 'Generar' : 'Generate'}`;
+            btnRetry.dataset.id = lic.firestoreId || lic.id || lic.refCode;
+            btnRetry.title = currentLang === 'es' ? 'Solicitar emisión fiscal manual' : 'Request manual fiscal issuance';
+            btnRetry.innerHTML = `<i data-lucide="plus"></i> ${currentLang === 'es' ? 'Solicitar' : 'Request'}`;
             actions.appendChild(btnRetry);
             
             sriContainer.appendChild(actions);
@@ -944,19 +962,19 @@ function setupHistoryRowEvents() {
             const paymentId = btn.dataset.id;
             const legacyUser = getLegacyUser();
             const producerId = window.currentUser || legacyUser;
-            const lic = window.licenseHistory.find(l => (l.id && l.id === paymentId) || (l.refCode && l.refCode === paymentId));
+            const lic = window.licenseHistory.find(l => (l.id && l.id === paymentId) || (l.firestoreId && l.firestoreId === paymentId) || (l.refCode && l.refCode === paymentId));
             if (lic?.providerLivemode === false || /^cs_test_/i.test(String(lic?.reference || lic?.refCode || paymentId))) {
                 showToast('Una compra de prueba no puede generar factura SRI.', true);
                 return;
             }
-            if (!window.confirm(`¿Confirmas la emisión fiscal manual de ${lic?.beatName || 'este beat'} para ${lic?.buyerName || 'el comprador'}? Verifica antes el pago aprobado y los datos fiscales.`)) return;
+            if (!window.confirm(`¿Solicitas la emisión fiscal de ${lic?.beatName || 'este beat'} para ${lic?.buyerName || 'el comprador'}? Esto sólo crea el trabajo; sin ejecutor activo tendrás que procesarlo puntualmente. Verifica antes el pago aprobado y los datos fiscales.`)) return;
             
             btn.disabled = true;
             btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" style="width: 12px; height: 12px; margin-right: 4px;"></i>...`;
             
             const initMsg = currentLang === 'es'
-                ? 'Iniciando proceso de facturación con el SRI...'
-                : 'Starting billing process with the SRI...';
+                ? 'Registrando solicitud fiscal...'
+                : 'Registering fiscal request...';
             showToast(initMsg);
             
             try {
@@ -977,14 +995,14 @@ function setupHistoryRowEvents() {
                 
                 const result = await response.json();
                 if (response.ok) {
-                    const successMsg = currentLang === 'es'
-                        ? 'Facturación iniciada. El estado se actualizará en segundos.'
-                        : 'Billing started. The status will update in a few seconds.';
+                    const successMsg = result.message || (currentLang === 'es'
+                        ? 'Solicitud registrada; aún no es una factura autorizada.'
+                        : 'Request registered; not yet an authorized invoice.');
                     showToast(successMsg);
                     
                     // El comprobante sólo queda en cola. “Pendiente de autorización”
                     // se reserva para después de que el SRI reciba el XML.
-                    const localLic = window.licenseHistory.find(l => (l.id && l.id === paymentId) || (l.refCode && l.refCode === paymentId));
+                    const localLic = window.licenseHistory.find(l => (l.id && l.id === paymentId) || (l.firestoreId && l.firestoreId === paymentId) || (l.refCode && l.refCode === paymentId));
                     if (localLic) {
                         localLic.sriEstado = 'EN_COLA_EMISION';
                         localLic.sriErrorMensaje = '';
@@ -992,12 +1010,13 @@ function setupHistoryRowEvents() {
                     }
                     
                     // Polling para actualizar el estado del SRI de forma fluida
+                    if (result.status === 'WAITING_FOR_OPERATOR') return;
                     let pollCount = 0;
                     const intervalId = setInterval(async () => {
                         pollCount++;
                         await reloadHistoryFromLocalServer();
                         
-                        const currentLic = window.licenseHistory.find(l => (l.id && l.id === paymentId) || (l.refCode && l.refCode === paymentId));
+                        const currentLic = window.licenseHistory.find(l => (l.id && l.id === paymentId) || (l.firestoreId && l.firestoreId === paymentId) || (l.refCode && l.refCode === paymentId));
                         if (!currentLic || currentLic.sriEstado === 'AUTORIZADO' || (currentLic.sriEstado && !['EN_COLA_EMISION', 'EN_PROCESO', 'PENDIENTE_AUTORIZACION', 'CONTINGENCIA'].includes(currentLic.sriEstado) && (currentLic.sriEstado.startsWith('ERROR_') || currentLic.sriEstado.startsWith('RECHAZADO_'))) || pollCount >= 10) {
                             clearInterval(intervalId);
                         }

@@ -1,5 +1,47 @@
 # Tareas de Ejecución
 
+## Emisión SRI manual por venta desde BeatSS — IMPLEMENTADO Y PUBLICADO (2026-09-24)
+
+- [x] Antes de encolar una factura manual nueva, solicitar y validar la ficha fiscal explícita del comprador, vinculada únicamente al pago elegido.
+- [x] Aceptar Consumidor Final sólo con confirmación expresa y pago total positivo de hasta USD 50; bloquear solicitudes heredadas sin datos para conciliación, sin reenvío automático.
+- [x] Aplicar al XML la ficha confirmada y verificar identidad/dirección antes de reservar secuencial o contactar al SRI.
+- [x] Publicar esta actualización: Vercel `dpl_9W8MKjetf47RUptAqrPiz51nkaT7` quedó `READY` en producción; alias beatss.app y bundle nuevo de Facturador comprobados.
+
+- [x] Conservar el motor fiscal existente, sin añadir otro proyecto de GitHub ni ejecutar un worker permanente.
+- [x] Permitir que un pago aprobado quede en cola aunque el ejecutor esté desconectado, indicando que todavía no es una factura.
+- [x] Añadir inspección de sólo lectura y ejecución puntual por ID, con confirmación explícita y bloqueo de ambiente.
+- [x] Evitar que un intento puntual publique un heartbeat engañoso o procese otras ventas.
+- [x] Bloquear reemisión desde la interfaz cuando un error requiera conciliación.
+- [x] Añadir al Facturador SRI una solicitud de emisión por operación, sólo tras confirmación explícita y en ambiente de producción.
+- [x] Presentar la emisión desde BEATSS como flujo principal por fila y mostrar el requisito pendiente (pago, ambiente o firma) en vez de ocultar la acción sin explicación; el worker permanente no es requisito para una emisión puntual autenticada.
+- [x] Mantener visible la solicitud durable si falla el ejecutor puntual y permitir continuar la misma venta; bloquear reintentos desde la interfaz cuando el estado exige conciliación o sigue en proceso.
+- [x] Conectar la acción de la fila con un endpoint autenticado que procesa únicamente el pago seleccionado y su solicitud manual; no recorre la cola global.
+- [x] Permitir la emisión puntual desde la web sin exigir un worker permanente, manteniendo clave/reserva/estado durables y evitando reenvío SOAP ciego si el SRI deja autorización pendiente.
+- [x] Mantener la importación XML/RIDE como flujo alternativo para facturas emitidas manualmente fuera de BEATSS; no confundir archivos importados con una factura emitida por el motor.
+- [x] Consolidar las rutas BeatStars/API para conservar el límite de 12 funciones Vercel Hobby.
+- [x] Confirmar que `api/sri-issue.py` sigue la convención documentada por Vercel: `handler` deriva de `BaseHTTPRequestHandler`, `requirements.txt` define dependencias y `maxDuration` se configura en `vercel.json`.
+- [x] Permitir adjuntar a una venta el XML autorizado y RIDE PDF de la emisión manual, almacenarlos en Storage privado y descargarlos con sesión.
+- [x] Mantener los archivos subidos como `ARCHIVOS_MANUALES_REGISTRADOS`, separado de `AUTORIZADO` del motor BEATSS.
+- [x] Excluir sandbox, exigir propietario/registro existente, cotejar emisor, comprador cuando consta, total y claves entre autorización/XML, además de tamaño/tipo básico.
+- [x] Permitir al productor registrar la revisión hecha en el portal SRI, con actor/hora e integridad de archivos; mantener un estado separado de `AUTORIZADO` y bloquear reemplazo/reemisión.
+- [x] Armar cada emisión Live sólo cuando el productor confirma una venta concreta; el worker persistente ignora trabajos antiguos/no seleccionados y la cola SQLite coteja esa selección antes de consultar o reintentar en SRI.
+- [ ] Validar una importación con comprobantes oficiales y comprobar visualmente el contenido del RIDE; BeatSS no verifica firmas criptográficas.
+- [x] Mantener los límites de ambiente en el worker persistente cuando se use; la emisión puntual autenticada de una venta elegida no depende de su heartbeat.
+- [ ] Validar en ambiente SRI de pruebas: recepción, autorización, XML/RIDE y descargas con un pago controlado.
+- [x] Confirmar por el código y pruebas que la emisión puntual web no necesita un proceso/worker permanente; la autenticación y confirmación se verifican por cada solicitud.
+- [x] Añadir una prueba integrada local, con Firestore/SRI simulados, que recorre una venta seleccionada hasta `DONE` y verifica que no procesa cola global ni publica heartbeat.
+- [ ] Desplegar un worker persistente sólo si luego se desea procesar una cola asíncrona; no es requisito para la operación manual por venta.
+- [x] Generar el RIDE en directorio temporal escribible cuando una función serverless recibe autorización SRI.
+- [x] Usar una única fecha/hora de Ecuador en XML, clave fiscal y timestamp de firma aun con servidor UTC.
+- [x] Mantener zona Ecuador continental UTC−05:00 como fallback cuando el runtime no tenga tzdb.
+- [ ] Validar importación y descargas con archivos oficiales, y publicar sólo tras autorización expresa.
+- [x] Validar runtime Python 3.12 y recuento con Vercel CLI 59.23.2: build preview local exitoso, 12 funciones, HTML gzip 61.89 kB (<=65 kB).
+- [x] Excluir del bundle Python datos/artefactos locales no runtime mediante `functions.excludeFiles` y conservar `public/logo.png` con `includeFiles`; comprobar que el árbol `.migration` y `.env` no entren al bundle.
+- [x] Confirmar el plan vigente de la cuenta Vercel: el equipo visible está en Hobby; por sus términos el uso comercial requiere Pro/Enterprise. No desplegar a Hobby.
+- [x] Publicar con autorización expresa y verificar `READY`, alias, rutas públicas y respuesta del webhook a método GET/HEAD no admitido.
+- [x] Alinear en la ayuda del Facturador la emisión manual puntual sin worker permanente; proteger la explicación con una prueba de regresión.
+- [x] Alinear `docs/30_SRI/README.md` con el código: emisión web puntual sin heartbeat, seguimiento asíncrono opcional y XML/RIDE en Storage privado.
+
 ## Paso 114: Publicar y reenviar licencia segura de Wow — COMPLETADO
 
 - [x] Publicar la ruta canónica de entrega segura.
@@ -478,6 +520,14 @@
   - [x] Pasar 97/97 pruebas Node, 30/30 Python, seguridad, build, rendimiento y `diff --check`
   - [x] Publicar Vercel `dpl_7FbhaDyYMUT9LGYVo7v5tvNnmDrY` y reglas Firestore/Storage
   - [x] Verificar portada, catálogo y acceso en 1440×1000 y 390×844 sin overflow ni errores de consola
+
+- [x] Paso 95.1: Dejar la facturación SRI en modo manual bajo demanda
+  - [x] Bloquear la cola automática aunque exista una preferencia heredada
+  - [x] Mantener las ventas nuevas como “Sin emitir” hasta una decisión expresa
+  - [x] Preparar una ficha local con datos confirmados y campos faltantes visibles
+  - [x] Enlazar la herramienta web oficial y gratuita mantenida por el SRI
+  - [x] Evitar escrituras en Firestore o contactos con el SRI al preparar datos
+  - [ ] Publicar únicamente después de una nueva autorización explícita
 
 - [x] Paso 96: Recuperar la vista previa del contrato
   - [x] Confirmar que la hoja vacia era causada por `activeTemplates` fuera del alcance de `editor.js`

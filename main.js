@@ -1698,7 +1698,7 @@ async function loadProducerConfig() {
     document.getElementById('cfg-sri-ruc').value = producerConfig.sriRuc || "";
     document.getElementById('cfg-sri-razon-social').value = producerConfig.sriRazonSocial || "";
     document.getElementById('cfg-sri-nombre-comercial').value = producerConfig.sriNombreComercial || "";
-    document.getElementById('cfg-sri-dir-matriz').value = producerConfig.sriDirMatriz || "Quito - Ecuador";
+    document.getElementById('cfg-sri-dir-matriz').value = producerConfig.sriDirMatriz || "";
     document.getElementById('cfg-sri-estab').value = producerConfig.sriEstab || "001";
     document.getElementById('cfg-sri-pto-emi').value = producerConfig.sriPtoEmi || "001";
     document.getElementById('cfg-sri-ambiente').value = producerConfig.sriAmbiente || "1";
@@ -1725,7 +1725,7 @@ async function loadProducerConfig() {
         if (producerConfig.sriSignatureConfigured === true) {
             p12Status.innerHTML = '✅ <strong style="color: #4ade80;">Firma electrónica protegida y configurada.</strong> Puedes subir otra para reemplazarla; la actual no se descarga al navegador.';
         } else {
-            p12Status.innerHTML = 'Firma electrónica (.p12 / .pfx) no cargada. Sube tu archivo para emitir facturas digitales oficiales.';
+            p12Status.innerHTML = 'Firma electrónica (.p12 / .pfx) no cargada. Es necesaria para que BEATSS firme la factura individual que selecciones.';
         }
     }
 
@@ -1990,7 +1990,7 @@ function validateSriProducerConfig(config) {
         'sriRuc', 'sriRazonSocial', 'sriNombreComercial',
         'sriRucProveedor', ...secretFields
     ].some((key) => value(key)) ||
-        (value('sriDirMatriz') !== '' && value('sriDirMatriz') !== 'Quito - Ecuador') ||
+        value('sriDirMatriz') !== '' ||
         value('sriEstab') !== '' && value('sriEstab') !== '001' ||
         value('sriPtoEmi') !== '' && value('sriPtoEmi') !== '001' ||
         value('sriAmbiente') !== '' && value('sriAmbiente') !== '1' ||
@@ -4492,7 +4492,17 @@ function handleInitialRouting() {
         window.showAppView('store', { producer: routeProducerAka || producerAka }, false);
     } else if (workspaceTab) {
         const canonicalPath = workspacePathForTab(workspaceTab);
-        if (canonicalPath && pathname !== canonicalPath) {
+        if (urlParams.get('session') === 'expired') {
+            // El destino sólo contiene una ruta interna ya validada por el
+            // router. Retira el marcador al restablecer el área autenticada.
+            urlParams.delete('session');
+            const remainingQuery = urlParams.toString();
+            window.history.replaceState(
+                { view: 'home', tabId: workspaceTab },
+                '',
+                `${canonicalPath}${remainingQuery ? `?${remainingQuery}` : ''}${window.location.hash}`
+            );
+        } else if (canonicalPath && pathname !== canonicalPath) {
             window.history.replaceState(
                 { view: 'home', tabId: workspaceTab },
                 '',

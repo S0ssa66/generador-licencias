@@ -54,7 +54,7 @@ test('bootstrap, Studio y Vercel comparten el enrutamiento privado', () => {
     assert.match(bootstrap, /const privateRouteTab = workspaceTabForPath\(path\)/);
     assert.match(bootstrap, /canonicalPrivatePath/);
     assert.match(bootstrap, /window\.history\.replaceState/);
-    assert.match(auth, /import \{ workspaceTabForPath \} from '\.\/workspace-routes\.js'/);
+    assert.match(auth, /import \{ workspacePathForTab, workspaceTabForPath \} from '\.\/workspace-routes\.js'/);
     assert.match(auth, /Boolean\(workspaceTabForPath\(currentPath\)\)/);
     assert.match(main, /window\.syncBeatssPathForTab\(tabId\)/);
     assert.match(main, /workspaceTabForPath\(pathname\)/);

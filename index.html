@@ -44,7 +44,7 @@
     </style>
     <title>Beatss</title>
     <!-- The active visual system imports only Plus Jakarta Sans and IBM Plex Mono. -->
-    <script type="module" src="/app-bootstrap.js?v=public-purchase-1"></script>
+    <script type="module" src="/app-bootstrap.js?v=license-guide-1"></script>
     <!-- Google Identity Services se carga únicamente al abrir una vinculación de Drive. -->
     <!-- PayPal SDK loaded dynamically -->
     <link rel="manifest" href="/manifest.json">
@@ -1237,12 +1237,13 @@
                     <div class="sri-facturador-head">
                         <div>
                             <div class="sri-facturador-kicker">BEATSS / CONTROL FISCAL</div>
-                            <h1>Facturador SRI</h1>
-                            <p>Gestiona facturas electrónicas vinculadas a tus ventas de beats y licencias.</p>
+                            <h1>Control fiscal manual</h1>
+                            <p>Escoge la venta, emite su comprobante en el SRI oficial y asocia aquí los archivos autorizados.</p>
                         </div>
                         <div class="sri-facturador-head-actions">
                             <button type="button" class="sri-facturador-btn" id="sri-invoicing-refresh"><i data-lucide="refresh-cw"></i> Actualizar</button>
-                            <button type="button" class="sri-facturador-btn primary" id="sri-invoicing-settings"><i data-lucide="settings-2"></i> Configurar SRI</button>
+                            <button type="button" class="sri-facturador-btn primary" id="sri-open-official"><i data-lucide="external-link"></i> Abrir Facturador SRI</button>
+                            <button type="button" class="sri-facturador-btn" id="sri-invoicing-settings"><i data-lucide="settings-2"></i> Datos fiscales</button>
                         </div>
                     </div>
 
@@ -1258,7 +1259,7 @@
                     <div class="sri-facturador-grid">
                         <section class="sri-facturador-card" aria-labelledby="sri-invoicing-list-title">
                             <div class="sri-facturador-card-head">
-                                <div><h2 id="sri-invoicing-list-title">Registro de comprobantes</h2><p>Cada fila conserva el estado de emisión y sus archivos autorizados.</p></div>
+                                <div><h2 id="sri-invoicing-list-title">Registro de comprobantes</h2><p>Elige una venta fiscal para emitirla o asociar sus archivos. Las compras de prueba se muestran por separado y no cuentan como facturas.</p></div>
                             </div>
                             <div class="sri-facturador-filters">
                                 <input type="search" id="sri-invoicing-search" placeholder="Buscar referencia, beat o comprador…" aria-label="Buscar comprobantes">
@@ -1268,6 +1269,7 @@
                                     <option value="pending">En proceso</option>
                                     <option value="failed">Requieren revisión</option>
                                     <option value="none">Sin emitir</option>
+                                    <option value="sandbox">Compras de prueba · no fiscales</option>
                                 </select>
                             </div>
                             <div class="sri-facturador-table-wrap">
@@ -1278,13 +1280,13 @@
                             </div>
                         </section>
                         <aside class="sri-facturador-card sri-facturador-help">
-                            <h3>Flujo de BEATSS</h3>
+                            <h3>Emite sólo lo que selecciones</h3>
                             <ul>
-                                <li>La cola automática exige pago Live, solicitud de factura y tu activación previa.</li>
-                                <li>Las compras de prueba y las ventas sin solicitud fiscal permanecen sin emitir.</li>
-                                <li>BEATSS genera y firma el XML con tu certificado.</li>
-                                <li>El SRI devuelve autorización o el comprobante queda en contingencia.</li>
-                                <li>Al autorizarse, puedes descargar RIDE y XML.</li>
+                                <li>En la fila de la venta confirmada, pulsa “Emitir esta venta en SRI”.</li>
+                                <li>Revisa pago, comprador, concepto, fecha e impuestos antes de confirmar.</li>
+                                <li>BEATSS genera, firma y transmite sólo esa factura; nunca factura automáticamente cada cobro.</li>
+                                <li>La emisión manual puntual se procesa al confirmar esta venta desde BeatSS y no depende de un worker permanente. El worker sólo sería necesario para una cola automática asíncrona futura.</li>
+                                <li>Si emitiste una factura fuera de BEATSS, puedes asociar su XML y RIDE; quedarán identificados como archivos pendientes de tu revisión.</li>
                             </ul>
                             <div class="sri-facturador-privacy"><strong>Privacidad</strong><p>El RUC se muestra enmascarado. El certificado y su contraseña permanecen en configuración privada y no se guardan en el catálogo público.</p></div>
                         </aside>
@@ -2919,12 +2921,11 @@
                   </div>
                   
                       <div class="input-group" style="margin-top: 8px; border: 1px dashed var(--border-color); padding: 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.01); box-sizing: border-box;">
-                      <label style="display: flex; align-items: flex-start; gap: 8px; margin: 0 0 12px; font-size: 12px; line-height: 1.45;">
-                          <input type="checkbox" id="cfg-sri-auto-queue" style="margin-top: 2px;">
-                          <span><strong>Facturar automáticamente sólo cuando el comprador solicite factura.</strong><br>Desactivado por defecto: las ventas quedan como “No emitida” hasta que decidas facturarlas.</span>
-                      </label>
-                      <label style="font-weight: 600; margin-bottom: 4px;">Firma Electrónica (.p12 / .pfx)</label>
-                      <div id="cfg-sri-p12-status" style="font-size: 11px; color: #8a91a6; margin-bottom: 8px; line-height: 1.4;">Sube tu archivo de firma para emitir facturas digitales oficiales.</div>
+                      <div style="margin: 0 0 12px; font-size: 12px; line-height: 1.45;">
+                          <strong>Emisión manual por operación.</strong><br>Elige una venta en el Facturador BEATSS y confirma si quieres emitirla. No se crea una factura automáticamente cuando recibes un pago.
+                      </div>
+                      <label style="font-weight: 600; margin-bottom: 4px;">Firma Electrónica (.p12 / .pfx) · emisión manual desde BEATSS</label>
+                      <div id="cfg-sri-p12-status" style="font-size: 11px; color: #8a91a6; margin-bottom: 8px; line-height: 1.4;">Necesaria para que BEATSS firme y envíe al SRI la factura individual que confirmes. Se conserva en configuración privada.</div>
                       <button type="button" id="btn-upload-sri-p12" class="btn btn-secondary" style="width: 100%; height: 36px; font-size: 12px; justify-content: center; gap: 4px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: #fff; border-radius: 8px; cursor: pointer;">
                           <i data-lucide="key-round" style="width: 14px; height: 14px;"></i> Subir Archivo de Firma (.p12)
                       </button>
@@ -3460,6 +3461,11 @@
     <div id="public-purchase-view" aria-hidden="true" inert style="display: none;"></div>
 
     <!-- ======================================================= -->
+    <!-- GUÍA PÚBLICA DE LICENCIAS PARA COMPRADORES             -->
+    <!-- ======================================================= -->
+    <div id="public-license-guide-view" aria-hidden="true" inert style="display: none;"></div>
+
+    <!-- ======================================================= -->
     <!-- PORTAL DE DESCARGAS DEL COMPRADOR                       -->
     <!-- ======================================================= -->
     <div id="buyer-download-view" aria-hidden="true" inert style="display: none;" class="min-h-screen bg-[radial-gradient(circle_at_top,_#0b0e14_0%,_#05070a_100%)] text-on-surface font-body-md py-12 px-6">
@@ -3553,6 +3559,7 @@
                         <span><i data-lucide="shield-check" aria-hidden="true"></i> Pago seguro</span>
                         <span><i data-lucide="check-circle-2" aria-hidden="true"></i> Entrega digital</span>
                     </div>
+                    <a class="store-license-guide-link" href="/guia-licencias">Comparar licencias antes de comprar <span aria-hidden="true">→</span></a>
                 </div>
 
                 <aside class="store-identity-card" aria-label="Información del productor">
