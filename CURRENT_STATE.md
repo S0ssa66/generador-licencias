@@ -1,5 +1,24 @@
 # Estado operativo actual de BEATSS
 
+## Desbloquear venta Wow y ventas pendientes sin clave fiscal reservada — DONE (2026-09-24)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Antigravity`.
+- Fecha: `2026-09-24`.
+- Objetivo: Desbloquear la venta Wow (y cualquier venta con estado pendiente antiguo donde no exista clave fiscal ni trabajo reservado) para permitir su emisión manual directa desde el Facturador SRI de BeatSS.
+- Cambios aplicados:
+  1. `server-handlers/sri-retry.js`: Añadida la acción `action: 'unblock'`. Si una venta está en estado pendiente pero no tiene una clave fiscal reservada en `sriReservations` ni comprobante emitido, el productor puede desbloquearla de forma segura. El backend limpia el estado pendiente de Firestore (`sriEstado: null`), elimina trabajos huérfanos y devuelve `SIN_EMITIR`.
+  2. `dashboard_modules/invoicing.js`:
+     - Añadido el botón "Desbloquear para emitir" en filas pendientes sin clave reservada.
+     - Añadida la función `unblockSelectedSriInvoice` con confirmación expresa que ejecuta el desbloqueo y re-renderiza la fila como `SIN EMITIR`, dejando listo el botón "Emitir esta venta en SRI".
+     - Intercepción automática del error 409 cuando la reconciliación informa que no hay clave previa, ofreciendo desbloquear la venta en el acto.
+- Pruebas y verificación:
+  - Node tests: 295/295 passed.
+  - Python tests: 77/77 passed.
+  - Build & Performance: `npm run build` aprobado (HTML gzip 62.48 kB).
+  - Seguridad: `npm run security:check` PASSED.
+- Siguiente acción: Sossa puede recargar `https://beatss.app/facturacion` y hacer clic en "Desbloquear para emitir" (o en "Consultar / conciliar en SRI" para aceptar el desbloqueo automático) en la venta Wow, y luego pulsar "Emitir esta venta en SRI".
+
 ## Auditoría fiscal integral del SRI y ajustes normativos en RIDE y validación — DONE (2026-09-24)
 
 - Estado: `DONE`; lock liberado.
