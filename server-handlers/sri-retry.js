@@ -88,10 +88,12 @@ export default async function handler(req, res) {
             return res.status(400).json({
                 error: action === 'reconcile'
                     ? 'Confirma expresamente la consulta de la clave fiscal existente.'
+                    : action === 'unblock'
+                    ? 'Confirma expresamente el desbloqueo de esta venta.'
                     : 'Confirma expresamente la emisión fiscal antes de encolarla.'
             });
         }
-        if (!['issue', 'reconcile'].includes(action)) return res.status(400).json({ error: 'Acción fiscal inválida.' });
+        if (!['issue', 'reconcile', 'unblock'].includes(action)) return res.status(400).json({ error: 'Acción fiscal inválida.' });
         if (!/^[A-Za-z0-9_-]{3,160}$/.test(paymentId)) return res.status(400).json({ error: 'ID de pago inválido' });
 
         initFirebaseAdmin();
@@ -102,7 +104,7 @@ export default async function handler(req, res) {
         }
         const currentStatus = invoice.data.sriEstado || '';
         const isReconciliation = RECONCILIATION_STATES.has(String(currentStatus).toUpperCase());
-        if (isReconciliation && action !== 'reconcile') {
+        if (isReconciliation && action !== 'reconcile' && action !== 'unblock') {
             return res.status(409).json({ error: 'Esta venta ya tiene un estado fiscal pendiente. Consulta su clave existente; no solicites otra emisión.' });
         }
         if (action === 'reconcile' && !isReconciliation) {
@@ -126,6 +128,38 @@ export default async function handler(req, res) {
         if (!invoice.data.producerId || invoice.data.producerId !== producerId) {
             return res.status(409).json({ error: 'El pago no tiene un productor válido.' });
         }
+        if (action === 'unblock') {
+            const reservationSnapshot = await db.collection('sriReservations').doc(paymentId).get();
+            const reservation = reservationSnapshot.exists ? reservationSnapshot.data() || {} : {};
+            if (reservationSnapshot.exists && reservation.accessKey) {
+                return res.status(409).json({
+                    error: 'Esta venta ya tiene una clave fiscal reservada en el sistema. No se puede desbloquear; consúltala en el SRI.'
+                });
+            }
+            const updateFields = {
+                sriEstado: null,
+                sriErrorMensaje: null,
+                sriUltimoIntento: null,
+                sriUnblockedAt: new Date().toISOString(),
+                sriUnblockedBy: decoded.uid,
+                sriUnblockedReason: 'owner_unblocked_after_sri_verification'
+            };
+            await invoice.ref.set(updateFields, { merge: true });
+            if (invoice.ref.id !== paymentId) {
+                await db.collection('payments').doc(paymentId).set(updateFields, { merge: true }).catch(() => {});
+            }
+            if (decoded?.uid) {
+                await db.collection('users').doc(decoded.uid).collection('licencias').doc(paymentId).set(updateFields, { merge: true }).catch(() => {});
+            }
+            await db.collection('sriJobs').doc(paymentId).delete().catch(() => {});
+
+            return res.status(200).json({
+                unblocked: true,
+                status: 'SIN_EMITIR',
+                message: 'Venta desbloqueada con éxito. Ya puedes revisar sus datos y emitirla al SRI.'
+            });
+        }
+
         const pendingStates = new Set(['EN_COLA_EMISION', 'EN_PROCESO', 'PENDIENTE', 'PENDIENTE_AUTORIZACION', 'CONTINGENCIA', 'PENDING_AUTORIZACION']);
         const storedInvoiceDetails = invoice.data.sriInvoiceDetails;
         let invoiceDetails = null;

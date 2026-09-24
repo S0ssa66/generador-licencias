@@ -416,6 +416,41 @@ async function registerManualPayment(invoice, button) {
     }
 }
 
+async function unblockSelectedSriInvoice(invoice, button) {
+    const paymentId = invoiceKey(invoice);
+    if (!paymentId) return;
+    const confirmed = window.confirm(
+        `DESBLOQUEAR VENTA PARA EMISIÓN FISCAL\n\nBeat: ${invoice.beatName || 'Beat'}\nComprador: ${invoice.buyerName || 'Cliente'}\nReferencia: ${invoice.refCode || invoice.reference || paymentId}\n\nConfirma sólo si revisaste en el portal del SRI y comprobaste que NO existe ninguna factura previa emitida para esta venta.\n\nBeatSS verificará que no exista una clave reservada en el sistema y restablecerá el estado para que puedas emitir la factura. ¿Confirmas desbloquear?`
+    );
+    if (!confirmed) return;
+    const originalText = button?.textContent || 'Desbloquear';
+    if (button) {
+        button.disabled = true;
+        button.textContent = 'Desbloqueando…';
+    }
+    try {
+        const authHeaders = await sriHeaders(true);
+        const response = await fetch('/api/payments/retry-sri', {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({ paymentId, action: 'unblock', confirmManualIssue: true })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || 'No se pudo desbloquear la venta.');
+        invoice.sriEstado = '';
+        invoice.sriClaveAcceso = '';
+        invoice.sriErrorMensaje = '';
+        renderSriInvoicingView();
+        window.showToast?.('✅ Venta desbloqueada. Ya puedes hacer clic en "Emitir esta venta en SRI".');
+    } catch (error) {
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+        window.showToast?.(`❌ ${error.message}`, true);
+    }
+}
+
 async function requestSelectedSriInvoice(invoice, button) {
     const paymentId = invoiceKey(invoice);
     if (!paymentId) return;
@@ -459,7 +494,18 @@ async function requestSelectedSriInvoice(invoice, button) {
             body: JSON.stringify({ paymentId, producerId: window.currentUser, action: fiscalAction, confirmManualIssue: true, invoiceDetails })
         });
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || 'No se pudo solicitar la emisión SRI.');
+        if (!response.ok) {
+            if (response.status === 409 && payload.error?.includes('No hay un trabajo y una clave fiscal previa')) {
+                const wantUnblock = window.confirm(
+                    `${payload.error}\n\n¿Confirmaste en el SRI que no existe factura y deseas desbloquear esta venta ahora para emitirla desde BeatSS?`
+                );
+                if (wantUnblock) {
+                    await unblockSelectedSriInvoice(invoice, button);
+                    return;
+                }
+            }
+            throw new Error(payload.error || 'No se pudo solicitar la emisión SRI.');
+        }
         // El primer endpoint deja un trabajo durable en Firestore. Si la
         // invocación puntual falla después, no ocultes la cola ni invites a
         // comenzar una factura nueva: la misma fila podrá continuarla.
@@ -607,7 +653,7 @@ export function renderSriInvoicingView() {
                 : requiresReconciliation
                     ? `<span class="sri-facturador-tracking">Conciliar en el SRI antes de cualquier reintento</span>`
             : stateClass(status) === 'pending'
-                ? `<span class="sri-facturador-tracking">Consulta únicamente una clave fiscal ya reservada; no se genera otra factura.</span><button type="button" data-sri-action="issue">Consultar / conciliar en SRI</button>`
+                ? `<span class="sri-facturador-tracking">Consulta únicamente una clave fiscal ya reservada; no se genera otra factura.</span><button type="button" data-sri-action="issue">Consultar / conciliar en SRI</button>${!item.sriClaveAcceso ? '<button type="button" data-sri-action="unblock">Desbloquear para emitir</button>' : ''}`
                 : `<button type="button" data-sri-action="prepare">Ver datos de factura</button><button type="button" data-sri-action="import">Asociar XML + RIDE</button>${directIssuanceAction(item, { environment, config, isSandbox })}`;
         const manualNote = item.manualPaymentAttestation?.source === 'owner_manual_attestation'
             ? `<small>Cobro ${safeText(item.manualPaymentAttestation.method || item.paymentMethod || 'manual')} confirmado por el productor; registro auditable, todavía no es factura.</small>`
@@ -634,6 +680,8 @@ export function renderSriInvoicingView() {
         issueButton?.addEventListener('click', () => requestSelectedSriInvoice(item, issueButton));
         const attestButton = row.querySelector('[data-sri-action="attest-payment"]');
         attestButton?.addEventListener('click', () => registerManualPayment(item, attestButton));
+        const unblockButton = row.querySelector('[data-sri-action="unblock"]');
+        unblockButton?.addEventListener('click', () => unblockSelectedSriInvoice(item, unblockButton));
     });
     window.safeCreateIcons?.(root);
 }
