@@ -42,7 +42,7 @@ def is_trusted_origin(origin):
     return value in ALLOWED_ORIGINS or bool(PROJECT_PREVIEW_ORIGIN.match(value)) or bool(LOCAL_ORIGIN.match(value))
 
 
-RECONCILIATION_STATES = {'PENDIENTE_AUTORIZACION', 'PENDING_AUTORIZACION', 'CONTINGENCIA'}
+RECONCILIATION_STATES = {'PENDIENTE_AUTORIZACION', 'PENDING_AUTORIZACION', 'CONTINGENCIA', 'EN_COLA_EMISION'}
 RECONCILABLE_RESERVATIONS = {'SIGNED_READY', 'SENDING', 'RECEIVED', 'AUTHORIZED'}
 
 
@@ -237,9 +237,11 @@ class handler(BaseHTTPRequestHandler):
             return _json_response(self, 401 if identity is None else 409, {'error': str(exc)})
         except Exception as exc:
             # Nunca devolver/registrar payload, certificado, contraseña ni token.
-            print(f'[SRI one-shot] No se completó la emisión: {type(exc).__name__}')
+            err_msg = str(exc)
+            safe_msg = re.sub(r'(Bearer\s+[A-Za-z0-9._-]+|password["\']?\s*[:=]\s*["\']?[^"\'\s]+)', '[REDACTED]', err_msg, flags=re.I)
+            print(f'[SRI one-shot] No se completó la emisión: {type(exc).__name__}: {safe_msg}')
             return _json_response(self, 409, {
-                'error': 'No se pudo confirmar la factura. Revisa el estado fiscal de esta misma venta antes de intentar otra vez.'
+                'error': f'No se pudo confirmar la factura. {safe_msg[:180]}'
             })
 
     def log_message(self, _format, *_args):

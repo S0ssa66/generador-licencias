@@ -1160,6 +1160,7 @@ def emitir_factura_sri_background(reference_id, producer_id, reconciliation_only
                         'buyerCountry': form_data_rest.get('buyerCountry', {}).get('stringValue') or 'Ecuador',
                         'payment_id': fields.get('id', {}).get('stringValue')
                     }
+                    comprador_info = _apply_manual_sri_invoice_details(comprador_info, fields, reference_id=reference_id)
                     print(f"[+] [SRI] Licencia {reference_id} obtenida con éxito desde Firestore.")
                     try:
                         backup_path, username = resolve_backup_file(producer_id)
@@ -1243,6 +1244,7 @@ def emitir_factura_sri_background(reference_id, producer_id, reconciliation_only
                         'payment_id': reference_id,
                         'payment_method': _firestore_field_value(payment_fields, 'paymentMethod') or _firestore_field_value(payment_fields, 'method') or _firestore_field_value(payment_fields, 'payment_method') or 'otros'
             }
+            comprador_info = _apply_manual_sri_invoice_details(comprador_info, payment_fields, reference_id=reference_id)
             print(f"[+] [SRI] Pago {reference_id} obtenido desde Firestore para facturación.")
         except Exception as payment_error:
             # Un 404 aquí significa que la referencia antigua no es un
@@ -1262,6 +1264,8 @@ def emitir_factura_sri_background(reference_id, producer_id, reconciliation_only
         return
         
     payment_id = comprador_info.get('payment_id') if comprador_info else None
+    if comprador_info:
+        comprador_info = _apply_manual_sri_invoice_details(comprador_info, {}, reference_id=reference_id)
 
     if not comprador_info or comprador_info.get('_manualFiscalDetailsConfirmed') is not True:
         actualizar_estado_factura_db(
