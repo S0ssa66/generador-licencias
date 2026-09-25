@@ -202,9 +202,25 @@ async function openArtifact(invoice, artifact) {
 }
 
 function manualInvoiceText(invoice) {
+    const previous = invoice?.sriInvoiceDetails || {};
     const details = invoice?.formData || {};
     const issuer = window.producerConfig || {};
-    const missing = value => String(value || '').trim() || 'PENDIENTE DE COMPLETAR';
+    const missing = value => {
+        const str = String(value || '').trim();
+        return (str && !/^no proporcionad[oa]$/i.test(str)) ? str : 'PENDIENTE DE COMPLETAR';
+    };
+
+    const buyerName = previous.buyerName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName;
+    const buyerId = previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId || details.buyerDni;
+    const buyerEmail = previous.buyerEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail;
+    const buyerCityCountry = [invoice?.buyerCity || details?.buyerCity, invoice?.buyerCountry || details?.buyerCountry]
+        .map(v => String(v || '').trim())
+        .filter(v => v && !/^no proporcionad[oa]$/i.test(v))
+        .join(', ');
+    const buyerAddress = previous.buyerAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress || buyerCityCountry;
+    const buyerRuc = previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId;
+    const buyerCompany = invoice?.invoiceCompany || details.invoiceCompany || buyerName;
+
     return [
         'BEATSS — DATOS PARA FACTURACIÓN MANUAL SRI',
         'Este archivo prepara información; no es una factura ni acredita emisión ante el SRI.',
@@ -221,12 +237,12 @@ function manualInvoiceText(invoice) {
         `Dirección matriz: ${missing(issuer.sriDirMatriz)}`,
         '',
         'CLIENTE',
-        `Nombre: ${missing(invoice?.buyerName || details.buyerName)}`,
-        `Identificación: ${missing(invoice?.buyerDni || invoice?.buyerId || details.buyerId)}`,
-        `Correo: ${missing(invoice?.invoiceEmail || invoice?.buyerEmail || details.invoiceEmail || details.buyerEmail)}`,
-        `Dirección: ${missing(invoice?.invoiceAddress || details.invoiceAddress)}`,
-        `RUC para factura: ${missing(invoice?.invoiceRuc || details.invoiceRuc)}`,
-        `Razón social: ${missing(invoice?.invoiceCompany || details.invoiceCompany)}`,
+        `Nombre: ${missing(buyerName)}`,
+        `Identificación: ${missing(buyerId)}`,
+        `Correo: ${missing(buyerEmail)}`,
+        `Dirección: ${missing(buyerAddress)}`,
+        `RUC para factura: ${missing(buyerRuc)}`,
+        `Razón social: ${missing(buyerCompany)}`,
         '',
         'OPERACIÓN',
         `Concepto sugerido: Licencia ${missing(invoice?.licenseType || invoice?.type)} del beat ${missing(invoice?.beatName)}`,
