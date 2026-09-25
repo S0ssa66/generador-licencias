@@ -5,6 +5,8 @@ import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
 import { isTrustedBeatssOrigin } from '../api/_cors-origin.js';
 
+const STORAGE_BUCKET = process.env.FIREBASE_STORAGE_BUCKET || 'licencias-musicales.firebasestorage.app';
+
 export function initFirebaseAdmin() {
     if (getApps().length > 0) return;
     initializeApp({
@@ -13,7 +15,7 @@ export function initFirebaseAdmin() {
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
             privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
         }),
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'licencias-musicales.firebasestorage.app'
+        storageBucket: STORAGE_BUCKET
     });
 }
 
@@ -149,19 +151,58 @@ export async function serveSriArtifact(req, res, kind) {
         let bytes;
         if (data[storageField]) {
             const objectPath = String(data[storageField]);
-            const producerPath = String(data.producerId || invoice.ownerUid || '').replace(/[^A-Za-z0-9_-]/g, '');
-            const paymentPath = paymentId.replace(/[^A-Za-z0-9_-]/g, '');
-            if (!objectPath.startsWith(`sri/${producerPath}/${paymentPath}/`)) {
+            const candidateProducers = new Set([
+                data.producerId,
+                invoice.ownerUid,
+                data.userId,
+                decoded.uid
+            ].filter(Boolean).map(v => String(v).replace(/[^A-Za-z0-9_-]/g, '')));
+
+            const candidatePayments = new Set([
+                paymentId,
+                invoice.id,
+                data.firestoreId,
+                data.paymentId,
+                data.refCode,
+                data.reference,
+                data.contractReference,
+                data.orderId
+            ].filter(Boolean).map(v => String(v).replace(/[^A-Za-z0-9_-]/g, '')));
+
+            const isPathValid = Array.from(candidateProducers).some(prod =>
+                Array.from(candidatePayments).some(pay =>
+                    objectPath.startsWith(`sri/${prod}/${pay}/`)
+                )
+            );
+            if (!isPathValid) {
                 return res.status(409).json({ error: 'La ruta del comprobante no es válida.' });
             }
-            [bytes] = await getStorage().bucket().file(objectPath).download();
-        } else if (!manualArtifactsAvailable && data[legacyField]) {
-            // Compatibilidad temporal para comprobantes emitidos antes de
-            // mover los binarios fuera de Firestore.
-            bytes = Buffer.from(data[legacyField], 'base64');
-        } else {
+
+            try {
+                [bytes] = await getStorage().bucket().file(objectPath).download();
+            } catch (downloadErr) {
+                console.warn(`[SRI Download] Fallback a bucket explícito (${STORAGE_BUCKET}):`, downloadErr?.message);
+                try {
+                    [bytes] = await getStorage().bucket(STORAGE_BUCKET).file(objectPath).download();
+                } catch (explicitErr) {
+                    console.error('[SRI Download] Error descargando desde Storage:', explicitErr?.message);
+                }
+            }
+        }
+
+        // Si la descarga desde Storage no obtuvo bytes o no existía ruta en Storage:
+        if (!bytes) {
+            if (kind === 'xml' && data.sriXmlAutorizado) {
+                bytes = Buffer.from(String(data.sriXmlAutorizado), 'utf-8');
+            } else if (!manualArtifactsAvailable && data[legacyField]) {
+                bytes = Buffer.from(data[legacyField], 'base64');
+            }
+        }
+
+        if (!bytes) {
             return res.status(404).json({ error: `No hay ${kind.toUpperCase()} autorizado disponible` });
         }
+
         const expectedHash = String(data[kind === 'xml' ? 'sriXmlSha256' : 'sriRideSha256'] || '');
         const expectedSize = Number(data[kind === 'xml' ? 'sriXmlSize' : 'sriRideSize']);
         if (expectedHash && createHash('sha256').update(bytes).digest('hex') !== expectedHash) {
@@ -170,7 +211,11 @@ export async function serveSriArtifact(req, res, kind) {
         if (expectedSize > 0 && bytes.length !== expectedSize) {
             return res.status(409).json({ error: 'El tamaño del comprobante no coincide.' });
         }
-        const filename = kind === 'xml' ? `Factura_${paymentId}.xml` : `Factura_${paymentId}.pdf`;
+
+        const secuencial = String(data.sriSecuencial || data.secuencial || '').padStart(9, '0');
+        const filename = (secuencial && secuencial !== '000000000')
+            ? `Factura_${secuencial}.${kind === 'xml' ? 'xml' : 'pdf'}`
+            : `Factura_${paymentId}.${kind === 'xml' ? 'xml' : 'pdf'}`;
         res.setHeader('Content-Type', kind === 'xml' ? 'application/xml; charset=utf-8' : 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         res.setHeader('Cache-Control', 'private, no-store');

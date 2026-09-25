@@ -242,10 +242,17 @@ async function openArtifact(invoice, artifact) {
             const payload = await response.json().catch(() => ({}));
             throw new Error(payload.error || 'No se pudo descargar el comprobante.');
         }
-        const blobUrl = URL.createObjectURL(await response.blob());
+        const blob = await response.blob();
+        const disposition = response.headers.get('content-disposition') || '';
+        const match = disposition.match(/filename="?([^"]+)"?/i);
+        const seq = String(invoice?.sriSecuencial || invoice?.secuencial || '').padStart(9, '0');
+        const fallbackName = (seq && seq !== '000000000')
+            ? `Factura_${seq}.${artifact === 'ride' ? 'pdf' : 'xml'}`
+            : `Factura_${paymentId}.${artifact === 'ride' ? 'pdf' : 'xml'}`;
+        const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
-        link.download = `Factura_${paymentId}.${artifact === 'ride' ? 'pdf' : 'xml'}`;
+        link.download = match ? match[1] : fallbackName;
         document.body.appendChild(link);
         link.click();
         link.remove();

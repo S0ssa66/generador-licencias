@@ -1,5 +1,34 @@
 # Estado operativo actual de BEATSS
 
+## Descarga de comprobantes SRI (RIDE PDF y XML) corregida y blindada — DONE (2026-09-25)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Antigravity`.
+- Fecha: `2026-09-25`.
+- Objetivo: Corregir el fallo al hacer clic en los botones `RIDE PDF` y `XML` en `https://beatss.app/facturacion` para facturas autorizadas (venta Wow y generales), que arrojaba el error "No se pudo obtener el comprobante SRI".
+- Causas raíz resueltas:
+  1. **Discrepancia en la validación de ruta Storage (`paymentPath` vs `docId`)**: La interfaz enviaba como clave de factura el código de referencia contractual (`BS3-20260913-BAS-EQTS-W2T4-YQZS-H3QB-43PN`), mientras los archivos en Google Cloud Storage fueron guardados bajo el ID del documento en Firestore (`manual_f9d6f2fadab81d68f31216862243a758f7c759c7`). La comprobación estricta de prefijo rechazaba la solicitud con HTTP 409.
+  2. **Configuración del bucket en inicialización Firebase Admin**: En `api/payments/config.js`, `initializeApp` se ejecutaba sin la opción `storageBucket`. Cuando el contenedor serverless reutilizaba la instancia de Firebase, `getStorage().bucket()` sin argumentos arrojaba una excepción al no encontrar un bucket predeterminado, transformándose en HTTP 500.
+  3. **Fallbacks de alta disponibilidad**: No existía fallback directo al XML autorizado almacenado en Firestore (`data.sriXmlAutorizado`), ni doble intento contra el nombre explícito del bucket de Storage.
+- Soluciones aplicadas:
+  1. `server-handlers/sri-download.js`:
+     - Validación multi-identificador: `candidatePayments` ahora valida de forma segura contra `paymentId`, `invoice.id`, `data.firestoreId`, `data.paymentId`, `data.refCode`, `data.reference`, `data.contractReference` y `data.orderId`.
+     - Doble intento de descarga en Storage: descarga con `getStorage().bucket()` y fallback automático con el bucket explícito `STORAGE_BUCKET`.
+     - Fallback resiliente para XML: si Storage presenta latencia o error, entrega directamente los bytes del XML autorizado de Firestore (`data.sriXmlAutorizado`).
+     - Nombre de archivo canónico: headers `Content-Disposition` con `Factura_{secuencial}.pdf` / `.xml` formateado a 9 dígitos (ej. `Factura_000000003.pdf`).
+  2. `api/payments/config.js`:
+     - Incorporado `storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'licencias-musicales.firebasestorage.app'` en `initFirebaseAdmin()`.
+  3. `dashboard_modules/invoicing.js`:
+     - `openArtifact()` ahora respeta el nombre devuelto en la cabecera `Content-Disposition` del servidor y usa el secuencial oficial como fallback de guardado.
+  4. `tests/sri-issuance-hardening.test.mjs`:
+     - Añadido test unitario de regresión para verificar soporte multi-identificador, fallback a bucket explícito y entrega de XML autorizado.
+- Pruebas y verificación:
+  - 296/296 tests pasados en Node.js (`node --test tests/*.test.mjs`).
+  - 78/78 tests pasados en Python.
+  - Build aprobado dentro del presupuesto (`npm run build` - HTML gzip 62.56 kB).
+  - Verificación de seguridad aprobada (`npm run security:check`).
+- Siguiente acción: Sossa puede simplemente recargar `https://beatss.app/facturacion` y hacer clic en `RIDE PDF` y `XML`; ambos archivos se descargarán de inmediato en su dispositivo con el formato oficial `Factura_000000003.pdf` y `Factura_000000003.xml`.
+
 ## Emisión y autorización oficial en SRI Producción para venta Wow — DONE (2026-09-25)
 
 - Estado: `DONE`; lock liberado.

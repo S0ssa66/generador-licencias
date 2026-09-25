@@ -508,3 +508,17 @@ test('el worker protege el secuencial, aplica backoff y separa una entrega pendi
     assert.match(contingency, /REVIEW_REQUIRED/);
     assert.match(config, /sriWorkerHealthy/);
 });
+
+test('la descarga SRI admite múltiples identificadores de venta, fallback a bucket explícito y XML autorizado', () => {
+    const download = read('server-handlers/sri-download.js');
+    const config = read('api/payments/config.js');
+    const invoicing = read('dashboard_modules/invoicing.js');
+    assert.match(download, /candidateProducers/);
+    assert.match(download, /candidatePayments/);
+    assert.match(download, /getStorage\(\)\.bucket\(STORAGE_BUCKET\)/);
+    assert.match(download, /data\.sriXmlAutorizado/);
+    assert.match(download, /Factura_\$\{secuencial\}/);
+    assert.match(config, /storageBucket: process\.env\.FIREBASE_STORAGE_BUCKET/);
+    assert.match(invoicing, /content-disposition/);
+});
+
