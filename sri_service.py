@@ -31,11 +31,15 @@ def _safe_storage_segment(value):
     return re.sub(r'[^A-Za-z0-9_-]', '', str(value or ''))[:160]
 
 
+def _safe_storage_filename(value):
+    return re.sub(r'[^A-Za-z0-9_.-]', '', str(value or ''))[:160]
+
+
 def upload_sri_artifact(producer_id, payment_id, filename, content, content_type, token):
     """Sube XML/RIDE autorizado a Storage privado, nunca como Base64 en Firestore."""
     producer = _safe_storage_segment(producer_id)
     payment = _safe_storage_segment(payment_id)
-    name = _safe_storage_segment(filename)
+    name = _safe_storage_filename(filename)
     if not producer or not payment or not name or not isinstance(content, (bytes, bytearray)):
         raise ValueError('Datos inválidos para almacenar artefacto SRI.')
     if len(content) > 15 * 1024 * 1024:
@@ -1406,24 +1410,29 @@ def emitir_factura_sri_background(reference_id, producer_id, reconciliation_only
     # Los bytes exactos firmados y la clave se conservan antes de contactar al
     # SRI. Si el proceso cae tras enviar, un nuevo worker ve SENDING y se
     # detiene para reconciliar por la misma clave, sin crear otro XML.
+    signed_bytes = xml_firmado.encode('utf-8')
+    signed_path = None
     try:
-        signed_bytes = xml_firmado.encode('utf-8')
         signed_path = upload_sri_artifact(
             producer_id, payment_id or reference_id,
             f'Factura_{secuencial_str}_firmada.xml', signed_bytes,
             'application/xml', token
         )
+    except Exception as exc:
+        print(f'[-] [SRI] Advertencia al conservar XML firmado en Storage: {exc}')
+
+    try:
         _update_sri_reservation(
             payment_id or reference_id, token, status='SIGNED_READY',
             accessKey=clave_acceso, emissionDate=fecha_emision_dt.strftime('%Y-%m-%d'),
-            signedXmlStoragePath=signed_path,
+            signedXmlStoragePath=signed_path or '',
             signedXmlSha256=hashlib.sha256(signed_bytes).hexdigest(),
         )
         _update_sri_reservation(payment_id or reference_id, token, status='SENDING')
     except Exception as exc:
         actualizar_estado_factura_db(
             payment_id, producer_id, 'ERROR_PREPARACION',
-            error_msg='No se pudo conservar el XML firmado antes de enviarlo.',
+            error_msg='No se pudo registrar la reserva antes de enviarla.',
             token=token, ref_code=reference_id
         )
         print(f'[-] [SRI] Preparación durable fallida: {exc}')

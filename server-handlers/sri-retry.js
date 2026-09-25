@@ -140,6 +140,10 @@ export default async function handler(req, res) {
                 await db.collection('users').doc(decoded.uid).collection('licencias').doc(paymentId).set(updateFields, { merge: true }).catch(() => {});
             }
             await db.collection('sriJobs').doc(paymentId).delete().catch(() => {});
+            await db.collection('sriReservations').doc(paymentId).delete().catch(() => {});
+            if (invoice.ref.id !== paymentId) {
+                await db.collection('sriReservations').doc(invoice.ref.id).delete().catch(() => {});
+            }
 
             return res.status(200).json({
                 unblocked: true,
