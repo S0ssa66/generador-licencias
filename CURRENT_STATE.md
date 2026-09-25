@@ -1,5 +1,45 @@
 # Estado operativo actual de BEATSS
 
+## Configuración oficial de RUC y Régimen RIMPE Negocio Popular para Sossa — DONE (2026-09-24)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Antigravity`.
+- Fecha: `2026-09-24`.
+- Objetivo: Configurar de forma exacta e inmutable los datos fiscales del productor principal (Sossa) a partir de su certificado RUC oficial del SRI (`0803743111001`), asignando el régimen legal RIMPE Negocio Popular (IVA 0%, sin contabilidad, ambiente de producción 2, dirección matriz oficial de Esmeraldas).
+- Datos fiscales oficiales configurados y sincronizados:
+  - RUC: `0803743111001`
+  - Razón Social: `DOMINGUEZ SOSA JOAO DAVID`
+  - Nombre Comercial: `Sossa`
+  - Dirección Matriz: `Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS`
+  - Teléfono: `0961201184`
+  - Lugar: `Esmeraldas, Ecuador`
+  - Establecimiento: `001`
+  - Punto de Emisión: `001`
+  - Ambiente SRI: `2` (Producción / Real)
+  - Tipo de Régimen: `rimpe_popular` (Contribuyente Negocio Popular - Régimen RIMPE)
+  - Tarifa IVA de la operación: `0` (0% por disposición expresa de la ley para Negocios Populares)
+  - Obligado a llevar Contabilidad: `NO`
+  - El precio publicado ya incluye IVA: `true`
+  - Método de pago manual por defecto: `Transferencia Bancaria`
+- Cambios aplicados:
+  1. `producerDefaults.js`: Definida y exportada la constante `SOSSA_FISCAL_DEFAULTS`, incorporada en `PRODUCER_DEFAULTS['sossa']`.
+  2. `main.js`:
+     - En `loadProducerConfig()`: detección del usuario Sossa y sincronización automática bidireccional hacia Firestore (`users/{uid}/config/producer` y `saveSriConfigToServer`).
+     - En `populateSettingsForm()`: pre-carga exacta de los datos fiscales en el formulario de configuración y listener reactivo en `cfg-sri-rimpe` para seleccionar automáticamente tarifa 0% al elegir Negocio Popular.
+  3. `api/payments/config.js`:
+     - Incorporado `SOSSA_SRI_DEFAULTS` en `readSriPrivateConfig` para `ADMIN_UID` (`paXbnNbHMMPC31X3hf0oTUx4bbr2`), fusionando y persistiendo con `{ merge: true }` sin afectar el certificado `.p12` ni su contraseña.
+  4. `server-handlers/sri-retry.js`:
+     - Asignación garantizada de los valores oficiales de Sossa en `publicConfig` y `privateConfig` para validación de ambiente Producción (`2`) y completitud fiscal.
+  5. `sri_contingency.py` y `sri_service.py`:
+     - Fallbacks garantizados de los datos oficiales de Sossa en la carga de configuración y generación de XML/RIDE bajo RIMPE Negocio Popular.
+  6. `index.html` y `editor.js`:
+     - Selección por defecto de "Transferencia Bancaria" en el modal de pago manual y en el Studio.
+- Pruebas y verificación:
+  - 295/295 tests pasados en Node (`node --test tests/*.test.mjs`).
+  - `npm run build` exitoso con performance budget aprobado.
+  - Commits `f4d126f` y `6592ee4` sincronizados en `origin/main`.
+- Siguiente acción: Sossa puede simplemente recargar BeatSS en su navegador (`https://beatss.app/facturacion`), y verá su RUC, razón social, dirección de Esmeraldas y régimen RIMPE Negocio Popular (IVA 0%) listos para emitir directamente al SRI en ambiente Producción.
+
 ## Corregir hidratación y visualización móvil del Facturador SRI — DONE (2026-09-24)
 
 - Estado: `DONE`; lock liberado.
