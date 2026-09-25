@@ -130,10 +130,14 @@ function invoiceConfirmationDetails(invoice) {
 function collectSriInvoiceDetails(invoice) {
     const previous = invoice?.sriInvoiceDetails || {};
     const details = invoice?.formData || {};
-    const existingName = String(previous.buyerName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName || '').trim();
-    const existingId = String(previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId || '').trim();
-    const existingAddress = String(previous.buyerAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress || invoice?.buyerCity || details?.buyerCity || '').trim();
-    const existingEmail = String(previous.buyerEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail || '').trim();
+    const cleanCandidate = val => {
+        const str = String(val || '').trim();
+        return (str && !/^no proporcionad[oa](?:,\s*no proporcionad[oa])?$/i.test(str) && !/^pendiente/i.test(str)) ? str : '';
+    };
+    const existingName = cleanCandidate(previous.buyerName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName);
+    const existingId = cleanCandidate(previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId);
+    const existingAddress = cleanCandidate(previous.buyerAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress || invoice?.buyerCity || details?.buyerCity);
+    const existingEmail = cleanCandidate(previous.buyerEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail);
 
     // Si la venta ya tiene los datos fiscales del cliente guardados, se usan directamente para la factura
     if (existingName && existingId) {
