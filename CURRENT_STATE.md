@@ -1,5 +1,30 @@
 # Estado operativo actual de BEATSS
 
+## Organización completa de Google Drive y corrección de la versión móvil — DONE (2026-09-25)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Antigravity`.
+- Fecha: `2026-09-25`.
+- Objetivo: 
+  1. Organizar exhaustivamente todos los archivos de beats y stems de Sossa en Google Drive (`BEATSS Platform / Productores / Sossa - paXbnNbH / Beats`).
+  2. Corregir la versión móvil en smartphones eliminando la "barrera inferior", el vacío blanco de ~200px bajo los botones del Studio y restaurando el desplazamiento fluido en las tarjetas de licencias y pestañas principales.
+- Resultados en Google Drive:
+  - 15 carpetas dedicadas creadas para cada beat registrado: `Bubble`, `Diamond`, `Fresh`, `GLUE`, `Haze`, `Latina`, `Loca`, `Magic`, `Model`, `Now`, `OOUUHH`, `Shatta`, `VEN`, `Wiggle`, `Wow`.
+  - 64 archivos clasificados, movidos y renombrados limpiamente (Master WAV, Stems ZIP, Untagged WAV/MP3) dentro de sus respectivas carpetas.
+  - Cero archivos sueltos en la raíz de `Beats`.
+  - Inmutabilidad de IDs en Google Drive garantizada: no se rompieron enlaces de entrega ni referencias de Firestore. Streaming en vivo verificado exitosamente mediante `/api/proxy-audio` (HTTP 206).
+- Resultados en la versión móvil (`viewport-coherence.css`):
+  - Eliminado el doble espaciado acumulativo (`bottom: calc(76px + ...)` y padding inferior redundante) en `.sidebar-footer` que provocaba el vacío blanco de ~200px.
+  - El pie de acción del wizard (`.sidebar-footer` / `.wizard-progress-actions`) se acopla inmediatamente sobre la barra de navegación inferior (`.ledger-mobile-nav`) con espaciado limpio de 8px/12px.
+  - `.sidebar-scroll` configurado con `flex: 1 1 0%`, `overflow-y: auto` y desplazamiento táctil inercial (`-webkit-overflow-scrolling: touch`), permitiendo visualizar y pulsar cómodamente las 5 licencias del Paso 1 (incluidas *Ilimitada* y *Exclusiva*).
+  - Espaciado y despeje inferior asegurado en todas las vistas (`tab-home`, `tab-beats`, `tab-history`, `tab-sales`, `tab-invoicing`).
+- Pruebas y verificación:
+  - 296/296 tests pasados en Node.js (`node --test tests/*.test.mjs`).
+  - 78/78 tests pasados en Python (`.venv/bin/python -m unittest discover tests`).
+  - Build de Vite y presupuesto de rendimiento aprobados (`npm run build`).
+  - Verificación estática de seguridad aprobada (`npm run security:check`).
+- Siguiente acción: Desplegar a producción en Vercel y verificar visualmente en dispositivo móvil.
+
 ## Descarga de comprobantes SRI (RIDE PDF y XML) corregida y blindada — DONE (2026-09-25)
 
 - Estado: `DONE`; lock liberado.

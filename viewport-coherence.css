@@ -525,8 +525,12 @@
 
 #app-container.saas-workspace .sidebar-scroll {
     display: block !important;
+    flex: 1 1 0% !important;
     min-height: 0 !important;
-    padding: 0 !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 12px 14px 28px !important;
 }
 
 #app-container.saas-workspace .wizard-stage {
@@ -723,19 +727,38 @@
         display: none !important;
     }
 
-    #app-container.saas-workspace .wizard-step-copy {
-        font-size: 12px !important;
+    #app-container.saas-workspace .sidebar {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        padding-bottom: calc(76px + env(safe-area-inset-bottom, 12px)) !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
     }
 
     #app-container.saas-workspace .sidebar-footer {
-        position: sticky !important;
-        bottom: calc(76px + env(safe-area-inset-bottom, 12px)) !important;
+        position: relative !important;
+        bottom: auto !important;
+        flex: 0 0 auto !important;
+        margin: 0 !important;
+        padding: 8px 12px !important;
+        background: #ffffff !important;
+        border-top: 1px solid #e2e8f0 !important;
+        box-shadow: 0 -4px 18px rgba(23, 35, 61, .06) !important;
         z-index: 501 !important;
-        box-shadow: 0 -8px 24px rgba(23, 35, 61, .14) !important;
     }
 
     #app-container.saas-workspace .wizard-progress-actions {
-        padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+        display: grid !important;
+        grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr) !important;
+        gap: 8px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    #app-container.saas-workspace .wizard-progress-actions[data-editor-step-state="1"] {
+        grid-template-columns: minmax(0, 1fr) !important;
     }
 }
 
