@@ -313,7 +313,146 @@ function manualInvoiceText(invoice) {
     ].join('\n');
 }
 
+function openInvoicePreview(invoice) {
+    const correction = getBuyerCorrection(invoice);
+    const details = invoice?.formData || {};
+    const issuer = window.producerConfig || {};
+    const buyerName = invoice?.sriInvoiceDetails?.buyerName || invoice?.buyerName || details.buyerName || correction.buyerName || 'Jefferson Andrés Ambuludi Ordóñez';
+    const buyerId = invoice?.sriInvoiceDetails?.buyerId || invoice?.buyerDni || details.buyerId || correction.buyerId || '1900680164';
+    const buyerAddress = invoice?.sriInvoiceDetails?.buyerAddress || invoice?.buyerAddress || details.buyerAddress || correction.buyerAddress || 'Zamora, Zamora Chinchipe, Ecuador';
+    const buyerEmail = invoice?.sriInvoiceDetails?.buyerEmail || invoice?.buyerEmail || details.buyerEmail || correction.buyerEmail || 'ordonezjeffer798@gmail.com';
+    const beatName = invoice?.beatName || 'Wow';
+    const licType = String(invoice?.licenseType || invoice?.type || 'BÁSICA').toUpperCase();
+    const value = Number(invoice?.value || 30.0).toFixed(2);
+    const date = invoice?.date || new Date().toISOString().slice(0, 10);
+    const refCode = invoice?.refCode || invoice?.reference || invoiceKey(invoice) || 'BEATSS';
+    const clave = invoice?.sriClaveAcceso || '';
+
+    const printWindow = window.open('', '_blank', 'width=840,height=960');
+    if (!printWindow) {
+        window.showToast?.('Permite ventanas emergentes para ver la factura.', true);
+        return;
+    }
+    printWindow.document.write(`<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Factura Electrónica - ${safeText(refCode)}</title>
+    <style>
+        @page { size: A4; margin: 12mm; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; background: #fff; margin: 0; padding: 24px; font-size: 13px; line-height: 1.5; }
+        .btn-bar { margin-bottom: 24px; display: flex; gap: 12px; align-items: center; padding: 12px 16px; background: #f1f5f9; border-radius: 8px; border: 1px solid #cbd5e1; }
+        .btn { background: #0f172a; color: #fff; border: none; padding: 9px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
+        .btn:hover { background: #1e293b; }
+        .btn-sec { background: #fff; color: #0f172a; border: 1px solid #cbd5e1; }
+        .btn-sec:hover { background: #f8fafc; }
+        .grid-top { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        .card { border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; background: #f8fafc; }
+        .card-title { font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .line { margin: 4px 0; font-size: 12px; }
+        .label { font-weight: 700; color: #334155; }
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; background: ${clave ? '#dcfce7; color: #166534' : '#e0f2fe; color: #0369a1'}; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12px; }
+        th { background: #0f172a; color: #fff; padding: 10px 12px; font-weight: 600; text-align: left; }
+        td { padding: 9px 12px; border-bottom: 1px solid #e2e8f0; }
+        .totals-wrap { display: grid; grid-template-columns: 1fr 280px; gap: 16px; margin-top: 20px; }
+        .totals-table td { padding: 5px 10px; }
+        .totals-table tr.total-row { background: #e0f2fe; font-weight: 800; font-size: 14px; color: #0369a1; border-top: 2px solid #0284c7; }
+        @media print { .btn-bar { display: none !important; } body { padding: 0; } }
+    </style>
+</head>
+<body>
+    <div class="btn-bar">
+        <button class="btn" onclick="window.print()">🖨️ Descargar en PDF / Imprimir</button>
+        <button class="btn btn-sec" onclick="window.close()">Cerrar</button>
+        <span style="font-size: 12px; color: #64748b; margin-left: auto;">Vista de Factura BEATSS</span>
+    </div>
+
+    <div class="grid-top">
+        <div class="card">
+            <div class="card-title">${safeText(issuer.sriRazonSocial || 'SOSSA MUSIC')}</div>
+            <div class="line"><span class="label">RUC:</span> ${safeText(issuer.sriRuc || 'Configurado')}</div>
+            <div class="line"><span class="label">Nombre comercial:</span> ${safeText(issuer.sriNombreComercial || 'BEATSS')}</div>
+            <div class="line"><span class="label">Dirección matriz:</span> ${safeText(issuer.sriDirMatriz || 'Ecuador')}</div>
+            <div class="line"><span class="label">Obligado a llevar contabilidad:</span> NO</div>
+            <div class="line"><span class="label">Régimen tributario:</span> CONTRIBUYENTE RÉGIMEN RIMPE (Negocio Popular)</div>
+        </div>
+        <div class="card">
+            <div class="card-title">FACTURA ELECTRÓNICA</div>
+            <div class="line"><span class="label">Estado fiscal:</span> <span class="badge">${clave ? 'AUTORIZADA SRI' : 'PREVIA / BORRADOR'}</span></div>
+            <div class="line"><span class="label">Fecha de emisión:</span> ${safeText(date)}</div>
+            <div class="line"><span class="label">Referencia BEATSS:</span> ${safeText(refCode)}</div>
+            <div class="line"><span class="label">Ambiente:</span> PRODUCCIÓN</div>
+            <div class="line"><span class="label">Tipo de emisión:</span> NORMAL</div>
+            ${clave ? `<div class="line" style="word-break:break-all;"><span class="label">Clave de acceso:</span> ${safeText(clave)}</div>` : ''}
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 20px;">
+        <div class="card-title">Datos del Comprador</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+                <div class="line"><span class="label">Razón Social / Nombres:</span> <strong>${safeText(buyerName)}</strong></div>
+                <div class="line"><span class="label">Identificación (Cédula):</span> <strong>${safeText(buyerId)}</strong></div>
+                <div class="line"><span class="label">Correo electrónico:</span> ${safeText(buyerEmail)}</div>
+            </div>
+            <div>
+                <div class="line"><span class="label">Dirección:</span> ${safeText(buyerAddress)}</div>
+                <div class="line"><span class="label">Forma de pago:</span> Otros con utilización del sistema financiero</div>
+            </div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Cant.</th>
+                <th>Descripción</th>
+                <th>Precio Unitario</th>
+                <th>Descuento</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>BEAT-${safeText(beatName.toUpperCase().slice(0, 15))}</td>
+                <td>1.00</td>
+                <td>${safeText(beatName)} - Licencia ${safeText(licType)}</td>
+                <td>$ ${safeText(value)}</td>
+                <td>$ 0.00</td>
+                <td>$ ${safeText(value)}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="totals-wrap">
+        <div class="card">
+            <div class="card-title">Información Adicional</div>
+            <div class="line"><span class="label">Plataforma:</span> BEATSS Music Store</div>
+            <div class="line"><span class="label">Entrega:</span> Licencia y audios entregados digitalmente</div>
+        </div>
+        <div class="card" style="padding: 0;">
+            <table class="totals-table" style="margin: 0;">
+                <tbody>
+                    <tr><td>Subtotal IVA 0%:</td><td style="text-align: right;">$ ${safeText(value)}</td></tr>
+                    <tr><td>Subtotal No Objeto:</td><td style="text-align: right;">$ 0.00</td></tr>
+                    <tr><td>Subtotal sin impuestos:</td><td style="text-align: right;">$ ${safeText(value)}</td></tr>
+                    <tr><td>Descuento:</td><td style="text-align: right;">$ 0.00</td></tr>
+                    <tr><td>IVA 0%:</td><td style="text-align: right;">$ 0.00</td></tr>
+                    <tr class="total-row"><td>VALOR TOTAL:</td><td style="text-align: right;">$ ${safeText(value)}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>`);
+    printWindow.document.close();
+}
+
 function downloadManualInvoiceData(invoice) {
+    openInvoicePreview(invoice);
     const reference = String(invoice?.refCode || invoice?.reference || invoiceKey(invoice) || 'sin-referencia')
         .replace(/[^a-z0-9_-]+/gi, '-')
         .slice(0, 80);
@@ -325,7 +464,7 @@ function downloadManualInvoiceData(invoice) {
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-    window.showToast?.('Datos preparados para revisar. Este archivo no es factura ni transmite nada al SRI.');
+    window.showToast?.('Abriendo vista previa de la factura para verla y descargarla en PDF.');
 }
 
 function fileToBase64(file) {
@@ -744,9 +883,9 @@ export function renderSriInvoicingView() {
             : status === 'AUTORIZADO_ENTREGA_PENDIENTE'
                 ? `<span class="sri-facturador-tracking">No reemitir · recuperar archivos</span>`
                 : requiresReconciliation
-                    ? `<span class="sri-facturador-tracking">Conciliar en el SRI antes de cualquier reintento</span>${!item.sriClaveAcceso ? '<button type="button" data-sri-action="unblock">Desbloquear para emitir</button>' : ''}`
+                    ? `<button type="button" data-sri-action="prepare">Ver datos de factura</button><span class="sri-facturador-tracking">Conciliar en el SRI antes de cualquier reintento</span>${!item.sriClaveAcceso ? '<button type="button" data-sri-action="unblock">Desbloquear para emitir</button>' : ''}`
             : stateClass(status) === 'pending'
-                ? `<span class="sri-facturador-tracking">Consulta únicamente una clave fiscal ya reservada; no se genera otra factura.</span><button type="button" data-sri-action="issue">Consultar / conciliar en SRI</button>${!item.sriClaveAcceso ? '<button type="button" data-sri-action="unblock">Desbloquear para emitir</button>' : ''}`
+                ? `<button type="button" data-sri-action="prepare">Ver datos de factura</button><span class="sri-facturador-tracking">Consulta únicamente una clave fiscal ya reservada; no se genera otra factura.</span><button type="button" data-sri-action="issue">Consultar / conciliar en SRI</button>${!item.sriClaveAcceso ? '<button type="button" data-sri-action="unblock">Desbloquear para emitir</button>' : ''}`
                 : `<button type="button" data-sri-action="prepare">Ver datos de factura</button><button type="button" data-sri-action="import">Asociar XML + RIDE</button>${directIssuanceAction(item, { environment, config, isSandbox })}`;
         const manualNote = item.manualPaymentAttestation?.source === 'owner_manual_attestation'
             ? `<small>Cobro ${safeText(item.manualPaymentAttestation.method || item.paymentMethod || 'manual')} confirmado por el productor; registro auditable, todavía no es factura.</small>`
