@@ -532,7 +532,7 @@ async function requestSelectedSriInvoice(invoice, button) {
         window.showToast?.('Una compra de prueba no puede generar una factura fiscal.', true);
         return;
     }
-    const isReconciliation = PENDING_STATES.has(currentStatus);
+    const isReconciliation = PENDING_STATES.has(currentStatus) && Boolean(invoice?.sriClaveAcceso);
     const fiscalAction = isReconciliation ? 'reconcile' : 'issue';
     const invoiceDetails = isReconciliation ? null : invoice.sriInvoiceDetails || collectSriInvoiceDetails(invoice);
     if (!isReconciliation && !invoiceDetails) return;
@@ -744,7 +744,7 @@ export function renderSriInvoicingView() {
             : status === 'AUTORIZADO_ENTREGA_PENDIENTE'
                 ? `<span class="sri-facturador-tracking">No reemitir · recuperar archivos</span>`
                 : requiresReconciliation
-                    ? `<span class="sri-facturador-tracking">Conciliar en el SRI antes de cualquier reintento</span>`
+                    ? `<span class="sri-facturador-tracking">Conciliar en el SRI antes de cualquier reintento</span>${!item.sriClaveAcceso ? '<button type="button" data-sri-action="unblock">Desbloquear para emitir</button>' : ''}`
             : stateClass(status) === 'pending'
                 ? `<span class="sri-facturador-tracking">Consulta únicamente una clave fiscal ya reservada; no se genera otra factura.</span><button type="button" data-sri-action="issue">Consultar / conciliar en SRI</button>${!item.sriClaveAcceso ? '<button type="button" data-sri-action="unblock">Desbloquear para emitir</button>' : ''}`
                 : `<button type="button" data-sri-action="prepare">Ver datos de factura</button><button type="button" data-sri-action="import">Asociar XML + RIDE</button>${directIssuanceAction(item, { environment, config, isSandbox })}`;

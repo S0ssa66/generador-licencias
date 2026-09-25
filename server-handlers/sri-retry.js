@@ -116,18 +116,6 @@ export default async function handler(req, res) {
         if (['PENDING_OWNER_VERIFICATION', 'OWNER_VERIFIED'].includes(String(invoice.data.sriManualArtifactsStatus || ''))) {
             return res.status(409).json({ error: 'Esta venta ya tiene archivos de una emisión manual. Verifícalos antes de solicitar otra factura.' });
         }
-        if (currentStatus.startsWith('ERROR_') || currentStatus.startsWith('RECHAZADO_')) {
-            return res.status(409).json({ error: 'Esta factura necesita conciliación manual antes de cualquier nueva emisión.' });
-        }
-        const reference = invoice.data.reference || invoice.data.refCode || paymentId;
-        if (invoice.data.providerLivemode === false || /^cs_test_/i.test(String(reference))) {
-            return res.status(409).json({ error: 'Las compras de prueba no generan comprobantes fiscales.' });
-        }
-
-        const producerId = invoice.data.producerId || invoice.ownerUid || decoded.uid;
-        if (!invoice.data.producerId || invoice.data.producerId !== producerId) {
-            return res.status(409).json({ error: 'El pago no tiene un productor válido.' });
-        }
         if (action === 'unblock') {
             const reservationSnapshot = await db.collection('sriReservations').doc(paymentId).get();
             const reservation = reservationSnapshot.exists ? reservationSnapshot.data() || {} : {};
@@ -158,6 +146,18 @@ export default async function handler(req, res) {
                 status: 'SIN_EMITIR',
                 message: 'Venta desbloqueada con éxito. Ya puedes revisar sus datos y emitirla al SRI.'
             });
+        }
+        if (currentStatus.startsWith('ERROR_') || currentStatus.startsWith('RECHAZADO_')) {
+            return res.status(409).json({ error: 'Esta factura necesita conciliación manual antes de cualquier nueva emisión.' });
+        }
+        const reference = invoice.data.reference || invoice.data.refCode || paymentId;
+        if (invoice.data.providerLivemode === false || /^cs_test_/i.test(String(reference))) {
+            return res.status(409).json({ error: 'Las compras de prueba no generan comprobantes fiscales.' });
+        }
+
+        const producerId = invoice.data.producerId || invoice.ownerUid || decoded.uid;
+        if (!invoice.data.producerId || invoice.data.producerId !== producerId) {
+            return res.status(409).json({ error: 'El pago no tiene un productor válido.' });
         }
 
         const pendingStates = new Set(['EN_COLA_EMISION', 'EN_PROCESO', 'PENDIENTE', 'PENDIENTE_AUTORIZACION', 'CONTINGENCIA', 'PENDING_AUTORIZACION']);
