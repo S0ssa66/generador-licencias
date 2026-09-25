@@ -204,7 +204,7 @@ export default async function handler(req, res) {
             const SOSSA_DEFAULTS = {
                 sriRuc: '0803743111001',
                 sriRazonSocial: 'DOMINGUEZ SOSA JOAO DAVID',
-                sriNombreComercial: 'Sossa',
+                sriNombreComercial: 'Sossa Music',
                 sriDirMatriz: 'Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS',
                 sriEstab: '001',
                 sriPtoEmi: '001',

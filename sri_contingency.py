@@ -71,6 +71,7 @@ def _load_public_producer_config(user_uid, token):
         config.setdefault('sriRimpe', 'rimpe_popular')
         config.setdefault('sriRuc', '0803743111001')
         config.setdefault('sriRazonSocial', 'DOMINGUEZ SOSA JOAO DAVID')
+        config.setdefault('sriNombreComercial', 'Sossa Music')
         config.setdefault('sriDirMatriz', 'Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS')
         config.setdefault('sriEstab', '001')
         config.setdefault('sriPtoEmi', '001')

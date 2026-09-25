@@ -140,7 +140,7 @@ const SRI_SECRET_KEYS = ['sriP12Base64', 'sriP12Password', 'sriSecuencial'];
 export const SOSSA_SRI_DEFAULTS = {
     sriRuc: '0803743111001',
     sriRazonSocial: 'DOMINGUEZ SOSA JOAO DAVID',
-    sriNombreComercial: 'Sossa',
+    sriNombreComercial: 'Sossa Music',
     sriDirMatriz: 'Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS',
     sriEstab: '001',
     sriPtoEmi: '001',
@@ -174,6 +174,7 @@ async function readSriPrivateConfig(db, producerId) {
             ...combined,
             sriRuc: SOSSA_SRI_DEFAULTS.sriRuc,
             sriRazonSocial: SOSSA_SRI_DEFAULTS.sriRazonSocial,
+            sriNombreComercial: SOSSA_SRI_DEFAULTS.sriNombreComercial,
             sriDirMatriz: SOSSA_SRI_DEFAULTS.sriDirMatriz,
             sriEstab: combined.sriEstab || SOSSA_SRI_DEFAULTS.sriEstab,
             sriPtoEmi: combined.sriPtoEmi || SOSSA_SRI_DEFAULTS.sriPtoEmi,
@@ -183,7 +184,7 @@ async function readSriPrivateConfig(db, producerId) {
             sriIvaTarifa: SOSSA_SRI_DEFAULTS.sriIvaTarifa,
             sriIvaIncluido: true
         };
-        if (!dedicated.sriRuc || dedicated.sriRuc !== SOSSA_SRI_DEFAULTS.sriRuc || dedicated.sriRimpe !== 'rimpe_popular' || dedicated.sriAmbiente !== '2') {
+        if (!dedicated.sriRuc || dedicated.sriRuc !== SOSSA_SRI_DEFAULTS.sriRuc || dedicated.sriRimpe !== 'rimpe_popular' || dedicated.sriAmbiente !== '2' || dedicated.sriNombreComercial !== 'Sossa Music') {
             await sriRef.set(sossaUpdated, { merge: true }).catch(() => {});
         }
         return sossaUpdated;

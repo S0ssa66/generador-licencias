@@ -9,7 +9,7 @@
 - Datos fiscales oficiales configurados y sincronizados:
   - RUC: `0803743111001`
   - Razón Social: `DOMINGUEZ SOSA JOAO DAVID`
-  - Nombre Comercial: `Sossa`
+  - Nombre Comercial: `Sossa Music`
   - Dirección Matriz: `Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS`
   - Teléfono: `0961201184`
   - Lugar: `Esmeraldas, Ecuador`

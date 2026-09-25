@@ -1650,6 +1650,7 @@ async function loadProducerConfig() {
             producerConfig.sriRuc !== '0803743111001' ||
             producerConfig.sriAmbiente !== '2' ||
             producerConfig.sriRazonSocial !== 'DOMINGUEZ SOSA JOAO DAVID' ||
+            producerConfig.sriNombreComercial !== 'Sossa Music' ||
             !producerConfig.sriDirMatriz
         )) {
             saveSriConfigToServer(SOSSA_FISCAL_DEFAULTS).then(savedSri => {

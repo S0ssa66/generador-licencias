@@ -912,7 +912,7 @@ def emitir_factura_sri_background(reference_id, producer_id, reconciliation_only
     if producer_id in {'paXbnNbHMMPC31X3hf0oTUx4bbr2', 'sossa'}:
         producer_config.setdefault('sriRuc', '0803743111001')
         producer_config.setdefault('sriRazonSocial', 'DOMINGUEZ SOSA JOAO DAVID')
-        producer_config.setdefault('sriNombreComercial', 'Sossa')
+        producer_config.setdefault('sriNombreComercial', 'Sossa Music')
         producer_config.setdefault('sriDirMatriz', 'Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS')
         producer_config.setdefault('sriEstab', '001')
         producer_config.setdefault('sriPtoEmi', '001')
