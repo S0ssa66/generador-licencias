@@ -1,6 +1,6 @@
 import { LICENSE_CONFIGS, SEED_LICENSES, DEFAULT_TEMPLATES } from './config.js';
 import { TRANSLATIONS, UI_TRANSLATIONS } from './i18n.js';
-import { getProducerDefault } from './producerDefaults.js';
+import { getProducerDefault, SOSSA_FISCAL_DEFAULTS } from './producerDefaults.js';
 import {
     normalizeWorkspacePathname,
     workspacePathForTab,
@@ -1613,6 +1613,52 @@ async function loadProducerConfig() {
             .catch((error) => console.warn('No se pudo guardar la migración de almacenamiento:', error.message));
     }
 
+    const activeEmail = auth.currentUser ? String(auth.currentUser.email || '').toLowerCase() : '';
+    const isSossaUser = activeEmail === 'admin@sossamusic.com' ||
+        activeEmail === 'masterjuego25@gmail.com' ||
+        activeEmail === 'sossabeatz1@gmail.com' ||
+        activeEmail === 'sossamusicbusiness@gmail.com' ||
+        window.currentUserIsAdmin ||
+        window.currentUser === 'paXbnNbHMMPC31X3hf0oTUx4bbr2' ||
+        (producerConfig.aka || '').toLowerCase().includes('sossa');
+
+    if (isSossaUser) {
+        const sossaProducerUpdates = {
+            name: 'DOMINGUEZ SOSA JOAO DAVID',
+            aka: 'Sossa',
+            phone: '0961201184',
+            place: 'Esmeraldas, Ecuador',
+            id: '0803743111001',
+            address: 'Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS'
+        };
+        producerConfig = { ...producerConfig, ...sossaProducerUpdates, ...SOSSA_FISCAL_DEFAULTS };
+        window.producerConfig = producerConfig;
+
+        if (firestoreLoaded && (
+            publicData?.name !== sossaProducerUpdates.name ||
+            publicData?.address !== sossaProducerUpdates.address ||
+            publicData?.phone !== sossaProducerUpdates.phone ||
+            publicData?.id !== sossaProducerUpdates.id
+        )) {
+            setDoc(docRef, getPublicProducerConfig({ ...producerConfig, ...sossaProducerUpdates }), { merge: true })
+                .catch(err => console.warn('[BEATSS] Sync Sossa config Firestore:', err));
+        }
+
+        if (auth.currentUser && (
+            producerConfig.sriRimpe !== 'rimpe_popular' ||
+            producerConfig.sriIvaTarifa !== '0' ||
+            producerConfig.sriRuc !== '0803743111001' ||
+            producerConfig.sriAmbiente !== '2' ||
+            producerConfig.sriRazonSocial !== 'DOMINGUEZ SOSA JOAO DAVID' ||
+            !producerConfig.sriDirMatriz
+        )) {
+            saveSriConfigToServer(SOSSA_FISCAL_DEFAULTS).then(savedSri => {
+                producerConfig = { ...producerConfig, ...savedSri };
+                window.producerConfig = producerConfig;
+            }).catch(err => console.warn('[BEATSS] Sync Sossa SRI config:', err));
+        }
+    }
+
     // Comprobar expiración del Plan Pro o Elite
     const expDateStr = producerConfig.planExpirationDate || producerConfig.expirationPro;
     if ((producerConfig.plan === 'pro' || producerConfig.plan === 'elite') && expDateStr) {
@@ -1707,7 +1753,21 @@ async function loadProducerConfig() {
     document.getElementById('cfg-sri-estab').value = producerConfig.sriEstab || "001";
     document.getElementById('cfg-sri-pto-emi').value = producerConfig.sriPtoEmi || "001";
     document.getElementById('cfg-sri-ambiente').value = producerConfig.sriAmbiente || "1";
-    document.getElementById('cfg-sri-rimpe').value = producerConfig.sriRimpe || "no_rimpe";
+    const rimpeSelect = document.getElementById('cfg-sri-rimpe');
+    rimpeSelect.value = producerConfig.sriRimpe || "no_rimpe";
+    if (rimpeSelect && !rimpeSelect.dataset.listenerBound) {
+        rimpeSelect.dataset.listenerBound = 'true';
+        rimpeSelect.addEventListener('change', () => {
+            const tarifaEl = document.getElementById('cfg-sri-iva-tarifa');
+            if (tarifaEl) {
+                if (rimpeSelect.value === 'rimpe_popular') {
+                    tarifaEl.value = '0';
+                } else if (tarifaEl.value === '0') {
+                    tarifaEl.value = '15';
+                }
+            }
+        });
+    }
     document.getElementById('cfg-sri-contabilidad').value = producerConfig.sriContabilidad || "NO";
     const sriIvaTarifaEl = document.getElementById('cfg-sri-iva-tarifa');
     if (sriIvaTarifaEl) {

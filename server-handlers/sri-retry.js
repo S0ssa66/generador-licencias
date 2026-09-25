@@ -200,6 +200,23 @@ export default async function handler(req, res) {
             ...(privateConfigSnap.exists ? privateConfigSnap.data() : {}),
             ...sriConfig
         };
+        if (producerId === 'paXbnNbHMMPC31X3hf0oTUx4bbr2') {
+            const SOSSA_DEFAULTS = {
+                sriRuc: '0803743111001',
+                sriRazonSocial: 'DOMINGUEZ SOSA JOAO DAVID',
+                sriNombreComercial: 'Sossa',
+                sriDirMatriz: 'Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS',
+                sriEstab: '001',
+                sriPtoEmi: '001',
+                sriAmbiente: '2',
+                sriRimpe: 'rimpe_popular',
+                sriContabilidad: 'NO',
+                sriIvaTarifa: '0',
+                sriIvaIncluido: true
+            };
+            Object.assign(publicConfig, SOSSA_DEFAULTS);
+            Object.assign(privateConfig, SOSSA_DEFAULTS);
+        }
         if (!hasCompleteSriConfig(publicConfig, privateConfig)) {
             return res.status(409).json({
                 error: 'La configuración SRI está incompleta. Guarda el RUC, el certificado .p12/.pfx y su contraseña antes de reintentar.'

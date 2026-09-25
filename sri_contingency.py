@@ -66,6 +66,17 @@ def _load_public_producer_config(user_uid, token):
     except urllib.error.HTTPError as exc:
         if exc.code != 404:
             raise
+    if user_uid == 'paXbnNbHMMPC31X3hf0oTUx4bbr2':
+        config.setdefault('sriAmbiente', '2')
+        config.setdefault('sriRimpe', 'rimpe_popular')
+        config.setdefault('sriRuc', '0803743111001')
+        config.setdefault('sriRazonSocial', 'DOMINGUEZ SOSA JOAO DAVID')
+        config.setdefault('sriDirMatriz', 'Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS')
+        config.setdefault('sriEstab', '001')
+        config.setdefault('sriPtoEmi', '001')
+        config.setdefault('sriContabilidad', 'NO')
+        config.setdefault('sriIvaTarifa', '0')
+        config.setdefault('sriIvaIncluido', True)
     return config
 
 

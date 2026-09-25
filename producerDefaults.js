@@ -1,3 +1,17 @@
+export const SOSSA_FISCAL_DEFAULTS = {
+    sriRuc: "0803743111001",
+    sriRazonSocial: "DOMINGUEZ SOSA JOAO DAVID",
+    sriNombreComercial: "Sossa",
+    sriDirMatriz: "Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS",
+    sriEstab: "001",
+    sriPtoEmi: "001",
+    sriAmbiente: "2",
+    sriRimpe: "rimpe_popular",
+    sriContabilidad: "NO",
+    sriIvaTarifa: "0",
+    sriIvaIncluido: true
+};
+
 export const PRODUCER_DEFAULTS = {
     'beatscgmonarco@gmail.com': {
         name: "CG Monarco",
@@ -22,15 +36,15 @@ export const PRODUCER_DEFAULTS = {
         pdfStorageProvider: "firebase"
     },
     'sossa': {
-        name: "Sossa",
+        name: "DOMINGUEZ SOSA JOAO DAVID",
         aka: "Sossa",
-        phone: "",
-        place: "Quito, Ecuador",
-        id: "",
+        phone: "0961201184",
+        place: "Esmeraldas, Ecuador",
+        id: "0803743111001",
         pro: "BMI",
         ipi: "",
         publisher: "Songtrust",
-        address: "Quito - Ecuador",
+        address: "Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS",
         birthdate: "",
         dsClientId: "",
         dsAccountId: "",
@@ -40,7 +54,8 @@ export const PRODUCER_DEFAULTS = {
         emailjsPublicKey: "",
         gdriveClientId: "",
         storageProvider: "gdrive-central",
-        pdfStorageProvider: "firebase"
+        pdfStorageProvider: "firebase",
+        ...SOSSA_FISCAL_DEFAULTS
     },
     'mistermicua@gmail.com': {
         name: "Mister Micua",

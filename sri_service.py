@@ -909,6 +909,18 @@ def emitir_factura_sri_background(reference_id, producer_id, reconciliation_only
     # Los datos fiscales se guardan en private_config. La mezcla conserva
     # compatibilidad con documentos heredados mientras se completa la migración.
     producer_config = {**producer_config, **private_config}
+    if producer_id in {'paXbnNbHMMPC31X3hf0oTUx4bbr2', 'sossa'}:
+        producer_config.setdefault('sriRuc', '0803743111001')
+        producer_config.setdefault('sriRazonSocial', 'DOMINGUEZ SOSA JOAO DAVID')
+        producer_config.setdefault('sriNombreComercial', 'Sossa')
+        producer_config.setdefault('sriDirMatriz', 'Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS')
+        producer_config.setdefault('sriEstab', '001')
+        producer_config.setdefault('sriPtoEmi', '001')
+        producer_config.setdefault('sriAmbiente', '2')
+        producer_config.setdefault('sriRimpe', 'rimpe_popular')
+        producer_config.setdefault('sriContabilidad', 'NO')
+        producer_config.setdefault('sriIvaTarifa', '0')
+        producer_config.setdefault('sriIvaIncluido', True)
     ruc_emisor = producer_config.get('sriRuc')
     p12_b64 = private_config.get('sriP12Base64')
     p12_password = os.environ.get("SRI_FIRMA_PASSWORD") or private_config.get('sriP12Password')

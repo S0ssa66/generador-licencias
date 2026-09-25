@@ -137,6 +137,20 @@ function sanitizeSriUpdate(raw = {}) {
 
 const SRI_SECRET_KEYS = ['sriP12Base64', 'sriP12Password', 'sriSecuencial'];
 
+export const SOSSA_SRI_DEFAULTS = {
+    sriRuc: '0803743111001',
+    sriRazonSocial: 'DOMINGUEZ SOSA JOAO DAVID',
+    sriNombreComercial: 'Sossa',
+    sriDirMatriz: 'Barrio: SANTAS VAINAS Calle: RIO TABIAZO Intersección: RIO QUININDE, ESMERALDAS',
+    sriEstab: '001',
+    sriPtoEmi: '001',
+    sriAmbiente: '2',
+    sriRimpe: 'rimpe_popular',
+    sriContabilidad: 'NO',
+    sriIvaTarifa: '0',
+    sriIvaIncluido: true
+};
+
 async function readSriPrivateConfig(db, producerId) {
     const legacyRef = db.collection('users').doc(producerId).collection('private_config').doc('producer');
     const sriRef = db.collection('users').doc(producerId).collection('private_config').doc('sri');
@@ -153,7 +167,28 @@ async function readSriPrivateConfig(db, producerId) {
         batch.update(legacyRef, Object.fromEntries(Object.keys(migrated).map(key => [key, FieldValue.delete()])));
         await batch.commit();
     }
-    return { ...legacy, ...dedicated, ...migrated };
+    const combined = { ...legacy, ...dedicated, ...migrated };
+    if (producerId === ADMIN_UID) {
+        const sossaUpdated = {
+            ...SOSSA_SRI_DEFAULTS,
+            ...combined,
+            sriRuc: SOSSA_SRI_DEFAULTS.sriRuc,
+            sriRazonSocial: SOSSA_SRI_DEFAULTS.sriRazonSocial,
+            sriDirMatriz: SOSSA_SRI_DEFAULTS.sriDirMatriz,
+            sriEstab: combined.sriEstab || SOSSA_SRI_DEFAULTS.sriEstab,
+            sriPtoEmi: combined.sriPtoEmi || SOSSA_SRI_DEFAULTS.sriPtoEmi,
+            sriAmbiente: combined.sriAmbiente || SOSSA_SRI_DEFAULTS.sriAmbiente,
+            sriRimpe: SOSSA_SRI_DEFAULTS.sriRimpe,
+            sriContabilidad: SOSSA_SRI_DEFAULTS.sriContabilidad,
+            sriIvaTarifa: SOSSA_SRI_DEFAULTS.sriIvaTarifa,
+            sriIvaIncluido: true
+        };
+        if (!dedicated.sriRuc || dedicated.sriRuc !== SOSSA_SRI_DEFAULTS.sriRuc || dedicated.sriRimpe !== 'rimpe_popular' || dedicated.sriAmbiente !== '2') {
+            await sriRef.set(sossaUpdated, { merge: true }).catch(() => {});
+        }
+        return sossaUpdated;
+    }
+    return combined;
 }
 
 async function requireOwnerSession(req) {
