@@ -3101,7 +3101,7 @@ function loadFormDraft() {
             'audio-link-wav': draft.audioLinkWav,
             'audio-link-stems': draft.audioLinkStems,
             'ref-code': draft.refCode,
-            'payment-method': draft.paymentMethod,
+            'payment-method': draft.paymentMethod || 'Transferencia Bancaria',
             'effective-date': refreshEffectiveDate ? today : draft.effectiveDate,
             'celebration-place': draft.celebrationPlace,
             'clause-formats': draft.clauseFormats,
@@ -3170,6 +3170,11 @@ function clearFormFields() {
         const celebEl = document.getElementById('celebration-place');
         if (celebEl) {
             celebEl.value = producerConfig.place || 'Quito, Ecuador';
+        }
+        
+        const payEl = document.getElementById('payment-method');
+        if (payEl) {
+            payEl.value = 'Transferencia Bancaria';
         }
         
         initDefaultDate();
@@ -3542,7 +3547,7 @@ export function compileContractData(orderData, producerConfig, templateId = 'lic
         }
     }
 
-    const paymentMethod = source.paymentMethod || source.method || "PayPal";
+    const paymentMethod = source.paymentMethod || source.method || "Transferencia Bancaria";
     const normalizedPaymentMethod = String(paymentMethod).toLowerCase() === 'stripe'
         ? 'Stripe'
         : paymentMethod;
