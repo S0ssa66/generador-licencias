@@ -689,10 +689,16 @@ export async function loadHistory() {
         }
     }
 
+    window.dispatchEvent(new CustomEvent('beatss:history-updated', { detail: { count: window.licenseHistory.length } }));
+
     // El renderizador vive en el módulo visual del historial y puede cargarse
     // de forma diferida. Esperarlo evita que la carga termine con contador 0
     // durante el primer frame aunque los datos ya estén en memoria.
-    await updateHistoryTable();
+    try {
+        await updateHistoryTable();
+    } catch (err) {
+        console.warn('[BEATSS] No se pudo actualizar la tabla de historial:', err);
+    }
     if (statusEl) {
         if (firestoreError && window.licenseHistory.length === 0) {
             statusEl.hidden = false;

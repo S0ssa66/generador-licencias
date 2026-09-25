@@ -10,12 +10,14 @@ function safeText(value) {
 
 function currentHistory() {
     const list = Array.isArray(window.licenseHistory) ? window.licenseHistory : [];
-    return list.map(item => {
-        if (item && item.value == null && (item.finalPrice != null || item.price != null || item.amount != null)) {
-            item.value = item.finalPrice ?? item.price ?? item.amount;
-        }
-        return item;
-    });
+    return list
+        .filter(item => item && typeof item === 'object')
+        .map(item => {
+            if (item.value == null && (item.finalPrice != null || item.price != null || item.amount != null)) {
+                item.value = item.finalPrice ?? item.price ?? item.amount;
+            }
+            return item;
+        });
 }
 
 function statusOf(invoice) {
@@ -553,9 +555,20 @@ function bindInvoicingActions() {
     const root = document.getElementById('tab-invoicing');
     if (!root || root.dataset.bound === 'true') return;
     root.dataset.bound = 'true';
-    root.querySelector('#sri-invoicing-refresh')?.addEventListener('click', async () => {
-        await window.loadHistory?.();
-        renderSriInvoicingView();
+    const refreshBtn = root.querySelector('#sri-invoicing-refresh');
+    refreshBtn?.addEventListener('click', async () => {
+        if (refreshBtn.disabled) return;
+        refreshBtn.disabled = true;
+        refreshBtn.classList.add('loading');
+        try {
+            await window.loadHistory?.();
+        } catch (error) {
+            console.warn('[BEATSS] Error al recargar historial en facturación:', error?.message || error);
+        } finally {
+            renderSriInvoicingView();
+            refreshBtn.disabled = false;
+            refreshBtn.classList.remove('loading');
+        }
     });
     root.querySelector('#sri-invoicing-settings')?.addEventListener('click', () => {
         window.openSettingsModal?.();
@@ -566,6 +579,12 @@ function bindInvoicingActions() {
     });
     root.querySelector('#sri-invoicing-search')?.addEventListener('input', renderSriInvoicingView);
     root.querySelector('#sri-invoicing-filter')?.addEventListener('change', renderSriInvoicingView);
+    window.addEventListener('beatss:history-updated', () => {
+        const invoicingRoot = document.getElementById('tab-invoicing');
+        if (invoicingRoot && !invoicingRoot.hidden) {
+            renderSriInvoicingView();
+        }
+    });
 }
 
 function directIssuanceAction(invoice, { environment, config, isSandbox }) {
@@ -610,7 +629,10 @@ export function renderSriInvoicingView() {
         const sandbox = isSandboxInvoice(item);
         if ((selected === 'sandbox') !== sandbox) return false;
         const status = statusOf(item);
-        const haystack = [item.refCode, item.reference, item.beatName, item.buyerName, item.sriClaveAcceso].join(' ').toLowerCase();
+        const haystack = [item?.refCode, item?.reference, item?.beatName, item?.buyerName, item?.sriClaveAcceso]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
         const matchesQuery = !query || haystack.includes(query);
         const matchesStatus = selected === 'all' || selected === 'sandbox' || (selected === 'authorized' && status === 'AUTORIZADO') || (selected === 'pending' && (PENDING_STATES.has(status) || status === 'ARCHIVOS_MANUALES_REGISTRADOS')) || (selected === 'failed' && stateClass(status) === 'failed') || (selected === 'none' && stateClass(status) === 'none');
         return matchesQuery && matchesStatus;
@@ -688,8 +710,14 @@ export function renderSriInvoicingView() {
 
 export async function initSriInvoicingView() {
     bindInvoicingActions();
-    await window.loadHistory?.();
     renderSriInvoicingView();
+    try {
+        await window.loadHistory?.();
+    } catch (error) {
+        console.warn('[BEATSS] No se pudo cargar el historial en facturación:', error?.message || error);
+    } finally {
+        renderSriInvoicingView();
+    }
 }
 
 window.initSriInvoicingView = initSriInvoicingView;

@@ -921,6 +921,10 @@ let producerConfig = {
     pdfStorageProvider: "firebase"
 };
 window.producerConfig = producerConfig;
+Object.defineProperty(window, 'producerConfig', {
+    get: () => producerConfig,
+    set: (val) => { producerConfig = val; }
+});
 
 // Historial de licencias
 let licenseHistory = [];
@@ -1457,6 +1461,7 @@ async function initApp(user) {
     // facturación; las funciones lazy continúan disponibles para cada acción.
     if (bootRoute === 'studio') runWhenIdle(() => loadHistory(), 1200);
     if (bootRoute === 'studio') runWhenIdle(() => loadReferralData(), 4000);
+    if (bootRoute === 'invoicing') runWhenIdle(() => loadHistory(), 100);
     safeCreateIcons();
     initTooltips();
     
@@ -3100,7 +3105,10 @@ function setupEventListeners() {
         if (tabId === 'tab-invoicing') {
             Promise.resolve(loadModule('invoicing'))
                 .then(() => window.initSriInvoicingView?.())
-                .catch((error) => console.warn('[BEATSS] No se pudo cargar el facturador SRI:', error?.message || error));
+                .catch((error) => {
+                    console.warn('[BEATSS] No se pudo cargar el facturador SRI:', error?.message || error);
+                    window.renderSriInvoicingView?.();
+                });
         }
         if (tabId === 'tab-admin') {
             loadConsolidatedAccounting();

@@ -27,8 +27,15 @@
 .sri-facturador-btn.danger { color: #b43646; }
 .sri-facturador-btn[disabled] { opacity: .55; cursor: wait; }
 .sri-facturador-btn svg, .sri-facturador-btn i { width: 17px; height: 17px; }
+.sri-facturador-btn.loading svg,
+.sri-facturador-btn.loading i { animation: sri-spin 1s linear infinite; }
+@keyframes sri-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 
 .sri-facturador-status { display: flex; gap: 10px 12px; align-items: center; flex-wrap: wrap; background: #fff; border: 1px solid #dfe6f1; border-radius: 14px; padding: 12px 15px; margin-bottom: 12px; box-shadow: 0 6px 18px rgba(40,57,92,.05); }
+.sri-facturador-status:empty { display: none; }
 .sri-facturador-status-copy { flex: 1 1 340px; min-width: 0; }
 .sri-facturador-status-copy strong { display: inline; font-size: 14px; margin-right: 7px; }
 .sri-facturador-status-copy span { color: #697993; font-size: 12px; }

@@ -501,6 +501,7 @@ function updateHistoryTable() {
     const badgeEl = document.getElementById('history-count');
     const statsContainer = document.getElementById('history-stats-container');
     const mainLayout = document.getElementById('history-main-layout');
+    if (!tbody || !emptyEl || !badgeEl) return;
     
     const activeLicenses = getActiveLicenses();
     tbody.innerHTML = '';
