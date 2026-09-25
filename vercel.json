@@ -173,6 +173,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/@:producer",
+      "destination": "/index.html"
+    },
+    {
       "source": "/compra/:state",
       "destination": "/index.html"
     },

@@ -498,7 +498,7 @@ export function initAuthAndApp() {
     
     // Configurar modo tienda o catálogo de inmediato para evitar conflictos con la sesión
     const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
-    const isStore = urlParams.get('p') || urlParams.get('producer') || currentPath.startsWith('/tienda/');
+    const isStore = urlParams.get('p') || urlParams.get('producer') || currentPath.startsWith('/tienda/') || currentPath.startsWith('/@');
     const isPrivateWorkspaceRoute = Boolean(workspaceTabForPath(currentPath));
     // Las rutas limpias se resuelven después de importar el Studio. Si Auth
     // no las reconoce desde el primer callback, su estado sin sesión vuelve a

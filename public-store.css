@@ -347,7 +347,7 @@ body[data-beatss-view="store"] {
     width: min(1380px, calc(100% - clamp(36px, 8vw, 120px)));
     max-width: none !important;
     margin: 0 auto !important;
-    padding: 24px 0 72px !important;
+    padding: 24px 0 120px !important;
 }
 
 #public-store-view .store-view-tabs {
@@ -1644,7 +1644,7 @@ body > .store-wa-float svg {
 
     #public-store-view .store-container {
         width: calc(100% - 28px);
-        padding: 18px 0 68px !important;
+        padding: 18px 0 calc(130px + env(safe-area-inset-bottom, 16px)) !important;
     }
 
     #public-store-view .store-view-tabs {

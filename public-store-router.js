@@ -29,9 +29,16 @@ function showStoreShell() {
 }
 
 function currentProducerAlias() {
-    const prefix = '/tienda/';
-    const raw = window.location.pathname.startsWith(prefix) ? window.location.pathname.slice(prefix.length) : '';
-    try { return decodeURIComponent(raw).trim(); } catch (_) { return ''; }
+    const pathname = window.location.pathname;
+    if (pathname.startsWith('/tienda/')) {
+        const raw = pathname.slice('/tienda/'.length);
+        try { return decodeURIComponent(raw).trim(); } catch (_) { return ''; }
+    }
+    if (pathname.startsWith('/@')) {
+        const raw = pathname.slice(2);
+        try { return decodeURIComponent(raw).trim(); } catch (_) { return ''; }
+    }
+    return '';
 }
 
 export async function showPublicStore() {

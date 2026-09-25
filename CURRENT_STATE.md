@@ -1,5 +1,24 @@
 # Estado operativo actual de BEATSS
 
+## Optimización de Tienda Pública: enlace corto /@sossa, despeje móvil y beat Haze vendido — DONE (2026-09-25)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Antigravity`.
+- Fecha: `2026-09-25`.
+- Objetivo:
+  1. Registrar formalmente el beat *Haze* como vendido y privado en Firestore por instrucción de Sossa.
+  2. Implementar soporte de primer nivel para la ruta amigable de creador `https://beatss.app/@:producer` (ej. `https://beatss.app/@sossa`).
+  3. Corregir el despeje inferior en la tienda pública (`public-store.css`) para que el reproductor de audio flotante no cubra las últimas tarjetas ni los botones de compra en móviles y escritorio.
+- Resultados aplicados:
+  - **Beat Haze vendido**: En Firestore (`users/paXbnNbHMMPC31X3hf0oTUx4bbr2/beats/beat_haze`), actualizado con `sold: true`, `isSold: true`, `published: false`, `isPublished: false`, `status: "sold"` y `retiredReason: "sold"`. Ya no se expone a la venta en el catálogo público ni en endpoints de compra.
+  - **Ruta de creador `/@:producer`**: Integrado en `vercel.json` (`/@:producer` -> `/index.html`), `app-bootstrap.js` (`path.startsWith('/@')`), `auth.js` (`isStore`) y `public-store-router.js` (`currentProducerAlias()`). Cualquier persona que ingrese a `https://beatss.app/@sossa` accede de forma instantánea a la tienda pública oficial.
+  - **Despeje de reproductor en tienda**: En `public-store.css`, aumentado el padding inferior de `.store-container` a `120px` en escritorio y `calc(130px + env(safe-area-inset-bottom, 16px))` en móvil. El botón de compra y los datos del último beat permanecen 100% visibles y accesibles aun con el reproductor activo y sonando.
+- Pruebas y verificación:
+  - 297/297 tests pasados en Node.js (+1 nueva prueba de regresión para `/@:producer` y despeje CSS).
+  - 78/78 tests pasados en Python.
+  - Vite build y performance budget superados (`npm run build`).
+  - Verificación de seguridad aprobada (`npm run security:check`).
+
 ## Organización completa de Google Drive y corrección de la versión móvil — DONE (2026-09-25)
 
 - Estado: `DONE`; lock liberado.

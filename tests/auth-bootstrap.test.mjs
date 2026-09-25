@@ -583,3 +583,28 @@ test('Firebase Auth conserva el redirect URI autorizado del proyecto', () => {
     assert.ok(authRewrite, 'falta el rewrite del helper de Firebase');
     assert.equal(authRewrite.destination, 'https://licencias-musicales.firebaseapp.com/__/auth/:path*');
 });
+
+test('la ruta corta de creador /@:producer y el despeje del reproductor público están protegidos', () => {
+    const bootstrap = read('app-bootstrap.js');
+    const auth = read('auth.js');
+    const publicStoreRouter = read('public-store-router.js');
+    const publicStoreCss = read('public-store.css');
+    const vercel = JSON.parse(read('vercel.json'));
+
+    // 1. Rewrite en vercel.json para /@:producer
+    const aliasRewrite = vercel.rewrites.find((entry) => entry.source === '/@:producer');
+    assert.ok(aliasRewrite, 'falta el rewrite para /@:producer en vercel.json');
+    assert.equal(aliasRewrite.destination, '/index.html');
+
+    // 2. Reconocimiento de /@ en bootstrap y auth
+    assert.match(bootstrap, /const isPublicStoreRoute = path\.startsWith\('\/tienda\/'\) \|\| path\.startsWith\('\/@'\);/);
+    assert.match(auth, /currentPath\.startsWith\('\/tienda\/'\) \|\| currentPath\.startsWith\('\/@'\)/);
+
+    // 3. Extracción de alias en public-store-router.js
+    assert.match(publicStoreRouter, /pathname\.startsWith\('\/@'\)/);
+
+    // 4. Despeje de scroll en public-store.css para que el reproductor no tape las tarjetas finales
+    assert.match(publicStoreCss, /#public-store-view \.store-container \{[\s\S]*?padding: 24px 0 120px !important;/);
+    assert.match(publicStoreCss, /#public-store-view \.store-container \{[\s\S]*?padding: 18px 0 calc\(130px \+ env\(safe-area-inset-bottom/);
+});
+

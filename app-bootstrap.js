@@ -62,7 +62,7 @@ window.ensureBeatssAuth = loadBeatssAuth;
 window.ensureBeatssMaterialSymbols = loadMaterialSymbols;
 
 const path = window.location.pathname.replace(/\/+$/, '') || '/';
-const isPublicStoreRoute = path.startsWith('/tienda/');
+const isPublicStoreRoute = path.startsWith('/tienda/') || path.startsWith('/@');
 const isPublicLicenseGuideRoute = path === '/guia-licencias';
 const isBuyerDownloadRoute = path.startsWith('/descargas/');
 const isPublicPurchaseRoute = path === '/compra/stripe' || path === '/compra/gracias' || path === '/compra/cancelada';
