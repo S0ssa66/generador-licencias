@@ -363,6 +363,41 @@ class SriIssueApiTests(unittest.TestCase):
             payment_id_filter='paid_order_123', expected_owner_uid='owner123', reconciliation_only=False
         )
 
+    def test_verify_firebase_id_token_with_x509_certificate(self):
+        import datetime
+        from cryptography import x509
+        from cryptography.x509.oid import NameOID
+
+        subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'firebase-test')])
+        cert = x509.CertificateBuilder().subject_name(
+            subject
+        ).issuer_name(
+            issuer
+        ).public_key(
+            self.private_key.public_key()
+        ).serial_number(
+            x509.random_serial_number()
+        ).not_valid_before(
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)
+        ).not_valid_after(
+            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)
+        ).sign(self.private_key, hashes.SHA256())
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode('ascii')
+
+        sri_issue_api._FIREBASE_CERTS = {'x509-key': cert_pem}
+        now = 1_700_000_000
+        claims = {
+            'sub': 'user_x509_123',
+            'aud': sri_issue_api.PROJECT_ID,
+            'iss': f'https://securetoken.google.com/{sri_issue_api.PROJECT_ID}',
+            'exp': now + 3600,
+            'iat': now,
+            'auth_time': now,
+        }
+        token = _token(self.private_key, claims, kid='x509-key')
+        verified = sri_issue_api.verify_firebase_id_token(token, now=now)
+        self.assertEqual(verified['uid'], 'user_x509_123')
+
 
 if __name__ == '__main__':
     unittest.main()

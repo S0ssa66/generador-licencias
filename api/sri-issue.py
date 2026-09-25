@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler
 
+from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 
@@ -96,7 +97,11 @@ def verify_firebase_id_token(token, now=None):
             pem = _firebase_public_keys(force_refresh=True).get(header['kid'])
         if not pem:
             raise ValueError('Clave de sesión desconocida.')
-        public_key = serialization.load_pem_public_key(pem.encode('ascii'))
+        try:
+            cert = x509.load_pem_x509_certificate(pem.encode('ascii'))
+            public_key = cert.public_key()
+        except Exception:
+            public_key = serialization.load_pem_public_key(pem.encode('ascii'))
         public_key.verify(
             _b64url_decode(parts[2]),
             f'{parts[0]}.{parts[1]}'.encode('ascii'),
