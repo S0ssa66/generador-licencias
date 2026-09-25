@@ -42,6 +42,19 @@ export async function findInvoice(db, paymentId, decoded) {
         return { data, id: paymentSnap.id, ref: paymentRef, ownerUid: data.producerId || data.userId || '' };
     }
 
+    const paymentQueries = [
+        db.collection('payments').where('refCode', '==', paymentId).limit(5),
+        db.collection('payments').where('reference', '==', paymentId).limit(5),
+    ];
+    for (const query of paymentQueries) {
+        const snap = await query.get();
+        for (const doc of snap.docs) {
+            const data = doc.data() || {};
+            const ownerUid = data.producerId || data.userId || '';
+            if (ownsDocument(decoded, data, ownerUid)) return { data, id: doc.id, ref: doc.ref, ownerUid };
+        }
+    }
+
     // Las ventas manuales del productor viven directamente en su historial y
     // pueden no tener un documento paralelo en /payments. Aceptar el ID del
     // documento sólo dentro del historial del usuario autenticado.
