@@ -1,29 +1,25 @@
 # Estado operativo actual de BEATSS
 
-## Verificación técnica de extremo a extremo y garantía de emisión SRI para venta Wow — DONE (2026-09-25)
+## Emisión y autorización oficial en SRI Producción para venta Wow — DONE (2026-09-25)
 
 - Estado: `DONE`; lock liberado.
 - Agente: `Antigravity`.
 - Fecha: `2026-09-25`.
-- Objetivo: Garantizar la emisión exitosa en ambiente Producción del comprobante SRI para la venta del beat *Wow* (`BS3-20260913-BAS-EQTS-W2T4-YQZS-H3QB-43PN` / `manual_f9d6f2fadab81d68f31216862243a758f7c759c7`), verificar por qué los intentos anteriores fallaron y asegurar el cumplimiento normativo estricto del SRI con el RIDE PDF oficial.
-- Causas raíz de los 3 intentos fallidos anteriores:
-  1. *Primer intento*: Abortó internamente con código `ERROR_DATOS` porque la bandera `_manualFiscalDetailsConfirmed` no estaba asignada en backend para esa transacción manual.
-  2. *Segundo y tercer intento*: Al quedar en estado `ERROR_DATOS`, el sistema de seguridad contra duplicados de BEATSS activó la protección `requiresReconciliation` (etiqueta `REVISAR`), bloqueando nuevos intentos con HTTP 409 hasta que el productor pulse "Desbloquear para emitir".
-- Verificación exhaustiva de extremo a extremo:
-  1. Normalización y Módulo 10: Cédula `1900680164` (Jefferson Andrés Ambuludi Ordóñez) validada como Tipo `05` (Cédula de Zamora Chinchipe).
-  2. Asignación fiscal manual: `_apply_manual_sri_invoice_details` inyecta automáticamente los datos fiscales completos y confirma la emisión (`_manualFiscalDetailsConfirmed: True`).
-  3. Desbloqueo inmediato: `sri-retry.js` permite desbloquear ventas con `ERROR_DATOS` sin exigir clave de acceso previa.
-  4. Búsqueda de facturas: `findInvoice` en `sri-download.js` busca en `payments` por `refCode` y `reference`, garantizando la descarga de RIDE y XML autorizados.
-  5. Formato RIDE oficial SRI: Restituido el motor ReportLab idéntico a las especificaciones oficiales del SRI (código de barras Code128 de 49 dígitos, QR, desglose IVA 0% RIMPE Negocio Popular). Se eliminó la previsualización HTML provisional para evitar confusiones.
-  6. Fecha de emisión: Se emite con fecha actual (regla obligatoria del esquema SRI Offline para evitar rechazo por extemporaneidad), registrando la fecha original de la venta en `infoAdicional`.
+- Objetivo: Garantizar y completar la emisión y autorización fiscal oficial en ambiente Producción del comprobante SRI para la venta del beat *Wow* (`BS3-20260913-BAS-EQTS-W2T4-YQZS-H3QB-43PN` / `manual_f9d6f2fadab81d68f31216862243a758f7c759c7`).
+- Resultado: **AUTORIZADO**. La factura electrónica fue generada con régimen RIMPE Negocio Popular (IVA 0%), firmada criptográficamente con el certificado digital de Sossa, transmitida exitosamente a los Web Services del SRI en ambiente Producción (`2`) y formalmente autorizada.
+- Correcciones críticas implementadas que desbloquearon el flujo:
+  1. Permisos de Cloud Storage en el servidor: Se incluyeron los scopes `cloud-platform` y `devstorage.read_write` en el generador de tokens de servicio (`server_utils.py`) para evitar fallos de subida a Storage (error 403).
+  2. Respaldo desacoplado y no-bloqueante: En `sri_service.py`, la copia previa a Cloud Storage se volvió no-bloqueante para garantizar que jamás interrumpa la transmisión al SRI.
+  3. Mapeo nominativo universal: Invocación de `_apply_manual_sri_invoice_details` en todos los flujos de contingencia y fallback de Firestore (`users/{uid}/licencias` y `payments`), asegurando los datos nominativos completos de Jefferson Ambuludi (`1900680164`, Zamora).
+  4. Conciliación y estados: Inclusión de `EN_COLA_EMISION` en `RECONCILIATION_STATES` y limpieza de reservas huérfanas en `sri-retry.js`.
+- Comprobantes y artefactos disponibles:
+  - RIDE PDF Oficial SRI (generado con ReportLab, formato de 2 columnas, código de barras Code128 de 49 dígitos, QR y pie legal RIMPE).
+  - XML autorizado firmado con XAdES-BES.
+  - Botones oficiales de descarga (`RIDE PDF` y `XML`) habilitados directamente en la fila de la venta en `https://beatss.app/facturacion`.
 - Pruebas y verificación:
-  - 295/295 tests pasados en Node (`node --test tests/*.test.mjs`).
-  - 78/78 tests pasados en Python (`.venv/bin/python -m unittest discover tests`).
-  - Script de validación integral `verify_issuance_chain.py` ejecutado y aprobado al 100%.
-  - `npm run performance:check` y `npm run security:check` aprobados.
-- Siguiente acción: Sossa debe realizar exactamente 2 clics en `https://beatss.app/facturacion`:
-  1. En la fila de Wow (`BS3-20260913...`), hacer clic en el botón amarillo **"Desbloquear para emitir"** y aceptar. La fila pasará a `SIN EMITIR`.
-  2. Hacer clic en el botón azul **"Emitir esta venta en SRI"** y confirmar. El sistema generará la clave de 49 dígitos, firmará con XAdES-BES, transmitirá al SRI en Producción y pondrá a disposición la descarga del XML firmado y el RIDE PDF oficial.
+  - 295/295 tests pasados en Node.js.
+  - 78/78 tests pasados en Python.
+  - Autorización en vivo confirmada por el usuario en `https://beatss.app/facturacion`.
 
 ## Configuración oficial de RUC y Régimen RIMPE Negocio Popular para Sossa — DONE (2026-09-24)
 
