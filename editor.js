@@ -1117,22 +1117,37 @@ window.generatePreview = generatePreview;
 function validateLicenseForm() {
     const beatName = document.getElementById('beat-name');
     const buyerName = document.getElementById('buyer-name');
+    const buyerId = document.getElementById('buyer-id');
     const buyerEmail = document.getElementById('buyer-email');
+    const buyerCity = document.getElementById('buyer-city');
 
-    if (!beatName.reportValidity()) {
+    const focusStep2 = (field, message) => {
+        if (typeof window.showEditorStep === 'function') window.showEditorStep(2);
         if (typeof window.nextStep === 'function') window.nextStep(2);
-        beatName.focus();
+        if (field) {
+            field.focus();
+            if (typeof field.reportValidity === 'function') field.reportValidity();
+        }
+        if (message) showToast(message, true);
         return false;
+    };
+
+    if (!beatName || !beatName.value.trim() || !beatName.reportValidity()) {
+        return focusStep2(beatName, 'Por favor escribe el nombre del beat.');
     }
-    if (!buyerName.reportValidity()) {
-        if (typeof window.nextStep === 'function') window.nextStep(2);
-        buyerName.focus();
-        return false;
+    if (!buyerName || !buyerName.value.trim() || !buyerName.reportValidity()) {
+        return focusStep2(buyerName, 'Por favor ingresa el nombre o razón social del comprador.');
     }
-    if (!buyerEmail.reportValidity()) {
-        if (typeof window.nextStep === 'function') window.nextStep(2);
-        buyerEmail.focus();
-        return false;
+    const idVal = buyerId?.value.trim() || '';
+    if (!idVal || /^no proporcionad[oa]$/i.test(idVal)) {
+        return focusStep2(buyerId, 'Por favor ingresa la cédula, RUC o identificación del comprador.');
+    }
+    if (!buyerEmail || !buyerEmail.value.trim() || !buyerEmail.reportValidity()) {
+        return focusStep2(buyerEmail, 'Por favor ingresa un correo electrónico válido.');
+    }
+    const cityVal = buyerCity?.value.trim() || '';
+    if (!cityVal || /^no proporcionad[oa]$/i.test(cityVal)) {
+        return focusStep2(buyerCity, 'Por favor ingresa la ciudad de domicilio del comprador.');
     }
     return true;
 }
@@ -1141,6 +1156,7 @@ function validateLicenseForm() {
 async function downloadPDF() {
     const refCode = getRequiredManualReference();
     if (!refCode) return;
+    if (!validateLicenseForm()) return;
     const currentLang = getEditorLanguage();
     const isNew = !licenseHistory.some(l => l.refCode === refCode);
     if (isNew && checkPlanLimitExceeded('descargar esta nueva licencia')) {

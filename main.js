@@ -2623,11 +2623,18 @@ function setupEventListeners() {
     document.querySelectorAll('[data-editor-step]').forEach(control => {
         control.addEventListener('click', (event) => {
             event.preventDefault();
+            const targetStep = Number(control.dataset.editorStep);
+            if (targetStep === 3 && activeEditorStep < 3) {
+                if (typeof window.validateLicenseForm === 'function' && !window.validateLicenseForm()) return;
+            }
             showEditorStep(control.dataset.editorStep);
         });
     });
 
     document.getElementById('wizard-next')?.addEventListener('click', () => {
+        if (activeEditorStep === 2) {
+            if (typeof window.validateLicenseForm === 'function' && !window.validateLicenseForm()) return;
+        }
         showEditorStep(Math.min(3, activeEditorStep + 1));
     });
     document.getElementById('wizard-back')?.addEventListener('click', () => {

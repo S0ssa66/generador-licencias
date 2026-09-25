@@ -401,6 +401,21 @@ function saveCurrentLicenseToHistory(silent = false) {
         return false;
     }
 
+    const rawBuyerId = document.getElementById('buyer-id')?.value.trim() || '';
+    const rawBuyerCity = document.getElementById('buyer-city')?.value.trim() || '';
+    if (silent !== true) {
+        if (!rawBuyerId || /^no proporcionad[oa]$/i.test(rawBuyerId)) {
+            showToast('Ingresa la cédula, RUC o pasaporte del comprador antes de guardar.', true);
+            document.getElementById('buyer-id')?.focus();
+            return false;
+        }
+        if (!rawBuyerCity || /^no proporcionad[oa]$/i.test(rawBuyerCity)) {
+            showToast('Ingresa la ciudad de domicilio del comprador antes de guardar.', true);
+            document.getElementById('buyer-city')?.focus();
+            return false;
+        }
+    }
+
     const index = existingIndex;
     const existing = historicalRecord;
     const now = new Date().toISOString();
