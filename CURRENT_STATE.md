@@ -1,5 +1,40 @@
 # Estado operativo actual de BEATSS
 
+## Corregir hidratación y visualización móvil del Facturador SRI — DONE (2026-09-24)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Antigravity`.
+- Fecha: `2026-09-24`.
+- Objetivo: Resolver el problema reportado en móvil donde al entrar a `/facturacion` o "Facturas SRI" aparecía todo en blanco con contadores en 0 y sin operaciones renderizadas.
+- Causa raíz diagnosticada:
+  1. Condición de carrera en `initSriInvoicingView`: ejecutaba `await window.loadHistory?.(); renderSriInvoicingView();`. Si `loadHistory` fallaba por CDN o elementos DOM no montados de `updateHistoryTable()`, `renderSriInvoicingView` nunca se ejecutaba.
+  2. `window.producerConfig` no era reactivo con getter/setter (`Object.defineProperty`), provocando que lecturas en caliente usaran el objeto inicial vacío.
+  3. `updateHistoryTable()` en `storageBackup.js` no estaba envuelto en `try...catch`, haciendo que cualquier excepción en la vista de historial abortara `loadHistory()`.
+  4. Falta de evento de hidratación y estados vacíos no estilizados (`.sri-facturador-status:empty`).
+- Soluciones aplicadas:
+  1. `dashboard_modules/invoicing.js`:
+     - `initSriInvoicingView` ahora renderiza de inmediato con lo que haya en memoria y ejecuta `loadHistory` dentro de un bloque `try/finally` para garantizar re-renderizado sin bloqueos.
+     - Botón "Actualizar" incluye estado visual de carga (`loading` y `disabled`).
+     - Listener global del evento `beatss:history-updated` para re-renderizado automático al completarse la carga de licencias.
+     - Acceso seguro con optional chaining a las propiedades en `haystack` (`item?.refCode`, etc.).
+  2. `main.js`:
+     - Añadido `Object.defineProperty(window, 'producerConfig', ...)` para sincronización reactiva bidireccional.
+     - En `switchTab('tab-invoicing')` se añadió fallback para asegurar el renderizado de datos en caché.
+     - En `initApp(user)` se programa `loadHistory()` de inmediato si la ruta de arranque es `invoicing`.
+  3. `storageBackup.js`:
+     - Despacho del evento `beatss:history-updated` inmediatamente tras establecer `window.licenseHistory`.
+     - `await updateHistoryTable()` envuelto en `try...catch` defensivo.
+  4. `dashboard_modules/history.js`:
+     - Salvaguarda defensiva al inicio de `updateHistoryTable` ante elementos DOM no disponibles.
+  5. `facturador.css` & `index.html`:
+     - `.sri-facturador-status:empty { display: none; }` y animación de giro para el botón de recarga.
+     - Fila de carga informativa por defecto en `sri-invoicing-table-body` en lugar de una tabla vacía sin feedback.
+- Pruebas y verificación:
+  - 295/295 tests pasados en Node (`node --test tests/*.test.mjs`).
+  - `npm run build` exitoso dentro de presupuestos (HTML gzip 62.09 kB).
+  - Deploy subido a `origin/main` (commit `4373cbc`).
+- Siguiente acción: Sossa puede abrir o refrescar `https://beatss.app/facturacion` en su teléfono; las 53 operaciones fiscales y botones de acción aparecerán de inmediato.
+
 ## Desbloquear venta Wow y ventas pendientes sin clave fiscal reservada — DONE (2026-09-24)
 
 - Estado: `DONE`; lock liberado.
