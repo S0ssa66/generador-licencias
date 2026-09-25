@@ -156,13 +156,13 @@ function collectSriInvoiceDetails(invoice) {
         if (buyerEmail === null) return null;
         return { mode: 'consumer_final', consumerFinalConfirmed: true, buyerEmail };
     }
-    const buyerName = promptValue('Nombre completo o razón social EXACTA del comprador para la factura:', existingName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName);
+    const buyerName = promptValue('Nombre completo o razón social EXACTA del comprador para la factura:', existingName);
     if (buyerName === null) return null;
-    const buyerId = promptValue('Cédula, RUC o pasaporte del comprador (confírmalo con él):', existingId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId);
+    const buyerId = promptValue('Cédula, RUC o pasaporte del comprador (confírmalo con él):', existingId);
     if (buyerId === null) return null;
-    const buyerAddress = promptValue('Dirección del comprador para la factura:', existingAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress);
+    const buyerAddress = promptValue('Dirección del comprador para la factura:', existingAddress);
     if (buyerAddress === null) return null;
-    const buyerEmail = promptValue('Correo para entregar XML/RIDE (opcional):', existingEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail);
+    const buyerEmail = promptValue('Correo para entregar XML/RIDE (opcional):', existingEmail);
     if (buyerEmail === null) return null;
     return { mode: 'identified', buyerName, buyerId, buyerAddress: buyerAddress || 'Ecuador', buyerEmail };
 }
