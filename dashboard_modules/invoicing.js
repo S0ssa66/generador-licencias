@@ -8,6 +8,38 @@ function safeText(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
 
+function invoiceKey(invoice) {
+    return String(invoice?.firestoreId || invoice?.paymentId || invoice?.id || invoice?.reference || invoice?.refCode || '').trim();
+}
+
+const KNOWN_BUYER_CORRECTIONS = {
+    'BS3-20260913-BAS-EQTS-W2T4-YQZS-H3QB-43PN': {
+        buyerName: 'Jefferson Andrés Ambuludi Ordóñez',
+        buyerId: '1900680164',
+        buyerAddress: 'Zamora, Zamora Chinchipe, Ecuador',
+        buyerCity: 'Zamora',
+        buyerCountry: 'Ecuador',
+        buyerPhone: '+593 99 758 7297',
+        buyerEmail: 'ordonezjeffer798@gmail.com'
+    }
+};
+
+function getBuyerCorrection(invoice) {
+    const keys = [
+        invoice?.refCode,
+        invoice?.reference,
+        invoice?.contractReference,
+        invoice?.firestoreId,
+        invoice?.paymentId,
+        invoice?.id,
+        invoiceKey(invoice)
+    ].filter(Boolean).map(v => String(v).trim());
+    for (const key of keys) {
+        if (KNOWN_BUYER_CORRECTIONS[key]) return KNOWN_BUYER_CORRECTIONS[key];
+    }
+    return {};
+}
+
 function currentHistory() {
     const list = Array.isArray(window.licenseHistory) ? window.licenseHistory : [];
     return list
@@ -15,6 +47,23 @@ function currentHistory() {
         .map(item => {
             if (item.value == null && (item.finalPrice != null || item.price != null || item.amount != null)) {
                 item.value = item.finalPrice ?? item.price ?? item.amount;
+            }
+            const correction = getBuyerCorrection(item);
+            if (correction.buyerId) {
+                if (!item.buyerDni || /^no proporcionad/i.test(item.buyerDni)) item.buyerDni = correction.buyerId;
+                if (!item.buyerCity || /^no proporcionad/i.test(item.buyerCity)) item.buyerCity = correction.buyerCity;
+                if (!item.buyerAddress || /^no proporcionad/i.test(item.buyerAddress)) item.buyerAddress = correction.buyerAddress;
+                if (!item.buyerPhone) item.buyerPhone = correction.buyerPhone;
+                if (!item.buyerEmail || /^no proporcionad/i.test(item.buyerEmail)) item.buyerEmail = correction.buyerEmail;
+                if (!item.buyerName || /^no proporcionad/i.test(item.buyerName)) item.buyerName = correction.buyerName;
+                if (item.formData) {
+                    if (!item.formData.buyerId || /^no proporcionad/i.test(item.formData.buyerId)) item.formData.buyerId = correction.buyerId;
+                    if (!item.formData.buyerCity || /^no proporcionad/i.test(item.formData.buyerCity)) item.formData.buyerCity = correction.buyerCity;
+                    if (!item.formData.buyerAddress || /^no proporcionad/i.test(item.formData.buyerAddress)) item.formData.buyerAddress = correction.buyerAddress;
+                    if (!item.formData.buyerPhone) item.formData.buyerPhone = correction.buyerPhone;
+                    if (!item.formData.buyerEmail || /^no proporcionad/i.test(item.formData.buyerEmail)) item.formData.buyerEmail = correction.buyerEmail;
+                    if (!item.formData.buyerName || /^no proporcionad/i.test(item.formData.buyerName)) item.formData.buyerName = correction.buyerName;
+                }
             }
             return item;
         });
@@ -46,10 +95,6 @@ function stateLabel(status) {
     if (PENDING_STATES.has(status)) return 'EN PROCESO';
     if (status.startsWith('ERROR_') || status.startsWith('RECHAZADO_')) return 'REVISAR';
     return 'SIN EMITIR';
-}
-
-function invoiceKey(invoice) {
-    return String(invoice?.firestoreId || invoice?.paymentId || invoice?.id || invoice?.reference || invoice?.refCode || '').trim();
 }
 
 function isSandboxInvoice(invoice) {
@@ -87,8 +132,12 @@ function invoiceConfirmationDetails(invoice) {
     const details = invoice?.formData || {};
     const fiscalBuyer = invoice?.sriInvoiceDetails || {};
     const config = window.producerConfig || {};
+    const correction = getBuyerCorrection(invoice);
     const line = (label, ...values) => {
-        const value = values.find(candidate => String(candidate ?? '').trim());
+        const value = values.find(candidate => {
+            const s = String(candidate ?? '').trim();
+            return s && !/^no proporcionad[oa]$/i.test(s) && !/^pendiente/i.test(s);
+        });
         const normalized = String(value ?? 'NO REGISTRADO').replace(/[\r\n\t]+/g, ' ').trim();
         return `${label}: ${normalized || 'NO REGISTRADO'}`;
     };
@@ -112,10 +161,10 @@ function invoiceConfirmationDetails(invoice) {
         '',
         'COMPRADOR',
         line('Modalidad', fiscalBuyer.mode === 'consumer_final' ? 'Consumidor Final' : 'Nominativa'),
-        line('Nombre / razón social', fiscalBuyer.buyerName, invoice?.invoiceCompany, details.invoiceCompany, invoice?.buyerName, details.buyerName),
-        line('RUC / identificación', fiscalBuyer.buyerId, invoice?.invoiceRuc, details.invoiceRuc, invoice?.buyerDni, invoice?.buyerId, details.buyerId),
-        line('Correo', fiscalBuyer.buyerEmail, invoice?.invoiceEmail, invoice?.buyerEmail, details.invoiceEmail, details.buyerEmail),
-        line('Dirección', fiscalBuyer.buyerAddress, invoice?.invoiceAddress, details.invoiceAddress, invoice?.buyerCity),
+        line('Nombre / razón social', fiscalBuyer.buyerName, invoice?.invoiceCompany, details.invoiceCompany, invoice?.buyerName, details.buyerName, correction.buyerName),
+        line('RUC / identificación', fiscalBuyer.buyerId, invoice?.invoiceRuc, details.invoiceRuc, invoice?.buyerDni, invoice?.buyerId, details.buyerId, correction.buyerId),
+        line('Correo', fiscalBuyer.buyerEmail, invoice?.invoiceEmail, invoice?.buyerEmail, details.invoiceEmail, details.buyerEmail, correction.buyerEmail),
+        line('Dirección', fiscalBuyer.buyerAddress, invoice?.invoiceAddress, details.invoiceAddress, invoice?.buyerCity, correction.buyerAddress),
         '',
         'IMPUESTOS CONFIGURADOS EN BEATSS',
         `IVA tarifa: ${vatRateLabel} · ${ivaIncluded ? 'incluido en el importe cobrado' : 'se añadirá al importe cobrado'}`,
@@ -130,14 +179,15 @@ function invoiceConfirmationDetails(invoice) {
 function collectSriInvoiceDetails(invoice) {
     const previous = invoice?.sriInvoiceDetails || {};
     const details = invoice?.formData || {};
+    const correction = getBuyerCorrection(invoice);
     const cleanCandidate = val => {
         const str = String(val || '').trim();
         return (str && !/^no proporcionad[oa](?:,\s*no proporcionad[oa])?$/i.test(str) && !/^pendiente/i.test(str)) ? str : '';
     };
-    const existingName = cleanCandidate(previous.buyerName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName);
-    const existingId = cleanCandidate(previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId);
-    const existingAddress = cleanCandidate(previous.buyerAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress || invoice?.buyerCity || details?.buyerCity);
-    const existingEmail = cleanCandidate(previous.buyerEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail);
+    const existingName = cleanCandidate(previous.buyerName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName || correction.buyerName);
+    const existingId = cleanCandidate(previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId || correction.buyerId);
+    const existingAddress = cleanCandidate(previous.buyerAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress || invoice?.buyerCity || details?.buyerCity || correction.buyerAddress);
+    const existingEmail = cleanCandidate(previous.buyerEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail || correction.buyerEmail);
 
     // Si la venta ya tiene los datos fiscales del cliente guardados, se usan directamente para la factura
     if (existingName && existingId) {
@@ -209,20 +259,21 @@ function manualInvoiceText(invoice) {
     const previous = invoice?.sriInvoiceDetails || {};
     const details = invoice?.formData || {};
     const issuer = window.producerConfig || {};
+    const correction = getBuyerCorrection(invoice);
     const missing = value => {
         const str = String(value || '').trim();
         return (str && !/^no proporcionad[oa]$/i.test(str)) ? str : 'PENDIENTE DE COMPLETAR';
     };
 
-    const buyerName = previous.buyerName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName;
-    const buyerId = previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId || details.buyerDni;
-    const buyerEmail = previous.buyerEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail;
-    const buyerCityCountry = [invoice?.buyerCity || details?.buyerCity, invoice?.buyerCountry || details?.buyerCountry]
+    const buyerName = previous.buyerName || invoice?.invoiceCompany || details.invoiceCompany || invoice?.buyerName || details.buyerName || correction.buyerName;
+    const buyerId = previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId || details.buyerDni || correction.buyerId;
+    const buyerEmail = previous.buyerEmail || invoice?.invoiceEmail || details.invoiceEmail || invoice?.buyerEmail || details.buyerEmail || correction.buyerEmail;
+    const buyerCityCountry = [invoice?.buyerCity || details?.buyerCity || correction.buyerCity, invoice?.buyerCountry || details?.buyerCountry || correction.buyerCountry]
         .map(v => String(v || '').trim())
         .filter(v => v && !/^no proporcionad[oa]$/i.test(v))
         .join(', ');
-    const buyerAddress = previous.buyerAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress || buyerCityCountry;
-    const buyerRuc = previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId;
+    const buyerAddress = previous.buyerAddress || invoice?.invoiceAddress || details.invoiceAddress || invoice?.buyerAddress || details.buyerAddress || buyerCityCountry || correction.buyerAddress;
+    const buyerRuc = previous.buyerId || invoice?.invoiceRuc || details.invoiceRuc || invoice?.buyerDni || invoice?.buyerId || details.buyerId || correction.buyerId;
     const buyerCompany = invoice?.invoiceCompany || details.invoiceCompany || buyerName;
 
     return [

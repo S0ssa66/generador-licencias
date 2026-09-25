@@ -1093,19 +1093,24 @@ function loadLicenseIntoEditor(lic) {
     });
 
     const fd = lic.formData || {};
+    const isJefferson = (lic.refCode === 'BS3-20260913-BAS-EQTS-W2T4-YQZS-H3QB-43PN' || lic.reference === 'BS3-20260913-BAS-EQTS-W2T4-YQZS-H3QB-43PN');
+    const cleanField = v => {
+        const s = String(v || '').trim();
+        return (s && !/^no proporcionad/i.test(s)) ? s : '';
+    };
 
     // Llenar inputs principales
     document.getElementById('beat-name').value = lic.beatName || "";
-    document.getElementById('buyer-name').value = lic.buyerName || "";
-    document.getElementById('buyer-email').value = fd.buyerEmail || lic.buyerEmail || "";
-    document.getElementById('buyer-phone').value = fd.buyerPhone || lic.buyerPhone || "";
-    document.getElementById('buyer-id').value = fd.buyerId || lic.buyerId || "";
+    document.getElementById('buyer-name').value = lic.buyerName || (isJefferson ? "Jefferson Andrés Ambuludi Ordóñez" : "");
+    document.getElementById('buyer-email').value = fd.buyerEmail || lic.buyerEmail || (isJefferson ? "ordonezjeffer798@gmail.com" : "");
+    document.getElementById('buyer-phone').value = fd.buyerPhone || lic.buyerPhone || (isJefferson ? "+593 99 758 7297" : "");
+    document.getElementById('buyer-id').value = cleanField(fd.buyerId || lic.buyerId) || (isJefferson ? "1900680164" : "");
     document.getElementById('license-value').value = lic.value !== undefined ? lic.value : 29.99;
-    document.getElementById('buyer-city').value = fd.buyerCity || lic.buyerCity || "";
+    document.getElementById('buyer-city').value = cleanField(fd.buyerCity || lic.buyerCity) || (isJefferson ? "Zamora" : "");
     document.getElementById('buyer-country').value = fd.buyerCountry || lic.buyerCountry || "Ecuador";
     document.getElementById('ref-code').value = resolveLicenseReference(lic) || lic.refCode || "";
     document.getElementById('effective-date').value = lic.contractEffectiveDate || lic.date || "";
-    document.getElementById('celebration-place').value = fd.celebrationPlace || lic.celebrationPlace || "";
+    document.getElementById('celebration-place').value = fd.celebrationPlace || lic.celebrationPlace || (isJefferson ? "Zamora, Zamora Chinchipe" : "");
     document.getElementById('payment-method').value = lic.paymentMethod || "Transferencia Bancaria";
 
     // Llenar enlaces de audio
