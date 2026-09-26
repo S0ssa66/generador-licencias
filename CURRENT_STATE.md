@@ -1,5 +1,23 @@
 # Estado operativo actual de BEATSS
 
+## Integración y Botón de PayPal (Express Checkout y Radio Card Estándar) — DONE (2026-09-25)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Antigravity`.
+- Fecha: `2026-09-25`.
+- Producción verificada: Desplegado y verificado en vivo en `https://beatss.app/@sossa` (Vercel deployment `generador-licencias-lwrkip5gb`).
+- Objetivo:
+  1. Habilitar el flujo de pago con PayPal en la tienda pública del productor principal (`Sossa`).
+  2. Resolver la causa raíz por la cual el botón de PayPal Express no se activaba: `server-handlers/public-store.js` dependía exclusivamente de credenciales en Firestore, omitiendo las variables de entorno de plataforma (`PAYPAL_CLIENT_ID` y `PAYPAL_CLIENT_SECRET`).
+  3. Cargar el SDK oficial de PayPal JS con Smart Payment Buttons tanto en el contenedor de **Express Checkout** (`#store-paypal-express-container`) como en el panel de **Métodos de pago** (`#store-paypal-button-container`).
+  4. Auto-completar los datos del comprador (`details.payer.name` y `details.payer.email_address`) en caso de que el cliente realice Express Checkout directo sin llenar el formulario previamente.
+  5. Asegurar la verificación y captura del pago del lado del servidor en `/api/confirm-purchase` con fallback a variables de entorno para el productor de la plataforma.
+- Pruebas y verificación:
+  - 298/298 tests pasados en Node.js (+1 prueba de regresión para capacidades PayPal en productor de plataforma).
+  - 78/78 tests pasados en Python.
+  - Verificación visual y funcional automatizada en producción con Puppeteer: botón PayPal interactivo (iframe `paypal-buttons`) renderizado y visible tanto en Express Checkout superior como en el panel estándar de PayPal.
+  - HTTP 200 y `paymentCapabilities.paypal: true` verificado en `https://beatss.app/api/public-store?producer=sossa`.
+
 ## Pasarela de Pagos Simplificada (Layout unificado de 2 columnas estilo E-commerce moderno) — DONE (2026-09-25)
 
 - Estado: `DONE`; lock liberado.
