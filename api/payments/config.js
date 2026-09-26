@@ -55,9 +55,9 @@ export function getSanitizedClientIp(req) {
         ?.slice(0, 128) || 'unknown';
 }
 
-export function serializePublicPaymentConfig(config = {}) {
+export function serializePublicPaymentConfig(config = {}, env = process.env) {
     return {
-        paypalClientId: String(config.paypalClientId || '').slice(0, 512),
+        paypalClientId: String(config.paypalClientId || env.PAYPAL_CLIENT_ID || '').slice(0, 512),
         paypalPlanIdPro: String(config.paypalPlanIdPro || '').slice(0, 160),
         paypalPlanIdElite: String(config.paypalPlanIdElite || '').slice(0, 160),
         paypalPlanIdCreator: String(config.paypalPlanIdCreator || '').slice(0, 160),
@@ -291,7 +291,7 @@ export default async function handler(req, res) {
             ...serializePublicPaymentConfig({
                 ...snap.data(),
                 ...(privateSnap.exists ? privateSnap.data() : {})
-            }),
+            }, process.env),
             capabilities: paymentCapabilities()
         });
 

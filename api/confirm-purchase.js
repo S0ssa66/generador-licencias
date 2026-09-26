@@ -9,6 +9,7 @@ import { enqueueSriJob } from './_sri_queue.js';
 import { isTrustedBeatssOrigin } from './_cors-origin.js';
 import { notifyPurchaseDelivery } from './_purchase-delivery.js';
 import { isBeatAvailableForSale, resolvePublicPreview } from '../server-handlers/beat-availability.js';
+import { resolveProducerSalesMode } from '../server-handlers/producer-settlement.js';
 import {
     CURRENT_REFERENCE_VERSION,
     createPublicContractReference,
@@ -367,10 +368,15 @@ export default async function handler(req, res) {
         const publicConfig = publicSnap.data();
         const privateConfig = privateSnap.exists ? privateSnap.data() : {};
 
-        // 2. Cada tienda usa exclusivamente su propia cuenta PayPal. Un
-        // fallback global mezclaría cobros de productores distintos.
-        const activeClientId = privateConfig.paypalClientId || '';
-        const activeSecret = privateConfig.paypalClientSecret || '';
+        // 2. Cada tienda usa exclusivamente su propia cuenta PayPal.
+        // El productor de plataforma (Sossa) puede cobrar mediante la cuenta de plataforma.
+        let activeClientId = privateConfig.paypalClientId || '';
+        let activeSecret = privateConfig.paypalClientSecret || '';
+        const mode = resolveProducerSalesMode({ producerId, publicConfig, privateConfig, env: process.env });
+        if ((!activeClientId || !activeSecret) && mode.isPlatform) {
+            activeClientId = process.env.PAYPAL_CLIENT_ID || '';
+            activeSecret = process.env.PAYPAL_CLIENT_SECRET || '';
+        }
 
         if (!activeClientId || !activeSecret) {
             return res.status(409).json({ error: 'PayPal no está configurado para este productor.' });

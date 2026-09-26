@@ -3825,11 +3825,13 @@
                     </nav>
 
                     <!-- EXPRESS CHECKOUT (PayPal Express) -->
-                    <div class="checkout-express-box bg-white border border-[#e2e8f0] p-5 rounded-2xl text-center space-y-3 shadow-sm">
+                    <div class="checkout-express-box bg-white border border-[#e2e8f0] p-5 rounded-2xl text-center space-y-3 shadow-sm" id="checkout-express-box">
                         <span class="block text-[11px] font-extrabold tracking-widest text-[#64748b] uppercase">EXPRESS CHECKOUT</span>
-                        <button type="button" id="btn-express-paypal" onclick="window.switchStorePaymentMethod('paypal');" class="w-full max-w-sm mx-auto py-3 px-6 rounded-xl bg-[#ffc439] hover:bg-[#f4bb36] font-bold text-[#003087] flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer">
-                            <img src="/banks/paypal.svg" alt="PayPal" class="h-5 object-contain">
-                        </button>
+                        <div id="store-paypal-express-container" class="w-full max-w-sm mx-auto min-h-[48px] flex items-center justify-center">
+                            <button type="button" id="btn-express-paypal" onclick="window.switchStorePaymentMethod('paypal');" class="w-full py-3 px-6 rounded-xl bg-[#ffc439] hover:bg-[#f4bb36] font-bold text-[#003087] flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer">
+                                <img src="/banks/paypal.svg" alt="PayPal" class="h-5 object-contain">
+                            </button>
+                        </div>
                         <div class="relative flex py-2 items-center">
                             <div class="flex-grow border-t border-[#e2e8f0]"></div>
                             <span class="flex-shrink mx-4 text-xs font-semibold text-[#94a3b8] uppercase">O ingresa tus datos</span>

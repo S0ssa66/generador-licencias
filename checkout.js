@@ -1250,6 +1250,14 @@ export function openBeatCheckoutModal(beatId) {
     storePaymentReceiptBase64 = null;
     window.checkoutExclusivePrice = 500; // Reset de precio exclusivo
 
+    // Pre-cargar SDK de PayPal de inmediato si el productor tiene credenciales activas
+    const paypalCid = window.storeProducerConfig?.paypalClientId || '';
+    if (paypalCid && window.storePaymentCapabilities?.paypal === true) {
+        loadStorePayPalSDK(paypalCid, () => {
+            renderStorePayPalButton(paypalCid);
+        });
+    }
+
     // Cargar datos guardados de localStorage si existe la preferencia
     const shouldRemember = localStorage.getItem('store_remember_data') !== 'false';
     const savedName = shouldRemember ? (localStorage.getItem('store_buyer_name') || '') : '';
@@ -1664,6 +1672,18 @@ export function updateCheckoutStepView(step) {
                 paypalVisible = true;
             } else if (paypalTab) {
                 paypalTab.style.display = 'none';
+            }
+
+            const expressBox = document.getElementById('checkout-express-box');
+            if (expressBox) {
+                const canExpress = (paypalClientId || paypalEmail) && window.storePaymentCapabilities?.paypal === true;
+                expressBox.style.display = canExpress ? 'block' : 'none';
+            }
+
+            if (paypalClientId && window.storePaymentCapabilities?.paypal === true) {
+                loadStorePayPalSDK(paypalClientId, () => {
+                    renderStorePayPalButton(paypalClientId);
+                });
             }
 
             if (window.storePaymentCapabilities?.stripe === true && stripeTab) {
@@ -2384,6 +2404,12 @@ export function setupStoreCheckout() {
             if (paypalContainer) {
                 paypalContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+            const clientId = window.storeProducerConfig?.paypalClientId || '';
+            if (clientId) {
+                loadStorePayPalSDK(clientId, () => {
+                    renderStorePayPalButton(clientId);
+                });
+            }
         });
     }
 
@@ -2709,10 +2735,22 @@ export function setupStoreCheckout() {
 }
 
 export function loadStorePayPalSDK(clientId, callback) {
+    if (!clientId) return;
+    if (window.paypal && typeof window.paypal.Buttons === 'function') {
+        const existingScript = document.getElementById('store-paypal-sdk-script');
+        if (existingScript && existingScript.getAttribute('data-client-id') === clientId) {
+            callback();
+            return;
+        }
+    }
     const existingScript = document.getElementById('store-paypal-sdk-script');
     if (existingScript) {
         if (existingScript.getAttribute('data-client-id') === clientId) {
-            callback();
+            if (window.paypal && typeof window.paypal.Buttons === 'function') {
+                callback();
+            } else {
+                existingScript.addEventListener('load', callback, { once: true });
+            }
             return;
         } else {
             existingScript.remove();
@@ -2720,7 +2758,7 @@ export function loadStorePayPalSDK(clientId, callback) {
     }
     const sdk = document.createElement('script');
     sdk.id = 'store-paypal-sdk-script';
-    sdk.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=USD&intent=capture`;
+    sdk.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=USD&intent=capture`;
     sdk.setAttribute('data-client-id', clientId);
     sdk.onload = callback;
     document.head.appendChild(sdk);
@@ -2791,125 +2829,185 @@ async function preparePaidLicenseDeliveries(deliveries, buyerData) {
 }
 
 export function renderStorePayPalButton(clientId) {
-    const container = document.getElementById('store-paypal-button-container');
-    container.innerHTML = '';
-    
+    if (!window.paypal || typeof window.paypal.Buttons !== 'function') return;
+
     const price = window.getCheckoutPrice();
     let description = '';
-    
+
     if (checkoutSelectedBeatId) {
         const beat = findBeatById(checkoutSelectedBeatId);
         description = `Licencia ${checkoutSelectedLicense.toUpperCase()} - Beat: ${beat ? beat.name : 'Desconocido'}`;
     } else {
         description = `Licencias de Beats: ${window.cart.map(item => `${item.beatName} (${item.licenseType.toUpperCase()})`).join(', ')}`;
     }
-    
-    if (window.paypal) {
-        window.paypal.Buttons({
-            style: {
-                layout: 'vertical',
-                color: 'gold',
-                shape: 'rect',
-                height: 55
-            },
-            onClick: function(data, actions) {
-                if (!requireCheckoutTermsAcceptance()) {
-                    return actions.reject();
-                }
-                const validation = validateAndSaveBuyerCheckoutData({ focusOnError: true });
-                if (!validation.ok) {
-                    return actions.reject();
-                }
-                return actions.resolve();
-            },
-            createOrder: function(data, actions) {
-                return actions.order.create({
-                    purchase_units: [{
-                        amount: {
-                            currency_code: 'USD',
-                            value: price.toFixed(2)
-                        },
-                        description: description.substring(0, 127)
-                    }]
-                });
-            },
-            onApprove: async function(data, actions) {
-                return actions.order.capture().then(async function(details) {
-                    checkoutDebug('PayPal transaction completed:', details);
-                    if (typeof window.showToast === 'function') window.showToast('Pago aprobado por PayPal. Procesando entrega...');
-                    
-                    const buyerName = document.getElementById('store-buyer-name').value.trim();
-                    const buyerEmail = document.getElementById('store-buyer-email').value.trim();
-                    const buyerPhone = document.getElementById('store-buyer-phone').value.trim();
-                    const buyerDni = document.getElementById('store-buyer-dni').value.trim();
-                    const buyerCity = document.getElementById('store-buyer-city').value.trim();
-                    const buyerCountry = document.getElementById('store-buyer-country').value.trim();
-                    const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist').value.trim();
-                    
-                    let itemsToProcess = [];
-                    if (checkoutSelectedBeatId) {
-                        const beat = findBeatById(checkoutSelectedBeatId);
-                        itemsToProcess.push({
-                            beatId: checkoutSelectedBeatId,
-                            beatName: beat ? beat.name : 'Desconocido',
-                            licenseType: checkoutSelectedLicense,
-                            price: getCheckoutBasePrice()
-                        });
-                    } else {
-                        itemsToProcess = window.cart.map(item => ({
-                            beatId: item.beatId,
-                            beatName: item.beatName,
-                            licenseType: item.licenseType,
-                            price: item.price
-                        }));
-                    }
-                    
-                    const payload = {
-                        orderId: details.id,
-                        producerId: window.storeProducerUid,
-                        buyerName,
-                        buyerEmail,
-                        buyerPhone,
-                        buyerDni,
-                        buyerCity,
-                        buyerCountry,
-                        youtubeWhitelist,
-                        items: itemsToProcess,
-                        discountPercent: window.checkoutDiscountPercent || 0,
-                        couponCode: window.checkoutAppliedCoupon || ''
-                    };
-                    
-                    try {
-                        const response = await fetch('/api/confirm-purchase', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        });
-                        
-                        const result = await response.json();
-                        if (response.ok && result.success) {
-                            await preparePaidLicenseDeliveries(result.deliveries, payload);
-                            if (typeof window.showToast === 'function') window.showToast('¡Pago verificado, licencia PDF y archivos enviados con éxito!');
-                            
-                            clearPurchasedItems();
-                            document.getElementById('beat-checkout-modal').style.display = 'none';
-                            await finalizePaymentSuccess(result.paymentId || details.id, itemsToProcess);
-                        } else {
-                            throw new Error(result.error || 'Error al verificar el pago en el servidor');
-                        }
-                    } catch (e) {
-                        console.error("Fallo al verificar compra:", e);
-                        if (typeof window.showToast === 'function') window.showToast("Fallo al entregar tus beats. Tu pago fue procesado. Por favor, contacta al productor: " + e.message, true);
-                    }
-                });
-            },
-            onError: function(err) {
-                console.error('PayPal store error:', err);
-                if (typeof window.showToast === 'function') window.showToast('Error en el pago de PayPal.', true);
+
+    const createOrderAction = function(data, actions) {
+        return actions.order.create({
+            purchase_units: [{
+                amount: {
+                    currency_code: 'USD',
+                    value: price.toFixed(2)
+                },
+                description: description.substring(0, 127)
+            }]
+        });
+    };
+
+    const handleApprove = async function(data, actions) {
+        return actions.order.capture().then(async function(details) {
+            checkoutDebug('PayPal transaction completed:', details);
+            if (typeof window.showToast === 'function') window.showToast('Pago aprobado por PayPal. Procesando entrega...');
+
+            let buyerName = document.getElementById('store-buyer-name')?.value?.trim() || '';
+            let buyerEmail = document.getElementById('store-buyer-email')?.value?.trim() || '';
+            const buyerPhone = document.getElementById('store-buyer-phone')?.value?.trim() || '';
+            const buyerDni = document.getElementById('store-buyer-dni')?.value?.trim() || '';
+            const buyerCity = document.getElementById('store-buyer-city')?.value?.trim() || '';
+            const buyerCountry = document.getElementById('store-buyer-country')?.value?.trim() || '';
+            const youtubeWhitelist = document.getElementById('store-txt-youtube-whitelist')?.value?.trim() || '';
+
+            // Auto-rellenar desde la cuenta PayPal si se usó Express Checkout
+            if (!buyerName && details.payer?.name) {
+                const given = details.payer.name.given_name || '';
+                const surname = details.payer.name.surname || '';
+                buyerName = `${given} ${surname}`.trim();
             }
-        }).render('#store-paypal-button-container');
+            if (!buyerName) buyerName = 'Cliente PayPal';
+            if (!buyerEmail && details.payer?.email_address) {
+                buyerEmail = details.payer.email_address;
+            }
+
+            const nameInput = document.getElementById('store-buyer-name');
+            if (nameInput && !nameInput.value) nameInput.value = buyerName;
+            const emailInput = document.getElementById('store-buyer-email');
+            if (emailInput && !emailInput.value) emailInput.value = buyerEmail;
+
+            try {
+                localStorage.setItem('store_buyer_name', buyerName);
+                localStorage.setItem('store_buyer_email', buyerEmail);
+            } catch (_) {}
+
+            let itemsToProcess = [];
+            if (checkoutSelectedBeatId) {
+                const beat = findBeatById(checkoutSelectedBeatId);
+                itemsToProcess.push({
+                    beatId: checkoutSelectedBeatId,
+                    beatName: beat ? beat.name : 'Desconocido',
+                    licenseType: checkoutSelectedLicense,
+                    price: getCheckoutBasePrice()
+                });
+            } else {
+                itemsToProcess = window.cart.map(item => ({
+                    beatId: item.beatId,
+                    beatName: item.beatName,
+                    licenseType: item.licenseType,
+                    price: item.price
+                }));
+            }
+
+            const payload = {
+                orderId: details.id,
+                producerId: window.storeProducerUid,
+                buyerName,
+                buyerEmail,
+                buyerPhone,
+                buyerDni,
+                buyerCity,
+                buyerCountry,
+                youtubeWhitelist,
+                items: itemsToProcess,
+                discountPercent: window.checkoutDiscountPercent || 0,
+                couponCode: window.checkoutAppliedCoupon || ''
+            };
+
+            try {
+                const response = await fetch('/api/confirm-purchase', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    await preparePaidLicenseDeliveries(result.deliveries, payload);
+                    if (typeof window.showToast === 'function') window.showToast('¡Pago verificado, licencia PDF y archivos enviados con éxito!');
+
+                    clearPurchasedItems();
+                    document.getElementById('beat-checkout-modal').style.display = 'none';
+                    await finalizePaymentSuccess(result.paymentId || details.id, itemsToProcess);
+                } else {
+                    throw new Error(result.error || 'Error al verificar el pago en el servidor');
+                }
+            } catch (e) {
+                console.error("Fallo al verificar compra:", e);
+                if (typeof window.showToast === 'function') window.showToast("Fallo al entregar tus beats. Tu pago fue procesado. Por favor, contacta al productor: " + e.message, true);
+            }
+        });
+    };
+
+    const handleError = function(err) {
+        console.error('PayPal store error:', err);
+        if (typeof window.showToast === 'function') window.showToast('Error en el pago de PayPal.', true);
+    };
+
+    // 1. Renderizar en el contenedor Express superior
+    const expressContainer = document.getElementById('store-paypal-express-container');
+    if (expressContainer) {
+        expressContainer.innerHTML = '';
+        try {
+            window.paypal.Buttons({
+                style: {
+                    layout: 'horizontal',
+                    color: 'gold',
+                    shape: 'rect',
+                    label: 'paypal',
+                    height: 48,
+                    tagline: false
+                },
+                onClick: function(data, actions) {
+                    const termsChk = document.getElementById('store-chk-accept-terms');
+                    if (termsChk && !termsChk.checked) {
+                        termsChk.checked = true;
+                        if (typeof window.onAcceptTermsChange === 'function') window.onAcceptTermsChange();
+                    }
+                    return actions.resolve();
+                },
+                createOrder: createOrderAction,
+                onApprove: handleApprove,
+                onError: handleError
+            }).render('#store-paypal-express-container');
+        } catch (err) {
+            console.warn('Error al renderizar PayPal Express button:', err);
+        }
+    }
+
+    // 2. Renderizar en el contenedor de método de pago vertical
+    const standardContainer = document.getElementById('store-paypal-button-container');
+    if (standardContainer) {
+        standardContainer.innerHTML = '';
+        try {
+            window.paypal.Buttons({
+                style: {
+                    layout: 'vertical',
+                    color: 'gold',
+                    shape: 'rect',
+                    height: 48
+                },
+                onClick: function(data, actions) {
+                    if (!requireCheckoutTermsAcceptance()) {
+                        return actions.reject();
+                    }
+                    return actions.resolve();
+                },
+                createOrder: createOrderAction,
+                onApprove: handleApprove,
+                onError: handleError
+            }).render('#store-paypal-button-container');
+        } catch (err) {
+            console.warn('Error al renderizar PayPal standard button:', err);
+        }
     }
 }
 

@@ -108,8 +108,17 @@ export function parsePublicArtworkDataUrl(value) {
     return { body, contentType };
 }
 
-export function serializePublicStoreProducer(data, producerId) {
+export function serializePublicStoreProducer(data, producerId, env = process.env) {
     const { defaultBeatArtwork, ...producer } = sanitizePublicProducer(data);
+    const mode = resolveProducerSalesMode({ producerId, publicConfig: data, privateConfig: data, env });
+    if (mode.isPlatform) {
+        if (!producer.paypalClientId && env.PAYPAL_CLIENT_ID) {
+            producer.paypalClientId = env.PAYPAL_CLIENT_ID;
+        }
+        if (!producer.paypalEmail) {
+            producer.paypalEmail = data.email || 'sossabeatz1@gmail.com';
+        }
+    }
     return {
         ...producer,
         ...(parsePublicArtworkDataUrl(defaultBeatArtwork)
@@ -133,10 +142,12 @@ export function paymentCapabilitiesForProducer(data = {}, env = process.env, pro
             transfer: false
         };
     }
+    const hasProducerPaypal = Boolean(data.paypalClientId && data.paypalClientSecret && data.paypalEmail);
+    const hasPlatformPaypal = Boolean(mode.isPlatform && env.PAYPAL_CLIENT_ID && env.PAYPAL_CLIENT_SECRET);
     return {
         salesEnabled: true,
         stripe: Boolean(env.STRIPE_SECRET_KEY) && (mode.isPlatform || mode.paymentMode === PAYMENT_MODES.PLATFORM_SELLER),
-        paypal: Boolean(data.paypalClientId && data.paypalClientSecret && data.paypalEmail),
+        paypal: hasProducerPaypal || hasPlatformPaypal,
         payphone: Boolean(data.payphoneClientId && data.payphoneAppId),
         deuna: Boolean(data.deunaPhone && String(env.DEUNA_WEBHOOK_SECRET || '').length >= 32),
         transfer: Boolean(data.bankPichinchaAcc || data.bankGuayaquilAcc)
@@ -378,7 +389,7 @@ export default async function handler(req, res) {
         const paymentCapabilities = paymentCapabilitiesForProducer(mergedConfig, process.env, producerId);
         return res.status(200).json({
             producerId,
-            producer: serializePublicStoreProducer(mergedConfig, producerId),
+            producer: serializePublicStoreProducer(mergedConfig, producerId, process.env),
             salesEnabled: paymentCapabilities.salesEnabled,
             paymentCapabilities,
             beats

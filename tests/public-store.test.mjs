@@ -37,6 +37,23 @@ test('las capacidades de cobro son por productor y fallan cerradas', () => {
     assert.equal(open.paypal, true);
 });
 
+test('el productor de plataforma habilita paypal y transmite paypalClientId desde el entorno', () => {
+    const env = {
+        STRIPE_SECRET_KEY: 'sk_live_test',
+        STRIPE_PLATFORM_PRODUCER_ID: 'owner',
+        PAYPAL_CLIENT_ID: 'paypal-platform-client-id',
+        PAYPAL_CLIENT_SECRET: 'paypal-platform-secret'
+    };
+    const caps = paymentCapabilitiesForProducer({}, env, 'owner');
+    assert.equal(caps.salesEnabled, true);
+    assert.equal(caps.stripe, true);
+    assert.equal(caps.paypal, true);
+
+    const producer = serializePublicStoreProducer({ aka: 'Sossa', email: 'admin@sossamusic.com' }, 'owner', env);
+    assert.equal(producer.paypalClientId, 'paypal-platform-client-id');
+    assert.equal(producer.paypalEmail, 'admin@sossamusic.com');
+});
+
 test('el catálogo global no expone datos de cobro de productores no seleccionados', () => {
     const result = sanitizePublicCatalogProducer({
         aka: 'Sossa', brandColor: '#3157e8', plan: 'elite',
