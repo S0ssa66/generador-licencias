@@ -2963,7 +2963,7 @@ export function renderStorePayPalButton(clientId) {
                     color: 'gold',
                     shape: 'rect',
                     label: 'paypal',
-                    height: 48,
+                    height: 42,
                     tagline: false
                 },
                 onClick: function(data, actions) {
@@ -2993,7 +2993,7 @@ export function renderStorePayPalButton(clientId) {
                     layout: 'vertical',
                     color: 'gold',
                     shape: 'rect',
-                    height: 48
+                    height: 42
                 },
                 onClick: function(data, actions) {
                     if (!requireCheckoutTermsAcceptance()) {
@@ -4629,27 +4629,25 @@ export function updateStoreCheckoutSummary() {
     let total = 0;
 
     if (checkoutSelectedBeatId) {
-        // Single Beat Mode
+        // Single Beat Mode: El beat ya se muestra en #checkout-single-beat-preview.
+        // No duplicamos la tarjeta visual del beat abajo para mantener el checkout en 1 sola pantalla compacta.
         const beat = findBeatById(checkoutSelectedBeatId);
         if (beat) {
-            const artwork = window.getBeatArtwork ? window.getBeatArtwork(beat) : '';
             const licenseName = LICENSE_CONFIGS[checkoutSelectedLicense]?.name || checkoutSelectedLicense;
             const price = window.getCheckoutPrice();
             total = price;
 
-            summaryHtml = `
-                <div class="flex gap-4 items-start">
-                    <img src="${artwork}" class="w-16 h-16 bg-[#1A1A20] rounded-lg flex-shrink-0 object-cover border border-[#454558]/20" alt="${beat.name}">
-                    <div class="space-y-0.5 overflow-hidden">
-                        <h3 class="font-bold text-white leading-tight truncate text-sm">${window.sanitizeHtml ? window.sanitizeHtml(beat.name) : beat.name}</h3>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="text-[9px] bg-[#bec2ff]/10 text-[#bec2ff] border border-[#bec2ff]/20 px-1.5 py-0.5 rounded uppercase font-mono">${licenseName}</span>
-                            <span class="text-[9px] text-[#c5c4db] font-mono">${beat.bpm ? beat.bpm + ' BPM' : ''}</span>
-                        </div>
-                        <p class="text-[#bec2ff] font-bold text-base mt-1">$${price.toFixed(2)}</p>
-                    </div>
-                </div>
-            `;
+            const nameEl = document.getElementById('checkout-single-beat-name');
+            const metaEl = document.getElementById('checkout-single-beat-meta');
+            const imgEl = document.getElementById('checkout-single-beat-img');
+            if (nameEl) nameEl.textContent = beat.name;
+            if (metaEl) {
+                let details = [licenseName];
+                if (beat.bpm) details.push(`${beat.bpm} BPM`);
+                metaEl.textContent = details.join(' • ');
+            }
+            if (imgEl && window.getBeatArtwork) imgEl.src = window.getBeatArtwork(beat);
+            summaryHtml = '';
         }
     } else if (window.cart && window.cart.length > 0) {
         // Multi Beat Mode

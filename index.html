@@ -3784,128 +3784,128 @@
     <!-- Modal: Checkout de Beat (Modern 2-Column Minimalist Redesign) -->
     <div class="fixed inset-0 z-[100000] bg-[#f4f6fb] text-[#17233d] flex flex-col overflow-y-auto" id="beat-checkout-modal" style="display: none;">
         
-        <!-- HEADER MINIMALISTA -->
-        <header class="bg-white border-b border-[#e2e8f0] sticky top-0 z-50 shadow-sm">
-            <div class="flex justify-between items-center w-full px-6 py-4 max-w-6xl mx-auto">
-                <div class="flex items-center gap-3">
-                    <img alt="Logo de Beatss" class="h-8 md:h-9 object-contain" data-deferred-src="/logo.png"/>
-                    <span class="font-extrabold text-lg text-[#3157e8] tracking-tight">BEATSS</span>
+        <!-- HEADER MINIMALISTA COMPACTO -->
+        <header class="bg-white border-b border-[#e2e8f0] sticky top-0 z-50 shadow-xs">
+            <div class="flex justify-between items-center w-full px-4 sm:px-6 py-2.5 max-w-6xl mx-auto">
+                <div class="flex items-center gap-2.5">
+                    <img alt="Logo de Beatss" class="h-7 md:h-8 object-contain" data-deferred-src="/logo.png"/>
+                    <span class="font-extrabold text-base md:text-lg text-[#3157e8] tracking-tight">BEATSS</span>
+                    <span class="text-[11px] font-bold text-[#64748b] bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 hidden sm:inline-flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        Checkout Seguro
+                    </span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button type="button" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#f1f5f9] text-[#64748b] hover:text-[#0f172a] transition-all" id="btn-close-checkout-modal" aria-label="Cerrar checkout">
+                    <button type="button" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#f1f5f9] text-[#64748b] hover:text-[#0f172a] transition-all" id="btn-close-checkout-modal" aria-label="Cerrar checkout">
                         <span class="checkout-close-glyph" aria-hidden="true">×</span>
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- MAIN 2 COLUMNAS (Estilo Diem Gaming) -->
-        <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 md:py-10 flex-1">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+        <!-- MAIN 2 COLUMNAS COMPACTAS -->
+        <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 py-3.5 sm:py-4 flex-1">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 items-start">
                 
                 <!-- COLUMNA IZQUIERDA: Flujo de Pago y Contacto (7 cols) -->
-                <div class="lg:col-span-7 space-y-8">
+                <div class="lg:col-span-7 space-y-3.5">
                     
-                    <!-- Stepper minimalista -->
-                    <nav class="flex items-center justify-between pb-4 border-b border-[#e2e8f0]" aria-label="Pasos de checkout">
-                        <div class="flex items-center gap-2 text-[#3157e8] font-bold" id="ck-nav-step-1">
-                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-[#3157e8] text-white font-mono text-xs font-bold" id="ck-dot-1">1</span>
-                            <span class="font-mono uppercase tracking-wider text-xs">Licencia</span>
-                        </div>
-                        <div class="w-8 md:w-16 h-px bg-[#cbd5e1]"></div>
-                        <div class="flex items-center gap-2 text-[#3157e8] font-bold" id="ck-nav-step-2">
-                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-[#3157e8] text-white font-mono text-xs font-bold" id="ck-dot-2">2</span>
-                            <span class="font-mono uppercase tracking-wider text-xs">Contacto</span>
-                        </div>
-                        <div class="w-8 md:w-16 h-px bg-[#cbd5e1]"></div>
-                        <div class="flex items-center gap-2 text-[#3157e8] font-bold" id="ck-nav-step-3">
-                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-[#3157e8] text-white font-mono text-xs font-bold" id="ck-dot-3">3</span>
-                            <span class="font-mono uppercase tracking-wider text-xs">Pago</span>
-                        </div>
-                    </nav>
+                    <!-- Navegación conservada para compatibilidad de estado -->
+                    <div class="hidden" id="ck-nav-step-1"><span id="ck-dot-1">1</span></div>
+                    <div class="hidden" id="ck-nav-step-2"><span id="ck-dot-2">2</span></div>
+                    <div class="hidden" id="ck-nav-step-3"><span id="ck-dot-3">3</span></div>
 
                     <!-- EXPRESS CHECKOUT (PayPal Express) -->
-                    <div class="checkout-express-box bg-white border border-[#e2e8f0] p-5 rounded-2xl text-center space-y-3 shadow-sm" id="checkout-express-box">
-                        <span class="block text-[11px] font-extrabold tracking-widest text-[#64748b] uppercase">EXPRESS CHECKOUT</span>
-                        <div id="store-paypal-express-container" class="w-full max-w-sm mx-auto min-h-[48px] flex items-center justify-center">
-                            <button type="button" id="btn-express-paypal" onclick="window.switchStorePaymentMethod('paypal');" class="w-full py-3 px-6 rounded-xl bg-[#ffc439] hover:bg-[#f4bb36] font-bold text-[#003087] flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer">
-                                <img src="/banks/paypal.svg" alt="PayPal" class="h-5 object-contain">
+                    <div class="checkout-express-box bg-white border border-[#e2e8f0] p-3 rounded-xl text-center space-y-1.5 shadow-xs" id="checkout-express-box">
+                        <div class="flex items-center justify-between px-1">
+                            <span class="text-[10px] font-extrabold tracking-widest text-[#64748b] uppercase flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                EXPRESS CHECKOUT
+                            </span>
+                            <span class="text-[10px] text-[#94a3b8] font-medium">Rápido y seguro</span>
+                        </div>
+                        <div id="store-paypal-express-container" class="w-full max-w-sm mx-auto min-h-[44px] flex items-center justify-center">
+                            <button type="button" id="btn-express-paypal" onclick="window.switchStorePaymentMethod('paypal');" class="w-full py-2 px-4 rounded-lg bg-[#ffc439] hover:bg-[#f4bb36] font-bold text-[#003087] flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer text-xs">
+                                <img src="/banks/paypal.svg" alt="PayPal" class="h-4 object-contain">
                             </button>
                         </div>
-                        <div class="relative flex py-2 items-center">
+                        <div class="relative flex py-1 items-center">
                             <div class="flex-grow border-t border-[#e2e8f0]"></div>
-                            <span class="flex-shrink mx-4 text-xs font-semibold text-[#94a3b8] uppercase">O ingresa tus datos</span>
+                            <span class="flex-shrink mx-3 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">o completa tus datos</span>
                             <div class="flex-grow border-t border-[#e2e8f0]"></div>
                         </div>
                     </div>
 
                     <!-- PASO 2: Información de Contacto y Licencia -->
-                    <div class="checkout-step-panel space-y-5" id="checkout-panel-2">
-                        <div>
-                            <h2 class="font-extrabold text-xl text-[#0f172a]">Información de Contacto y Licencia</h2>
-                            <p class="text-xs text-[#64748b] mt-1">Estos datos se incluirán en tu contrato oficial de licencia y entrega digital.</p>
+                    <div class="checkout-step-panel space-y-2.5" id="checkout-panel-2">
+                        <div class="flex items-center justify-between pb-1 border-b border-[#e2e8f0]">
+                            <h2 class="font-extrabold text-xs uppercase tracking-wider text-[#0f172a] flex items-center gap-1.5">
+                                <span class="w-4 h-4 rounded-full bg-[#3157e8] text-white flex items-center justify-center text-[9px] font-bold">1</span>
+                                Datos de Contacto y Licencia
+                            </h2>
+                            <span class="text-[10px] text-[#64748b]">Para tu contrato oficial</span>
                         </div>
 
-                        <form id="checkout-billing-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" onsubmit="event.preventDefault();">
-                            <div class="md:col-span-2 space-y-1.5">
-                                <label for="store-buyer-email" class="text-xs font-bold text-[#334155] block">Correo Electrónico * (Para recibir tu licencia y archivos)</label>
-                                <input type="email" id="store-buyer-email" required class="w-full bg-white border border-[#cbd5e1] px-4 py-3 rounded-xl text-[#0f172a] text-sm focus:border-[#3157e8] focus:ring-2 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="tu-correo@ejemplo.com">
+                        <form id="checkout-billing-form" class="grid grid-cols-1 sm:grid-cols-2 gap-2" onsubmit="event.preventDefault();">
+                            <div class="space-y-1">
+                                <label for="store-buyer-name" class="text-[11px] font-bold text-[#334155] block">Nombre Artístico / Completo *</label>
+                                <input type="text" id="store-buyer-name" required class="w-full bg-white border border-[#cbd5e1] px-3 py-1.5 rounded-lg text-[#0f172a] text-xs focus:border-[#3157e8] focus:ring-1 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="Nombre para firmar">
                             </div>
-                            <div class="md:col-span-2 space-y-1.5">
-                                <label for="store-buyer-name" class="text-xs font-bold text-[#334155] block">Nombre Artístico / Nombre Completo *</label>
-                                <input type="text" id="store-buyer-name" required class="w-full bg-white border border-[#cbd5e1] px-4 py-3 rounded-xl text-[#0f172a] text-sm focus:border-[#3157e8] focus:ring-2 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="Nombre para firmar la licencia">
+                            <div class="space-y-1">
+                                <label for="store-buyer-email" class="text-[11px] font-bold text-[#334155] block">Correo Electrónico *</label>
+                                <input type="email" id="store-buyer-email" required class="w-full bg-white border border-[#cbd5e1] px-3 py-1.5 rounded-lg text-[#0f172a] text-xs focus:border-[#3157e8] focus:ring-1 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="Para recibir tus beats">
                             </div>
-                            <div class="space-y-1.5">
-                                <label for="store-buyer-phone" class="text-xs font-bold text-[#334155] block">WhatsApp / Teléfono</label>
-                                <input type="text" id="store-buyer-phone" class="w-full bg-white border border-[#cbd5e1] px-4 py-3 rounded-xl text-[#0f172a] text-sm focus:border-[#3157e8] focus:ring-2 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="Ej: +593 99 999 9999">
+                            <div class="space-y-1">
+                                <label for="store-buyer-phone" class="text-[11px] font-bold text-[#334155] block">WhatsApp / Teléfono</label>
+                                <input type="text" id="store-buyer-phone" class="w-full bg-white border border-[#cbd5e1] px-3 py-1.5 rounded-lg text-[#0f172a] text-xs focus:border-[#3157e8] focus:ring-1 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="+593 99 999 9999">
                             </div>
-                            <div class="space-y-1.5">
-                                <label for="store-buyer-dni" class="text-xs font-bold text-[#334155] block">Identificación / Cédula / DNI</label>
-                                <input type="text" id="store-buyer-dni" class="w-full bg-white border border-[#cbd5e1] px-4 py-3 rounded-xl text-[#0f172a] text-sm focus:border-[#3157e8] focus:ring-2 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="Cédula, RUC o Pasaporte">
+                            <div class="space-y-1">
+                                <label for="store-buyer-dni" class="text-[11px] font-bold text-[#334155] block">Cédula / DNI / Pasaporte</label>
+                                <input type="text" id="store-buyer-dni" class="w-full bg-white border border-[#cbd5e1] px-3 py-1.5 rounded-lg text-[#0f172a] text-xs focus:border-[#3157e8] focus:ring-1 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="Identificación">
                             </div>
-                            <div class="space-y-1.5">
-                                <label for="store-buyer-city" class="text-xs font-bold text-[#334155] block">Ciudad</label>
-                                <input type="text" id="store-buyer-city" class="w-full bg-white border border-[#cbd5e1] px-4 py-3 rounded-xl text-[#0f172a] text-sm focus:border-[#3157e8] focus:ring-2 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="Ej: Quito / Guayaquil">
+                            <div class="space-y-1">
+                                <label for="store-buyer-city" class="text-[11px] font-bold text-[#334155] block">Ciudad</label>
+                                <input type="text" id="store-buyer-city" class="w-full bg-white border border-[#cbd5e1] px-3 py-1.5 rounded-lg text-[#0f172a] text-xs focus:border-[#3157e8] focus:ring-1 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="Ej: Quito / Guayaquil">
                             </div>
-                            <div class="space-y-1.5">
-                                <label for="store-buyer-country" class="text-xs font-bold text-[#334155] block">País</label>
-                                <input type="text" id="store-buyer-country" class="w-full bg-white border border-[#cbd5e1] px-4 py-3 rounded-xl text-[#0f172a] text-sm focus:border-[#3157e8] focus:ring-2 focus:ring-[#3157e8]/20 transition-all outline-none" value="Ecuador">
+                            <div class="space-y-1">
+                                <label for="store-buyer-country" class="text-[11px] font-bold text-[#334155] block">País</label>
+                                <input type="text" id="store-buyer-country" class="w-full bg-white border border-[#cbd5e1] px-3 py-1.5 rounded-lg text-[#0f172a] text-xs focus:border-[#3157e8] focus:ring-1 focus:ring-[#3157e8]/20 transition-all outline-none" value="Ecuador">
                             </div>
-                            <div class="md:col-span-2 space-y-1.5">
-                                <label for="store-txt-youtube-whitelist" class="text-xs font-bold text-[#334155] block">Canal de YouTube (Whitelist Content ID - Opcional)</label>
-                                <input type="text" id="store-txt-youtube-whitelist" class="w-full bg-white border border-[#cbd5e1] px-4 py-3 rounded-xl text-[#0f172a] text-sm focus:border-[#3157e8] focus:ring-2 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="https://youtube.com/@tu_canal">
+                            <div class="sm:col-span-2 space-y-1">
+                                <label for="store-txt-youtube-whitelist" class="text-[11px] font-bold text-[#334155] block">Canal de YouTube (Whitelist Content ID - Opcional)</label>
+                                <input type="text" id="store-txt-youtube-whitelist" class="w-full bg-white border border-[#cbd5e1] px-3 py-1.5 rounded-lg text-[#0f172a] text-xs focus:border-[#3157e8] focus:ring-1 focus:ring-[#3157e8]/20 transition-all outline-none" placeholder="https://youtube.com/@tu_canal">
                             </div>
                             
-                            <!-- Recordar datos -->
-                            <div class="md:col-span-2 flex items-center gap-3 pt-1">
-                                <input type="checkbox" id="store-chk-remember-me" checked class="w-4 h-4 rounded border-[#cbd5e1] text-[#3157e8] focus:ring-[#3157e8]">
-                                <label for="store-chk-remember-me" class="text-xs text-[#64748b] cursor-pointer select-none">Recordar mis datos para futuras compras</label>
+                            <!-- Toggles en fila -->
+                            <div class="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 pt-0.5">
+                                <label class="flex items-center gap-2 cursor-pointer select-none">
+                                    <input type="checkbox" id="store-chk-remember-me" checked class="w-3.5 h-3.5 rounded border-[#cbd5e1] text-[#3157e8] focus:ring-[#3157e8]">
+                                    <span class="text-[11px] text-[#64748b]">Recordar mis datos</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer select-none">
+                                    <input type="checkbox" id="store-chk-need-invoice" onchange="document.getElementById('store-invoice-fields-container').style.display = this.checked ? 'flex' : 'none';" class="w-3.5 h-3.5 rounded border-[#cbd5e1] text-[#3157e8] focus:ring-[#3157e8]">
+                                    <span class="text-[11px] text-[#0f172a] font-bold">🧾 Factura Electrónica SRI</span>
+                                </label>
                             </div>
                             
                             <!-- Factura RUC Ecuador -->
-                            <div class="md:col-span-2 bg-white border border-[#e2e8f0] p-4 rounded-xl space-y-3">
-                                <div class="flex items-center gap-3">
-                                    <input type="checkbox" id="store-chk-need-invoice" onchange="document.getElementById('store-invoice-fields-container').style.display = this.checked ? 'flex' : 'none';" class="w-4 h-4 rounded border-[#cbd5e1] text-[#3157e8] focus:ring-[#3157e8]">
-                                    <label for="store-chk-need-invoice" class="text-xs text-[#0f172a] font-bold cursor-pointer select-none">🧾 Requiero Factura Electrónica Autorizada (SRI Ecuador)</label>
-                                </div>
-                                <div id="store-invoice-fields-container" style="display: none;" class="flex-col gap-3 border-t border-[#e2e8f0] pt-3">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        <div class="space-y-1">
-                                            <label for="store-invoice-ruc" class="text-[11px] font-bold text-[#64748b] block uppercase">RUC (13 dígitos) *</label>
-                                            <input type="text" id="store-invoice-ruc" class="w-full bg-white border border-[#cbd5e1] px-3 py-2 rounded-lg text-xs text-[#0f172a] outline-none" placeholder="1792948291001" maxlength="13">
-                                        </div>
-                                        <div class="space-y-1">
-                                            <label for="store-invoice-company" class="text-[11px] font-bold text-[#64748b] block uppercase">Razón Social *</label>
-                                            <input type="text" id="store-invoice-company" class="w-full bg-white border border-[#cbd5e1] px-3 py-2 rounded-lg text-xs text-[#0f172a] outline-none" placeholder="Nombre en el RUC">
-                                        </div>
-                                        <div class="space-y-1">
-                                            <label for="store-invoice-address" class="text-[11px] font-bold text-[#64748b] block uppercase">Dirección Fiscal *</label>
-                                            <input type="text" id="store-invoice-address" class="w-full bg-white border border-[#cbd5e1] px-3 py-2 rounded-lg text-xs text-[#0f172a] outline-none" placeholder="Dirección registrada">
-                                        </div>
-                                        <div class="space-y-1">
-                                            <label for="store-invoice-email" class="text-[11px] font-bold text-[#64748b] block uppercase">Correo Facturación *</label>
-                                            <input type="email" id="store-invoice-email" class="w-full bg-white border border-[#cbd5e1] px-3 py-2 rounded-lg text-xs text-[#0f172a] outline-none" placeholder="facturacion@empresa.com">
-                                        </div>
+                            <div id="store-invoice-fields-container" style="display: none;" class="sm:col-span-2 flex-col gap-2 bg-slate-50 border border-[#e2e8f0] p-2.5 rounded-xl">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div class="space-y-0.5">
+                                        <label for="store-invoice-ruc" class="text-[10px] font-bold text-[#64748b] block uppercase">RUC (13 dígitos) *</label>
+                                        <input type="text" id="store-invoice-ruc" class="w-full bg-white border border-[#cbd5e1] px-2.5 py-1.5 rounded-lg text-xs text-[#0f172a] outline-none" placeholder="1792948291001" maxlength="13">
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <label for="store-invoice-company" class="text-[10px] font-bold text-[#64748b] block uppercase">Razón Social *</label>
+                                        <input type="text" id="store-invoice-company" class="w-full bg-white border border-[#cbd5e1] px-2.5 py-1.5 rounded-lg text-xs text-[#0f172a] outline-none" placeholder="Nombre en el RUC">
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <label for="store-invoice-address" class="text-[10px] font-bold text-[#64748b] block uppercase">Dirección Fiscal *</label>
+                                        <input type="text" id="store-invoice-address" class="w-full bg-white border border-[#cbd5e1] px-2.5 py-1.5 rounded-lg text-xs text-[#0f172a] outline-none" placeholder="Dirección registrada">
+                                    </div>
+                                    <div class="space-y-0.5">
+                                        <label for="store-invoice-email" class="text-[10px] font-bold text-[#64748b] block uppercase">Correo Facturación *</label>
+                                        <input type="email" id="store-invoice-email" class="w-full bg-white border border-[#cbd5e1] px-2.5 py-1.5 rounded-lg text-xs text-[#0f172a] outline-none" placeholder="facturacion@empresa.com">
                                     </div>
                                 </div>
                             </div>
@@ -3913,11 +3913,11 @@
                     </div>
 
                     <!-- PASO 3: Método de Pago (Estilo Radio Cards) -->
-                    <div class="checkout-step-panel space-y-6" id="checkout-panel-3">
+                    <div class="checkout-step-panel space-y-2.5" id="checkout-panel-3">
                         
-                        <div class="space-y-1">
+                        <div class="flex items-center justify-between pb-1 border-b border-[#e2e8f0]">
                             <h3 class="checkout-payment-heading">Elige cómo pagar</h3>
-                            <p class="text-xs text-[#64748b]">Todas las transacciones son seguras y encriptadas.</p>
+                            <span class="text-[10px] text-[#64748b]">Transacciones seguras y encriptadas</span>
                         </div>
 
                         <!-- Pay Cards Selector -->
@@ -3976,112 +3976,112 @@
                         </div>
 
                         <!-- PANELES DE DETALLE SEGÚN MÉTODO -->
-                        <div id="payment-details-panels" class="mt-4">
+                        <div id="payment-details-panels" class="mt-2">
                             
                             <!-- Panel Stripe -->
-                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-5 rounded-2xl text-center space-y-4 shadow-sm" id="store-pay-stripe" style="display: none;">
-                                <div class="flex justify-between items-center bg-[#635bff]/5 border border-[#635bff]/20 p-3 rounded-xl">
-                                    <span class="text-xs text-[#475569] uppercase font-bold">Total a pagar:</span>
+                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-3.5 rounded-xl text-center space-y-2 shadow-xs" id="store-pay-stripe" style="display: none;">
+                                <div class="flex justify-between items-center bg-[#635bff]/5 border border-[#635bff]/20 px-3 py-1.5 rounded-lg">
+                                    <span class="text-[11px] text-[#475569] uppercase font-bold">Total a pagar:</span>
                                     <span id="stripe-total-price" class="text-sm font-extrabold text-[#635bff]">$0.00 USD</span>
                                 </div>
-                                <p class="text-xs text-[#64748b]">Serás redirigido a la pasarela segura de <strong>Stripe</strong> para procesar tu tarjeta de crédito o débito internacional con encriptación bancaria de 256 bits.</p>
+                                <p class="text-[11px] text-[#64748b]">Procesado por <strong>Stripe</strong> con encriptación de 256 bits.</p>
                                 <div class="relative max-w-sm mx-auto">
-                                    <button type="button" id="btn-stripe-checkout" class="w-full px-5 py-3.5 rounded-xl bg-[#635bff] hover:bg-[#5148e8] text-white font-extrabold transition-all shadow-sm text-sm tracking-wide uppercase">Pagar de forma segura con Stripe</button>
-                                    <button type="button" id="store-stripe-overlay" class="absolute inset-0 cursor-pointer z-10 rounded-xl" onclick="window.onPaymentClickWithoutTerms()" aria-label="Acepta los términos para habilitar Stripe"></button>
+                                    <button type="button" id="btn-stripe-checkout" class="w-full px-4 py-2.5 rounded-lg bg-[#635bff] hover:bg-[#5148e8] text-white font-extrabold transition-all shadow-xs text-xs tracking-wide uppercase">Pagar de forma segura con Stripe</button>
+                                    <button type="button" id="store-stripe-overlay" class="absolute inset-0 cursor-pointer z-10 rounded-lg" onclick="window.onPaymentClickWithoutTerms()" aria-label="Acepta los términos para habilitar Stripe"></button>
                                 </div>
                             </div>
 
                             <!-- Panel Deuna -->
-                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-5 rounded-2xl space-y-4 shadow-sm" id="store-pay-deuna" style="display: none;">
-                                <div class="flex justify-between items-center bg-[#3157e8]/5 border border-[#3157e8]/15 p-3 rounded-xl">
-                                    <span class="text-xs text-[#475569] uppercase font-bold">Total a pagar:</span>
+                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-3.5 rounded-xl space-y-2 shadow-xs" id="store-pay-deuna" style="display: none;">
+                                <div class="flex justify-between items-center bg-[#3157e8]/5 border border-[#3157e8]/15 px-3 py-1.5 rounded-lg">
+                                    <span class="text-[11px] text-[#475569] uppercase font-bold">Total a pagar:</span>
                                     <span id="deuna-total-price" class="text-sm font-extrabold text-[#3157e8]">$0.00 USD</span>
                                 </div>
-                                <ol class="space-y-2 text-xs text-[#475569]">
-                                    <li class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-[#e2e8f0]"><span class="w-5 h-5 flex items-center justify-center rounded-full bg-[#3157e8] text-white font-bold text-[10px]">1</span> Envía el pago desde la app Deuna! al número indicado.</li>
-                                    <li class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-[#e2e8f0]"><span class="w-5 h-5 flex items-center justify-center rounded-full bg-[#3157e8] text-white font-bold text-[10px]">2</span> Guarda la captura de comprobante y súbela abajo.</li>
+                                <ol class="space-y-1 text-xs text-[#475569]">
+                                    <li class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-[#e2e8f0]"><span class="w-4 h-4 flex items-center justify-center rounded-full bg-[#3157e8] text-white font-bold text-[10px]">1</span> Envía el pago desde Deuna! al número indicado.</li>
+                                    <li class="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-[#e2e8f0]"><span class="w-4 h-4 flex items-center justify-center rounded-full bg-[#3157e8] text-white font-bold text-[10px]">2</span> Guarda la captura de comprobante y súbela abajo.</li>
                                 </ol>
-                                <div class="bg-slate-50 border border-[#e2e8f0] p-3 rounded-xl flex justify-between items-center text-xs">
+                                <div class="bg-slate-50 border border-[#e2e8f0] p-2 rounded-lg flex justify-between items-center text-xs">
                                     <div>
                                         <div class="text-[10px] text-[#64748b] uppercase font-bold">Celular</div>
-                                        <div class="text-sm font-bold text-[#0f172a]" id="deuna-info-phone">-</div>
+                                        <div class="text-xs font-bold text-[#0f172a]" id="deuna-info-phone">-</div>
                                     </div>
                                     <div class="text-right">
                                         <div class="text-[10px] text-[#64748b] uppercase font-bold">Titular</div>
-                                        <div class="text-sm font-bold text-[#0f172a]" id="deuna-info-name">-</div>
+                                        <div class="text-xs font-bold text-[#0f172a]" id="deuna-info-name">-</div>
                                     </div>
                                 </div>
-                                <div class="text-center bg-white p-3 rounded-xl border border-[#e2e8f0] inline-block w-full max-w-[200px] mx-auto">
+                                <div class="text-center bg-white p-2 rounded-lg border border-[#e2e8f0] inline-block w-full max-w-[150px] mx-auto">
                                     <img id="deuna-qr-image" data-deferred-src="/deuna-qr.jpg" class="w-full h-auto object-contain rounded" alt="Deuna QR">
                                 </div>
                             </div>
 
                             <!-- Panel Transferencia -->
-                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-5 rounded-2xl space-y-4 shadow-sm" id="store-pay-transfer" style="display: none;">
-                                <div class="flex justify-between items-center bg-[#3157e8]/5 border border-[#3157e8]/15 p-3 rounded-xl">
-                                    <span class="text-xs text-[#475569] uppercase font-bold">Total a transferir:</span>
+                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-3.5 rounded-xl space-y-2 shadow-xs" id="store-pay-transfer" style="display: none;">
+                                <div class="flex justify-between items-center bg-[#3157e8]/5 border border-[#3157e8]/15 px-3 py-1.5 rounded-lg">
+                                    <span class="text-[11px] text-[#475569] uppercase font-bold">Total a transferir:</span>
                                     <span id="transfer-total-price" class="text-sm font-extrabold text-[#3157e8]">$0.00 USD</span>
                                 </div>
-                                <div class="space-y-3">
-                                    <div id="store-bank-pichincha-card" class="bg-slate-50 border border-[#e2e8f0] p-3.5 rounded-xl">
-                                        <div class="text-xs font-bold text-[#f59e0b] uppercase tracking-wider mb-2">🏦 Banco Pichincha</div>
-                                        <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <div id="store-bank-pichincha-card" class="bg-slate-50 border border-[#e2e8f0] p-2.5 rounded-lg">
+                                        <div class="text-[10px] font-bold text-[#f59e0b] uppercase tracking-wider mb-1">🏦 Banco Pichincha</div>
+                                        <div class="space-y-0.5 text-[11px]">
                                             <div>Cuenta: <strong class="text-[#0f172a]" id="pichincha-info-acc">-</strong></div>
                                             <div>Titular: <span class="text-[#0f172a]" id="pichincha-info-name">-</span></div>
-                                            <div class="col-span-2">CI/RUC: <span class="text-[#0f172a]" id="pichincha-info-dni">-</span></div>
+                                            <div>CI/RUC: <span class="text-[#0f172a]" id="pichincha-info-dni">-</span></div>
                                         </div>
                                     </div>
-                                    <div id="store-bank-guayaquil-card" class="bg-slate-50 border border-[#e2e8f0] p-3.5 rounded-xl">
-                                        <div class="text-xs font-bold text-[#ec4899] uppercase tracking-wider mb-2">🏦 Banco Guayaquil</div>
-                                        <div class="grid grid-cols-2 gap-2 text-xs">
+                                    <div id="store-bank-guayaquil-card" class="bg-slate-50 border border-[#e2e8f0] p-2.5 rounded-lg">
+                                        <div class="text-[10px] font-bold text-[#ec4899] uppercase tracking-wider mb-1">🏦 Banco Guayaquil</div>
+                                        <div class="space-y-0.5 text-[11px]">
                                             <div>Cuenta: <strong class="text-[#0f172a]" id="guayaquil-info-acc">-</strong></div>
                                             <div>Titular: <span class="text-[#0f172a]" id="guayaquil-info-name">-</span></div>
-                                            <div class="col-span-2">CI/RUC: <span class="text-[#0f172a]" id="guayaquil-info-dni">-</span></div>
+                                            <div>CI/RUC: <span class="text-[#0f172a]" id="guayaquil-info-dni">-</span></div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Panel PayPal -->
-                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-5 rounded-2xl text-center space-y-4 shadow-sm" id="store-pay-paypal" style="display: none;">
-                                <p class="text-xs text-[#64748b]">Paga de manera instantánea y segura con tu cuenta PayPal:</p>
+                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-3 rounded-xl text-center space-y-1.5 shadow-xs" id="store-pay-paypal" style="display: none;">
+                                <p class="text-[11px] text-[#64748b]">Pago instantáneo y seguro con tu cuenta o tarjeta:</p>
                                 <div class="relative max-w-sm mx-auto">
-                                    <div id="store-paypal-button-container" class="min-height-[115px] p-3 rounded-xl"></div>
-                                    <button type="button" id="store-paypal-overlay" class="absolute inset-0 cursor-pointer z-10 rounded-xl" onclick="window.onPaymentClickWithoutTerms()" aria-label="Acepta los términos para habilitar PayPal"></button>
+                                    <div id="store-paypal-button-container" class="min-h-[90px] p-1 rounded-lg"></div>
+                                    <button type="button" id="store-paypal-overlay" class="absolute inset-0 cursor-pointer z-10 rounded-lg" onclick="window.onPaymentClickWithoutTerms()" aria-label="Acepta los términos para habilitar PayPal"></button>
                                 </div>
                             </div>
 
                             <!-- Panel PayPhone -->
-                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-5 rounded-2xl text-center space-y-4 shadow-sm" id="store-pay-payphone" style="display: none;">
-                                <p class="text-xs text-[#64748b]">Paga al instante usando tu cuenta <strong>PayPhone</strong> o tarjeta de débito/crédito ecuatoriana:</p>
+                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-3 rounded-xl text-center space-y-1.5 shadow-xs" id="store-pay-payphone" style="display: none;">
+                                <p class="text-[11px] text-[#64748b]">Paga al instante con PayPhone o tarjeta ecuatoriana:</p>
                                 <div class="relative max-w-xs mx-auto">
-                                    <div id="payphone-button" class="min-h-[50px] p-3 rounded-xl"></div>
-                                    <button type="button" id="store-payphone-overlay" class="absolute inset-0 cursor-pointer z-10 rounded-xl" onclick="window.onPaymentClickWithoutTerms()" aria-label="Acepta los términos para habilitar PayPhone"></button>
+                                    <div id="payphone-button" class="min-h-[44px] p-1 rounded-lg"></div>
+                                    <button type="button" id="store-payphone-overlay" class="absolute inset-0 cursor-pointer z-10 rounded-lg" onclick="window.onPaymentClickWithoutTerms()" aria-label="Acepta los términos para habilitar PayPhone"></button>
                                 </div>
                             </div>
 
                             <!-- Panel Oferta -->
-                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-5 rounded-2xl space-y-4 shadow-sm" id="store-pay-offer" style="display: none;">
-                                <p class="text-xs text-[#64748b]">Propón un precio de oferta al productor para adquirir los derechos exclusivos:</p>
-                                <div class="space-y-3">
-                                    <div class="space-y-1">
-                                        <label for="offer-price-input" class="text-xs font-bold text-[#334155] block uppercase">Tu Oferta ($ USD) *</label>
-                                        <input type="number" id="offer-price-input" min="250" step="5" class="w-full bg-white border border-[#cbd5e1] px-4 py-2.5 rounded-lg text-sm text-[#0f172a] font-bold" placeholder="Ej: 400">
+                            <div class="store-payment-panel bg-white border border-[#e2e8f0] p-3 rounded-xl space-y-2 shadow-xs" id="store-pay-offer" style="display: none;">
+                                <p class="text-[11px] text-[#64748b]">Propón un precio de oferta al productor para adquirir derechos exclusivos:</p>
+                                <div class="space-y-1.5">
+                                    <div class="space-y-0.5">
+                                        <label for="offer-price-input" class="text-[10px] font-bold text-[#334155] block uppercase">Tu Oferta ($ USD) *</label>
+                                        <input type="number" id="offer-price-input" min="250" step="5" class="w-full bg-white border border-[#cbd5e1] px-3 py-1.5 rounded-lg text-xs text-[#0f172a] font-bold" placeholder="Ej: 400">
                                     </div>
-                                    <div class="space-y-1">
-                                        <label for="offer-message-input" class="text-xs font-bold text-[#334155] block uppercase">Mensaje</label>
-                                        <textarea id="offer-message-input" rows="2" class="w-full bg-white border border-[#cbd5e1] px-3 py-2 rounded-lg text-xs text-[#0f172a] resize-none"></textarea>
+                                    <div class="space-y-0.5">
+                                        <label for="offer-message-input" class="text-[10px] font-bold text-[#334155] block uppercase">Mensaje</label>
+                                        <textarea id="offer-message-input" rows="2" class="w-full bg-white border border-[#cbd5e1] px-2.5 py-1.5 rounded-lg text-xs text-[#0f172a] resize-none"></textarea>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- Comprobante (Transferencia / Deuna) -->
-                            <div id="store-receipt-upload-section" class="bg-white border border-[#e2e8f0] p-4 rounded-xl mt-3 space-y-2 shadow-sm" style="display: none;">
-                                <label class="text-xs font-bold text-[#334155] block">📸 Sube tu Comprobante de Pago *</label>
-                                <label for="store-receipt-file" class="border-2 border-dashed border-[#cbd5e1] hover:border-[#3157e8] rounded-xl p-5 text-center cursor-pointer transition-all bg-slate-50 block">
+                            <div id="store-receipt-upload-section" class="bg-white border border-[#e2e8f0] p-2.5 rounded-xl mt-2 space-y-1 shadow-xs" style="display: none;">
+                                <label class="text-[11px] font-bold text-[#334155] block">📸 Sube tu Comprobante de Pago *</label>
+                                <label for="store-receipt-file" class="border-2 border-dashed border-[#cbd5e1] hover:border-[#3157e8] rounded-lg p-2.5 text-center cursor-pointer transition-all bg-slate-50 block">
                                     <input type="file" id="store-receipt-file" accept="image/jpeg,image/png,image/webp" class="hidden">
-                                    <div class="text-xs font-bold text-[#3157e8]">Haz clic para subir el comprobante</div>
-                                    <div id="store-receipt-file-name" class="text-[11px] text-[#64748b] mt-1">Ningún archivo seleccionado</div>
+                                    <div class="text-xs font-bold text-[#3157e8]">Clic para subir comprobante</div>
+                                    <div id="store-receipt-file-name" class="text-[10px] text-[#64748b] mt-0.5">Ningún archivo seleccionado</div>
                                 </label>
                             </div>
 
@@ -4089,15 +4089,15 @@
                     </div>
                 </div>
 
-                <!-- COLUMNA DERECHA: ORDER REVIEW STICKY (5 cols) (Estilo Diem Gaming) -->
+                <!-- COLUMNA DERECHA: ORDER REVIEW STICKY (5 cols) -->
                 <div class="lg:col-span-5">
-                    <aside class="sticky top-24 space-y-5">
+                    <aside class="sticky top-14 space-y-2.5">
                         
                         <!-- Panel 1 (Selección de Licencia / Resumen) -->
                         <div class="checkout-step-panel" id="checkout-panel-1">
                             <div id="checkout-single-beat-view">
-                                <div id="checkout-urgency-banner" style="display: none;" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-semibold mb-4">
-                                    <i data-lucide="eye" aria-hidden="true"></i>
+                                <div id="checkout-urgency-banner" style="display: none;" class="bg-rose-50 border border-rose-200 text-rose-700 px-3 py-1.5 rounded-lg flex items-center justify-center gap-2 text-xs font-semibold mb-2">
+                                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
                                     <span id="checkout-urgency-text"></span>
                                 </div>
                             </div>
@@ -4107,42 +4107,45 @@
                             </div>
                         </div>
 
-                        <div id="checkout-summary-card" class="rounded-2xl p-6 space-y-6 relative overflow-hidden bg-white border border-[#e2e8f0] shadow-sm">
-                            <h3 class="text-xs font-extrabold text-[#64748b] uppercase tracking-wider">ORDER REVIEW</h3>
+                        <div id="checkout-summary-card" class="rounded-xl p-3.5 space-y-2.5 relative overflow-hidden bg-white border border-[#e2e8f0] shadow-xs">
+                            <div class="flex items-center justify-between pb-1 border-b border-[#e2e8f0]">
+                                <h3 class="text-xs font-black text-[#0f172a] uppercase tracking-wider">RESUMEN DEL PEDIDO</h3>
+                                <span class="text-[10px] font-bold text-[#3157e8] bg-[#3157e8]/10 px-2 py-0.5 rounded">Entrega Inmediata</span>
+                            </div>
                             
-                            <!-- Beat Preview Card Mirror (Idéntico a la imagen) -->
-                            <div id="checkout-single-beat-preview" class="flex items-center gap-4 p-3 rounded-xl bg-slate-50 border border-[#e2e8f0]">
-                                <img id="checkout-single-beat-img" src="" class="w-14 h-14 rounded-lg object-cover bg-slate-200 border border-[#cbd5e1]" alt="Beat Cover">
+                            <!-- Beat Preview Card Mirror -->
+                            <div id="checkout-single-beat-preview" class="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 border border-[#e2e8f0]">
+                                <img id="checkout-single-beat-img" src="" class="w-11 h-11 rounded-lg object-cover bg-slate-200 border border-[#cbd5e1] shadow-xs" alt="Beat Cover">
                                 <div class="flex-1 min-w-0">
-                                    <div id="checkout-single-beat-name" class="font-extrabold text-[#0f172a] text-sm uppercase truncate">-</div>
-                                    <div id="checkout-single-beat-meta" class="text-xs text-[#64748b] truncate">Licencia seleccionada</div>
+                                    <div id="checkout-single-beat-name" class="font-extrabold text-[#0f172a] text-xs uppercase truncate">-</div>
+                                    <div id="checkout-single-beat-meta" class="text-[10px] text-[#64748b] truncate">Licencia seleccionada</div>
                                 </div>
                             </div>
 
                             <!-- Selector de Licencia interactivo en el resumen -->
-                            <div class="space-y-2">
-                                <span class="text-xs font-bold text-[#64748b] uppercase tracking-wider block">Licencia de Uso</span>
-                                <div class="flex flex-col gap-2" id="license-options-container">
+                            <div class="space-y-1">
+                                <span class="text-[10px] font-bold text-[#64748b] uppercase tracking-wider block">Elige tu licencia</span>
+                                <div class="flex flex-col gap-1" id="license-options-container">
                                     <!-- Cargado dinámicamente -->
                                 </div>
                             </div>
 
-                            <div id="checkout-summary-items" class="space-y-3">
+                            <div id="checkout-summary-items" class="space-y-1.5">
                                 <!-- Dynamic items loaded via cart -->
                             </div>
 
                             <!-- CÓDIGO DE DESCUENTO (DISCOUNT CODE) -->
-                            <div id="checkout-coupon-section" class="border-t border-[#e2e8f0] pt-4 space-y-2">
-                                <label for="checkout-coupon-code" class="text-xs font-bold text-[#64748b] uppercase tracking-wider block">DISCOUNT CODE</label>
-                                <div class="flex gap-2">
-                                    <input type="text" id="checkout-coupon-code" class="flex-1 bg-white border border-[#cbd5e1] px-3.5 py-2.5 rounded-lg text-xs font-bold uppercase text-[#0f172a] placeholder-[#94a3b8] focus:border-[#3157e8] outline-none" placeholder="ENTER YOUR CODE">
-                                    <button type="button" class="px-5 py-2.5 bg-[#0f172a] hover:bg-[#1e293b] text-white rounded-lg font-extrabold text-xs uppercase tracking-wider transition-all" id="btn-apply-coupon" onclick="window.applyCheckoutCoupon()">APPLY</button>
+                            <div id="checkout-coupon-section" class="border-t border-[#e2e8f0] pt-2 space-y-1">
+                                <label for="checkout-coupon-code" class="text-[10px] font-bold text-[#64748b] uppercase tracking-wider block">CUPÓN DE DESCUENTO</label>
+                                <div class="flex gap-1.5">
+                                    <input type="text" id="checkout-coupon-code" class="flex-1 bg-white border border-[#cbd5e1] px-2.5 py-1 rounded-lg text-xs font-bold uppercase text-[#0f172a] placeholder-[#94a3b8] focus:border-[#3157e8] outline-none" placeholder="CÓDIGO">
+                                    <button type="button" class="px-3 py-1 bg-[#0f172a] hover:bg-[#1e293b] text-white rounded-lg font-extrabold text-[11px] uppercase tracking-wider transition-all" id="btn-apply-coupon" onclick="window.applyCheckoutCoupon()">APLICAR</button>
                                 </div>
-                                <div id="checkout-coupon-msg" class="text-xs font-semibold mt-1" style="display:none;"></div>
+                                <div id="checkout-coupon-msg" class="text-[10px] font-semibold mt-0.5" style="display:none;"></div>
                             </div>
 
                             <!-- LÍNEAS DE TOTALES -->
-                            <div class="space-y-3 border-t border-[#e2e8f0] pt-4">
+                            <div class="space-y-1 border-t border-[#e2e8f0] pt-2">
                                 <div class="flex justify-between text-xs text-[#64748b]">
                                     <span class="uppercase tracking-wider">SUBTOTAL</span>
                                     <span id="summary-subtotal" class="font-bold text-[#0f172a]">$0.00</span>
@@ -4155,9 +4158,9 @@
                                     <span class="uppercase tracking-wider">DESCUENTO</span>
                                     <span id="summary-discount-amount" class="font-bold">-$0.00</span>
                                 </div>
-                                <div class="flex justify-between items-baseline text-[#0f172a] border-t border-[#e2e8f0] pt-3">
-                                    <span class="font-extrabold text-sm uppercase tracking-wider">TOTAL</span>
-                                    <span id="summary-total-display" class="font-black text-2xl font-mono text-[#3157e8]">$0.00</span>
+                                <div class="flex justify-between items-baseline text-[#0f172a] border-t border-[#e2e8f0] pt-1.5">
+                                    <span class="font-extrabold text-xs uppercase tracking-wider">TOTAL</span>
+                                    <span id="summary-total-display" class="font-black text-xl font-mono text-[#3157e8]">$0.00</span>
                                 </div>
                             </div>
                         </div>
@@ -4172,22 +4175,22 @@
                                 onchange="window.onAcceptTermsChange()"
                             >
                             <div class="checkout-terms-copy">
-                                <label for="store-chk-accept-terms">Acepto los Términos de Servicio y la licencia seleccionada.</label>
+                                <label for="store-chk-accept-terms" class="text-xs">Acepto los Términos y la licencia seleccionada.</label>
                                 <div class="checkout-legal-actions" aria-label="Documentos de la compra">
                                     <button type="button" data-checkout-legal="terms" onclick="window.openCheckoutLegalDocument('terms', this)">Leer términos</button>
                                     <button type="button" data-checkout-legal="license" onclick="window.openCheckoutLegalDocument('license', this)">Ver licencia seleccionada</button>
                                 </div>
-                                <p id="checkout-terms-help">Obligatorio antes de continuar con tus datos o pago. Guardamos la versión, la licencia y la fecha de tu aceptación con la orden.</p>
+                                <p id="checkout-terms-help" class="text-[10px]">Obligatorio antes de pagar. Guardamos versión, licencia y fecha con la orden.</p>
                                 <p id="checkout-terms-error" role="alert" aria-live="polite" hidden>Acepta los términos y la licencia seleccionada para continuar.</p>
                             </div>
-                            <span id="checkout-terms-state" class="checkout-terms-state" role="status" aria-live="polite">Pendiente</span>
+                            <span id="checkout-terms-state" class="checkout-terms-state text-[10px]" role="status" aria-live="polite">Pendiente</span>
                         </div>
 
                         <!-- BOTONES AUXILIARES Y COMPATIBILIDAD CON TESTS -->
-                        <div class="flex justify-between items-center gap-3">
-                            <button type="button" class="px-4 py-2.5 bg-white hover:bg-slate-50 border border-[#cbd5e1] text-[#64748b] rounded-xl text-xs font-bold transition-all" id="btn-checkout-prev" style="display: none;">← Atrás</button>
-                            <button type="button" class="px-4 py-2.5 bg-white hover:bg-slate-50 border border-[#cbd5e1] text-[#64748b] rounded-xl text-xs font-bold transition-all" id="btn-checkout-cancel">Cancelar</button>
-                            <button type="button" class="px-5 py-2.5 bg-[#3157e8] hover:bg-[#2546c2] text-white rounded-xl text-xs font-bold transition-all shadow-sm" id="btn-checkout-next" style="display: none;">Continuar</button>
+                        <div class="flex justify-between items-center gap-2">
+                            <button type="button" class="px-3 py-1.5 bg-white hover:bg-slate-50 border border-[#cbd5e1] text-[#64748b] rounded-lg text-[11px] font-bold transition-all" id="btn-checkout-prev" style="display: none;">← Atrás</button>
+                            <button type="button" class="px-3 py-1.5 bg-white hover:bg-slate-50 border border-[#cbd5e1] text-[#64748b] rounded-lg text-[11px] font-bold transition-all" id="btn-checkout-cancel">Cancelar</button>
+                            <button type="button" class="px-4 py-1.5 bg-[#3157e8] hover:bg-[#2546c2] text-white rounded-lg text-[11px] font-bold transition-all shadow-xs" id="btn-checkout-next" style="display: none;">Continuar</button>
                             
                             <!-- Botones requeridos por suite de tests en estado disabled hasta aceptación legal -->
                             <button type="button" id="btn-checkout-buy-now" data-checkout-requires-terms aria-describedby="checkout-terms-help" disabled style="display: none;">Comprar Ahora</button>
@@ -4196,12 +4199,12 @@
                             <button type="button" id="btn-checkout-keep-shopping" style="display: none;">Seguir Comprando</button>
                         </div>
 
-                        <!-- TRUST BADGES -->
-                        <div id="checkout-trust-badges" class="grid grid-cols-2 gap-2 text-center text-[11px] font-bold text-[#64748b] pt-2">
-                            <span class="flex items-center justify-center gap-1.5 bg-white border border-[#e2e8f0] p-2 rounded-lg"><i data-lucide="shield-check" class="text-[#3157e8]" aria-hidden="true"></i> SSL Seguro</span>
-                            <span class="flex items-center justify-center gap-1.5 bg-white border border-[#e2e8f0] p-2 rounded-lg"><i data-lucide="zap" class="text-amber-500" aria-hidden="true"></i> Entrega Inmediata</span>
-                            <span class="flex items-center justify-center gap-1.5 bg-white border border-[#e2e8f0] p-2 rounded-lg"><i data-lucide="file-check-2" class="text-emerald-600" aria-hidden="true"></i> Firma Digital</span>
-                            <span class="flex items-center justify-center gap-1.5 bg-white border border-[#e2e8f0] p-2 rounded-lg"><i data-lucide="lock" class="text-[#3157e8]" aria-hidden="true"></i> Encriptado 256-bit</span>
+                        <!-- TRUST BADGES (Micro-strip 1 fila) -->
+                        <div id="checkout-trust-badges" class="grid grid-cols-4 gap-1 text-center text-[9px] font-bold text-[#64748b] pt-0.5">
+                            <span class="flex items-center justify-center gap-1 bg-white border border-[#e2e8f0] py-1 px-1 rounded-md"><i data-lucide="shield-check" class="w-3 h-3 text-[#3157e8]" aria-hidden="true"></i> SSL</span>
+                            <span class="flex items-center justify-center gap-1 bg-white border border-[#e2e8f0] py-1 px-1 rounded-md"><i data-lucide="zap" class="w-3 h-3 text-amber-500" aria-hidden="true"></i> Inmediato</span>
+                            <span class="flex items-center justify-center gap-1 bg-white border border-[#e2e8f0] py-1 px-1 rounded-md"><i data-lucide="file-check-2" class="w-3 h-3 text-emerald-600" aria-hidden="true"></i> Digital</span>
+                            <span class="flex items-center justify-center gap-1 bg-white border border-[#e2e8f0] py-1 px-1 rounded-md"><i data-lucide="lock" class="w-3 h-3 text-[#3157e8]" aria-hidden="true"></i> 256-bit</span>
                         </div>
 
                     </aside>
