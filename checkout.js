@@ -1094,6 +1094,151 @@ export function updateExclusivePrice(val) {
     }
 }
 
+export function validateAndSaveBuyerCheckoutData({ focusOnError = true } = {}) {
+    const emailEl = document.getElementById('store-buyer-email');
+    const nameEl = document.getElementById('store-buyer-name');
+    const phoneEl = document.getElementById('store-buyer-phone');
+    const dniEl = document.getElementById('store-buyer-dni');
+    const cityEl = document.getElementById('store-buyer-city');
+    const countryEl = document.getElementById('store-buyer-country');
+    const ytEl = document.getElementById('store-txt-youtube-whitelist');
+    const rememberChk = document.getElementById('store-chk-remember-me');
+
+    const email = sanitizeInput(emailEl?.value || '').trim();
+    const name = sanitizeInput(nameEl?.value || '').trim();
+    const phone = sanitizeInput(phoneEl?.value || '').trim();
+    const dni = sanitizeInput(dniEl?.value || '').trim();
+    const city = sanitizeInput(cityEl?.value || '').trim();
+    const country = sanitizeInput(countryEl?.value || 'Ecuador').trim();
+    const yt = sanitizeInput(ytEl?.value || '').trim();
+
+    // 1. Validar Correo Electrónico
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Por favor, ingresa un correo electrónico válido para recibir tu licencia y archivos.', true);
+        }
+        if (focusOnError && emailEl) {
+            emailEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            emailEl.focus();
+        }
+        return { ok: false, error: 'INVALID_EMAIL' };
+    }
+
+    // 2. Validar Nombre
+    if (!name || name.length < 2) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Por favor, ingresa tu nombre artístico o nombre completo para la licencia.', true);
+        }
+        if (focusOnError && nameEl) {
+            nameEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            nameEl.focus();
+        }
+        return { ok: false, error: 'INVALID_NAME' };
+    }
+
+    // 3. Validar Facturación SRI si está seleccionada
+    const needInvoiceChk = document.getElementById('store-chk-need-invoice');
+    const needInvoice = Boolean(needInvoiceChk?.checked);
+    let invoiceData = null;
+
+    if (needInvoice) {
+        const rucEl = document.getElementById('store-invoice-ruc');
+        const companyEl = document.getElementById('store-invoice-company');
+        const addressEl = document.getElementById('store-invoice-address');
+        const invoiceEmailEl = document.getElementById('store-invoice-email');
+
+        const ruc = sanitizeInput(rucEl?.value || '').trim();
+        const company = sanitizeInput(companyEl?.value || '').trim();
+        const address = sanitizeInput(addressEl?.value || '').trim();
+        const invoiceEmail = sanitizeInput(invoiceEmailEl?.value || '').trim();
+
+        if (!ruc || ruc.length !== 13 || !/^\d{13}$/.test(ruc)) {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Para factura con RUC, ingresa un RUC válido de 13 dígitos numéricos.', true);
+            }
+            if (focusOnError && rucEl) {
+                rucEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                rucEl.focus();
+            }
+            return { ok: false, error: 'INVALID_RUC' };
+        }
+
+        if (!company || company.length < 2) {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Ingresa la Razón Social o nombre fiscal registrado en el RUC.', true);
+            }
+            if (focusOnError && companyEl) {
+                companyEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                companyEl.focus();
+            }
+            return { ok: false, error: 'INVALID_COMPANY' };
+        }
+
+        if (!address || address.length < 3) {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Ingresa la dirección fiscal para la factura.', true);
+            }
+            if (focusOnError && addressEl) {
+                addressEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                addressEl.focus();
+            }
+            return { ok: false, error: 'INVALID_ADDRESS' };
+        }
+
+        if (!invoiceEmail || !emailRegex.test(invoiceEmail)) {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Ingresa un correo válido para el envío de la factura electrónica.', true);
+            }
+            if (focusOnError && invoiceEmailEl) {
+                invoiceEmailEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                invoiceEmailEl.focus();
+            }
+            return { ok: false, error: 'INVALID_INVOICE_EMAIL' };
+        }
+
+        invoiceData = { ruc, company, address, email: invoiceEmail };
+    }
+
+    // 4. Persistir datos según preferencia del usuario
+    const shouldRemember = rememberChk ? rememberChk.checked : true;
+    try {
+        localStorage.setItem('store_remember_data', shouldRemember ? 'true' : 'false');
+        if (shouldRemember) {
+            localStorage.setItem('store_buyer_name', name);
+            localStorage.setItem('store_buyer_email', email);
+            localStorage.setItem('store_buyer_phone', phone);
+            localStorage.setItem('store_buyer_dni', dni);
+            localStorage.setItem('store_buyer_city', city);
+            localStorage.setItem('store_buyer_country', country);
+            localStorage.setItem('store_buyer_yt', yt);
+            localStorage.setItem('store_need_invoice', needInvoice ? 'true' : 'false');
+            if (needInvoice && invoiceData) {
+                localStorage.setItem('store_invoice_ruc', invoiceData.ruc);
+                localStorage.setItem('store_invoice_company', invoiceData.company);
+                localStorage.setItem('store_invoice_address', invoiceData.address);
+                localStorage.setItem('store_invoice_email', invoiceData.email);
+            }
+        }
+    } catch (_) {}
+
+    return {
+        ok: true,
+        buyerData: {
+            name,
+            email,
+            phone,
+            dni,
+            city,
+            country,
+            youtubeWhitelist: yt,
+            needInvoice,
+            invoiceData
+        }
+    };
+}
+window.validateAndSaveBuyerCheckoutData = validateAndSaveBuyerCheckoutData;
+
 export function openBeatCheckoutModal(beatId) {
     checkoutDebug("🚀 openBeatCheckoutModal called with ID:", beatId);
     loadStorePaymentCapabilities();
@@ -1101,7 +1246,7 @@ export function openBeatCheckoutModal(beatId) {
     logCheckoutStep('checkout_initiated', { beatId: beatId });
     checkoutSelectedBeatId = beatId;
     checkoutSelectedLicense = 'basic';
-    checkoutCurrentStep = 1;
+    checkoutCurrentStep = 3;
     storePaymentReceiptBase64 = null;
     window.checkoutExclusivePrice = 500; // Reset de precio exclusivo
 
@@ -1269,7 +1414,7 @@ export function openBeatCheckoutModal(beatId) {
 
     if (window.lucide) window.lucide.createIcons();
 
-    updateCheckoutStepView(1);
+    updateCheckoutStepView(3);
     if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
     document.getElementById('beat-checkout-modal').style.display = 'flex';
 }
@@ -1320,6 +1465,8 @@ export function selectCheckoutLicense(licenseKey) {
     if (deunaTotalEl) deunaTotalEl.textContent = priceStr;
     const transferTotalEl = document.getElementById('transfer-total-price');
     if (transferTotalEl) transferTotalEl.textContent = priceStr;
+    const stripeTotalEl = document.getElementById('stripe-total-price');
+    if (stripeTotalEl) stripeTotalEl.textContent = `$${Number(window.getCheckoutBasePrice()).toFixed(2)} USD`;
     if (typeof window.updateStoreCheckoutSummary === 'function') window.updateStoreCheckoutSummary();
 
     if (activeCheckoutLegalDocument === 'license') {
@@ -1356,40 +1503,34 @@ export function updateCheckoutStepView(step) {
         const dot = document.getElementById(`ck-dot-${s}`);
         if (!navItem || !dot) return;
         
-        if (s === step) {
-            // Paso Activo
-            navItem.classList.remove('text-[#c5c4db]', 'opacity-60');
-            navItem.classList.add('text-[#bec2ff]', 'font-bold');
-            dot.className = "flex items-center justify-center w-6 h-6 rounded-full bg-[#bec2ff] text-[#0001ac] font-mono text-xs font-bold transition-all";
+        if (s <= step) {
+            // Paso Activo o Completado en vista unificada
+            navItem.classList.remove('opacity-60');
+            navItem.classList.add('text-[#3157e8]', 'font-bold');
+            dot.className = "flex items-center justify-center w-6 h-6 rounded-full bg-[#3157e8] text-white font-mono text-xs font-bold transition-all";
             dot.innerHTML = s;
-        } else if (s < step) {
-            // Paso Completado
-            navItem.classList.remove('text-[#bec2ff]', 'opacity-60');
-            navItem.classList.add('text-[#bec2ff]/80');
-            dot.className = "flex items-center justify-center w-6 h-6 rounded-full bg-[#bec2ff]/20 text-[#bec2ff] border border-[#bec2ff]/30 font-mono text-xs font-bold transition-all";
-            dot.innerHTML = '✓';
         } else {
             // Paso Futuro
-            navItem.className = "flex items-center gap-2 text-[#c5c4db] opacity-60";
-            dot.className = "flex items-center justify-center w-6 h-6 rounded-full border border-[#454558] font-mono text-xs transition-all";
+            navItem.className = "flex items-center gap-2 text-[#64748b] opacity-60";
+            dot.className = "flex items-center justify-center w-6 h-6 rounded-full border border-[#cbd5e1] font-mono text-xs transition-all";
             dot.innerHTML = s;
         }
     });
 
     // 2. Actualizar barra de progreso
-    const progressPercent = step === 1 ? 0 : (step === 2 ? 50 : 100);
+    const progressPercent = step === 1 ? 33 : (step === 2 ? 66 : 100);
     const stepProgress = document.getElementById('checkout-step-progress');
     if (stepProgress) {
         stepProgress.style.width = progressPercent + '%';
     }
 
-    // 3. Mostrar/ocultar paneles de pasos
+    // 3. Mostrar paneles en diseño unificado de 2 columnas
     const panel1 = document.getElementById('checkout-panel-1');
     const panel2 = document.getElementById('checkout-panel-2');
     const panel3 = document.getElementById('checkout-panel-3');
-    if (panel1) panel1.style.display = step === 1 ? 'block' : 'none';
-    if (panel2) panel2.style.display = step === 2 ? 'block' : 'none';
-    if (panel3) panel3.style.display = step === 3 ? 'block' : 'none';
+    if (panel1) panel1.style.display = 'block';
+    if (panel2) panel2.style.display = 'block';
+    if (panel3) panel3.style.display = 'block';
 
     // 4. Configurar visibilidad y textos de botones del footer
     const footerPrevBtn = document.getElementById('btn-checkout-prev');
@@ -1441,18 +1582,18 @@ export function updateCheckoutStepView(step) {
             let paypalVisible = false;
             let payphoneVisible = false;
 
+            function makeCopyBtn(text, label) {
+                const safeText = encodeURIComponent(String(text || ''));
+                const safeLabel = sanitizeHtml(label);
+                return `<button type="button" onclick="navigator.clipboard.writeText(decodeURIComponent('${safeText}')).then(()=>window.showToast('¡${safeLabel} copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 3px 8px; font-size: 11px; margin-left: 6px;" title="Copiar ${safeLabel}">📋</button>`;
+            }
+
             const deunaBackendReady = window.storePaymentCapabilities?.deuna === true;
             if (deunaPhone && deunaBackendReady && deunaTab) {
                 deunaTab.style.display = 'block';
                 const cleanPhone = deunaPhone.replace(/\D/g, '');
                 const deunaDeeplink = `deuna://payment?phone=${cleanPhone}`;
                 const deunaWhatsapp = `https://wa.me/${cleanPhone}`;
-                
-                function makeCopyBtn(text, label) {
-                    const safeText = encodeURIComponent(String(text || ''));
-                    const safeLabel = sanitizeHtml(label);
-                    return `<button type="button" onclick="navigator.clipboard.writeText(decodeURIComponent('${safeText}')).then(()=>window.showToast('¡${safeLabel} copiado!'))" style="background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: #8a91a6; cursor: pointer; padding: 3px 8px; font-size: 11px; margin-left: 6px;" title="Copiar ${safeLabel}">📋</button>`;
-                }
 
                 const deunaPhoneEl = document.getElementById('deuna-info-phone');
                 if (deunaPhoneEl) {
@@ -2222,6 +2363,7 @@ export function setupStoreCheckout() {
     const closeBtn = document.getElementById('btn-close-checkout-modal');
     const stripeButton = document.getElementById('btn-stripe-checkout');
     const legalModal = document.getElementById('checkout-legal-modal');
+    const expressPaypalBtn = document.getElementById('btn-express-paypal');
     
     // File upload
     const uploadReceiptBtn = document.getElementById('btn-store-upload-receipt');
@@ -2234,6 +2376,16 @@ export function setupStoreCheckout() {
     if (cancelBtn) cancelBtn.addEventListener('click', () => {
         window.closeBeatCheckoutModal();
     });
+
+    if (expressPaypalBtn) {
+        expressPaypalBtn.addEventListener('click', () => {
+            window.switchStorePaymentMethod('paypal');
+            const paypalContainer = document.getElementById('store-pay-paypal');
+            if (paypalContainer) {
+                paypalContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    }
 
     legalModal?.addEventListener('click', (event) => {
         if (event.target === legalModal) closeCheckoutLegalDocument();
@@ -2660,6 +2812,16 @@ export function renderStorePayPalButton(clientId) {
                 shape: 'rect',
                 height: 55
             },
+            onClick: function(data, actions) {
+                if (!requireCheckoutTermsAcceptance()) {
+                    return actions.reject();
+                }
+                const validation = validateAndSaveBuyerCheckoutData({ focusOnError: true });
+                if (!validation.ok) {
+                    return actions.reject();
+                }
+                return actions.resolve();
+            },
             createOrder: function(data, actions) {
                 return actions.order.create({
                     purchase_units: [{
@@ -2753,6 +2915,9 @@ export function renderStorePayPalButton(clientId) {
 
 export async function submitBeatPurchasePayment(method, reference = '') {
     if (!requireCheckoutTermsAcceptance()) return;
+
+    const validation = validateAndSaveBuyerCheckoutData({ focusOnError: true });
+    if (!validation.ok) return;
 
     let buyerName = sanitizeInput(document.getElementById('store-buyer-name').value);
     let buyerEmail = sanitizeInput(document.getElementById('store-buyer-email').value);
@@ -3480,6 +3645,9 @@ export async function startStripeCheckout() {
     const legalAcceptance = getCheckoutTermsAcceptance();
     if (!legalAcceptance) return onPaymentClickWithoutTerms();
 
+    const buyerValidation = validateAndSaveBuyerCheckoutData({ focusOnError: true });
+    if (!buyerValidation.ok) return;
+
     const read = (id) => sanitizeInput(document.getElementById(id)?.value || '');
     let buyerName = read('store-buyer-name');
     let buyerEmail = read('store-buyer-email').toLowerCase();
@@ -3521,7 +3689,7 @@ export async function startStripeCheckout() {
     }
 
     const button = document.getElementById('btn-stripe-checkout');
-    const originalText = button?.textContent || 'Continuar con Stripe';
+    const originalText = button?.textContent || 'Pagar de forma segura con Stripe';
     if (button) {
         button.disabled = true;
         button.textContent = 'Conectando con Stripe...';
@@ -3533,7 +3701,9 @@ export async function startStripeCheckout() {
             body: JSON.stringify({
                 producerId: window.storeProducerUid,
                 buyerName, buyerEmail, buyerPhone, buyerDni, buyerCity, buyerCountry,
-                youtubeWhitelist, items, discountPercent: 0, couponCode: '',
+                youtubeWhitelist, items,
+                discountPercent: window.checkoutDiscountPercent || 0,
+                couponCode: window.checkoutAppliedCoupon || '',
                 invoiceRuc: needsInvoice ? invoiceRuc : '',
                 invoiceCompany: needsInvoice ? invoiceCompany : '',
                 invoiceAddress: needsInvoice ? invoiceAddress : '',

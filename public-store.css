@@ -884,6 +884,9 @@ body > .store-wa-float svg {
 
 /* Checkout claro: el flujo conserva sus IDs y comportamiento transaccional. */
 #beat-checkout-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 999999 !important;
     color-scheme: light;
     background: #f4f6fb !important;
     color: #17233d !important;
@@ -1076,6 +1079,23 @@ body > .store-wa-float svg {
     #beat-checkout-modal .checkout-payment-methods .pay-card-btn {
         min-height: 76px !important;
     }
+}
+
+#beat-checkout-modal .checkout-express-box {
+    background: #ffffff !important;
+    border: 1px solid #d5dfed !important;
+    border-radius: 16px !important;
+}
+
+#beat-checkout-modal #btn-express-paypal {
+    background: #ffc439 !important;
+    border: 1px solid #eab308 !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+}
+
+#beat-checkout-modal #btn-express-paypal:hover {
+    background: #f4bb36 !important;
 }
 
 #beat-checkout-modal nav {
