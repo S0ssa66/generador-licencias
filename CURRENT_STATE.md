@@ -1,5 +1,25 @@
 # Estado operativo actual de BEATSS
 
+## Pasarela de Pagos Simplificada (Layout unificado de 2 columnas estilo E-commerce moderno) — DONE (2026-09-25)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Antigravity`.
+- Fecha: `2026-09-25`.
+- Producción verificada: Desplegado y verificado en vivo en `https://beatss.app/@sossa` (Vercel deployment `generador-licencias-m35qs1x0i`).
+- Objetivo:
+  1. Simplificar la pasarela de pagos eliminando la fricción de pasos fragmentados y adoptando una estructura de e-commerce moderna y directa (inspirada en la referencia visual).
+  2. Implementar layout de 2 columnas:
+     - **Columna izquierda (7 cols)**: Express Checkout (PayPal), Datos de contacto y entrega (Nombre, Email, Teléfono, DNI/RUC para factura electrónica), Selección directa de método de pago (Stripe con tarjeta, PayPal internacional, Deuna QR, PayPhone y Transferencia bancaria local Pichincha/Guayaquil) y botón de acción principal de pago seguro.
+     - **Columna derecha (5 cols)**: Resumen del pedido fijado (sticky) con carátula del beat, selector reactivo de licencias con cálculo de precio en tiempo real, cajetín de cupón de descuento con botón de aplicación instantánea, desglose de subtotal y total, e hipervínculos legales de términos de servicio y contrato de licencia.
+  3. Validar los datos con un solo clic: si el usuario no ha ingresado nombre o correo al intentar pagar con Stripe u otro método, el sistema enfoca automáticamente el campo faltante con un mensaje claro y amigable.
+  4. Preservar el 100% de la compatibilidad con pasarelas (Stripe, PayPal, PayPhone, Deuna, Transferencias), facturación electrónica del SRI y suites de tests.
+- Pruebas y verificación:
+  - 297/297 tests pasados en Node.js (`node --test tests/*.test.mjs`).
+  - 78/78 tests pasados en Python (`.venv/bin/python -m unittest discover tests`).
+  - Build de Vite y presupuesto de rendimiento aprobados (`npm run build`).
+  - Verificación estática de seguridad aprobada (`npm run security:check`).
+  - Despliegue de producción en Vercel completado exitosamente: HTTP 200 en `https://beatss.app/@sossa`.
+
 ## Optimización de Tienda Pública: enlace corto /@sossa, despeje móvil y beat Haze vendido — DONE (2026-09-25)
 
 - Estado: `DONE`; lock liberado.
