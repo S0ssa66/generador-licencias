@@ -942,21 +942,21 @@ body > .store-wa-float svg {
 #beat-checkout-modal .checkout-payment-methods {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
-    gap: 12px;
+    gap: 8px;
     width: 100%;
 }
 
 #beat-checkout-modal .checkout-payment-methods .pay-card-btn {
     position: relative;
     min-width: 0;
-    min-height: 52px !important;
-    padding: 8px 12px !important;
+    min-height: 46px !important;
+    padding: 6px 10px !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    gap: 10px !important;
+    gap: 8px !important;
     border: 1px solid #d5dfed !important;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
     background: #ffffff !important;
     color: #17233d !important;
     box-shadow: none !important;
@@ -1148,13 +1148,13 @@ body > .store-wa-float svg {
 
 #beat-checkout-modal .checkout-terms-card {
     display: grid;
-    grid-template-columns: 22px minmax(0, 1fr) auto;
+    grid-template-columns: 20px minmax(0, 1fr) auto;
     align-items: start;
-    gap: 8px;
-    margin: 8px 0;
-    padding: 8px 10px;
+    gap: 6px;
+    margin: 4px 0;
+    padding: 6px 8px;
     border: 1px solid #dce4f1 !important;
-    border-radius: 10px;
+    border-radius: 9px;
     background: #ffffff !important;
 }
 
@@ -1171,19 +1171,19 @@ body > .store-wa-float svg {
 #beat-checkout-modal #store-chk-accept-terms {
     appearance: none;
     display: grid;
-    width: 20px !important;
-    height: 20px !important;
+    width: 18px !important;
+    height: 18px !important;
     margin: 1px 0 0;
     place-items: center;
     border: 2px solid #9aabc4 !important;
-    border-radius: 6px !important;
+    border-radius: 5px !important;
     background: #ffffff !important;
     cursor: pointer;
 }
 
 #beat-checkout-modal #store-chk-accept-terms::before {
-    width: 9px;
-    height: 5px;
+    width: 8px;
+    height: 4.5px;
     content: "";
     border-bottom: 2px solid #ffffff;
     border-left: 2px solid #ffffff;
@@ -1213,27 +1213,27 @@ body > .store-wa-float svg {
 #beat-checkout-modal .checkout-terms-copy > label {
     display: block;
     color: #17233d !important;
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 800;
-    line-height: 1.35;
+    line-height: 1.3;
     cursor: pointer;
 }
 
 #beat-checkout-modal .checkout-legal-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 4px;
+    gap: 4px;
+    margin-top: 2px;
 }
 
 #beat-checkout-modal .checkout-legal-actions button {
-    min-height: 28px;
-    padding: 0 9px;
+    min-height: 24px;
+    padding: 0 7px;
     border: 1px solid #cbd7ea;
-    border-radius: 7px;
+    border-radius: 6px;
     background: #ffffff;
     color: #3157e8;
-    font-size: 10.5px;
+    font-size: 10px;
     font-weight: 800;
     cursor: pointer;
 }
@@ -1245,9 +1245,9 @@ body > .store-wa-float svg {
 
 #beat-checkout-modal #checkout-terms-help,
 #beat-checkout-modal #checkout-terms-error {
-    margin: 4px 0 0;
-    font-size: 10.5px;
-    line-height: 1.35;
+    margin: 2px 0 0;
+    font-size: 9.5px;
+    line-height: 1.3;
 }
 
 #beat-checkout-modal #checkout-terms-help {
@@ -1429,9 +1429,9 @@ body > .store-wa-float svg {
     flex-direction: column !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    gap: 3px !important;
-    padding: 6px 10px !important;
-    border-radius: 9px !important;
+    gap: 2px !important;
+    padding: 4px 8px !important;
+    border-radius: 8px !important;
     transition: all 120ms ease-out !important;
 }
 
@@ -1444,9 +1444,9 @@ body > .store-wa-float svg {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    gap: 8px !important;
+    gap: 6px !important;
     width: 100% !important;
-    min-height: 32px !important;
+    min-height: 26px !important;
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;

@@ -1558,8 +1558,8 @@ export function updateCheckoutStepView(step) {
             footerNextBtn.style.display = 'flex';
             footerNextBtn.innerHTML = 'Continuar <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>';
         } else if (step === 3) {
-            // Paso 3 (pago): Botón "Atrás" siempre visible. "Confirmar Compra" se gestiona según el método.
-            footerPrevBtn.style.display = 'block';
+            // Paso 3 (pago unificado): En el layout compacto de 2 columnas no se requiere botón atrás en el footer
+            footerPrevBtn.style.display = 'none';
             footerCancelBtn.style.display = 'none';
             
             // Cargar datos del productor para pasarelas
