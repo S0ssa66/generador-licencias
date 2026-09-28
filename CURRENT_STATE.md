@@ -1,5 +1,22 @@
 # Estado operativo actual de BEATSS
 
+## Subida de Beats con Drag & Drop Inteligente (MP3, WAV, Stems y Portada) — DONE (2026-09-27)
+
+- Estado: `DONE`; lock liberado.
+- Agente: `Antigravity`.
+- Fecha: `2026-09-27`.
+- Objetivo:
+  1. Habilitar la opción de arrastrar y soltar (Drag & Drop) archivos de audio al subir un beat (`.mp3`, `.wav`, `.zip`/stems o portadas) tanto en el catálogo principal (`#tab-beats`) como en el modal de beats (`#modal-beats`).
+  2. Implementar un selector inteligente de slots: clasificar automáticamente el archivo según extensión y nombre para asignarlo al campo exacto (`tab-db-beat-mp3`, `tab-db-beat-preview`, `tab-db-beat-wav`, `tab-db-beat-stems` o `tab-db-beat-artwork`).
+  3. Permitir soltar múltiples archivos simultáneamente (ej. MP3 + WAV + Stems a la vez) y procesarlos en cola con barras de progreso independientes.
+  4. Extraer automáticamente metadatos desde el nombre del archivo (Título limpio, BPM y escala musical/Key) si los campos correspondientes están vacíos.
+  5. Permitir arrastrar archivos sobre campos individuales con resaltado visual (`.is-dragover`) y sobre la pestaña completa con un overlay no invasivo que abre automáticamente el formulario.
+- Pruebas y verificación:
+  - 301/301 tests pasados en Node.js (+3 nuevos tests unitarios en `tests/beat-drag-drop-upload.test.mjs`).
+  - 78/78 tests pasados en Python.
+  - Compilación Vite y presupuesto de rendimiento aprobados (`npm run build` - HTML gzip 63.34 kB, por debajo del límite de 65 kB).
+  - Verificación estática de seguridad aprobada (`npm run security:check`).
+
 ## Integración y Botón de PayPal (Express Checkout y Radio Card Estándar) — DONE (2026-09-25)
 
 - Estado: `DONE`; lock liberado.

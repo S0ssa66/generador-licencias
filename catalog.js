@@ -683,318 +683,658 @@ async function uploadToPersonalDrive(file, config, onProgress) {
     return await uploadFileToDriveWithProgress(file, token, beatsFolderId, onProgress);
 }
 
-export function initFileUploads() {
-    const fileUploader = document.getElementById('shared-file-uploader');
-    if (!fileUploader) return;
+export function parseBeatMetadataFromFilename(filename) {
+    if (!filename || typeof filename !== 'string') return null;
 
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-upload-file');
-        if (!btn) return;
+    let base = filename.replace(/\.[a-zA-Z0-9]+$/i, '').trim();
 
-        e.preventDefault();
-
-        if (activeUploadInProgress) {
-            if (typeof window.showToast === 'function') {
-                window.showToast('Espera a que termine la subida actual antes de elegir otro archivo.', true);
-            }
-            return;
+    let bpm = null;
+    const bpmMatch = base.match(/(?:^|[\s_\-\(\[])(\d{2,3})\s*(?:bpm)?(?:[\s_\-\)\]]|$)/i);
+    if (bpmMatch) {
+        const parsed = parseInt(bpmMatch[1], 10);
+        if (parsed >= 50 && parsed <= 240) {
+            bpm = parsed;
         }
-        
-        activeUploadTarget = btn.getAttribute('data-target');
-        activeUploadButton = btn;
-        
-        const accept = btn.getAttribute('data-accept') || '*/*';
-        fileUploader.setAttribute('accept', accept);
-        fileUploader.value = '';
-        fileUploader.click();
+    }
+
+    let key = null;
+    const keyMatch = base.match(/(?:^|[\s_\-\(\[])([A-G][b#]?(?:\s*(?:m|min|minor|maj|major))?)(?:[\s_\-\)\]]|$)/i);
+    if (keyMatch) {
+        key = keyMatch[1].trim();
+    }
+
+    let title = base.replace(/[_\-]+/g, ' ');
+    if (bpm) {
+        title = title.replace(new RegExp(`\\b${bpm}\\s*(?:bpm)?\\b`, 'gi'), ' ');
+    }
+    if (key) {
+        const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        title = title.replace(new RegExp(`(?:^|[\\s_\\-\\(\\[])${escapedKey}(?:[\\s_\\-\\)\\]]|$)`, 'gi'), ' ');
+    }
+    title = title.replace(/\b(mp3|wav|zip|stems?|preview|tagged|untagged|master)\b/gi, ' ');
+    title = title.replace(/\[.*?\]|\(.*?\)/g, (match) => {
+        if (/free|bpm|prod|type beat|tag/i.test(match)) return '';
+        return match;
     });
+    title = title.replace(/\s+/g, ' ').trim();
 
-    fileUploader.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file || !activeUploadTarget || !activeUploadButton) return;
+    if (title.length > 0) {
+        title = title.charAt(0).toUpperCase() + title.slice(1);
+    }
 
-        const targetId = activeUploadTarget;
-        const targetLabel = uploadTargetLabel(targetId);
-        const isMp3Target = targetId.includes('mp3') || targetId.includes('preview');
-        const isWavTarget = targetId.includes('wav');
-        const looksLikeMp3 = file.type === 'audio/mpeg' || /\.mp3$/i.test(file.name);
-        const looksLikeWav = /^audio\/(wav|x-wav|wave|vnd\.wave)$/i.test(file.type) || /\.wav$/i.test(file.name);
-        if (isMp3Target && !looksLikeMp3) {
-            setUploadStatus(targetId, 'error', 'Selecciona un archivo MP3 válido para la previsualización.');
-            if (typeof window.showToast === 'function') window.showToast('El archivo seleccionado no es un MP3.', true);
-            fileUploader.value = '';
-            return;
+    return {
+        title: title || base,
+        bpm: bpm ? String(bpm) : '',
+        key: key || ''
+    };
+}
+
+export function resolveTargetIdForFile(file, isModal = false) {
+    if (!file) return null;
+    const name = file.name || '';
+    const type = file.type || '';
+
+    // Artwork / Image
+    if (type.startsWith('image/') || /\.(png|jpg|jpeg|webp|gif)$/i.test(name)) {
+        return isModal ? 'db-beat-artwork' : 'tab-db-beat-artwork';
+    }
+
+    // Stems (zip, rar, tar, gz, 7z)
+    if (/\.(zip|rar|tar|gz|7z)$/i.test(name) || /stem|trackout/i.test(name)) {
+        return isModal ? 'db-beat-stems' : 'tab-db-beat-stems';
+    }
+
+    // WAV
+    if (/\.wav$/i.test(name) || type.includes('wav')) {
+        return isModal ? 'db-beat-wav' : 'tab-db-beat-wav';
+    }
+
+    // MP3
+    if (/\.mp3$/i.test(name) || type.includes('mpeg') || type.includes('audio')) {
+        if (/(preview|tag|demo|muestra|sample)/i.test(name)) {
+            return isModal ? 'db-beat-preview' : 'tab-db-beat-preview';
         }
-        if (isWavTarget && !looksLikeWav) {
-            setUploadStatus(targetId, 'error', 'Selecciona un archivo WAV válido para este campo.');
-            if (typeof window.showToast === 'function') window.showToast('El archivo seleccionado no es un WAV.', true);
-            fileUploader.value = '';
-            return;
+        const mp3Id = isModal ? 'db-beat-mp3' : 'tab-db-beat-mp3';
+        const previewId = isModal ? 'db-beat-preview' : 'tab-db-beat-preview';
+        const mp3El = document.getElementById(mp3Id);
+        const previewEl = document.getElementById(previewId);
+        if (mp3El && mp3El.value.trim() && previewEl && !previewEl.value.trim()) {
+            return previewId;
         }
+        return mp3Id;
+    }
 
-        if (file.size === 0) {
-            setUploadStatus(targetId, 'error', 'El archivo está vacío. Elige otro archivo e inténtalo de nuevo.');
-            if (typeof window.showToast === 'function') window.showToast('El archivo está vacío.', true);
-            fileUploader.value = '';
-            return;
-        }
+    return isModal ? 'db-beat-mp3' : 'tab-db-beat-mp3';
+}
 
-        activeUploadInProgress = true;
-        setUploadStatus(targetId, 'loading', `Subiendo ${targetLabel}… no cierres este formulario.`);
+export async function uploadBeatFile(file, targetId, customBtn = null) {
+    if (!file || !targetId) return null;
 
-        const originalBtnHTML = activeUploadButton.innerHTML;
-        
-        activeUploadButton.disabled = true;
-        activeUploadButton.style.opacity = '0.7';
-        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando...`;
+    const targetLabel = uploadTargetLabel(targetId);
+    const isMp3Target = targetId.includes('mp3') || targetId.includes('preview');
+    const isWavTarget = targetId.includes('wav');
+    const looksLikeMp3 = file.type === 'audio/mpeg' || /\.mp3$/i.test(file.name);
+    const looksLikeWav = /^audio\/(wav|x-wav|wave|vnd\.wave)$/i.test(file.type) || /\.wav$/i.test(file.name);
+
+    if (isMp3Target && !looksLikeMp3) {
+        setUploadStatus(targetId, 'error', 'Selecciona un archivo MP3 válido para la previsualización.');
+        if (typeof window.showToast === 'function') window.showToast('El archivo seleccionado no es un MP3.', true);
+        return null;
+    }
+    if (isWavTarget && !looksLikeWav) {
+        setUploadStatus(targetId, 'error', 'Selecciona un archivo WAV válido para este campo.');
+        if (typeof window.showToast === 'function') window.showToast('El archivo seleccionado no es un WAV.', true);
+        return null;
+    }
+
+    if (file.size === 0) {
+        setUploadStatus(targetId, 'error', 'El archivo está vacío. Elige otro archivo e inténtalo de nuevo.');
+        if (typeof window.showToast === 'function') window.showToast('El archivo está vacío.', true);
+        return null;
+    }
+
+    activeUploadInProgress = true;
+    setUploadStatus(targetId, 'loading', `Subiendo ${targetLabel}… no cierres este formulario.`);
+
+    const isModal = targetId.startsWith('db-beat');
+    const dropzoneProgress = document.getElementById(isModal ? 'modal-beat-dropzone-progress' : 'tab-beat-dropzone-progress');
+    const dropzoneProgressBar = document.getElementById(isModal ? 'modal-beat-dropzone-progress-bar' : 'tab-beat-dropzone-progress-bar');
+    const dropzoneProgressText = document.getElementById(isModal ? 'modal-beat-dropzone-progress-text' : 'tab-beat-dropzone-progress-text');
+
+    const btn = customBtn || document.querySelector(`.btn-upload-file[data-target="${targetId}"]`);
+    const originalBtnHTML = btn ? btn.innerHTML : '';
+
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando...`;
         if (window.lucide) window.lucide.createIcons();
+    }
 
-        try {
-            const config = window.producerConfig || {};
-            const storageProvider = resolveBeatStorageProvider(config);
+    const updateProgress = (percent, message = null) => {
+        if (dropzoneProgress && dropzoneProgressBar && dropzoneProgressText) {
+            dropzoneProgress.hidden = false;
+            dropzoneProgressBar.style.width = `${percent}%`;
+            dropzoneProgressText.textContent = message || `Subiendo ${file.name} (${percent}%)…`;
+        }
+        if (btn) {
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> ${message || 'Subiendo... ' + percent + '%'}`;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    };
 
-            // Si el proveedor preferido es Firebase Storage (firebase),
-            // subimos de forma nativa a Firebase Storage para evitar exponer tokens al cliente.
-            if (storageProvider === 'firebase') {
-                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Firebase...`;
-                const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-                const storagePath = `beats/${window.currentUser || 'anonymous'}/${Date.now()}_${safeFileName}`;
-                const storageRef = ref(storage, storagePath);
-                const uploadTask = uploadBytesResumable(storageRef, file);
-                
-                const downloadURL = await new Promise((resolve, reject) => {
-                    uploadTask.on('state_changed', 
-                        (snapshot) => {
-                            const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-                            activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
-                            if (window.lucide) window.lucide.createIcons();
-                        }, 
-                        (error) => reject(error), 
-                        async () => {
-                            try {
-                                const url = await getDownloadURL(uploadTask.snapshot.ref);
-                                resolve(url);
-                            } catch (e) {
-                                reject(e);
-                            }
+    try {
+        const config = window.producerConfig || {};
+        const storageProvider = resolveBeatStorageProvider(config);
+
+        if (storageProvider === 'firebase') {
+            updateProgress(0, 'Conectando Firebase…');
+            const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const storagePath = `beats/${window.currentUser || 'anonymous'}/${Date.now()}_${safeFileName}`;
+            const storageRef = ref(storage, storagePath);
+            const uploadTask = uploadBytesResumable(storageRef, file);
+
+            const downloadURL = await new Promise((resolve, reject) => {
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+                        updateProgress(progress);
+                    },
+                    (error) => reject(error),
+                    async () => {
+                        try {
+                            const url = await getDownloadURL(uploadTask.snapshot.ref);
+                            resolve(url);
+                        } catch (e) {
+                            reject(e);
                         }
-                    );
-                });
-
-                const targetInput = document.getElementById(activeUploadTarget);
-                if (targetInput) {
-                    targetInput.value = downloadURL;
-                    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    
-                    if (typeof window.generatePreview === 'function') {
-                        window.generatePreview();
                     }
+                );
+            });
+
+            const targetInput = document.getElementById(targetId);
+            if (targetInput) {
+                targetInput.value = downloadURL;
+                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                if (typeof window.generatePreview === 'function') {
+                    window.generatePreview();
                 }
-                
-                if (typeof window.showToast === 'function') window.showToast("¡Archivo guardado en Firebase Storage con éxito!");
-                setUploadStatus(targetId, 'success', `${targetLabel} listo. Ahora pulsa “Guardar Beat” para conservarlo en el catálogo.`);
-                
-                activeUploadButton.disabled = false;
-                activeUploadButton.style.opacity = '1';
-                activeUploadButton.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
+            }
+
+            if (typeof window.showToast === 'function') window.showToast("¡Archivo guardado en Firebase Storage con éxito!");
+            setUploadStatus(targetId, 'success', `${targetLabel} listo. Ahora pulsa “Guardar Beat” para conservarlo en el catálogo.`);
+
+            if (dropzoneProgress && dropzoneProgressText) {
+                dropzoneProgressText.textContent = `¡${file.name} subido con éxito!`;
+                if (dropzoneProgressBar) dropzoneProgressBar.style.width = '100%';
+                setTimeout(() => { if (dropzoneProgress) dropzoneProgress.hidden = true; }, 2000);
+            }
+
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
                 if (window.lucide) window.lucide.createIcons();
-                
-                const btnRef = activeUploadButton;
                 setTimeout(() => {
-                    if (btnRef.innerHTML.includes('check')) {
-                        btnRef.innerHTML = originalBtnHTML;
+                    if (btn.innerHTML.includes('check')) {
+                        btn.innerHTML = originalBtnHTML;
                         if (window.lucide) window.lucide.createIcons();
                     }
                 }, 3000);
-                activeUploadInProgress = false;
-                return;
             }
-            
-            let downloadURL;
-            let uploadSuccess = false;
-            let detailedError = "";
+            activeUploadInProgress = false;
+            return downloadURL;
+        }
 
-            if (storageProvider === 'alternative') {
-                const progress = (percent) => {
-                    activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${percent}%`;
-                    if (window.lucide) window.lucide.createIcons();
-                };
-                if (isWavTarget || targetId.includes('stems')) {
-                    try {
-                        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo a almacenamiento seguro...`;
-                        if (window.lucide) window.lucide.createIcons();
-                        downloadURL = await uploadToFirebaseAudioStorage(file, progress);
-                        uploadSuccess = true;
-                    } catch (firebaseErr) {
-                        detailedError = `Firebase: ${firebaseErr.message}`;
-                    }
-                }
-                if (!uploadSuccess) {
-                    try {
-                        downloadURL = await uploadAudioToAlternativeCloud(file);
-                        uploadSuccess = true;
-                    } catch (alternativeErr) {
-                        detailedError += `${detailedError ? ' | ' : ''}Alternativo: ${alternativeErr.message}`;
-                    }
-                }
-                if (!uploadSuccess) {
-                    try {
-                        downloadURL = await uploadToFirebaseAudioStorage(file, progress);
-                        uploadSuccess = true;
-                    } catch (firebaseErr) {
-                        detailedError += `${detailedError ? ' | ' : ''}Firebase: ${firebaseErr.message}`;
-                    }
-                }
-            } else if (storageProvider === 'gdrive-central') {
-                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Central...`;
-                if (window.lucide) window.lucide.createIcons();
+        let downloadURL;
+        let uploadSuccess = false;
+        let detailedError = "";
 
+        if (storageProvider === 'alternative') {
+            const progress = (percent) => updateProgress(percent);
+            if (isWavTarget || targetId.includes('stems')) {
                 try {
-                    downloadURL = await uploadToCentralDrive(file, config, (progress) => {
-                        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
-                        if (window.lucide) window.lucide.createIcons();
-                    });
+                    updateProgress(0, 'Subiendo a almacenamiento seguro…');
+                    downloadURL = await uploadToFirebaseAudioStorage(file, progress);
                     uploadSuccess = true;
-                } catch (driveErr) {
-                    detailedError = driveErr.message;
-                    console.warn('Google Drive Central no estuvo disponible; se usará Firebase como respaldo seguro.', driveErr);
-                }
-            } else {
-                activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Drive...`;
-                if (window.lucide) window.lucide.createIcons();
-
-                try {
-                    downloadURL = await uploadToPersonalDrive(file, config, (progress) => {
-                        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${progress}%`;
-                        if (window.lucide) window.lucide.createIcons();
-                    });
-                    uploadSuccess = true;
-                } catch (driveErr) {
-                    detailedError = driveErr.message;
-                    console.warn("Fallo al subir a Google Drive Personal, intentando fallback a Google Drive Central...", driveErr);
-                    try {
-                        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Conectando Central (Fallback)...`;
-                        if (window.lucide) window.lucide.createIcons();
-                        
-                        downloadURL = await uploadToCentralDrive(file, config, (progress) => {
-                            activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo a Central... ${progress}%`;
-                            if (window.lucide) window.lucide.createIcons();
-                        });
-                        uploadSuccess = true;
-                    } catch (centralErr) {
-                        detailedError += " | Fallback: " + centralErr.message;
-                        console.error("Fallo también en la subida a Google Drive Central (Fallback):", centralErr);
-                    }
+                } catch (firebaseErr) {
+                    detailedError = `Firebase: ${firebaseErr.message}`;
                 }
             }
-
-            // El Drive central usa Firebase como respaldo seguro. Los servidores
-            // alternativos se reservan para productores que los eligieron.
-            if (!uploadSuccess && storageProvider !== 'alternative') {
+            if (!uploadSuccess) {
                 try {
-                    activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Usando respaldo seguro...`;
-                    if (window.lucide) window.lucide.createIcons();
-                    downloadURL = await uploadToFirebaseAudioStorage(file, (progress) => {
-                        activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Respaldo... ${progress}%`;
-                        if (window.lucide) window.lucide.createIcons();
-                    });
+                    downloadURL = await uploadAudioToAlternativeCloud(file);
+                    uploadSuccess = true;
+                } catch (alternativeErr) {
+                    detailedError += `${detailedError ? ' | ' : ''}Alternativo: ${alternativeErr.message}`;
+                }
+            }
+            if (!uploadSuccess) {
+                try {
+                    downloadURL = await uploadToFirebaseAudioStorage(file, progress);
                     uploadSuccess = true;
                 } catch (firebaseErr) {
                     detailedError += `${detailedError ? ' | ' : ''}Firebase: ${firebaseErr.message}`;
                 }
             }
-
-            if (!uploadSuccess) {
-                throw new Error("No se pudo subir el archivo: " + detailedError);
+        } else if (storageProvider === 'gdrive-central') {
+            updateProgress(0, 'Conectando Central…');
+            try {
+                downloadURL = await uploadToCentralDrive(file, config, (progress) => {
+                    updateProgress(progress);
+                });
+                uploadSuccess = true;
+            } catch (driveErr) {
+                detailedError = driveErr.message;
+                console.warn('Google Drive Central no estuvo disponible; se usará Firebase como respaldo seguro.', driveErr);
             }
+        } else {
+            updateProgress(0, 'Conectando Drive…');
+            try {
+                downloadURL = await uploadToPersonalDrive(file, config, (progress) => {
+                    updateProgress(progress);
+                });
+                uploadSuccess = true;
+            } catch (driveErr) {
+                detailedError = driveErr.message;
+                console.warn("Fallo al subir a Google Drive Personal, intentando fallback a Google Drive Central...", driveErr);
+                try {
+                    updateProgress(0, 'Conectando Central (Fallback)…');
+                    downloadURL = await uploadToCentralDrive(file, config, (progress) => {
+                        updateProgress(progress);
+                    });
+                    uploadSuccess = true;
+                } catch (centralErr) {
+                    detailedError += " | Fallback: " + centralErr.message;
+                    console.error("Fallo también en la subida a Google Drive Central (Fallback):", centralErr);
+                }
+            }
+        }
 
-            const targetInput = document.getElementById(activeUploadTarget);
+        if (!uploadSuccess && storageProvider !== 'alternative') {
+            try {
+                updateProgress(0, 'Usando respaldo seguro…');
+                downloadURL = await uploadToFirebaseAudioStorage(file, (progress) => {
+                    updateProgress(progress);
+                });
+                uploadSuccess = true;
+            } catch (firebaseErr) {
+                detailedError += `${detailedError ? ' | ' : ''}Firebase: ${firebaseErr.message}`;
+            }
+        }
+
+        if (!uploadSuccess) {
+            throw new Error("No se pudo subir el archivo: " + detailedError);
+        }
+
+        const targetInput = document.getElementById(targetId);
+        if (targetInput) {
+            targetInput.value = downloadURL;
+            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+            if (typeof window.generatePreview === 'function') {
+                window.generatePreview();
+            }
+        }
+
+        const providerLabel = downloadURL?.includes('firebasestorage.googleapis.com')
+            ? 'el respaldo seguro de Firebase'
+            : storageProvider === 'alternative' || downloadURL?.includes('pixeldrain') ||
+            downloadURL?.includes('tmpfiles') || downloadURL?.includes('gofile') ||
+            downloadURL?.includes('file.io')
+            ? 'un servidor alternativo'
+            : 'Google Drive';
+
+        if (typeof window.showToast === 'function') window.showToast(`¡Archivo guardado en ${providerLabel} con éxito!`);
+        setUploadStatus(targetId, 'success', `${targetLabel} listo. Ahora pulsa “Guardar Beat” para conservarlo en el catálogo.`);
+
+        if (dropzoneProgress && dropzoneProgressText) {
+            dropzoneProgressText.textContent = `¡${file.name} subido con éxito!`;
+            if (dropzoneProgressBar) dropzoneProgressBar.style.width = '100%';
+            setTimeout(() => { if (dropzoneProgress) dropzoneProgress.hidden = true; }, 2000);
+        }
+
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
+            if (window.lucide) window.lucide.createIcons();
+            setTimeout(() => {
+                if (btn.innerHTML.includes('check')) {
+                    btn.innerHTML = originalBtnHTML;
+                    if (window.lucide) window.lucide.createIcons();
+                }
+            }, 3000);
+        }
+
+        activeUploadInProgress = false;
+        return downloadURL;
+
+    } catch (finalErr) {
+        console.error("Fallo general de subida de archivo:", finalErr);
+        const readableError = finalErr?.message || 'Error desconocido de almacenamiento';
+        if (typeof window.showToast === 'function') {
+            window.showToast(`No se pudo subir ${targetLabel}: ${readableError}`, true);
+        }
+
+        updateProgress(0, 'Subiendo a servidor de respaldo…');
+
+        try {
+            const downloadURL = await uploadToFirebaseAudioStorage(file, (percent) => {
+                updateProgress(percent);
+            });
+
+            const targetInput = document.getElementById(targetId);
             if (targetInput) {
                 targetInput.value = downloadURL;
                 targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-                
+                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
                 if (typeof window.generatePreview === 'function') {
                     window.generatePreview();
                 }
             }
-            
-            const providerLabel = downloadURL?.includes('firebasestorage.googleapis.com')
-                ? 'el respaldo seguro de Firebase'
-                : storageProvider === 'alternative' || downloadURL?.includes('pixeldrain') ||
-                downloadURL?.includes('tmpfiles') || downloadURL?.includes('gofile') ||
-                downloadURL?.includes('file.io')
-                ? 'un servidor alternativo'
-                : 'Google Drive';
-            if (typeof window.showToast === 'function') window.showToast(`¡Archivo guardado en ${providerLabel} con éxito!`);
+
+            if (typeof window.showToast === 'function') window.showToast("¡Archivo guardado en servidor alternativo!");
             setUploadStatus(targetId, 'success', `${targetLabel} listo. Ahora pulsa “Guardar Beat” para conservarlo en el catálogo.`);
-            
-            activeUploadButton.disabled = false;
-            activeUploadButton.style.opacity = '1';
-            activeUploadButton.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
-            if (window.lucide) window.lucide.createIcons();
-            
-            const btnRef = activeUploadButton;
-            setTimeout(() => {
-                if (btnRef.innerHTML.includes('check')) {
-                    btnRef.innerHTML = originalBtnHTML;
-                    if (window.lucide) window.lucide.createIcons();
-                }
-            }, 3000);
-            activeUploadInProgress = false;
 
-        } catch (finalErr) {
-            console.error("Fallo general de subida de archivo:", finalErr);
-            const readableError = finalErr?.message || 'Error desconocido de almacenamiento';
-            if (typeof window.showToast === 'function') {
-                window.showToast(`No se pudo subir ${targetLabel}: ${readableError}`, true);
+            if (dropzoneProgress && dropzoneProgressText) {
+                dropzoneProgressText.textContent = `¡${file.name} subido con éxito!`;
+                if (dropzoneProgressBar) dropzoneProgressBar.style.width = '100%';
+                setTimeout(() => { if (dropzoneProgress) dropzoneProgress.hidden = true; }, 2000);
             }
-            
-            activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo...`;
-            if (window.lucide) window.lucide.createIcons();
 
-            try {
-                const downloadURL = await uploadToFirebaseAudioStorage(file, (percent) => {
-                    activeUploadButton.innerHTML = `<i data-lucide="loader-2" class="animate-spin" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px;"></i> Subiendo... ${percent}%`;
-                    if (window.lucide) window.lucide.createIcons();
-                });
-                
-                const targetInput = document.getElementById(activeUploadTarget);
-                if (targetInput) {
-                    targetInput.value = downloadURL;
-                    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    if (typeof window.generatePreview === 'function') {
-                        window.generatePreview();
-                    }
-                }
-                
-                if (typeof window.showToast === 'function') window.showToast("¡Archivo guardado en servidor alternativo!");
-                setUploadStatus(targetId, 'success', `${targetLabel} listo. Ahora pulsa “Guardar Beat” para conservarlo en el catálogo.`);
-                activeUploadButton.disabled = false;
-                activeUploadButton.style.opacity = '1';
-                activeUploadButton.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; display: inline-block; margin-right: 4px; color: #48bb78;"></i> ¡Subido!`;
                 if (window.lucide) window.lucide.createIcons();
-                
-                const btnRef = activeUploadButton;
                 setTimeout(() => {
-                    if (btnRef.innerHTML.includes('check')) {
-                        btnRef.innerHTML = originalBtnHTML;
+                    if (btn.innerHTML.includes('check')) {
+                        btn.innerHTML = originalBtnHTML;
                         if (window.lucide) window.lucide.createIcons();
                     }
                 }, 3000);
-                activeUploadInProgress = false;
-            } catch (altErr) {
-                console.error("Error al subir a servidores alternativos:", altErr);
-                const fallbackError = altErr?.message || readableError;
-                if (typeof window.showToast === 'function') window.showToast(`Error al subir ${targetLabel}: ${fallbackError}`, true);
-                setUploadStatus(targetId, 'error', `No se pudo subir el ${targetLabel}: ${fallbackError}`);
-                activeUploadButton.disabled = false;
-                activeUploadButton.style.opacity = '1';
-                activeUploadButton.innerHTML = originalBtnHTML;
+            }
+            activeUploadInProgress = false;
+            return downloadURL;
+        } catch (altErr) {
+            console.error("Error al subir a servidores alternativos:", altErr);
+            const fallbackError = altErr?.message || readableError;
+            if (typeof window.showToast === 'function') window.showToast(`Error al subir ${targetLabel}: ${fallbackError}`, true);
+            setUploadStatus(targetId, 'error', `No se pudo subir el ${targetLabel}: ${fallbackError}`);
+
+            if (dropzoneProgress) {
+                dropzoneProgress.hidden = true;
+            }
+
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerHTML = originalBtnHTML;
                 if (window.lucide) window.lucide.createIcons();
-                activeUploadInProgress = false;
+            }
+            activeUploadInProgress = false;
+            throw altErr;
+        }
+    }
+}
+
+export async function handleDroppedBeatFiles(files, explicitTargetId = null) {
+    if (!files || files.length === 0) return;
+
+    if (activeUploadInProgress) {
+        if (typeof window.showToast === 'function') {
+            window.showToast('Espera a que termine la subida actual antes de soltar otro archivo.', true);
+        }
+        return;
+    }
+
+    const fileList = Array.from(files);
+
+    const modalEl = document.getElementById('modal-beats');
+    const modalForm = document.getElementById('beat-form-container');
+    const isModalActive = (modalEl && modalEl.classList.contains('active')) ||
+                          (modalForm && modalForm.style.display !== 'none');
+
+    // If tab form is closed and we are in catalog tab, open it
+    if (!isModalActive) {
+        const tabForm = document.getElementById('tab-beat-form-fields');
+        if (!tabForm || tabForm.style.display === 'none') {
+            if (typeof window.openTabBeatForm === 'function') {
+                window.openTabBeatForm();
             }
         }
+    }
+
+    // Auto-populate Title, BPM, Key if empty
+    const firstAudio = fileList.find(f => /\.(mp3|wav)$/i.test(f.name)) || fileList[0];
+    if (firstAudio) {
+        const meta = parseBeatMetadataFromFilename(firstAudio.name);
+        if (meta) {
+            const nameInput = document.getElementById(isModalActive ? 'db-beat-name' : 'tab-db-beat-name');
+            if (nameInput && !nameInput.value.trim() && meta.title) {
+                nameInput.value = meta.title;
+                nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            const bpmInput = document.getElementById(isModalActive ? 'db-beat-bpm' : 'tab-db-beat-bpm');
+            if (bpmInput && !bpmInput.value.trim() && meta.bpm) {
+                bpmInput.value = meta.bpm;
+                bpmInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            const keyInput = document.getElementById(isModalActive ? 'db-beat-key' : 'tab-db-beat-key');
+            if (keyInput && !keyInput.value.trim() && meta.key) {
+                keyInput.value = meta.key;
+                keyInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+    }
+
+    // Process files sequentially
+    for (const file of fileList) {
+        let targetId = explicitTargetId;
+        if (!targetId) {
+            targetId = resolveTargetIdForFile(file, isModalActive);
+        }
+
+        if (targetId) {
+            const uploadBtn = document.querySelector(`.btn-upload-file[data-target="${targetId}"]`);
+            try {
+                await uploadBeatFile(file, targetId, uploadBtn);
+            } catch (err) {
+                console.error(`Error al procesar subida de ${file.name}:`, err);
+            }
+        }
+    }
+}
+
+export function initFileUploads() {
+    const fileUploader = document.getElementById('shared-file-uploader');
+    const dropzoneInput = document.getElementById('dropzone-file-input');
+
+    // Prevent default browser behavior on entire window when files are dragged
+    if (!window._beatDragDropGlobalBound) {
+        window.addEventListener('dragover', (e) => {
+            if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('drop', (e) => {
+            if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+                e.preventDefault();
+            }
+        });
+        window._beatDragDropGlobalBound = true;
+    }
+
+    if (fileUploader) {
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-upload-file');
+            if (!btn) return;
+
+            e.preventDefault();
+
+            if (activeUploadInProgress) {
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Espera a que termine la subida actual antes de elegir otro archivo.', true);
+                }
+                return;
+            }
+
+            activeUploadTarget = btn.getAttribute('data-target');
+            activeUploadButton = btn;
+
+            const accept = btn.getAttribute('data-accept') || '*/*';
+            fileUploader.setAttribute('accept', accept);
+            fileUploader.value = '';
+            fileUploader.click();
+        });
+
+        fileUploader.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !activeUploadTarget) return;
+
+            try {
+                await uploadBeatFile(file, activeUploadTarget, activeUploadButton);
+            } catch (err) {
+                console.error("Error en subida desde fileUploader:", err);
+            } finally {
+                fileUploader.value = '';
+            }
+        });
+    }
+
+    // Dropzone file input listener
+    if (dropzoneInput) {
+        dropzoneInput.addEventListener('change', async (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                try {
+                    await handleDroppedBeatFiles(e.target.files);
+                } catch (err) {
+                    console.error("Error en subida desde dropzoneInput:", err);
+                } finally {
+                    dropzoneInput.value = '';
+                }
+            }
+        });
+    }
+
+    // Setup dedicated dropzones (tab and modal)
+    const tabDropzone = document.getElementById('tab-beat-dropzone');
+    const modalDropzone = document.getElementById('modal-beat-dropzone');
+
+    [tabDropzone, modalDropzone].forEach(dropzone => {
+        if (!dropzone || dropzone._dragBound) return;
+        dropzone._dragBound = true;
+
+        dropzone.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (dropzoneInput) dropzoneInput.click();
+        });
+
+        dropzone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (dropzoneInput) dropzoneInput.click();
+            }
+        });
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('is-dragover');
+        });
+
+        dropzone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('is-dragover');
+        });
+
+        dropzone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('is-dragover');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                await handleDroppedBeatFiles(e.dataTransfer.files);
+            }
+        });
     });
+
+    // Setup row-level drag & drop for any input-group with a .btn-upload-file
+    document.querySelectorAll('.input-group').forEach(group => {
+        const btn = group.querySelector('.btn-upload-file');
+        if (!btn || group._dragBound) return;
+        const targetId = btn.getAttribute('data-target');
+        if (!targetId) return;
+        group._dragBound = true;
+
+        group.addEventListener('dragover', (e) => {
+            if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+                e.preventDefault();
+                e.stopPropagation();
+                group.classList.add('is-dragover');
+            }
+        });
+
+        group.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            group.classList.remove('is-dragover');
+        });
+
+        group.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            group.classList.remove('is-dragover');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                if (e.dataTransfer.files.length === 1) {
+                    await handleDroppedBeatFiles(e.dataTransfer.files, targetId);
+                } else {
+                    await handleDroppedBeatFiles(e.dataTransfer.files);
+                }
+            }
+        });
+    });
+
+    // Whole-tab drag overlay for #tab-beats
+    const tabBeats = document.getElementById('tab-beats');
+    const dragOverlay = document.getElementById('tab-beats-drag-overlay');
+    if (tabBeats && dragOverlay && !tabBeats._dragBound) {
+        tabBeats._dragBound = true;
+        let dragCounter = 0;
+
+        tabBeats.addEventListener('dragenter', (e) => {
+            if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+                dragCounter++;
+                dragOverlay.classList.add('is-active');
+            }
+        });
+
+        tabBeats.addEventListener('dragleave', (e) => {
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
+                dragOverlay.classList.remove('is-active');
+            }
+        });
+
+        tabBeats.addEventListener('dragover', (e) => {
+            if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+                e.preventDefault();
+            }
+        });
+
+        dragOverlay.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter = 0;
+            dragOverlay.classList.remove('is-active');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                await handleDroppedBeatFiles(e.dataTransfer.files);
+            }
+        });
+    }
 }
 
 export function initClearInputHandlers() {
@@ -2190,5 +2530,7 @@ window.saveTabBeat = saveTabBeat;
 window.initGlobalCatalog = initGlobalCatalog;
 window.renderGlobalBeats = renderGlobalBeats;
 window.setupGlobalCatalogFilters = setupGlobalEvents;
-window.playGlobalBeat = playGlobalBeat;
-window.openGlobalBeatCheckoutModal = openGlobalBeatCheckoutModal;
+window.parseBeatMetadataFromFilename = parseBeatMetadataFromFilename;
+window.resolveTargetIdForFile = resolveTargetIdForFile;
+window.uploadBeatFile = uploadBeatFile;
+window.handleDroppedBeatFiles = handleDroppedBeatFiles;
